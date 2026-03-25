@@ -1,0 +1,57 @@
+[gd_scene format=3 uid="uid://esa27afncviq"]
+
+[ext_resource type="Script" uid="uid://bopkfrrbv730s" path="res://scenes/combat/combat.gd" id="1_vj48t"]
+[ext_resource type="Script" uid="uid://b6ulmuwjf7p7h" path="res://scenes/combat/map_area.gd" id="2_h3bse"]
+[ext_resource type="PackedScene" uid="uid://beqywnotcyb30" path="res://scenes/combat/ui/top_bar.tscn" id="2_tppsp"]
+[ext_resource type="PackedScene" uid="uid://cwurnr3gybe06" path="res://scenes/cards/card_section.tscn" id="3_vvyul"]
+
+[node name="Combat" type="Control" unique_id=276766863]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_vj48t")
+
+[node name="MainVBox" type="VBoxContainer" parent="." unique_id=1678207089]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="TopBar" parent="MainVBox" unique_id=1820153679 instance=ExtResource("2_tppsp")]
+layout_mode = 2
+
+[node name="BattleArea" type="HBoxContainer" parent="MainVBox" unique_id=823301043]
+layout_mode = 2
+
+[node name="MapArea" type="Control" parent="MainVBox/BattleArea" unique_id=24900826]
+layout_mode = 2
+script = ExtResource("2_h3bse")
+
+[node name="SidePanel" type="Panel" parent="MainVBox/BattleArea" unique_id=155049453]
+layout_mode = 2
+
+[node name="MessageLog" type="RichTextLabel" parent="MainVBox/BattleArea/SidePanel" unique_id=1622629305]
+custom_minimum_size = Vector2(500, 100)
+layout_mode = 0
+offset_left = -4.0
+offset_top = 35.0
+offset_right = 496.0
+offset_bottom = 135.0
+grow_vertical = 0
+
+[node name="HandSections" type="HBoxContainer" parent="MainVBox" unique_id=1348213397]
+layout_mode = 2
+
+[node name="MovementSection" parent="MainVBox/HandSections" unique_id=386295756 instance=ExtResource("3_vvyul")]
+layout_mode = 2
+
+[node name="AttackSection" parent="MainVBox/HandSections" unique_id=1210102193 instance=ExtResource("3_vvyul")]
+layout_mode = 2
+
+[node name="BlockSection" parent="MainVBox/HandSections" unique_id=1478647015 instance=ExtResource("3_vvyul")]
+layout_mode = 2
+
+[node name="UltimateSection" parent="MainVBox/HandSections" unique_id=1108271054 instance=ExtResource("3_vvyul")]
+layout_mode = 2

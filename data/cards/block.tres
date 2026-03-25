@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CardData" format=3 uid="uid://2ywbhfjpjjer"]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_h1rc3"]
+
+[sub_resource type="Texture2DRD" id="Texture2DRD_3tsyl"]
+
+[resource]
+script = ExtResource("1_h1rc3")
+id = "block"
+name = "Block"
+cost = 1
+card_type = "block"
+image = SubResource("Texture2DRD_3tsyl")
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"

@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://slsjny8g2aor"]
+
+[ext_resource type="Script" uid="uid://ce4ujkdt8y88f" path="res://scenes/cards/card_view.gd" id="1_two4k"]
+
+[node name="CardView" type="Control" unique_id=1772071006]
+custom_minimum_size = Vector2(120, 170)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_two4k")
+
+[node name="CardInner" type="VBoxContainer" parent="." unique_id=975974102]
+clip_contents = true
+layout_mode = 0
+offset_right = 1.0
+offset_bottom = 27.0
+theme_override_constants/separation = 4
+
+[node name="CardFrame" type="MarginContainer" parent="CardInner" unique_id=103380185]
+clip_contents = true
+custom_minimum_size = Vector2(110, 145)
+layout_mode = 2
+
+[node name="CardButton" type="TextureButton" parent="CardInner/CardFrame" unique_id=27698285]
+custom_minimum_size = Vector2(110, 145)
+layout_mode = 2
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="CardLabel" type="Label" parent="CardInner" unique_id=362387966]
+layout_mode = 2
+horizontal_alignment = 1
+autowrap_mode = 3

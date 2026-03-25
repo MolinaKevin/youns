@@ -1,0 +1,51 @@
+[gd_scene format=3 uid="uid://b1uy7tyd0jkct"]
+
+[ext_resource type="Script" uid="uid://qetlimfp8xpa" path="res://UI/DeckBuilder/deck_builder_screen.gd" id="1_jlnoy"]
+[ext_resource type="PackedScene" uid="uid://cd40uh020beps" path="res://UI/Cards/CardGrid/card_grid.tscn" id="2_o5k13"]
+[ext_resource type="Script" uid="uid://dp5uwgsemyq7t" path="res://UI/DeckBuilder/preview_panel.gd" id="3_r7ef0"]
+
+[node name="DeckBuilderScreen" type="Control" unique_id=1885302580]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_jlnoy")
+
+[node name="TextureRect" type="TextureRect" parent="." unique_id=2053701205]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=293412836]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="MainVBox" type="VBoxContainer" parent="MarginContainer" unique_id=48667395]
+layout_mode = 2
+
+[node name="Header" type="HBoxContainer" parent="MarginContainer/MainVBox" unique_id=1773438845]
+layout_mode = 2
+
+[node name="Body" type="HBoxContainer" parent="MarginContainer/MainVBox" unique_id=1786760382]
+layout_mode = 2
+
+[node name="LeftPanel" type="VBoxContainer" parent="MarginContainer/MainVBox/Body" unique_id=506132835]
+layout_mode = 2
+
+[node name="FilteredPanel" type="HBoxContainer" parent="MarginContainer/MainVBox/Body/LeftPanel" unique_id=1711172969]
+layout_mode = 2
+
+[node name="CardGrid" parent="MarginContainer/MainVBox/Body/LeftPanel" unique_id=911396171 instance=ExtResource("2_o5k13")]
+layout_mode = 2
+
+[node name="PreviewPanel" type="Control" parent="MarginContainer/MainVBox/Body" unique_id=1515816459]
+layout_mode = 2
+script = ExtResource("3_r7ef0")
+
+[node name="Label" type="Label" parent="MarginContainer/MainVBox/Body/PreviewPanel" unique_id=339746784]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0

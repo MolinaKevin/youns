@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" format=3 uid="uid://dhhhamyi8bhhy"]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_qywro"]
+
+[sub_resource type="Texture2DRD" id="Texture2DRD_3tsyl"]
+
+[resource]
+script = ExtResource("1_qywro")
+id = "dash"
+name = "Dash"
+cost = 1
+card_type = "move"
+card_range = 15
+image = SubResource("Texture2DRD_3tsyl")
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"

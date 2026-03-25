@@ -1,0 +1,31 @@
+[gd_scene format=3 uid="uid://c7peygweituoj"]
+
+[ext_resource type="Script" uid="uid://cbyuafmon32oo" path="res://UI/Cards/Collection/collection_card.gd" id="1_sn87d"]
+
+[node name="CollectionCard" type="Button" unique_id=304229660]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_sn87d")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=573819913]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer" unique_id=1858879709]
+layout_mode = 2
+
+[node name="TextureRect" type="TextureRect" parent="MarginContainer/VBoxContainer" unique_id=1238221778]
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1873503103]
+layout_mode = 2
+
+[node name="CostLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=2038275366]
+layout_mode = 2
+
+[node name="TypeLabel" type="Label" parent="MarginContainer/VBoxContainer" unique_id=1437729182]
+layout_mode = 2

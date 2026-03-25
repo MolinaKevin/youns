@@ -1,0 +1,26 @@
+[gd_scene format=3 uid="uid://cwurnr3gybe06"]
+
+[ext_resource type="Script" uid="uid://jgsv8hdqfepu" path="res://scenes/cards/card_section.gd" id="1_25jqy"]
+
+[node name="CardSection" type="Control" unique_id=386295756]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_25jqy")
+
+[node name="Inner" type="VBoxContainer" parent="." unique_id=543559789]
+layout_mode = 0
+offset_right = 240.0
+offset_bottom = 260.0
+
+[node name="SectionLabel" type="Label" parent="Inner" unique_id=849671017]
+layout_mode = 2
+
+[node name="CardsWrapper" type="VBoxContainer" parent="Inner" unique_id=1531175746]
+layout_mode = 2
+
+[node name="CardsContainer" type="HBoxContainer" parent="Inner/CardsWrapper" unique_id=1692656029]
+layout_mode = 2
