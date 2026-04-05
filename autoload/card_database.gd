@@ -9,7 +9,15 @@ func _load_cards() -> void:
 	var all_cards: Array[CardData] = [
 		preload("res://data/cards/step.tres"),
 		preload("res://data/cards/dash.tres"),
-		preload("res://data/cards/strike.tres")
+		preload("res://data/cards/strike.tres"),
+		preload("res://data/cards/slash.tres"),
+		preload("res://data/cards/block.tres"),
+		preload("res://data/cards/meteor.tres"),
+		preload("res://data/cards/arrow.tres"),
+		preload("res://data/cards/snipe.tres"),
+		preload("res://data/cards/grenade.tres"),
+		preload("res://data/cards/bear_trap.tres"),
+		preload("res://data/cards/spike_trap.tres"),
 	]
 
 	for card in all_cards:

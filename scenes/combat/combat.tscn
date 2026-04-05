@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://b6ulmuwjf7p7h" path="res://scenes/combat/map_area.gd" id="2_h3bse"]
 [ext_resource type="PackedScene" uid="uid://beqywnotcyb30" path="res://scenes/combat/ui/top_bar.tscn" id="2_tppsp"]
 [ext_resource type="PackedScene" uid="uid://cwurnr3gybe06" path="res://scenes/cards/card_section.tscn" id="3_vvyul"]
+[ext_resource type="PackedScene" uid="uid://cd40uh020beps" path="res://UI/Cards/CardGrid/card_grid.tscn" id="4_cgrid"]
 
 [node name="Combat" type="Control" unique_id=276766863]
 layout_mode = 3
@@ -16,42 +17,134 @@ script = ExtResource("1_vj48t")
 
 [node name="MainVBox" type="VBoxContainer" parent="." unique_id=1678207089]
 layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="TopBar" parent="MainVBox" unique_id=1820153679 instance=ExtResource("2_tppsp")]
 layout_mode = 2
 
 [node name="BattleArea" type="HBoxContainer" parent="MainVBox" unique_id=823301043]
 layout_mode = 2
+size_flags_vertical = 3
 
 [node name="MapArea" type="Control" parent="MainVBox/BattleArea" unique_id=24900826]
 layout_mode = 2
+size_flags_horizontal = 3
 script = ExtResource("2_h3bse")
 
 [node name="SidePanel" type="Panel" parent="MainVBox/BattleArea" unique_id=155049453]
+custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 
 [node name="MessageLog" type="RichTextLabel" parent="MainVBox/BattleArea/SidePanel" unique_id=1622629305]
-custom_minimum_size = Vector2(500, 100)
 layout_mode = 0
-offset_left = -4.0
-offset_top = 35.0
-offset_right = 496.0
-offset_bottom = 135.0
-grow_vertical = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="HandSections" type="HBoxContainer" parent="MainVBox" unique_id=1348213397]
+[node name="HandArea" type="HBoxContainer" parent="MainVBox" unique_id=200000001]
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="DrawPileButton" type="Button" parent="MainVBox/HandArea" unique_id=200000010]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Mazo (0)"
+
+[node name="HandSection" parent="MainVBox/HandArea" unique_id=386295756 instance=ExtResource("3_vvyul")]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DiscardPileButton" type="Button" parent="MainVBox/HandArea" unique_id=200000011]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Descarte (0)"
+
+[node name="EndMoveButton" type="Button" parent="MainVBox/HandArea" unique_id=200000012]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Fin movimiento"
+visible = false
+
+[node name="PilePopup" type="Panel" parent="." unique_id=300000001]
+layout_mode = 0
+anchor_left = 0.1
+anchor_top = 0.05
+anchor_right = 0.9
+anchor_bottom = 0.95
+grow_horizontal = 2
+grow_vertical = 2
+visible = false
+
+[node name="VBox" type="VBoxContainer" parent="PilePopup" unique_id=300000002]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Header" type="HBoxContainer" parent="PilePopup/VBox" unique_id=300000003]
 layout_mode = 2
 
-[node name="MovementSection" parent="MainVBox/HandSections" unique_id=386295756 instance=ExtResource("3_vvyul")]
+[node name="PopupTitle" type="Label" parent="PilePopup/VBox/Header" unique_id=300000004]
 layout_mode = 2
+size_flags_horizontal = 3
+text = "Mazo"
 
-[node name="AttackSection" parent="MainVBox/HandSections" unique_id=1210102193 instance=ExtResource("3_vvyul")]
+[node name="CloseButton" type="Button" parent="PilePopup/VBox/Header" unique_id=300000005]
 layout_mode = 2
+text = "X"
 
-[node name="BlockSection" parent="MainVBox/HandSections" unique_id=1478647015 instance=ExtResource("3_vvyul")]
+[node name="CardGrid" parent="PilePopup/VBox" unique_id=300000006 instance=ExtResource("4_cgrid")]
 layout_mode = 2
+size_flags_vertical = 3
 
-[node name="UltimateSection" parent="MainVBox/HandSections" unique_id=1108271054 instance=ExtResource("3_vvyul")]
+[node name="ConfirmPopup" type="Panel" parent="." unique_id=400000001]
+layout_mode = 0
+anchor_left = 0.35
+anchor_top = 0.38
+anchor_right = 0.65
+anchor_bottom = 0.62
+grow_horizontal = 2
+grow_vertical = 2
+visible = false
+
+[node name="VBox" type="VBoxContainer" parent="ConfirmPopup" unique_id=400000002]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label" type="Label" parent="ConfirmPopup/VBox" unique_id=400000003]
 layout_mode = 2
+size_flags_vertical = 3
+horizontal_alignment = 1
+text = "Confirmar acción"
+
+[node name="Buttons" type="HBoxContainer" parent="ConfirmPopup/VBox" unique_id=400000004]
+layout_mode = 2
+alignment = 1
+
+[node name="YesButton" type="Button" parent="ConfirmPopup/VBox/Buttons" unique_id=400000005]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+text = "Sí"
+
+[node name="NoButton" type="Button" parent="ConfirmPopup/VBox/Buttons" unique_id=400000006]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+text = "No"
+
+[node name="FinButton" type="Button" parent="ConfirmPopup/VBox/Buttons" unique_id=400000007]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "Terminar"
+visible = false

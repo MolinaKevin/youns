@@ -10,8 +10,20 @@ func _ready() -> void:
 	player_save = PlayerSaveData.new()
 
 	# Mock para probar
-	player_save.owned_card_ids = ["step", "dash", "strike"]
-	player_save.equipped_deck_ids = ["step", "strike"]
+	player_save.owned_card_ids = ["step", "dash", "strike", "slash", "block", "meteor", "arrow", "snipe", "grenade"]
+	player_save.equipped_deck_ids = [
+		"step", "step", "step",
+		"dash", "dash",
+		"strike", "strike", "strike",
+		"slash", "slash",
+		"block", "block", "block",
+		"meteor", "meteor",
+		"arrow", "arrow", "arrow",
+		"snipe", "snipe",
+		"grenade", "grenade",
+		"bear_trap", "bear_trap",
+		"spike_trap", "spike_trap",
+	]
 
 	print("GameState loaded")
 	print("owned ids in GameState: ", player_save.owned_card_ids)

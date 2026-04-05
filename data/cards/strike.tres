@@ -1,16 +1,16 @@
 [gd_resource type="Resource" script_class="CardData" format=3 uid="uid://f2utw8a7pbhh"]
 
 [ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_j7hgg"]
-
-[sub_resource type="Texture2DRD" id="Texture2DRD_3tsyl"]
+[ext_resource type="Texture2D" uid="uid://dvv55f4ccin7i" path="res://assets/cards/v2_1.png" id="2_j7hgg"]
 
 [resource]
 script = ExtResource("1_j7hgg")
 id = "strike"
 name = "Strike"
+description = "Strike a nearby enemy for 6 damage."
 cost = 1
 card_type = "melee_attack"
-range = 1
+card_range = 1
 damage = 6
-image = SubResource("Texture2DRD_3tsyl")
+image = ExtResource("2_j7hgg")
 metadata/_custom_type_script = "uid://cb2fptd8ugdit"

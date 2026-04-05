@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="CardData" format=3 uid="uid://cvyrobhrgs5aa"]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_grenade"]
+[ext_resource type="Texture2D" uid="uid://c1osu43u6meov" path="res://assets/cards/v2_4.png" id="2_grenade"]
+
+[resource]
+script = ExtResource("1_grenade")
+id = "grenade"
+name = "Grenade"
+description = "Throw a grenade that bounces forward. Bounce coefficient: 0.4."
+cost = 2
+card_type = "grenade"
+card_range = 3
+damage = 15
+bounce = 0.4
+throw_range = 15
+image = ExtResource("2_grenade")
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"

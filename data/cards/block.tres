@@ -1,14 +1,15 @@
 [gd_resource type="Resource" script_class="CardData" format=3 uid="uid://2ywbhfjpjjer"]
 
 [ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_h1rc3"]
-
-[sub_resource type="Texture2DRD" id="Texture2DRD_3tsyl"]
+[ext_resource type="Texture2D" uid="uid://ceoegcr6sfihl" path="res://assets/cards/v2_2.png" id="2_h1rc3"]
 
 [resource]
 script = ExtResource("1_h1rc3")
 id = "block"
 name = "Block"
+description = "Gain block to absorb incoming damage."
 cost = 1
 card_type = "block"
-image = SubResource("Texture2DRD_3tsyl")
+block_amount = 5
+image = ExtResource("2_h1rc3")
 metadata/_custom_type_script = "uid://cb2fptd8ugdit"

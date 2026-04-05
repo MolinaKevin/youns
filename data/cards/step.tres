@@ -1,15 +1,15 @@
 [gd_resource type="Resource" script_class="CardData" format=3 uid="uid://xcfi1xf80dtk"]
 
 [ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_3tsyl"]
-
-[sub_resource type="Texture2DRD" id="Texture2DRD_3tsyl"]
+[ext_resource type="Texture2D" uid="uid://b6hagdwp4001o" path="res://assets/cards/v2_3.png" id="2_3tsyl"]
 
 [resource]
 script = ExtResource("1_3tsyl")
 id = "step"
 name = "Step"
+description = "Move a short distance."
 cost = 1
 card_type = "move"
-card_range = 10
-image = SubResource("Texture2DRD_3tsyl")
+card_range = 30
+image = ExtResource("2_3tsyl")
 metadata/_custom_type_script = "uid://cb2fptd8ugdit"

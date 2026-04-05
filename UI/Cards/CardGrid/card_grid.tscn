@@ -16,4 +16,5 @@ size_flags_horizontal = 3
 
 [node name="GridContainer" type="GridContainer" parent="ScrollContainer" unique_id=995286805]
 layout_mode = 2
+size_flags_horizontal = 0
 columns = 5
