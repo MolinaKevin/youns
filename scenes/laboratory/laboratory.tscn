@@ -1,0 +1,237 @@
+[gd_scene format=3 uid="uid://laboratory_scene"]
+
+[ext_resource type="Script" path="res://scenes/laboratory/laboratory.gd" id="1_labscr"]
+
+[node name="Laboratory" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_labscr")
+
+[node name="HBox" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="LocationPanel" type="Panel" parent="HBox"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+
+[node name="LocationList" type="VBoxContainer" parent="HBox/LocationPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 0
+
+[node name="MainArea" type="VBoxContainer" parent="HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 0
+
+[node name="TopBar" type="HBoxContainer" parent="HBox/MainArea"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+
+[node name="Columns" type="HBoxContainer" parent="HBox/MainArea"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 4
+
+[node name="InstantColumn" type="Panel" parent="HBox/MainArea/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+visible = false
+
+[node name="VBox" type="VBoxContainer" parent="HBox/MainArea/Columns/InstantColumn"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 4
+
+[node name="Header" type="Label" parent="HBox/MainArea/Columns/InstantColumn/VBox"]
+layout_mode = 2
+horizontal_alignment = 1
+text = "Instant"
+
+[node name="Separator" type="HSeparator" parent="HBox/MainArea/Columns/InstantColumn/VBox"]
+layout_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="HBox/MainArea/Columns/InstantColumn/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="RecipeList" type="VBoxContainer" parent="HBox/MainArea/Columns/InstantColumn/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="LoopColumn" type="Panel" parent="HBox/MainArea/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+visible = false
+
+[node name="VBox" type="VBoxContainer" parent="HBox/MainArea/Columns/LoopColumn"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 4
+
+[node name="Header" type="Label" parent="HBox/MainArea/Columns/LoopColumn/VBox"]
+layout_mode = 2
+horizontal_alignment = 1
+text = "Loop"
+
+[node name="Separator" type="HSeparator" parent="HBox/MainArea/Columns/LoopColumn/VBox"]
+layout_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="HBox/MainArea/Columns/LoopColumn/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="RecipeList" type="VBoxContainer" parent="HBox/MainArea/Columns/LoopColumn/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="UpgradeColumn" type="Panel" parent="HBox/MainArea/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+visible = false
+
+[node name="VBox" type="VBoxContainer" parent="HBox/MainArea/Columns/UpgradeColumn"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 4
+
+[node name="Header" type="Label" parent="HBox/MainArea/Columns/UpgradeColumn/VBox"]
+layout_mode = 2
+horizontal_alignment = 1
+text = "Upgrade"
+
+[node name="Separator" type="HSeparator" parent="HBox/MainArea/Columns/UpgradeColumn/VBox"]
+layout_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="HBox/MainArea/Columns/UpgradeColumn/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="RecipeList" type="VBoxContainer" parent="HBox/MainArea/Columns/UpgradeColumn/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="NextColumn" type="Panel" parent="HBox/MainArea/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+visible = false
+
+[node name="VBox" type="VBoxContainer" parent="HBox/MainArea/Columns/NextColumn"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 4
+
+[node name="Header" type="Label" parent="HBox/MainArea/Columns/NextColumn/VBox"]
+layout_mode = 2
+horizontal_alignment = 1
+text = "Next"
+
+[node name="Separator" type="HSeparator" parent="HBox/MainArea/Columns/NextColumn/VBox"]
+layout_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="HBox/MainArea/Columns/NextColumn/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="RecipeList" type="VBoxContainer" parent="HBox/MainArea/Columns/NextColumn/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="DungeonColumn" type="Panel" parent="HBox/MainArea/Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+visible = false
+
+[node name="VBox" type="VBoxContainer" parent="HBox/MainArea/Columns/DungeonColumn"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 4
+
+[node name="Header" type="Label" parent="HBox/MainArea/Columns/DungeonColumn/VBox"]
+layout_mode = 2
+horizontal_alignment = 1
+text = "Dungeon"
+
+[node name="Separator" type="HSeparator" parent="HBox/MainArea/Columns/DungeonColumn/VBox"]
+layout_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="HBox/MainArea/Columns/DungeonColumn/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="RecipeList" type="VBoxContainer" parent="HBox/MainArea/Columns/DungeonColumn/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="OutputPanel" type="Panel" parent="HBox"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="HBox/OutputPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 4
+
+[node name="Header" type="Label" parent="HBox/OutputPanel/VBox"]
+layout_mode = 2
+horizontal_alignment = 1
+text = "Generado"
+
+[node name="Separator" type="HSeparator" parent="HBox/OutputPanel/VBox"]
+layout_mode = 2
+
+[node name="Scroll" type="ScrollContainer" parent="HBox/OutputPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="OutputList" type="VBoxContainer" parent="HBox/OutputPanel/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="TakeAllButton" type="Button" parent="HBox/OutputPanel/VBox"]
+layout_mode = 2
+text = "Sacar todo"

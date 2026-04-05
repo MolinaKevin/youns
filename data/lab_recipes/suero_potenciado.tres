@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1_labrecipe"]
+
+[resource]
+script = ExtResource("1_labrecipe")
+id = "suero_potenciado"
+recipe_name = "Suero Potenciado"
+description = "Combina vitalidad y defensas en un suero de alto impacto."
+craft_time = 5.0
+location = "lab"
+action_type = "upgrade"
+reward = {"type": "max_hp", "value": 25}
+ingredients = [{"id": "suero_vitalidad", "amount": 2}, {"id": "suero_defensas", "amount": 1}]
