@@ -94,7 +94,7 @@ func _clear_notification(location: String) -> void:
 func _refresh_columns() -> void:
 	for action_type in ACTION_TYPES:
 		var column: Panel = columns[action_type]
-		var recipe_list := column.get_node("VBox/Scroll/RecipeList")
+		var recipe_list: VBoxContainer = column.recipe_list
 		for child in recipe_list.get_children():
 			child.queue_free()
 
