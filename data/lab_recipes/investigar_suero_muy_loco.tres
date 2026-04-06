@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1_labrecipe"]
+
+[resource]
+script = ExtResource("1_labrecipe")
+id = "investigar_suero_muy_loco"
+recipe_name = "Investigar Suero Muy Loco"
+description = "Estudia la fórmula del Suero Muy Loco."
+craft_time = 2.0
+location = "lab"
+action_type = "upgrade"
+reward = {"type": "unlock_recipe", "id": "suero_muy_loco"}
+extra_rewards = [{"type": "item", "id": "suero_muy_loco", "amount": 1}]
+ingredients = [{"id": "suero_loco", "amount": 2}, {"id": "suero_vitalidad", "amount": 1}]

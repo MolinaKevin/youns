@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1_labrecipe"]
+
+[resource]
+script = ExtResource("1_labrecipe")
+id = "suero_muy_loco"
+recipe_name = "Mezclar Suero Muy Loco"
+item_name = "Suero Muy Loco"
+description = "Una mezcla extremadamente inestable."
+craft_time = 1.0
+location = "city"
+action_type = "instant"
+reward = {"type": "item", "id": "suero_muy_loco", "amount": 1}
+ingredients = [{"id": "suero_loco", "amount": 2}, {"id": "suero_vitalidad", "amount": 1}]
+needs_research = true

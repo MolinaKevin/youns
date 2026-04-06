@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://laboratory_scene"]
 
 [ext_resource type="Script" path="res://scenes/laboratory/laboratory.gd" id="1_labscr"]
+[ext_resource type="Script" path="res://scenes/laboratory/tech_tree_view.gd" id="2_techtree"]
 
 [node name="Laboratory" type="Control"]
 layout_mode = 3
@@ -11,7 +12,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_labscr")
 
-[node name="HBox" type="HBoxContainer" parent="."]
+[node name="RootVBox" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -20,11 +21,32 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
 
-[node name="LocationPanel" type="Panel" parent="HBox"]
+[node name="TopBar" type="HBoxContainer" parent="RootVBox"]
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="RecipesButton" type="Button" parent="RootVBox/TopBar"]
+layout_mode = 2
+toggle_mode = true
+button_pressed = true
+text = "Recetas"
+
+[node name="TechTreeButton" type="Button" parent="RootVBox/TopBar"]
+layout_mode = 2
+toggle_mode = true
+text = "Árbol de Tecnologías"
+
+[node name="ContentHBox" type="HBoxContainer" parent="RootVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+
+[node name="LocationPanel" type="Panel" parent="RootVBox/ContentHBox"]
 custom_minimum_size = Vector2(150, 0)
 layout_mode = 2
 
-[node name="LocationList" type="VBoxContainer" parent="HBox/LocationPanel"]
+[node name="LocationList" type="VBoxContainer" parent="RootVBox/ContentHBox/LocationPanel"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -33,26 +55,22 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 0
 
-[node name="MainArea" type="VBoxContainer" parent="HBox"]
+[node name="MainArea" type="VBoxContainer" parent="RootVBox/ContentHBox"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 0
 
-[node name="TopBar" type="HBoxContainer" parent="HBox/MainArea"]
-custom_minimum_size = Vector2(0, 40)
-layout_mode = 2
-
-[node name="Columns" type="HBoxContainer" parent="HBox/MainArea"]
+[node name="Columns" type="HBoxContainer" parent="RootVBox/ContentHBox/MainArea"]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 4
 
-[node name="InstantColumn" type="Panel" parent="HBox/MainArea/Columns"]
+[node name="InstantColumn" type="Panel" parent="RootVBox/ContentHBox/MainArea/Columns"]
 layout_mode = 2
 size_flags_horizontal = 3
 visible = false
 
-[node name="VBox" type="VBoxContainer" parent="HBox/MainArea/Columns/InstantColumn"]
+[node name="VBox" type="VBoxContainer" parent="RootVBox/ContentHBox/MainArea/Columns/InstantColumn"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -61,29 +79,29 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 4
 
-[node name="Header" type="Label" parent="HBox/MainArea/Columns/InstantColumn/VBox"]
+[node name="Header" type="Label" parent="RootVBox/ContentHBox/MainArea/Columns/InstantColumn/VBox"]
 layout_mode = 2
 horizontal_alignment = 1
 text = "Instant"
 
-[node name="Separator" type="HSeparator" parent="HBox/MainArea/Columns/InstantColumn/VBox"]
+[node name="Separator" type="HSeparator" parent="RootVBox/ContentHBox/MainArea/Columns/InstantColumn/VBox"]
 layout_mode = 2
 
-[node name="Scroll" type="ScrollContainer" parent="HBox/MainArea/Columns/InstantColumn/VBox"]
+[node name="Scroll" type="ScrollContainer" parent="RootVBox/ContentHBox/MainArea/Columns/InstantColumn/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="RecipeList" type="VBoxContainer" parent="HBox/MainArea/Columns/InstantColumn/VBox/Scroll"]
+[node name="RecipeList" type="VBoxContainer" parent="RootVBox/ContentHBox/MainArea/Columns/InstantColumn/VBox/Scroll"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="LoopColumn" type="Panel" parent="HBox/MainArea/Columns"]
+[node name="LoopColumn" type="Panel" parent="RootVBox/ContentHBox/MainArea/Columns"]
 layout_mode = 2
 size_flags_horizontal = 3
 visible = false
 
-[node name="VBox" type="VBoxContainer" parent="HBox/MainArea/Columns/LoopColumn"]
+[node name="VBox" type="VBoxContainer" parent="RootVBox/ContentHBox/MainArea/Columns/LoopColumn"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -92,29 +110,29 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 4
 
-[node name="Header" type="Label" parent="HBox/MainArea/Columns/LoopColumn/VBox"]
+[node name="Header" type="Label" parent="RootVBox/ContentHBox/MainArea/Columns/LoopColumn/VBox"]
 layout_mode = 2
 horizontal_alignment = 1
 text = "Loop"
 
-[node name="Separator" type="HSeparator" parent="HBox/MainArea/Columns/LoopColumn/VBox"]
+[node name="Separator" type="HSeparator" parent="RootVBox/ContentHBox/MainArea/Columns/LoopColumn/VBox"]
 layout_mode = 2
 
-[node name="Scroll" type="ScrollContainer" parent="HBox/MainArea/Columns/LoopColumn/VBox"]
+[node name="Scroll" type="ScrollContainer" parent="RootVBox/ContentHBox/MainArea/Columns/LoopColumn/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="RecipeList" type="VBoxContainer" parent="HBox/MainArea/Columns/LoopColumn/VBox/Scroll"]
+[node name="RecipeList" type="VBoxContainer" parent="RootVBox/ContentHBox/MainArea/Columns/LoopColumn/VBox/Scroll"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="UpgradeColumn" type="Panel" parent="HBox/MainArea/Columns"]
+[node name="UpgradeColumn" type="Panel" parent="RootVBox/ContentHBox/MainArea/Columns"]
 layout_mode = 2
 size_flags_horizontal = 3
 visible = false
 
-[node name="VBox" type="VBoxContainer" parent="HBox/MainArea/Columns/UpgradeColumn"]
+[node name="VBox" type="VBoxContainer" parent="RootVBox/ContentHBox/MainArea/Columns/UpgradeColumn"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -123,29 +141,29 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 4
 
-[node name="Header" type="Label" parent="HBox/MainArea/Columns/UpgradeColumn/VBox"]
+[node name="Header" type="Label" parent="RootVBox/ContentHBox/MainArea/Columns/UpgradeColumn/VBox"]
 layout_mode = 2
 horizontal_alignment = 1
 text = "Upgrade"
 
-[node name="Separator" type="HSeparator" parent="HBox/MainArea/Columns/UpgradeColumn/VBox"]
+[node name="Separator" type="HSeparator" parent="RootVBox/ContentHBox/MainArea/Columns/UpgradeColumn/VBox"]
 layout_mode = 2
 
-[node name="Scroll" type="ScrollContainer" parent="HBox/MainArea/Columns/UpgradeColumn/VBox"]
+[node name="Scroll" type="ScrollContainer" parent="RootVBox/ContentHBox/MainArea/Columns/UpgradeColumn/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="RecipeList" type="VBoxContainer" parent="HBox/MainArea/Columns/UpgradeColumn/VBox/Scroll"]
+[node name="RecipeList" type="VBoxContainer" parent="RootVBox/ContentHBox/MainArea/Columns/UpgradeColumn/VBox/Scroll"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="NextColumn" type="Panel" parent="HBox/MainArea/Columns"]
+[node name="NextColumn" type="Panel" parent="RootVBox/ContentHBox/MainArea/Columns"]
 layout_mode = 2
 size_flags_horizontal = 3
 visible = false
 
-[node name="VBox" type="VBoxContainer" parent="HBox/MainArea/Columns/NextColumn"]
+[node name="VBox" type="VBoxContainer" parent="RootVBox/ContentHBox/MainArea/Columns/NextColumn"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -154,29 +172,29 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 4
 
-[node name="Header" type="Label" parent="HBox/MainArea/Columns/NextColumn/VBox"]
+[node name="Header" type="Label" parent="RootVBox/ContentHBox/MainArea/Columns/NextColumn/VBox"]
 layout_mode = 2
 horizontal_alignment = 1
 text = "Next"
 
-[node name="Separator" type="HSeparator" parent="HBox/MainArea/Columns/NextColumn/VBox"]
+[node name="Separator" type="HSeparator" parent="RootVBox/ContentHBox/MainArea/Columns/NextColumn/VBox"]
 layout_mode = 2
 
-[node name="Scroll" type="ScrollContainer" parent="HBox/MainArea/Columns/NextColumn/VBox"]
+[node name="Scroll" type="ScrollContainer" parent="RootVBox/ContentHBox/MainArea/Columns/NextColumn/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="RecipeList" type="VBoxContainer" parent="HBox/MainArea/Columns/NextColumn/VBox/Scroll"]
+[node name="RecipeList" type="VBoxContainer" parent="RootVBox/ContentHBox/MainArea/Columns/NextColumn/VBox/Scroll"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="DungeonColumn" type="Panel" parent="HBox/MainArea/Columns"]
+[node name="DungeonColumn" type="Panel" parent="RootVBox/ContentHBox/MainArea/Columns"]
 layout_mode = 2
 size_flags_horizontal = 3
 visible = false
 
-[node name="VBox" type="VBoxContainer" parent="HBox/MainArea/Columns/DungeonColumn"]
+[node name="VBox" type="VBoxContainer" parent="RootVBox/ContentHBox/MainArea/Columns/DungeonColumn"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -185,28 +203,48 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 4
 
-[node name="Header" type="Label" parent="HBox/MainArea/Columns/DungeonColumn/VBox"]
+[node name="Header" type="Label" parent="RootVBox/ContentHBox/MainArea/Columns/DungeonColumn/VBox"]
 layout_mode = 2
 horizontal_alignment = 1
 text = "Dungeon"
 
-[node name="Separator" type="HSeparator" parent="HBox/MainArea/Columns/DungeonColumn/VBox"]
+[node name="Separator" type="HSeparator" parent="RootVBox/ContentHBox/MainArea/Columns/DungeonColumn/VBox"]
 layout_mode = 2
 
-[node name="Scroll" type="ScrollContainer" parent="HBox/MainArea/Columns/DungeonColumn/VBox"]
+[node name="Scroll" type="ScrollContainer" parent="RootVBox/ContentHBox/MainArea/Columns/DungeonColumn/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="RecipeList" type="VBoxContainer" parent="HBox/MainArea/Columns/DungeonColumn/VBox/Scroll"]
+[node name="RecipeList" type="VBoxContainer" parent="RootVBox/ContentHBox/MainArea/Columns/DungeonColumn/VBox/Scroll"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="OutputPanel" type="Panel" parent="HBox"]
+[node name="TechTreeView" type="Control" parent="RootVBox/ContentHBox/MainArea"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+visible = false
+
+[node name="Scroll" type="ScrollContainer" parent="RootVBox/ContentHBox/MainArea/TechTreeView"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TreeCanvas" type="Control" parent="RootVBox/ContentHBox/MainArea/TechTreeView/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("2_techtree")
+
+[node name="OutputPanel" type="Panel" parent="RootVBox/ContentHBox"]
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 
-[node name="VBox" type="VBoxContainer" parent="HBox/OutputPanel"]
+[node name="VBox" type="VBoxContainer" parent="RootVBox/ContentHBox/OutputPanel"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -215,23 +253,23 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 4
 
-[node name="Header" type="Label" parent="HBox/OutputPanel/VBox"]
+[node name="Header" type="Label" parent="RootVBox/ContentHBox/OutputPanel/VBox"]
 layout_mode = 2
 horizontal_alignment = 1
 text = "Generado"
 
-[node name="Separator" type="HSeparator" parent="HBox/OutputPanel/VBox"]
+[node name="Separator" type="HSeparator" parent="RootVBox/ContentHBox/OutputPanel/VBox"]
 layout_mode = 2
 
-[node name="Scroll" type="ScrollContainer" parent="HBox/OutputPanel/VBox"]
+[node name="Scroll" type="ScrollContainer" parent="RootVBox/ContentHBox/OutputPanel/VBox"]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="OutputList" type="VBoxContainer" parent="HBox/OutputPanel/VBox/Scroll"]
+[node name="OutputList" type="VBoxContainer" parent="RootVBox/ContentHBox/OutputPanel/VBox/Scroll"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 4
 
-[node name="TakeAllButton" type="Button" parent="HBox/OutputPanel/VBox"]
+[node name="TakeAllButton" type="Button" parent="RootVBox/ContentHBox/OutputPanel/VBox"]
 layout_mode = 2
 text = "Sacar todo"

@@ -7,3 +7,6 @@ class_name PlayerSaveData
 @export var gold: int = 0
 @export var unlocked_relic_ids: Array[String] = []
 @export var player_level: int = 1
+
+@export var unlocked_recipe_ids: Array[String] = []
+@export var completed_recipe_ids: Array[String] = []

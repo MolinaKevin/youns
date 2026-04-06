@@ -3,22 +3,44 @@ extends Control
 const RecipeEntry := preload("res://scenes/laboratory/recipe_entry.tscn")
 const ACTION_TYPES := ["instant", "loop", "upgrade", "next", "dungeon"]
 
-@onready var location_list = $HBox/LocationPanel/LocationList
-@onready var output_list = $HBox/OutputPanel/VBox/Scroll/OutputList
-@onready var take_all_button = $HBox/OutputPanel/VBox/TakeAllButton
+@onready var location_list = $RootVBox/ContentHBox/LocationPanel/LocationList
+@onready var output_list = $RootVBox/ContentHBox/OutputPanel/VBox/Scroll/OutputList
+@onready var take_all_button = $RootVBox/ContentHBox/OutputPanel/VBox/TakeAllButton
+@onready var recipes_button = $RootVBox/TopBar/RecipesButton
+@onready var tech_tree_button = $RootVBox/TopBar/TechTreeButton
+@onready var columns_container = $RootVBox/ContentHBox/MainArea/Columns
+@onready var tech_tree_view = $RootVBox/ContentHBox/MainArea/TechTreeView
 @onready var columns := {
-	"instant": $HBox/MainArea/Columns/InstantColumn,
-	"loop":    $HBox/MainArea/Columns/LoopColumn,
-	"upgrade": $HBox/MainArea/Columns/UpgradeColumn,
-	"next":    $HBox/MainArea/Columns/NextColumn,
-	"dungeon": $HBox/MainArea/Columns/DungeonColumn,
+	"instant": $RootVBox/ContentHBox/MainArea/Columns/InstantColumn,
+	"loop":    $RootVBox/ContentHBox/MainArea/Columns/LoopColumn,
+	"upgrade": $RootVBox/ContentHBox/MainArea/Columns/UpgradeColumn,
+	"next":    $RootVBox/ContentHBox/MainArea/Columns/NextColumn,
+	"dungeon": $RootVBox/ContentHBox/MainArea/Columns/DungeonColumn,
 }
 
 var selected_location := ""
+var location_buttons: Dictionary = {}  # location -> Button
+var notified_locations: Array = []
 
 func _ready() -> void:
 	take_all_button.pressed.connect(_on_take_all)
+	recipes_button.pressed.connect(func(): _set_view("recipes"))
+	tech_tree_button.pressed.connect(func(): _set_view("tech_tree"))
 	LaboratoryState.recipe_completed.connect(_on_recipe_completed)
+	LaboratoryState.recipe_unlocked.connect(_on_recipe_unlocked)
+	LaboratoryState.pending_output_changed.connect(_sync_pending_output)
+	LaboratoryState.recipes_loaded.connect(_on_recipes_loaded)
+
+func _set_view(view: String) -> void:
+	var is_recipes := view == "recipes"
+	columns_container.visible = is_recipes
+	tech_tree_view.visible = not is_recipes
+	recipes_button.button_pressed = is_recipes
+	tech_tree_button.button_pressed = not is_recipes
+	$RootVBox/ContentHBox/OutputPanel.visible = is_recipes
+	$RootVBox/ContentHBox/LocationPanel.visible = is_recipes
+
+func _on_recipes_loaded() -> void:
 	_build_location_sidebar()
 	_sync_pending_output()
 
@@ -27,6 +49,7 @@ func _ready() -> void:
 func _build_location_sidebar() -> void:
 	for child in location_list.get_children():
 		child.queue_free()
+	location_buttons.clear()
 	var seen: Array = []
 	for recipe in LaboratoryState.all_recipes:
 		if recipe.location not in seen:
@@ -43,12 +66,28 @@ func _add_location_button(location: String) -> void:
 	btn.size_flags_horizontal = Control.SIZE_FILL
 	btn.pressed.connect(func(): _select_location(location))
 	location_list.add_child(btn)
+	location_buttons[location] = btn
 
 func _select_location(location: String) -> void:
 	selected_location = location
-	for btn in location_list.get_children():
-		btn.button_pressed = btn.text.to_lower() == location.to_lower()
+	for loc in location_buttons:
+		location_buttons[loc].button_pressed = (loc == location)
+	_clear_notification(location)
 	_refresh_columns()
+
+func _set_notification(location: String) -> void:
+	if location == selected_location or notified_locations.has(location):
+		return
+	notified_locations.append(location)
+	if location_buttons.has(location):
+		location_buttons[location].text = location.capitalize() + "  !"
+
+func _clear_notification(location: String) -> void:
+	if not notified_locations.has(location):
+		return
+	notified_locations.erase(location)
+	if location_buttons.has(location):
+		location_buttons[location].text = location.capitalize()
 
 # ── Columnas ──────────────────────────────────────────────────────────────────
 
@@ -62,7 +101,9 @@ func _refresh_columns() -> void:
 		column.visible = LaboratoryState.is_column_unlocked(selected_location, action_type)
 
 		var filtered := LaboratoryState.all_recipes.filter(
-			func(r): return r.location == selected_location and r.action_type == action_type
+			func(r): return r.location == selected_location and r.action_type == action_type \
+				and LaboratoryState.is_recipe_unlocked(r.id) \
+				and not LaboratoryState.is_recipe_completed(r.id)
 		)
 
 		for recipe in filtered:
@@ -86,19 +127,25 @@ func _on_recipe_completed(_recipe: Resource) -> void:
 	_refresh_columns()
 	_sync_pending_output()
 
+func _on_recipe_unlocked(recipe: Resource) -> void:
+	_set_notification(recipe.location)
+	if recipe.location == selected_location:
+		_refresh_columns()
+
 func _sync_pending_output() -> void:
 	for child in output_list.get_children():
 		child.queue_free()
-	for item in LaboratoryState.pending_output:
+	for item_id in LaboratoryState.pending_output:
+		var entry: Dictionary = LaboratoryState.pending_output[item_id]
 		var label := Label.new()
-		label.text = item["name"]
+		label.text = "%s x%d" % [entry["name"], entry["count"]]
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD
 		output_list.add_child(label)
 
 func _on_take_all() -> void:
 	var taken := LaboratoryState.take_all_output()
-	for item in taken:
-		# TODO: agregar item["reward"] al inventario del jugador
+	for item_id in taken:
+		# TODO: agregar item al inventario del jugador (id: item_id, count: taken[item_id]["count"])
 		pass
 	for child in output_list.get_children():
 		child.queue_free()

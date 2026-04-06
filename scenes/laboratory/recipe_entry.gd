@@ -39,12 +39,16 @@ func setup(recipe: Resource) -> void:
 	_recipe = recipe
 	name_label.text = recipe.recipe_name
 	description_label.text = recipe.description
-	time_label.text = "%.0fs" % recipe.craft_time
+	time_label.text = "" if recipe.action_type == "instant" else "%.0fs" % recipe.craft_time
 
 	var parts: Array = []
 	for ing in recipe.ingredients:
 		parts.append("%s x%d" % [ing["id"], ing["amount"]])
-	ingredients_label.text = "Necesita: " + ", ".join(parts)
+	ingredients_label.text = "" if parts.is_empty() else "Necesita: " + ", ".join(parts)
+
+	if not recipe.ingredients.is_empty():
+		LaboratoryState.pending_output_changed.connect(_update_availability)
+		_update_availability()
 
 func set_active() -> void:
 	_tracking_progress = true
@@ -59,8 +63,16 @@ func set_paused(progress: float) -> void:
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if _recipe != null and not _tracking_progress:
+		if _recipe != null and not _tracking_progress and _is_available():
 			activate_requested.emit(_recipe)
+
+func _is_available() -> bool:
+	return LaboratoryState.recipe_progress.has(_recipe.id) or LaboratoryState.has_ingredients(_recipe)
+
+func _update_availability() -> void:
+	if _recipe == null or _recipe.ingredients.is_empty():
+		return
+	modulate = Color.WHITE if _is_available() else Color(0.5, 0.5, 0.5, 0.8)
 
 func _process(_delta: float) -> void:
 	if not _tracking_progress:

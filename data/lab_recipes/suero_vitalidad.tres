@@ -6,9 +6,10 @@
 script = ExtResource("1_labrecipe")
 id = "suero_vitalidad"
 recipe_name = "Suero de Vitalidad"
-description = "Aumenta el HP máximo del Youn."
-craft_time = 5.0
-location = "lab"
-action_type = "upgrade"
-reward = {"type": "max_hp", "value": 10}
-ingredients = [{"id": "extracto_verde", "amount": 2}, {"id": "cristal_rojo", "amount": 1}]
+description = "Produce un suero de vitalidad."
+craft_time = 1.0
+location = "city"
+action_type = "loop"
+reward = {"type": "item", "id": "suero_vitalidad", "amount": 1}
+ingredients = []
+starts_unlocked = true
