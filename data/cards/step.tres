@@ -10,6 +10,6 @@ name = "Step"
 description = "Move a short distance."
 cost = 1
 card_type = "move"
-card_range = 30
+card_range = 8
 image = ExtResource("2_3tsyl")
 metadata/_custom_type_script = "uid://cb2fptd8ugdit"

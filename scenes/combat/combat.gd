@@ -1,29 +1,32 @@
-extends Control
+extends Node
 
 const HAND_SIZE := 6
 
 const _CombatState = preload("res://scenes/combat/combat_state.gd")
 const _CombatPlayerActions = preload("res://scenes/combat/combat_player_actions.gd")
 const _CombatEnemyAI = preload("res://scenes/combat/combat_enemy_ai.gd")
+const _AiAction   = preload("res://data/enemies/ai_action.gd")
+const _AiStrategy = preload("res://data/enemies/ai_strategy.gd")
+const _EnemyData  = preload("res://data/enemies/enemy_data.gd")
 
-@onready var player_stats = $MainVBox/TopBar/PlayerStats
-@onready var enemy_intent_label = $MainVBox/TopBar/EnemyIntent
-@onready var move_mode_button = $MainVBox/TopBar/MoveModeButton
-@onready var end_turn_button = $MainVBox/TopBar/EndTurnButton
-@onready var message_log = $MainVBox/BattleArea/SidePanel/MessageLog
-@onready var map_area = $MainVBox/BattleArea/MapArea
-@onready var hand_section = $MainVBox/HandArea/HandSection
-@onready var draw_pile_button = $MainVBox/HandArea/DrawPileButton
-@onready var discard_pile_button = $MainVBox/HandArea/DiscardPileButton
-@onready var end_move_button = $MainVBox/HandArea/EndMoveButton
-@onready var pile_popup = $PilePopup
-@onready var pile_popup_title = $PilePopup/VBox/Header/PopupTitle
-@onready var pile_popup_grid = $PilePopup/VBox/CardGrid
-@onready var pile_close_button = $PilePopup/VBox/Header/CloseButton
-@onready var confirm_popup = $ConfirmPopup
-@onready var confirm_yes_button = $ConfirmPopup/VBox/Buttons/YesButton
-@onready var confirm_no_button = $ConfirmPopup/VBox/Buttons/NoButton
-@onready var confirm_fin_button = $ConfirmPopup/VBox/Buttons/FinButton
+@onready var player_stats = $UI/MainVBox/TopBar/PlayerStats
+@onready var enemy_intent_label = $UI/MainVBox/TopBar/EnemyIntent
+@onready var move_mode_button = $UI/MainVBox/TopBar/MoveModeButton
+@onready var end_turn_button = $UI/MainVBox/TopBar/EndTurnButton
+@onready var message_log = $UI/MainVBox/MiddleRow/SidePanel/MessageLog
+@onready var map_area = $CombatWorld/MapArea
+@onready var hand_section = $UI/MainVBox/HandArea/HandSection
+@onready var draw_pile_button = $UI/MainVBox/HandArea/DrawPileButton
+@onready var discard_pile_button = $UI/MainVBox/HandArea/DiscardPileButton
+@onready var end_move_button = $UI/MainVBox/HandArea/EndMoveButton
+@onready var pile_popup = $UI/PilePopup
+@onready var pile_popup_title = $UI/PilePopup/VBox/Header/PopupTitle
+@onready var pile_popup_grid = $UI/PilePopup/VBox/CardGrid
+@onready var pile_close_button = $UI/PilePopup/VBox/Header/CloseButton
+@onready var confirm_popup = $UI/ConfirmPopup
+@onready var confirm_yes_button = $UI/ConfirmPopup/VBox/Buttons/YesButton
+@onready var confirm_no_button = $UI/ConfirmPopup/VBox/Buttons/NoButton
+@onready var confirm_fin_button = $UI/ConfirmPopup/VBox/Buttons/FinButton
 
 var state
 var player_actions
@@ -31,11 +34,31 @@ var enemy_ai
 
 func _ready() -> void:
 	randomize()
+	var cam: Camera3D = $CombatWorld/Camera3D
+	cam.look_at_from_position(Vector3(-10.0, 35.0, 78.0), Vector3(30.0, 0.0, 30.0), Vector3.UP)
+
+	var env := Environment.new()
+	env.background_mode = Environment.BG_COLOR
+	env.background_color = Color(0.08, 0.08, 0.12)
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = Color(0.4, 0.4, 0.5)
+	env.ambient_light_energy = 0.8
+	var we := WorldEnvironment.new()
+	we.environment = env
+	$CombatWorld.add_child(we)
+
 	state = _CombatState.new()
 	player_actions = _CombatPlayerActions.new()
 	player_actions.setup(self, state)
+
+	var enemy_data: _EnemyData = load("res://data/enemies/goblin.tres")
+	state.enemy_hp     = enemy_data.max_hp
+	state.enemy_max_hp = enemy_data.max_hp
+	map_area.set_enemy_hp(state.enemy_hp)
+	map_area.setup_enemy(enemy_data.mesh, enemy_data.mesh_scale)
+
 	enemy_ai = _CombatEnemyAI.new()
-	enemy_ai.setup(self, state)
+	enemy_ai.setup(self, state, enemy_data.strategy)
 
 	end_turn_button.pressed.connect(_on_end_turn_pressed)
 	move_mode_button.toggled.connect(player_actions._on_move_mode_toggled)
@@ -47,8 +70,8 @@ func _ready() -> void:
 	confirm_fin_button.pressed.connect(player_actions._on_confirm_fin)
 	end_move_button.pressed.connect(player_actions._on_end_move_pressed)
 
-	if map_area.has_signal("tile_selected"):
-		map_area.tile_selected.connect(player_actions._on_map_tile_selected)
+	if map_area.has_signal("position_selected"):
+		map_area.position_selected.connect(player_actions._on_position_selected)
 
 	hand_section.set_title("Mano")
 	hand_section.card_selected.connect(player_actions._on_card_selected)
@@ -151,8 +174,16 @@ func update_ui() -> void:
 	match state.enemy_intent["type"]:
 		"attack":
 			enemy_intent_label.text = "Intent: Attack %d" % state.enemy_intent["value"]
+		"range_attack":
+			enemy_intent_label.text = "Intent: Shoot %d" % state.enemy_intent["value"]
 		"move":
 			enemy_intent_label.text = "Intent: Move"
+		"retreat":
+			enemy_intent_label.text = "Intent: Retreat"
+		"block":
+			enemy_intent_label.text = "Intent: Block %d" % state.enemy_intent["value"]
+		"wait":
+			enemy_intent_label.text = "Intent: Wait"
 
 func check_combat_end() -> bool:
 	if state.enemy_hp <= 0:

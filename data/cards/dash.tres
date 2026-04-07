@@ -10,6 +10,6 @@ name = "Dash"
 description = "Dash a long distance quickly."
 cost = 1
 card_type = "move"
-card_range = 50
+card_range = 13
 image = ExtResource("2_qywro")
 metadata/_custom_type_script = "uid://cb2fptd8ugdit"
