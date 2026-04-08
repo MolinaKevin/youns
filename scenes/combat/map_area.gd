@@ -214,7 +214,7 @@ func _show_smooth_circle(mi: MeshInstance3D, center: Vector2, radius: float, seg
 
 func _setup_actors() -> void:
 	_player_body = MeshInstance3D.new()
-	var pm = load("res://assets/Player/Player 1.obj")
+	var pm = load("res://assets/youns/Agumon PS1.obj")
 	if pm: _player_body.mesh = pm
 	_player_body.scale = Vector3(0.3, 0.3, 0.3)
 	add_child(_player_body)
