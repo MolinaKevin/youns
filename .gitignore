@@ -1,3 +1,11 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
+
+# Local editor / OS files
+.DS_Store
+Thumbs.db
+
+# Exported builds
+/beta.zip
+/beta-w.zip
