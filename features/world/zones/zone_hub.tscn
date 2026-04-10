@@ -20,12 +20,12 @@ transform = Transform3D(0.707, 0, -0.707, 0, 1, 0, 0.707, 0, 0.707, -18, 0, 18)
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 10, 0)
-light_energy = 1.2
+light_energy = 0.78
 shadow_enabled = true
 
 [node name="AmbientFill" type="DirectionalLight3D" parent="."]
 transform = Transform3D(-0.866, -0.2, -0.46, 0, 0.917, -0.4, 0.5, -0.346, -0.795, 0, 8, 0)
-light_energy = 0.3
+light_energy = 0.14
 
 [node name="SpawnPoint" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.0, 0)

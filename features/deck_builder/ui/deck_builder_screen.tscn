@@ -13,6 +13,15 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_jlnoy")
 
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.06, 0.08, 1)
+
 [node name="MarginContainer" type="MarginContainer" parent="." unique_id=293412836]
 layout_mode = 0
 anchor_right = 1.0

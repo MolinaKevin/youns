@@ -5,6 +5,8 @@ signal close_requested
 const RecipeEntry := preload("res://features/laboratory/scene/recipe_entry.tscn")
 const ACTION_TYPES := ["instant", "loop", "upgrade", "next", "dungeon"]
 
+@export var standalone_mode := true
+
 @onready var location_list = $RootVBox/ContentHBox/LocationPanel/LocationList
 @onready var output_list = $RootVBox/ContentHBox/OutputPanel/VBox/Scroll/OutputList
 @onready var take_all_button = $RootVBox/ContentHBox/OutputPanel/VBox/TakeAllButton
@@ -26,6 +28,10 @@ var location_buttons: Dictionary = {}  # location -> Button
 var notified_locations: Array = []
 
 func _ready() -> void:
+	if standalone_mode:
+		ZoneManager.set_world_visible(false)
+		PartyManager.set_party_visible(false)
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	take_all_button.pressed.connect(_on_take_all)
 	recipes_button.pressed.connect(func(): _set_view("recipes"))
 	tech_tree_button.pressed.connect(func(): _set_view("tech_tree"))

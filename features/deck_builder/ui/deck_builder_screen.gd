@@ -12,6 +12,9 @@ var current_deck: Array[String] = []
 var selected_card: CardData = null
 
 func _ready() -> void:
+	ZoneManager.set_world_visible(false)
+	PartyManager.set_party_visible(false)
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	owned_cards = _get_owned_cards()
 	current_deck = GameState.player_save.equipped_deck_ids.duplicate()
 

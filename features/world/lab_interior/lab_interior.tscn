@@ -56,6 +56,7 @@ visible = false
 
 [node name="Laboratory" parent="LabLayer" instance=ExtResource("5_lab")]
 visible = false
+standalone_mode = false
 
 [node name="ExitWarp" type="Area3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0.5)

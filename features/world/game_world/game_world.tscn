@@ -11,3 +11,56 @@ script = ExtResource("1_gw")
 [node name="MainMenu" parent="MenuLayer" instance=ExtResource("2_menu")]
 visible = false
 overlay_mode = true
+
+[node name="IntroLayer" type="CanvasLayer" parent="."]
+
+[node name="Backdrop" type="ColorRect" parent="IntroLayer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.03, 0.04, 0.05, 0.82)
+
+[node name="Panel" type="Panel" parent="IntroLayer"]
+layout_mode = 0
+anchor_left = 0.18
+anchor_top = 0.17
+anchor_right = 0.82
+anchor_bottom = 0.83
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="IntroLayer/Panel"]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="IntroLayer/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="IntroLayer/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Demo"
+horizontal_alignment = 1
+
+[node name="Body" type="RichTextLabel" parent="IntroLayer/Panel/Margin/VBox"]
+custom_minimum_size = Vector2(0, 220)
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+scroll_active = false
+
+[node name="Hint" type="Label" parent="IntroLayer/Panel/Margin/VBox"]
+layout_mode = 2
+text = "Enter o Espacio para continuar"
+horizontal_alignment = 1

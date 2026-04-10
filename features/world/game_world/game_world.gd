@@ -1,6 +1,29 @@
 extends Node3D
 
 @onready var menu: Control = $MenuLayer/MainMenu
+@onready var intro_layer: CanvasLayer = $IntroLayer
+@onready var intro_title: Label = $IntroLayer/Panel/Margin/VBox/Title
+@onready var intro_body: RichTextLabel = $IntroLayer/Panel/Margin/VBox/Body
+@onready var intro_hint: Label = $IntroLayer/Panel/Margin/VBox/Hint
+
+const INTRO_PAGES := [
+	{
+		"title": "Bienvenido",
+		"body": "[center]Esto es un demo corto youns.[/center]"
+	},
+	{
+		"title": "Moverse",
+		"body": "Usa [b]WASD[/b] para moverte.\nMueve la camara con el mouse.\nESC menu"
+	},
+	{
+		"title": "Enemigos",
+		"body": "Si un enemigo te toca, te intercepta y entras en combate.\n El sistema de combate es una suerte de deck builder tactico."
+	},
+	{
+		"title": "LAB",
+		"body": "Otra mecanica importante del juego va a ser una mecanica incremental.\nPodemos acceder a esto hablando con el npc en el lab."
+	}
+]
 
 func _ready() -> void:
 	ZoneManager.set_world_visible(true)
@@ -10,8 +33,11 @@ func _ready() -> void:
 	_setup_environment()
 	_setup_screen_fx()
 	_restore_after_combat()
+	_setup_intro()
 
 func _input(event: InputEvent) -> void:
+	if _handle_intro_input(event):
+		return
 	if event.is_action_pressed("ui_cancel") and ZoneManager._interior == null:
 		_toggle_menu()
 
@@ -24,14 +50,14 @@ func _toggle_menu() -> void:
 func _setup_environment() -> void:
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.45, 0.6, 0.85)
+	env.background_color = Color(0.28, 0.36, 0.5)
 	env.fog_enabled = true
-	env.fog_density = 0.015
-	env.fog_light_color = Color(0.55, 0.65, 0.78)
-	env.fog_light_energy = 1.0
+	env.fog_density = 0.02
+	env.fog_light_color = Color(0.38, 0.45, 0.55)
+	env.fog_light_energy = 0.55
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.35, 0.38, 0.5)
-	env.ambient_light_energy = 0.6
+	env.ambient_light_color = Color(0.22, 0.25, 0.32)
+	env.ambient_light_energy = 0.32
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
@@ -57,3 +83,47 @@ func _restore_after_combat() -> void:
 	PartyManager.youn.global_position = pos + Vector3(1.5, 0, 1.5)
 	PartyManager.youn.velocity = Vector3.ZERO
 	ZoneManager.resolve_pending_world_combat_victory()
+
+var _intro_index := 0
+var _intro_active := false
+
+func _setup_intro() -> void:
+	if GameState.combat_return_pending:
+		intro_layer.visible = false
+		return
+	_intro_active = true
+	_intro_index = 0
+	intro_layer.visible = true
+	PartyManager.camera_rig.enabled = false
+	PartyManager.player.set_physics_process(false)
+	PartyManager.youn.set_physics_process(false)
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_show_intro_page()
+
+func _show_intro_page() -> void:
+	var page: Dictionary = INTRO_PAGES[_intro_index]
+	intro_title.text = page["title"]
+	intro_body.text = page["body"]
+	intro_hint.text = "Enter o Espacio para continuar  (%d/%d)" % [_intro_index + 1, INTRO_PAGES.size()]
+
+func _handle_intro_input(event: InputEvent) -> bool:
+	if not _intro_active:
+		return false
+	if event.is_action_pressed("ui_accept") or (
+		event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE
+	):
+		_intro_index += 1
+		if _intro_index >= INTRO_PAGES.size():
+			_close_intro()
+		else:
+			_show_intro_page()
+		return true
+	return true
+
+func _close_intro() -> void:
+	_intro_active = false
+	intro_layer.visible = false
+	PartyManager.camera_rig.enabled = true
+	PartyManager.player.set_physics_process(true)
+	PartyManager.youn.set_physics_process(true)
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
