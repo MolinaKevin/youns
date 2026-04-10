@@ -6,6 +6,7 @@
 [ext_resource type="Script" uid="uid://70sgg88cyq53" path="res://features/world/lab_interior/face_player.gd" id="4_face"]
 [ext_resource type="PackedScene" path="res://features/laboratory/scene/laboratory.tscn" id="5_lab"]
 [ext_resource type="ArrayMesh" uid="uid://duh1oyddfvm5k" path="res://assets/models/Digimon World - Item Monitor.obj" id="6_terminal_mesh"]
+[ext_resource type="PackedScene" path="res://features/menus/main_menu/main_menu.tscn" id="7_menu"]
 
 [sub_resource type="CapsuleShape3D" id="2"]
 radius = 0.4
@@ -19,6 +20,9 @@ size = Vector3(2.5, 2.5, 1)
 
 [sub_resource type="BoxShape3D" id="4"]
 size = Vector3(1.3, 1.6, 1.0)
+
+[sub_resource type="SphereShape3D" id="5"]
+radius = 2.2
 
 [node name="LabInterior" type="Node3D" unique_id=2098669015]
 script = ExtResource("2_script")
@@ -53,7 +57,7 @@ shape = SubResource("3")
 [node name="Prompt" type="Label3D" parent="Monzaemon" unique_id=247662655]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
 visible = false
-text = "Hablar [Enter]"
+text = "Hablar [E]"
 
 [node name="AnalysisTerminal" type="StaticBody3D" parent="." unique_id=1613636142]
 transform = Transform3D(0.84021634, 0, -0.542251, 0, 1, 0, 0.542251, 0, 0.84021634, -5.045761, 0, -10.485559)
@@ -67,11 +71,28 @@ mesh = ExtResource("6_terminal_mesh")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
 shape = SubResource("4")
 
+[node name="InteractArea" type="Area3D" parent="AnalysisTerminal"]
+
+[node name="InteractCol" type="CollisionShape3D" parent="AnalysisTerminal/InteractArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("5")
+
+[node name="Prompt" type="Label3D" parent="AnalysisTerminal"]
+transform = Transform3D(0.84021634, 0, -0.542251, 0, 1, 0, 0.542251, 0, 0.84021634, 0, 2.2, 0)
+visible = false
+text = "Ver reloj [E]"
+
 [node name="LabLayer" type="CanvasLayer" parent="." unique_id=346435126]
 
 [node name="Laboratory" parent="LabLayer" unique_id=1087029400 instance=ExtResource("5_lab")]
 visible = false
 standalone_mode = false
+
+[node name="MenuLayer" type="CanvasLayer" parent="."]
+
+[node name="MainMenu" parent="MenuLayer" instance=ExtResource("7_menu")]
+visible = false
+overlay_mode = true
 
 [node name="ExitWarp" type="Area3D" parent="." unique_id=908768260]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0.5)

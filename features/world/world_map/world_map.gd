@@ -5,6 +5,10 @@ extends Node3D
 var _ps1_shader := preload("res://features/world/world_map/ps1_vertex.gdshader")
 
 func _ready() -> void:
+	GameState.set_clock_visible(GameState.has_persistent_clock_ui())
+	GameState.set_clock_paused(false)
+	GameState.set_youns_status_visible(GameState.has_persistent_care_ui())
+	PauseMenu.enabled = false
 	_setup_environment()
 	_setup_screen_fx()
 	_build_floor_collision()
@@ -17,12 +21,17 @@ func _on_lab_warp_entered(body: Node3D) -> void:
 		get_tree().change_scene_to_file.call_deferred("res://features/world/lab_interior/lab_interior.tscn")
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel"):
+	if _is_menu_pressed(event):
+		_toggle_menu()
+	elif _is_cancel_pressed(event) and menu.visible:
 		_toggle_menu()
 
 func _toggle_menu() -> void:
 	var showing := not menu.visible
 	menu.visible = showing
+	GameState.set_clock_visible(false if showing else GameState.has_persistent_clock_ui())
+	GameState.set_clock_paused(showing)
+	GameState.set_youns_status_visible(false if showing else GameState.has_persistent_care_ui())
 	PartyManager.camera_rig.enabled = not showing
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if showing else Input.MOUSE_MODE_CAPTURED
 
@@ -190,3 +199,20 @@ func _mat(color: Color) -> ShaderMaterial:
 	m.shader = _ps1_shader
 	m.set_shader_parameter("albedo", color)
 	return m
+
+func _is_cancel_pressed(event: InputEvent) -> bool:
+	if not event.is_action_pressed("ui_cancel"):
+		return false
+	if event is InputEventKey:
+		return not event.echo
+	return true
+
+func _is_menu_pressed(event: InputEvent) -> bool:
+	if not event.is_action_pressed("menu_toggle"):
+		return false
+	if event is InputEventKey:
+		return not event.echo
+	return true
+
+func _exit_tree() -> void:
+	PauseMenu.enabled = false

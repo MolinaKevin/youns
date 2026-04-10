@@ -13,7 +13,7 @@ const INTRO_PAGES := [
 	},
 	{
 		"title": "Moverse",
-		"body": "Usa [b]WASD[/b] para moverte.\nMueve la camara con el mouse.\nESC menu"
+		"body": "Usa [b]WASD[/b] para moverte.\nMueve la camara con el mouse.\nCon Tab abris menu"
 	},
 	{
 		"title": "Enemigos",
@@ -26,6 +26,10 @@ const INTRO_PAGES := [
 ]
 
 func _ready() -> void:
+	GameState.set_clock_visible(GameState.has_persistent_clock_ui())
+	GameState.set_clock_paused(false)
+	GameState.set_youns_status_visible(GameState.has_persistent_care_ui())
+	PauseMenu.enabled = false
 	ZoneManager.set_world_visible(true)
 	PartyManager.set_party_visible(true)
 	PartyManager.camera_rig.enabled = true
@@ -38,12 +42,17 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	if _handle_intro_input(event):
 		return
-	if event.is_action_pressed("ui_cancel") and ZoneManager._interior == null:
+	if _is_menu_pressed(event) and not intro_layer.visible:
+		_toggle_menu()
+	elif _is_cancel_pressed(event) and menu.visible:
 		_toggle_menu()
 
 func _toggle_menu() -> void:
 	var showing := not menu.visible
 	menu.visible = showing
+	GameState.set_clock_visible(false if showing else GameState.has_persistent_clock_ui())
+	GameState.set_clock_paused(showing)
+	GameState.set_youns_status_visible(false if showing else GameState.has_persistent_care_ui())
 	PartyManager.camera_rig.enabled = not showing
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if showing else Input.MOUSE_MODE_CAPTURED
 
@@ -94,6 +103,9 @@ func _setup_intro() -> void:
 	_intro_active = true
 	_intro_index = 0
 	intro_layer.visible = true
+	GameState.set_clock_visible(false)
+	GameState.set_clock_paused(true)
+	GameState.set_youns_status_visible(false)
 	PartyManager.camera_rig.enabled = false
 	PartyManager.player.set_physics_process(false)
 	PartyManager.youn.set_physics_process(false)
@@ -124,7 +136,27 @@ func _close_intro() -> void:
 	_intro_active = false
 	GameState.world_intro_seen = true
 	intro_layer.visible = false
+	GameState.set_clock_visible(GameState.has_persistent_clock_ui())
+	GameState.set_clock_paused(false)
+	GameState.set_youns_status_visible(GameState.has_persistent_care_ui())
 	PartyManager.camera_rig.enabled = true
 	PartyManager.player.set_physics_process(true)
 	PartyManager.youn.set_physics_process(true)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+func _is_cancel_pressed(event: InputEvent) -> bool:
+	if not event.is_action_pressed("ui_cancel"):
+		return false
+	if event is InputEventKey:
+		return not event.echo
+	return true
+
+func _is_menu_pressed(event: InputEvent) -> bool:
+	if not event.is_action_pressed("menu_toggle"):
+		return false
+	if event is InputEventKey:
+		return not event.echo
+	return true
+
+func _exit_tree() -> void:
+	PauseMenu.enabled = false

@@ -11,5 +11,6 @@ extends Resource
 @export var reward: Dictionary = {}
 @export var extra_rewards: Array[Dictionary] = []
 @export var ingredients: Array[Dictionary] = []
+@export var gold_cost: int = 0
 @export var starts_unlocked: bool = false
 @export var needs_research: bool = false

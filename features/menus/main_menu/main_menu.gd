@@ -28,6 +28,10 @@ func _ready() -> void:
 		background.visible = false
 		stats_bar.visible = false
 		gold_panel.visible = true
+	else:
+		GameState.set_clock_visible(false)
+	GameState.set_clock_paused(true)
+	GameState.set_youns_status_visible(false)
 	_refresh_gold()
 
 	grid.columns = COLUMNS

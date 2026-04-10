@@ -34,6 +34,9 @@ var enemy_ai
 var _combat_finished := false
 
 func _ready() -> void:
+	GameState.set_clock_visible(false)
+	GameState.set_clock_paused(true)
+	GameState.set_youns_status_visible(false)
 	ZoneManager.set_world_visible(false)
 	PartyManager.set_party_visible(false)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -218,5 +221,7 @@ func log_message(text: String) -> void:
 func _return_to_world_after_victory() -> void:
 	if not GameState.combat_return_pending:
 		return
+	GameState.player_save.gold += 300
+	GameState.save_player_save()
 	await get_tree().create_timer(0.8).timeout
 	get_tree().change_scene_to_file("res://features/world/game_world/game_world.tscn")

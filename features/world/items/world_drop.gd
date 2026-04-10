@@ -7,10 +7,11 @@ extends Area3D
 
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
-	label.text = "%s +%dG" % [item_name, gold_amount]
+	label.text = item_name if gold_amount <= 0 else "%s +%dG" % [item_name, gold_amount]
 
 func _on_body_entered(body: Node3D) -> void:
 	if body != PartyManager.player:
 		return
-	GameState.player_save.gold += gold_amount
+	if gold_amount > 0:
+		GameState.player_save.gold += gold_amount
 	queue_free()

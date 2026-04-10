@@ -6,11 +6,11 @@
 script = ExtResource("1_labrecipe")
 id = "contador_de_crianza"
 recipe_name = "Contador de Crianza"
-description = "Agrega a la UI un contador del progreso de crianza y desarrollo del Youn."
+description = "Agrega barras visibles permanentes para seguir la disciplina y los errores de cuidado del Youn."
 craft_time = 16.0
 location = "sistemas"
 action_type = "upgrade"
-reward = {"type": "youn_growth_counter", "value": 1}
+reward = {"type": "unlock_care_ui"}
 ingredients = [{"id": "datos", "amount": 8}]
 starts_unlocked = false
 needs_research = true

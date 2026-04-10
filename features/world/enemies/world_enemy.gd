@@ -307,5 +307,5 @@ func _spawn_drop() -> void:
 	var drop := DROP_SCENE.instantiate()
 	drop.position = global_position + Vector3(0, 0.2, 0)
 	drop.item_name = enemy_data.loot_item_name
-	drop.gold_amount = enemy_data.loot_gold
+	drop.gold_amount = 0
 	get_parent().add_child(drop)

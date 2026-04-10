@@ -44,6 +44,8 @@ func setup(recipe: Resource, interactive := true) -> void:
 	time_label.text = "" if recipe.action_type == "instant" else "%.0fs" % recipe.craft_time
 
 	var parts: Array = []
+	if recipe.gold_cost > 0:
+		parts.append("%d oro" % recipe.gold_cost)
 	for ing in recipe.ingredients:
 		parts.append("%s x%d" % [ing["id"], ing["amount"]])
 	ingredients_label.text = "" if parts.is_empty() else "Necesita: " + ", ".join(parts)

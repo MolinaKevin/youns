@@ -1,8 +1,9 @@
-[gd_scene format=3 uid="uid://zone_hub"]
+[gd_scene format=3 uid="uid://clt8bogmchxf5"]
 
-[ext_resource type="Script" path="res://features/world/zones/zone_hub.gd"              id="1_hub"]
+[ext_resource type="Script" uid="uid://dhi3bn5obu37b" path="res://features/world/zones/zone_hub.gd" id="1_hub"]
 [ext_resource type="PackedScene" uid="uid://bfo5wpg0ptqcr" path="res://assets/maps/hub/city_map.glb" id="2_map"]
-[ext_resource type="PackedScene" uid="uid://c6sj4ql5s1p65" path="res://assets/maps/hub/lab.glb"      id="3_lab"]
+[ext_resource type="PackedScene" uid="uid://c6sj4ql5s1p65" path="res://assets/maps/hub/lab.glb" id="3_lab"]
+[ext_resource type="ArrayMesh" uid="uid://chrobcjle3fog" path="res://assets/youns/Monzaemon.obj" id="4_monzaemon"]
 
 [sub_resource type="BoxShape3D" id="1"]
 size = Vector3(130, 20, 130)
@@ -10,37 +11,123 @@ size = Vector3(130, 20, 130)
 [sub_resource type="BoxShape3D" id="2"]
 size = Vector3(2.5, 2.5, 1)
 
-[node name="ZoneHub" type="Node3D"]
+[sub_resource type="StandardMaterial3D" id="4"]
+albedo_color = Color(0.486275, 0.388235, 0.27451, 1)
+
+[sub_resource type="BoxMesh" id="3"]
+size = Vector3(10, 1.2, 22)
+
+[sub_resource type="BoxShape3D" id="5"]
+size = Vector3(10, 1.2, 22)
+
+[sub_resource type="CapsuleShape3D" id="8"]
+radius = 0.7
+height = 2.1
+
+[sub_resource type="SphereShape3D" id="9"]
+radius = 3.2
+
+[node name="ZoneHub" type="Node3D" unique_id=1690177326]
 script = ExtResource("1_hub")
 
-[node name="CityMap" parent="." instance=ExtResource("2_map")]
+[node name="CityMap" parent="." unique_id=1388604364 instance=ExtResource("2_map")]
 
-[node name="Lab" parent="." instance=ExtResource("3_lab")]
+[node name="Lab" parent="." unique_id=496110547 instance=ExtResource("3_lab")]
 transform = Transform3D(0.707, 0, -0.707, 0, 1, 0, 0.707, 0, 0.707, -18, 0, 18)
 
-[node name="Sun" type="DirectionalLight3D" parent="."]
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=1468814029]
 transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 10, 0)
 light_energy = 0.78
 shadow_enabled = true
 
-[node name="AmbientFill" type="DirectionalLight3D" parent="."]
+[node name="AmbientFill" type="DirectionalLight3D" parent="." unique_id=270886141]
 transform = Transform3D(-0.866, -0.2, -0.46, 0, 0.917, -0.4, 0.5, -0.346, -0.795, 0, 8, 0)
 light_energy = 0.14
 
-[node name="SpawnPoint" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.0, 0)
+[node name="SpawnPoint" type="Node3D" parent="." unique_id=1855648921]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
 
-[node name="SpawnFromLab" type="Node3D" parent="."]
+[node name="SpawnFromLab" type="Node3D" parent="." unique_id=1697016681]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0.8, 12)
 
-[node name="ZoneTrigger" type="Area3D" parent="."]
+[node name="ZoneTrigger" type="Area3D" parent="." unique_id=1354540957]
 
-[node name="Col" type="CollisionShape3D" parent="ZoneTrigger"]
+[node name="Col" type="CollisionShape3D" parent="ZoneTrigger" unique_id=220152909]
 shape = SubResource("1")
 
-[node name="LabWarp" type="Area3D" parent="."]
+[node name="LabWarp" type="Area3D" parent="." unique_id=2134864935]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 1, 16)
 
-[node name="Col" type="CollisionShape3D" parent="LabWarp"]
+[node name="Col" type="CollisionShape3D" parent="LabWarp" unique_id=1589684410]
 transform = Transform3D(0.7344291, 0, -0.6786854, 0, 1, 0, 0.6786854, 0, 0.7344291, 1.9069614, 1.070667, -1.9470034)
 shape = SubResource("2")
+
+[node name="DemoRamp" type="StaticBody3D" parent="." unique_id=610845647]
+transform = Transform3D(0.891007, 0.45399, 0, -0.45399, 0.891007, 0, 0, 0, 1, -30, 1.8, -3.8979359)
+
+[node name="Mesh" type="MeshInstance3D" parent="DemoRamp" unique_id=1339583340]
+transform = Transform3D(1.0000004, 0, 0, 0, 1.0000004, 0, 0, 0, 1, 5.709568, 2.9091625, -0.994627)
+material_override = SubResource("4")
+mesh = SubResource("3")
+
+[node name="Collision" type="CollisionShape3D" parent="DemoRamp" unique_id=205063394]
+transform = Transform3D(1.0000002, 0, 0, 0, 1.0000002, 0, 0, 0, 1, 5.8880997, 3.0001316, -1.0857487)
+shape = SubResource("5")
+
+[node name="DemoMonzaemon" type="StaticBody3D" parent="." unique_id=52817535]
+transform = Transform3D(0.766044, 0, -0.642788, 0, 1, 0, 0.642788, 0, 0.766044, -26.05894, 4.6965704, -5.855732)
+
+[node name="Mesh" type="MeshInstance3D" parent="DemoMonzaemon" unique_id=1747267577]
+transform = Transform3D(0.22, 0, 0, 0, 0.22, 0, 0, 0, 0.22, 0, 0, 0)
+mesh = ExtResource("4_monzaemon")
+
+[node name="Collision" type="CollisionShape3D" parent="DemoMonzaemon" unique_id=641256255]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0)
+shape = SubResource("8")
+
+[node name="InteractArea" type="Area3D" parent="DemoMonzaemon" unique_id=1986557475]
+
+[node name="InteractCol" type="CollisionShape3D" parent="DemoMonzaemon/InteractArea" unique_id=891970763]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("9")
+
+[node name="Prompt" type="Label3D" parent="DemoMonzaemon" unique_id=1913521489]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0)
+visible = false
+text = "Hablar [E]"
+
+[node name="DemoDialog" type="CanvasLayer" parent="." unique_id=1644363126]
+visible = false
+
+[node name="Backdrop" type="ColorRect" parent="DemoDialog" unique_id=2064248420]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.03, 0.04, 0.52)
+
+[node name="Panel" type="Panel" parent="DemoDialog" unique_id=295348939]
+anchors_preset = -1
+anchor_left = 0.2
+anchor_top = 0.74
+anchor_right = 0.8
+anchor_bottom = 0.94
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Margin" type="MarginContainer" parent="DemoDialog/Panel" unique_id=1925618726]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 14
+
+[node name="Text" type="Label" parent="DemoDialog/Panel/Margin" unique_id=579006488]
+layout_mode = 2
+text = "Monzaemon: Eso es todo lo que tiene el demo por ahora. Gracias por jugar."
+autowrap_mode = 3

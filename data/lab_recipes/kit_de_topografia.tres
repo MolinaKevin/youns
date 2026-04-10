@@ -14,5 +14,6 @@ action_type = "instant"
 reward = {"type": "unlock_recipe", "id": "estudio_de_puente_ligero"}
 extra_rewards = [{"type": "item", "id": "kit_topografia", "amount": 1}]
 ingredients = []
+gold_cost = 100
 starts_unlocked = false
 needs_research = true

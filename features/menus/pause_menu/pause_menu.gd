@@ -1,6 +1,8 @@
 extends CanvasLayer
 
 var enabled := false
+var _clock_was_visible := true
+var _status_was_visible := false
 
 @onready var continue_button = $Panel/VBox/ContinueButton
 @onready var deck_button = $Panel/VBox/DeckButton
@@ -15,17 +17,25 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not enabled:
 		return
-	if event.is_action_pressed("ui_cancel"):
+	if _is_menu_pressed(event):
 		if visible:
 			close()
 		else:
 			open()
 
 func open() -> void:
+	_clock_was_visible = GameState.clock_visible
+	_status_was_visible = GameState.youns_status_visible
+	GameState.set_clock_visible(false)
+	GameState.set_clock_paused(true)
+	GameState.set_youns_status_visible(false)
 	show()
 	get_tree().paused = true
 
 func close() -> void:
+	GameState.set_clock_paused(false)
+	GameState.set_clock_visible(_clock_was_visible)
+	GameState.set_youns_status_visible(_status_was_visible)
 	hide()
 	get_tree().paused = false
 
@@ -36,3 +46,10 @@ func _on_deck() -> void:
 func _on_quit() -> void:
 	get_tree().paused = false
 	get_tree().quit()
+
+func _is_menu_pressed(event: InputEvent) -> bool:
+	if not event.is_action_pressed("menu_toggle"):
+		return false
+	if event is InputEventKey:
+		return not event.echo
+	return true

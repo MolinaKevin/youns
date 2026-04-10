@@ -29,6 +29,9 @@ var location_buttons: Dictionary = {}  # location -> Button
 var notified_locations: Array = []
 
 func _ready() -> void:
+	GameState.set_clock_visible(false if standalone_mode else true)
+	GameState.set_clock_paused(true)
+	GameState.set_youns_status_visible(false)
 	if standalone_mode:
 		ZoneManager.set_world_visible(false)
 		PartyManager.set_party_visible(false)
@@ -48,6 +51,7 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if standalone_mode and event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
 		_close_or_return()
 
 func _apply_mode_state() -> void:

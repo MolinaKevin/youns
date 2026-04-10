@@ -15,6 +15,9 @@ var _selected_index := 0
 var _buttons: Array[Button] = []
 
 func _ready() -> void:
+	GameState.set_clock_visible(false)
+	GameState.set_clock_paused(true)
+	GameState.set_youns_status_visible(false)
 	_build_menu()
 	_update_selection()
 
