@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://zone_left"]
+
+[ext_resource type="Script" path="res://features/world/zones/zone_left.gd" id="1"]
+
+[sub_resource type="PlaneMesh" id="1"]
+size = Vector2(150, 150)
+
+[sub_resource type="BoxShape3D" id="2"]
+size = Vector3(150, 0.1, 150)
+
+[sub_resource type="BoxShape3D" id="3"]
+size = Vector3(130, 20, 130)
+
+[node name="ZoneCrossroads" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Floor" type="StaticBody3D" parent="."]
+
+[node name="Mesh" type="MeshInstance3D" parent="Floor"]
+mesh = SubResource("1")
+
+[node name="FloorCol" type="CollisionShape3D" parent="Floor"]
+shape = SubResource("2")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 10, 0)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="SpawnPoint" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
+
+[node name="ZoneTrigger" type="Area3D" parent="."]
+
+[node name="Col" type="CollisionShape3D" parent="ZoneTrigger"]
+shape = SubResource("3")

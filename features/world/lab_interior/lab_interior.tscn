@@ -1,0 +1,64 @@
+[gd_scene format=3 uid="uid://lab_interior"]
+
+[ext_resource type="PackedScene" path="res://assets/maps/hub/lab_interior.glb"   id="1_map"]
+[ext_resource type="PackedScene" path="res://features/laboratory/scene/laboratory.tscn" id="5_lab"]
+[ext_resource type="ArrayMesh" path="res://assets/youns/Monzaemon.obj"        id="3_monzaemon"]
+[ext_resource type="Script" path="res://features/world/lab_interior/face_player.gd"   id="4_face"]
+[ext_resource type="Script" path="res://features/world/lab_interior/lab_interior.gd"  id="2_script"]
+
+[sub_resource type="BoxShape3D" id="1"]
+size = Vector3(2.5, 2.5, 1.0)
+
+[sub_resource type="CapsuleShape3D" id="2"]
+radius = 0.4
+height = 1.2
+
+[sub_resource type="SphereShape3D" id="3"]
+radius = 3.0
+
+[node name="LabInterior" type="Node3D"]
+script = ExtResource("2_script")
+
+[node name="Map" parent="." instance=ExtResource("1_map")]
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 10, 0)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="SpawnPoint" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, -3.0)
+
+[node name="Monzaemon" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0.8, -5)
+script = ExtResource("4_face")
+
+[node name="Mesh" type="MeshInstance3D" parent="Monzaemon"]
+transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, 0, 0, 0)
+mesh = ExtResource("3_monzaemon")
+
+[node name="Collision" type="CollisionShape3D" parent="Monzaemon"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+shape = SubResource("2")
+
+[node name="InteractArea" type="Area3D" parent="Monzaemon"]
+
+[node name="InteractCol" type="CollisionShape3D" parent="Monzaemon/InteractArea"]
+shape = SubResource("3")
+
+[node name="Prompt" type="Label3D" parent="Monzaemon"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 0)
+text = "Hablar [Enter]"
+font_size = 32
+visible = false
+
+[node name="LabLayer" type="CanvasLayer" parent="."]
+
+[node name="Laboratory" parent="LabLayer" instance=ExtResource("5_lab")]
+visible = false
+
+[node name="ExitWarp" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0.5)
+
+[node name="Col" type="CollisionShape3D" parent="ExitWarp"]
+shape = SubResource("1")

@@ -1,0 +1,108 @@
+[gd_scene format=3 uid="uid://slsjny8g2aor"]
+
+[ext_resource type="Script" uid="uid://ce4ujkdt8y88f" path="res://features/cards/presentation/card_view.gd" id="1_two4k"]
+
+[node name="CardView" type="Control" unique_id=1772071006]
+custom_minimum_size = Vector2(130, 195)
+size_flags_vertical = 0
+clip_contents = true
+script = ExtResource("1_two4k")
+
+[node name="ArtRect" type="TextureRect" parent="." unique_id=200000007]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Stat1Label" type="Label" parent="." unique_id=200000020]
+layout_mode = 0
+anchor_left = 0.0
+anchor_top = 0.19
+anchor_right = 0.0
+anchor_bottom = 0.28
+offset_left = 3
+offset_right = 38
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 9
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Stat2Label" type="Label" parent="." unique_id=200000021]
+layout_mode = 0
+anchor_left = 0.0
+anchor_top = 0.32
+anchor_right = 0.0
+anchor_bottom = 0.41
+offset_left = 3
+offset_right = 38
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 9
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Stat3Label" type="Label" parent="." unique_id=200000022]
+layout_mode = 0
+anchor_left = 0.0
+anchor_top = 0.45
+anchor_right = 0.0
+anchor_bottom = 0.54
+offset_left = 3
+offset_right = 38
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 9
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="NameLabel" type="Label" parent="." unique_id=200000005]
+layout_mode = 0
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = 6
+offset_top = 10
+offset_right = -6
+offset_bottom = 24
+theme_override_font_sizes/font_size = 10
+clip_text = true
+
+[node name="CostLabel" type="Label" parent="." unique_id=200000023]
+layout_mode = 0
+anchor_left = 0.25
+anchor_top = 0.67
+anchor_right = 0.75
+anchor_bottom = 0.77
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 11
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DescLabel" type="Label" parent="." unique_id=200000011]
+layout_mode = 0
+anchor_left = 0.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 6
+offset_top = -48
+offset_right = -6
+offset_bottom = -16
+theme_override_font_sizes/font_size = 8
+autowrap_mode = 3
+
+[node name="CardButton" type="Button" parent="." unique_id=27698285]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+flat = true

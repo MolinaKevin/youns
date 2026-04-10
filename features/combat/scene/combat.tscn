@@ -1,0 +1,168 @@
+[gd_scene format=3 uid="uid://esa27afncviq"]
+
+[ext_resource type="Script" uid="uid://bopkfrrbv730s" path="res://features/combat/scene/combat.gd" id="1_vj48t"]
+[ext_resource type="Script" uid="uid://b6ulmuwjf7p7h" path="res://features/combat/scene/map_area.gd" id="2_h3bse"]
+[ext_resource type="Script" path="res://features/combat/scene/combat_camera.gd" id="6_cam"]
+[ext_resource type="PackedScene" uid="uid://beqywnotcyb30" path="res://features/combat/scene/ui/top_bar.tscn" id="3_topbar"]
+[ext_resource type="PackedScene" uid="uid://cwurnr3gybe06" path="res://features/cards/presentation/card_section.tscn" id="4_handsec"]
+[ext_resource type="PackedScene" uid="uid://cd40uh020beps" path="res://features/cards/ui/CardGrid/card_grid.tscn" id="5_cgrid"]
+
+[node name="Combat" type="Node"]
+script = ExtResource("1_vj48t")
+
+[node name="CombatWorld" type="Node3D" parent="."]
+
+[node name="Sun" type="DirectionalLight3D" parent="CombatWorld"]
+transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 10, 0)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="AmbientFill" type="DirectionalLight3D" parent="CombatWorld"]
+transform = Transform3D(-0.866, -0.2, -0.46, 0, 0.917, -0.4, 0.5, -0.346, -0.795, 0, 8, 0)
+light_energy = 0.4
+shadow_enabled = false
+
+[node name="Camera3D" type="Camera3D" parent="CombatWorld"]
+current = true
+script = ExtResource("6_cam")
+
+[node name="MapArea" type="Node3D" parent="CombatWorld"]
+script = ExtResource("2_h3bse")
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="MainVBox" type="VBoxContainer" parent="UI"]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="TopBar" parent="UI/MainVBox" instance=ExtResource("3_topbar")]
+layout_mode = 2
+
+[node name="MiddleRow" type="HBoxContainer" parent="UI/MainVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="Spacer" type="Control" parent="UI/MainVBox/MiddleRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="SidePanel" type="Panel" parent="UI/MainVBox/MiddleRow"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+
+[node name="MessageLog" type="RichTextLabel" parent="UI/MainVBox/MiddleRow/SidePanel"]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HandArea" type="HBoxContainer" parent="UI/MainVBox"]
+layout_mode = 2
+size_flags_vertical = 0
+
+[node name="DrawPileButton" type="Button" parent="UI/MainVBox/HandArea"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Mazo (0)"
+
+[node name="HandSection" parent="UI/MainVBox/HandArea" instance=ExtResource("4_handsec")]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DiscardPileButton" type="Button" parent="UI/MainVBox/HandArea"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Descarte (0)"
+
+[node name="EndMoveButton" type="Button" parent="UI/MainVBox/HandArea"]
+custom_minimum_size = Vector2(120, 0)
+layout_mode = 2
+text = "Fin movimiento"
+visible = false
+
+[node name="PilePopup" type="Panel" parent="UI"]
+layout_mode = 0
+anchor_left = 0.1
+anchor_top = 0.05
+anchor_right = 0.9
+anchor_bottom = 0.95
+grow_horizontal = 2
+grow_vertical = 2
+visible = false
+
+[node name="VBox" type="VBoxContainer" parent="UI/PilePopup"]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Header" type="HBoxContainer" parent="UI/PilePopup/VBox"]
+layout_mode = 2
+
+[node name="PopupTitle" type="Label" parent="UI/PilePopup/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Mazo"
+
+[node name="CloseButton" type="Button" parent="UI/PilePopup/VBox/Header"]
+layout_mode = 2
+text = "X"
+
+[node name="CardGrid" parent="UI/PilePopup/VBox" instance=ExtResource("5_cgrid")]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ConfirmPopup" type="Panel" parent="UI"]
+layout_mode = 0
+anchor_left = 0.35
+anchor_top = 0.38
+anchor_right = 0.65
+anchor_bottom = 0.62
+grow_horizontal = 2
+grow_vertical = 2
+visible = false
+
+[node name="VBox" type="VBoxContainer" parent="UI/ConfirmPopup"]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label" type="Label" parent="UI/ConfirmPopup/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_alignment = 1
+text = "Confirmar acción"
+
+[node name="Buttons" type="HBoxContainer" parent="UI/ConfirmPopup/VBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="YesButton" type="Button" parent="UI/ConfirmPopup/VBox/Buttons"]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+text = "Sí"
+
+[node name="NoButton" type="Button" parent="UI/ConfirmPopup/VBox/Buttons"]
+custom_minimum_size = Vector2(60, 0)
+layout_mode = 2
+text = "No"
+
+[node name="FinButton" type="Button" parent="UI/ConfirmPopup/VBox/Buttons"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "Terminar"
+visible = false

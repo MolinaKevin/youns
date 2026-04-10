@@ -1,0 +1,45 @@
+[gd_scene format=3 uid="uid://cwlupuvesmake"]
+
+[ext_resource type="Script" uid="uid://hqf2agavyc4y" path="res://features/world/world_map/world_map.gd" id="1_world"]
+[ext_resource type="PackedScene" path="res://features/menus/main_menu/main_menu.tscn" id="4_menu"]
+[ext_resource type="PackedScene" uid="uid://bfo5wpg0ptqcr" path="res://assets/maps/hub/city_map.glb" id="8_map"]
+[ext_resource type="PackedScene" uid="uid://c6sj4ql5s1p65" path="res://assets/maps/hub/lab.glb" id="9_lab"]
+
+[sub_resource type="BoxShape3D" id="3"]
+size = Vector3(2.5, 2.5, 1)
+
+[node name="WorldMap" type="Node3D" unique_id=1386813573]
+script = ExtResource("1_world")
+
+[node name="CityMap" parent="." unique_id=1335776378 instance=ExtResource("8_map")]
+
+[node name="Lab" parent="." unique_id=870629564 instance=ExtResource("9_lab")]
+transform = Transform3D(0.707, 0, -0.707, 0, 1, 0, 0.707, 0, 0.707, -18, 0, 18)
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=491756095]
+transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 10, 0)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="AmbientFill" type="DirectionalLight3D" parent="." unique_id=1651291881]
+transform = Transform3D(-0.866, -0.2, -0.46, 0, 0.917, -0.4, 0.5, -0.346, -0.795, 0, 8, 0)
+light_energy = 0.3
+
+[node name="SpawnPoint" type="Node3D" parent="." unique_id=1521672466]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+
+[node name="SpawnFromLab" type="Node3D" parent="." unique_id=926951605]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0.8, 12)
+
+[node name="LabWarp" type="Area3D" parent="." unique_id=2006227534]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 1, 16)
+
+[node name="Col" type="CollisionShape3D" parent="LabWarp" unique_id=1963220624]
+transform = Transform3D(0.7344291, 0, -0.6786854, 0, 1, 0, 0.6786854, 0, 0.7344291, 1.9069614, 1.070667, -1.9470034)
+shape = SubResource("3")
+
+[node name="MenuLayer" type="CanvasLayer" parent="." unique_id=1227660781]
+
+[node name="MainMenu" parent="MenuLayer" unique_id=421127293 instance=ExtResource("4_menu")]
+visible = false
+overlay_mode = true

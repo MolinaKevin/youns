@@ -1,0 +1,13 @@
+[gd_scene format=3 uid="uid://game_world"]
+
+[ext_resource type="Script" path="res://features/world/game_world/game_world.gd"    id="1_gw"]
+[ext_resource type="PackedScene" path="res://features/menus/main_menu/main_menu.tscn" id="2_menu"]
+
+[node name="GameWorld" type="Node3D"]
+script = ExtResource("1_gw")
+
+[node name="MenuLayer" type="CanvasLayer" parent="."]
+
+[node name="MainMenu" parent="MenuLayer" instance=ExtResource("2_menu")]
+visible = false
+overlay_mode = true

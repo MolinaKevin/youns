@@ -1,0 +1,70 @@
+[gd_scene format=3 uid="uid://main_menu"]
+
+[ext_resource type="Script" path="res://features/menus/main_menu/main_menu.gd" id="1_menuscr"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_menuscr")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.1, 0.15, 0.1, 1.0)
+
+[node name="StatsBar" type="Panel" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+grow_horizontal = 2
+custom_minimum_size = Vector2(0, 32)
+
+[node name="HBox" type="HBoxContainer" parent="StatsBar"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 24
+
+[node name="YearLabel" type="Label" parent="StatsBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_alignment = 2
+text = "1 Año"
+
+[node name="DayLabel" type="Label" parent="StatsBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_alignment = 1
+text = "1 Día"
+
+[node name="MenuPanel" type="PanelContainer" parent="."]
+layout_mode = 1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="MenuPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="Grid" type="GridContainer" parent="MenuPanel/Margin"]
+layout_mode = 2
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 12
+columns = 3

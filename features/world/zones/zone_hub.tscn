@@ -1,0 +1,46 @@
+[gd_scene format=3 uid="uid://zone_hub"]
+
+[ext_resource type="Script" path="res://features/world/zones/zone_hub.gd"              id="1_hub"]
+[ext_resource type="PackedScene" uid="uid://bfo5wpg0ptqcr" path="res://assets/maps/hub/city_map.glb" id="2_map"]
+[ext_resource type="PackedScene" uid="uid://c6sj4ql5s1p65" path="res://assets/maps/hub/lab.glb"      id="3_lab"]
+
+[sub_resource type="BoxShape3D" id="1"]
+size = Vector3(130, 20, 130)
+
+[sub_resource type="BoxShape3D" id="2"]
+size = Vector3(2.5, 2.5, 1)
+
+[node name="ZoneHub" type="Node3D"]
+script = ExtResource("1_hub")
+
+[node name="CityMap" parent="." instance=ExtResource("2_map")]
+
+[node name="Lab" parent="." instance=ExtResource("3_lab")]
+transform = Transform3D(0.707, 0, -0.707, 0, 1, 0, 0.707, 0, 0.707, -18, 0, 18)
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866, -0.354, 0.354, 0, 0.707, 0.707, -0.5, -0.612, 0.612, 0, 10, 0)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="AmbientFill" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.866, -0.2, -0.46, 0, 0.917, -0.4, 0.5, -0.346, -0.795, 0, 8, 0)
+light_energy = 0.3
+
+[node name="SpawnPoint" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.0, 0)
+
+[node name="SpawnFromLab" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0.8, 12)
+
+[node name="ZoneTrigger" type="Area3D" parent="."]
+
+[node name="Col" type="CollisionShape3D" parent="ZoneTrigger"]
+shape = SubResource("1")
+
+[node name="LabWarp" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 1, 16)
+
+[node name="Col" type="CollisionShape3D" parent="LabWarp"]
+transform = Transform3D(0.7344291, 0, -0.6786854, 0, 1, 0, 0.6786854, 0, 0.7344291, 1.9069614, 1.070667, -1.9470034)
+shape = SubResource("2")

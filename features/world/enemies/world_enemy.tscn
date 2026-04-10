@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://world_enemy" load_steps=3]
+
+[ext_resource type="Script" path="res://features/world/enemies/world_enemy.gd" id="1"]
+
+[sub_resource type="CapsuleShape3D" id="1"]
+radius = 0.35
+height = 1.6
+
+[node name="WorldEnemy" type="CharacterBody3D"]
+script = ExtResource("1")
+
+[node name="Body" type="MeshInstance3D" parent="."]
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+shape = SubResource("1")

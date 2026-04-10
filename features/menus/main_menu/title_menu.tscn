@@ -1,0 +1,175 @@
+[gd_scene format=3 uid="uid://bwhj2m4n4p7km"]
+
+[ext_resource type="Script" path="res://features/menus/main_menu/title_menu.gd" id="1_p1m7n"]
+
+[node name="TitleMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_p1m7n")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0313726, 0.0470588, 0.0666667, 1)
+
+[node name="GlowTop" type="ColorRect" parent="."]
+layout_mode = 0
+offset_right = 1050.0
+offset_bottom = 290.0
+color = Color(0.196078, 0.435294, 0.486275, 0.313726)
+
+[node name="GlowBottom" type="ColorRect" parent="."]
+layout_mode = 0
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -760.0
+offset_top = -280.0
+color = Color(0.372549, 0.258824, 0.145098, 0.25098)
+
+[node name="SafeArea" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 72
+theme_override_constants/margin_top = 48
+theme_override_constants/margin_right = 72
+theme_override_constants/margin_bottom = 48
+
+[node name="Layout" type="HBoxContainer" parent="SafeArea"]
+layout_mode = 2
+theme_override_constants/separation = 48
+
+[node name="LeftColumn" type="VBoxContainer" parent="SafeArea/Layout"]
+custom_minimum_size = Vector2(520, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 24
+
+[node name="TitleBlock" type="VBoxContainer" parent="SafeArea/Layout/LeftColumn"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="KickLabel" type="Label" parent="SafeArea/Layout/LeftColumn/TitleBlock"]
+layout_mode = 2
+text = "DIGIVICE DECK PROTOTYPE"
+theme_override_colors/font_color = Color(0.784314, 0.843137, 0.768627, 0.9)
+theme_override_font_sizes/font_size = 16
+
+[node name="TitleLabel" type="Label" parent="SafeArea/Layout/LeftColumn/TitleBlock"]
+layout_mode = 2
+text = "YOUNS"
+theme_override_colors/font_color = Color(0.933333, 0.94902, 0.905882, 1)
+theme_override_font_sizes/font_size = 72
+
+[node name="SubtitleLabel" type="Label" parent="SafeArea/Layout/LeftColumn/TitleBlock"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "Roguelike de cartas, crianza y exploracion en 3D."
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.733333, 0.780392, 0.803922, 1)
+theme_override_font_sizes/font_size = 22
+
+[node name="MenuPanel" type="PanelContainer" parent="SafeArea/Layout/LeftColumn"]
+custom_minimum_size = Vector2(0, 320)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="MenuMargin" type="MarginContainer" parent="SafeArea/Layout/LeftColumn/MenuPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 18
+
+[node name="MenuOptions" type="VBoxContainer" parent="SafeArea/Layout/LeftColumn/MenuPanel/MenuMargin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Footer" type="PanelContainer" parent="SafeArea/Layout/LeftColumn"]
+custom_minimum_size = Vector2(0, 64)
+layout_mode = 2
+
+[node name="HintLabel" type="Label" parent="SafeArea/Layout/LeftColumn/Footer"]
+layout_mode = 2
+text = "Seleccionado: Nueva partida"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.901961, 0.878431, 0.713726, 1)
+theme_override_font_sizes/font_size = 18
+
+[node name="RightColumn" type="VBoxContainer" parent="SafeArea/Layout"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 20
+
+[node name="HeroPanel" type="PanelContainer" parent="SafeArea/Layout/RightColumn"]
+custom_minimum_size = Vector2(0, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="HeroMargin" type="MarginContainer" parent="SafeArea/Layout/RightColumn/HeroPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 28
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 28
+
+[node name="HeroContent" type="VBoxContainer" parent="SafeArea/Layout/RightColumn/HeroPanel/HeroMargin"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="StatusLabel" type="Label" parent="SafeArea/Layout/RightColumn/HeroPanel/HeroMargin/HeroContent"]
+layout_mode = 2
+text = "ESTADO DEL MUNDO"
+theme_override_colors/font_color = Color(0.847059, 0.890196, 0.854902, 0.9)
+theme_override_font_sizes/font_size = 18
+
+[node name="WorldName" type="Label" parent="SafeArea/Layout/RightColumn/HeroPanel/HeroMargin/HeroContent"]
+layout_mode = 2
+text = "Sector Lab / Ciudad Baja"
+theme_override_colors/font_color = Color(0.94902, 0.94902, 0.929412, 1)
+theme_override_font_sizes/font_size = 38
+
+[node name="Description" type="Label" parent="SafeArea/Layout/RightColumn/HeroPanel/HeroMargin/HeroContent"]
+custom_minimum_size = Vector2(0, 140)
+layout_mode = 2
+text = "Tu companero Youn evoluciona, combate y vuelve a empezar. El progreso del entrenador persiste entre ciclos y abre rutas, recetas y encuentros."
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.745098, 0.788235, 0.815686, 1)
+theme_override_font_sizes/font_size = 24
+
+[node name="Divider" type="HSeparator" parent="SafeArea/Layout/RightColumn/HeroPanel/HeroMargin/HeroContent"]
+layout_mode = 2
+
+[node name="FeatureList" type="Label" parent="SafeArea/Layout/RightColumn/HeroPanel/HeroMargin/HeroContent"]
+custom_minimum_size = Vector2(0, 160)
+layout_mode = 2
+text = "Cartas tacticas\nIA enemiga por estrategia\nLaboratorio con recetas\nMapa 3D por zonas"
+theme_override_colors/font_color = Color(0.831373, 0.858824, 0.87451, 1)
+theme_override_font_sizes/font_size = 22
+
+[node name="InfoStrip" type="PanelContainer" parent="SafeArea/Layout/RightColumn"]
+custom_minimum_size = Vector2(0, 92)
+layout_mode = 2
+
+[node name="InfoLabel" type="Label" parent="SafeArea/Layout/RightColumn/InfoStrip"]
+layout_mode = 2
+text = "Flechas para navegar. Enter para confirmar."
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.737255, 0.776471, 0.8, 1)
+theme_override_font_sizes/font_size = 20
