@@ -31,8 +31,12 @@ const _EnemyData  = preload("res://data/enemies/enemy_data.gd")
 var state
 var player_actions
 var enemy_ai
+var _combat_finished := false
 
 func _ready() -> void:
+	ZoneManager.set_world_visible(false)
+	PartyManager.set_party_visible(false)
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	randomize()
 	var cam: Camera3D = $CombatWorld/Camera3D
 	cam.look_at_from_position(Vector3(-10.0, 35.0, 78.0), Vector3(30.0, 0.0, 30.0), Vector3.UP)
@@ -51,7 +55,10 @@ func _ready() -> void:
 	player_actions = _CombatPlayerActions.new()
 	player_actions.setup(self, state)
 
-	var enemy_data: _EnemyData = load("res://data/enemies/goblin.tres")
+	var enemy_data: _EnemyData = GameState.pending_enemy_data
+	if enemy_data == null:
+		enemy_data = load("res://data/enemies/goblin.tres")
+	GameState.pending_enemy_data = null
 	state.enemy_hp     = enemy_data.max_hp
 	state.enemy_max_hp = enemy_data.max_hp
 	map_area.set_enemy_hp(state.enemy_hp)
@@ -84,7 +91,11 @@ func _ready() -> void:
 
 	PauseMenu.enabled = true
 
-	log_message("Combat started.")
+	log_message("Combat started against %s." % enemy_data.enemy_name)
+
+func _exit_tree() -> void:
+	ZoneManager.set_world_visible(true)
+	PartyManager.set_party_visible(true)
 
 # ── Card pile management ──────────────────────────────────────────────────────
 
@@ -190,6 +201,9 @@ func check_combat_end() -> bool:
 		log_message("You win.")
 		hand_section.disable_cards()
 		end_turn_button.disabled = true
+		if not _combat_finished:
+			_combat_finished = true
+			_return_to_world_after_victory.call_deferred()
 		return true
 	if state.player_hp <= 0:
 		log_message("You lose.")
@@ -200,3 +214,9 @@ func check_combat_end() -> bool:
 
 func log_message(text: String) -> void:
 	message_log.append_text(text + "\n")
+
+func _return_to_world_after_victory() -> void:
+	if not GameState.combat_return_pending:
+		return
+	await get_tree().create_timer(0.8).timeout
+	get_tree().change_scene_to_file("res://features/world/game_world/game_world.tscn")

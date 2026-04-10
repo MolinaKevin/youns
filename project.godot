@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Youns"
-run/main_scene="res://features/world/game_world/game_world.tscn"
+run/main_scene="uid://bwhj2m4n4p7km"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
 

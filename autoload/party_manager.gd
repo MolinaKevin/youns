@@ -24,3 +24,12 @@ func place_at_spawn(scene: Node) -> void:
 	player.velocity = Vector3.ZERO
 	youn.global_position = pos + Vector3(1.5, 0, 1.5)
 	youn.velocity = Vector3.ZERO
+
+func set_party_visible(visible: bool) -> void:
+	for child in get_children():
+		if child is Node3D:
+			(child as Node3D).visible = visible
+	player.set_physics_process(visible)
+	youn.set_physics_process(visible)
+	if camera_rig:
+		camera_rig.enabled = visible

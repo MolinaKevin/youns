@@ -1,7 +1,7 @@
-[gd_resource type="Resource" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="AiStrategy" format=3 uid="uid://77c1dhq2qnsc"]
 
-[ext_resource type="Script" path="res://data/enemies/ai_action.gd" id="1"]
-[ext_resource type="Script" path="res://data/enemies/ai_strategy.gd" id="2"]
+[ext_resource type="Script" uid="uid://dj0v604tswfky" path="res://data/enemies/ai_action.gd" id="1"]
+[ext_resource type="Script" uid="uid://x6isa5xd4nf3" path="res://data/enemies/ai_strategy.gd" id="2"]
 
 [sub_resource type="Resource" id="AiAction_1"]
 script = ExtResource("1")
@@ -9,22 +9,13 @@ action_type = "melee_attack"
 base_score = 90.0
 conditions = ["player_adjacent"]
 damage = 8
-attack_range = 2.0
-move_range = 5.0
-block_amount = 0
 score_multiplier_low_hp = 1.6
 
 [sub_resource type="Resource" id="AiAction_2"]
 script = ExtResource("1")
-action_type = "move_toward"
-base_score = 50.0
 conditions = ["always"]
-damage = 0
-attack_range = 2.0
-move_range = 5.0
-block_amount = 0
 score_multiplier_low_hp = 1.3
 
 [resource]
 script = ExtResource("2")
-actions = [SubResource("AiAction_1"), SubResource("AiAction_2")]
+actions = Array[ExtResource("1")]([SubResource("AiAction_1"), SubResource("AiAction_2")])

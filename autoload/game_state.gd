@@ -2,6 +2,10 @@ extends Node
 
 var player_save: PlayerSaveData
 var current_run: RunStateData
+var pending_enemy_data: EnemyData
+var combat_return_pending := false
+var combat_return_position := Vector3.ZERO
+var combat_world_enemy_id := ""
 
 const SAVE_PATH := "user://player_save.tres"
 const RUN_PATH := "user://current_run.tres"

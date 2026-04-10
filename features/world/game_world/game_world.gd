@@ -2,11 +2,14 @@ extends Node3D
 
 @onready var menu: Control = $MenuLayer/MainMenu
 
-var _ps1_shader := preload("res://features/world/world_map/ps1_vertex.gdshader")
-
 func _ready() -> void:
+	ZoneManager.set_world_visible(true)
+	PartyManager.set_party_visible(true)
+	PartyManager.camera_rig.enabled = true
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_setup_environment()
 	_setup_screen_fx()
+	_restore_after_combat()
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel") and ZoneManager._interior == null:
@@ -44,3 +47,13 @@ func _setup_screen_fx() -> void:
 	rect.material = mat
 	layer.add_child(rect)
 	add_child(layer)
+
+func _restore_after_combat() -> void:
+	if not GameState.combat_return_pending:
+		return
+	var pos := GameState.combat_return_position
+	PartyManager.player.global_position = pos
+	PartyManager.player.velocity = Vector3.ZERO
+	PartyManager.youn.global_position = pos + Vector3(1.5, 0, 1.5)
+	PartyManager.youn.velocity = Vector3.ZERO
+	ZoneManager.resolve_pending_world_combat_victory()

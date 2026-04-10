@@ -91,3 +91,19 @@ func exit_interior(return_spawn := "SpawnPoint") -> void:
 		inst.show()
 	PartyManager.next_spawn = return_spawn
 	PartyManager.place_at_spawn(_loaded[current_zone])
+
+func set_world_visible(visible: bool) -> void:
+	for inst in _loaded.values():
+		inst.visible = visible
+	if _interior:
+		_interior.visible = visible
+
+func resolve_pending_world_combat_victory() -> void:
+	if not GameState.combat_return_pending or GameState.combat_world_enemy_id == "":
+		return
+	for enemy in get_tree().get_nodes_in_group("world_enemy"):
+		if enemy.has_method("handle_player_victory") and enemy.get("world_enemy_id") == GameState.combat_world_enemy_id:
+			enemy.handle_player_victory(GameState.combat_return_position)
+			break
+	GameState.combat_return_pending = false
+	GameState.combat_world_enemy_id = ""
