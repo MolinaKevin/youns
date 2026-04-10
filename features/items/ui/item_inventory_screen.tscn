@@ -1,0 +1,134 @@
+[gd_scene format=3 uid="uid://item_inventory_screen" load_steps=2]
+
+[ext_resource type="Script" path="res://features/items/ui/item_inventory_screen.gd" id="1"]
+
+[node name="ItemInventoryScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.06, 0.08, 1)
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 48
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_right = 48
+theme_override_constants/margin_bottom = 32
+
+[node name="WindowPanel" type="Panel" parent="MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+size_flags_vertical = 4
+custom_minimum_size = Vector2(820, 360)
+
+[node name="WindowMargin" type="MarginContainer" parent="MarginContainer/WindowPanel"]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 18
+
+[node name="MainVBox" type="VBoxContainer" parent="MarginContainer/WindowPanel/WindowMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Header" type="HBoxContainer" parent="MarginContainer/WindowPanel/WindowMargin/MainVBox"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/WindowPanel/WindowMargin/MainVBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Inventario"
+
+[node name="CountLabel" type="Label" parent="MarginContainer/WindowPanel/WindowMargin/MainVBox/Header"]
+layout_mode = 2
+custom_minimum_size = Vector2(80, 0)
+horizontal_alignment = 2
+text = "0 / 20"
+
+[node name="CloseButton" type="Button" parent="MarginContainer/WindowPanel/WindowMargin/MainVBox/Header"]
+layout_mode = 2
+text = "Cerrar"
+
+[node name="InventoryScroll" type="ScrollContainer" parent="MarginContainer/WindowPanel/WindowMargin/MainVBox"]
+custom_minimum_size = Vector2(0, 220)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="InventoryGrid" type="GridContainer" parent="MarginContainer/WindowPanel/WindowMargin/MainVBox/InventoryScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(650, 0)
+columns = 2
+theme_override_constants/h_separation = 10
+theme_override_constants/v_separation = 8
+
+[node name="ActionPopup" type="Panel" parent="."]
+visible = false
+layout_mode = 0
+anchor_left = 0.37
+anchor_top = 0.38
+anchor_right = 0.63
+anchor_bottom = 0.62
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="ActionPopup"]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="ActionPopup/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="PopupTitle" type="Label" parent="ActionPopup/Margin/VBox"]
+layout_mode = 2
+horizontal_alignment = 1
+text = "Item"
+
+[node name="Buttons" type="HBoxContainer" parent="ActionPopup/Margin/VBox"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 10
+
+[node name="UseButton" type="Button" parent="ActionPopup/Margin/VBox/Buttons"]
+layout_mode = 2
+text = "Usar"
+
+[node name="DropButton" type="Button" parent="ActionPopup/Margin/VBox/Buttons"]
+layout_mode = 2
+text = "Tirar"
+
+[node name="CancelButton" type="Button" parent="ActionPopup/Margin/VBox/Buttons"]
+layout_mode = 2
+text = "Cancelar"

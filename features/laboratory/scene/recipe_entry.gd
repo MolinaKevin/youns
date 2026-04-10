@@ -11,6 +11,7 @@ signal activate_requested(recipe: Resource)
 var _recipe: Resource = null
 var _tracking_progress := false
 var _shader_mat: ShaderMaterial
+var _interactive := true
 
 const FILL_SHADER := """
 shader_type canvas_item;
@@ -35,8 +36,9 @@ func _set_fill_color(color: Color) -> void:
 func _set_progress(value: float) -> void:
 	_shader_mat.set_shader_parameter("progress", value)
 
-func setup(recipe: Resource) -> void:
+func setup(recipe: Resource, interactive := true) -> void:
 	_recipe = recipe
+	_interactive = interactive
 	name_label.text = recipe.recipe_name
 	description_label.text = recipe.description
 	time_label.text = "" if recipe.action_type == "instant" else "%.0fs" % recipe.craft_time
@@ -63,7 +65,7 @@ func set_paused(progress: float) -> void:
 
 func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		if _recipe != null and not _tracking_progress and _is_available():
+		if _interactive and _recipe != null and not _tracking_progress and _is_available():
 			activate_requested.emit(_recipe)
 
 func _is_available() -> bool:

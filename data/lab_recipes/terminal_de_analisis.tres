@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1_labrecipe"]
+
+[resource]
+script = ExtResource("1_labrecipe")
+id = "terminal_de_analisis"
+recipe_name = "Terminal de Analisis"
+description = "Instala una terminal base en la ciudad para expandir la investigacion del laboratorio."
+craft_time = 18.0
+location = "analisis"
+action_type = "upgrade"
+reward = {"type": "unlock_recipe", "id": "reloj_de_sistema"}
+extra_rewards = [{"type": "unlock_recipe", "id": "kit_de_topografia"}, {"type": "unlock_recipe", "id": "biolectura_inicial"}, {"type": "unlock_recipe", "id": "archivo_de_campo"}]
+ingredients = [{"id": "datos", "amount": 5}]
+starts_unlocked = true
+needs_research = false

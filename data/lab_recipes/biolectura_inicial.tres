@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1_labrecipe"]
+
+[resource]
+script = ExtResource("1_labrecipe")
+id = "biolectura_inicial"
+recipe_name = "Biolectura Inicial"
+description = "Instala un monitoreo simple para observar mejor el estado general del Youn."
+craft_time = 14.0
+location = "bio"
+action_type = "upgrade"
+reward = {"type": "unlock_recipe", "id": "estimulacion_suave"}
+ingredients = [{"id": "datos", "amount": 7}]
+starts_unlocked = false
+needs_research = true

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1_labrecipe"]
+
+[resource]
+script = ExtResource("1_labrecipe")
+id = "producir_datos"
+recipe_name = "Producir Datos"
+item_name = "Datos"
+description = "Recolecta y ordena datos basicos para habilitar nuevas investigaciones."
+craft_time = 4.0
+location = "produccion"
+action_type = "loop"
+reward = {"type": "item", "id": "datos", "amount": 1}
+ingredients = []
+starts_unlocked = true
+needs_research = false

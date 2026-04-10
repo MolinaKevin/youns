@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1_labrecipe"]
+
+[resource]
+script = ExtResource("1_labrecipe")
+id = "estimulacion_suave"
+recipe_name = "Estimulacion Suave"
+description = "Aplica una mejora basal para favorecer el desarrollo temprano del Youn."
+craft_time = 18.0
+location = "bio"
+action_type = "upgrade"
+reward = {"type": "youn_growth_bonus", "value": 1}
+ingredients = [{"id": "datos", "amount": 10}]
+starts_unlocked = false
+needs_research = true

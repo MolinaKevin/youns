@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1_labrecipe"]
+
+[resource]
+script = ExtResource("1_labrecipe")
+id = "estudio_de_puente_ligero"
+recipe_name = "Estudio de Puente Ligero"
+description = "Analiza materiales y trazado para construir un puente por encima del rio."
+craft_time = 24.0
+location = "infraestructura"
+action_type = "upgrade"
+reward = {"type": "unlock_recipe", "id": "construccion_de_puente"}
+ingredients = [{"id": "datos", "amount": 12}, {"id": "kit_topografia", "amount": 1}]
+starts_unlocked = false
+needs_research = true

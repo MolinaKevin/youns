@@ -88,7 +88,7 @@ var _intro_index := 0
 var _intro_active := false
 
 func _setup_intro() -> void:
-	if GameState.combat_return_pending:
+	if GameState.combat_return_pending or GameState.world_intro_seen:
 		intro_layer.visible = false
 		return
 	_intro_active = true
@@ -122,6 +122,7 @@ func _handle_intro_input(event: InputEvent) -> bool:
 
 func _close_intro() -> void:
 	_intro_active = false
+	GameState.world_intro_seen = true
 	intro_layer.visible = false
 	PartyManager.camera_rig.enabled = true
 	PartyManager.player.set_physics_process(true)

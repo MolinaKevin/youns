@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1_labrecipe"]
+
+[resource]
+script = ExtResource("1_labrecipe")
+id = "construccion_de_puente"
+recipe_name = "Construccion de Puente"
+description = "Levanta una estructura basica para cruzar el rio y abrir una nueva ruta."
+craft_time = 35.0
+location = "infraestructura"
+action_type = "upgrade"
+reward = {"type": "world_bridge", "id": "river_bridge"}
+ingredients = [{"id": "datos", "amount": 20}]
+starts_unlocked = false
+needs_research = true

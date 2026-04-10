@@ -68,3 +68,29 @@ layout_mode = 2
 theme_override_constants/h_separation = 12
 theme_override_constants/v_separation = 12
 columns = 3
+
+[node name="GoldPanel" type="PanelContainer" parent="."]
+layout_mode = 0
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -90.0
+offset_top = -54.0
+offset_right = 90.0
+offset_bottom = -14.0
+grow_horizontal = 2
+grow_vertical = 0
+visible = false
+
+[node name="GoldMargin" type="MarginContainer" parent="GoldPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 6
+
+[node name="GoldLabel" type="Label" parent="GoldPanel/GoldMargin"]
+layout_mode = 2
+horizontal_alignment = 1
+text = "Oro: 0"

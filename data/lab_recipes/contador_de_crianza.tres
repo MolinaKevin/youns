@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1_labrecipe"]
+
+[resource]
+script = ExtResource("1_labrecipe")
+id = "contador_de_crianza"
+recipe_name = "Contador de Crianza"
+description = "Agrega a la UI un contador del progreso de crianza y desarrollo del Youn."
+craft_time = 16.0
+location = "sistemas"
+action_type = "upgrade"
+reward = {"type": "youn_growth_counter", "value": 1}
+ingredients = [{"id": "datos", "amount": 8}]
+starts_unlocked = false
+needs_research = true

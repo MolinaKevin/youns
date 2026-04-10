@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1_labrecipe"]
+
+[resource]
+script = ExtResource("1_labrecipe")
+id = "reloj_de_sistema"
+recipe_name = "Reloj de Sistema"
+description = "Integra un reloj visible en la UI para seguir el paso del tiempo en el mundo."
+craft_time = 12.0
+location = "sistemas"
+action_type = "upgrade"
+reward = {"type": "unlock_recipe", "id": "contador_de_crianza"}
+ingredients = [{"id": "datos", "amount": 6}]
+starts_unlocked = false
+needs_research = true

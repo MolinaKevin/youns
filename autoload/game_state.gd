@@ -6,6 +6,8 @@ var pending_enemy_data: EnemyData
 var combat_return_pending := false
 var combat_return_position := Vector3.ZERO
 var combat_world_enemy_id := ""
+var world_intro_seen := false
+var ui_return_scene_path := ""
 
 const SAVE_PATH := "user://player_save.tres"
 const RUN_PATH := "user://current_run.tres"
@@ -28,6 +30,15 @@ func _ready() -> void:
 		"bear_trap", "bear_trap",
 		"spike_trap", "spike_trap",
 	]
+	player_save.inventory_slots = 20
+	player_save.inventory_items = [
+		{"id": "agumon_fang", "name": "Agumon Fang", "icon": "res://assets/icons/icon_1.png", "count": 3},
+		{"id": "bear_plush", "name": "Bear Plush", "icon": "res://assets/icons/icon_2.png", "count": 1},
+		{"id": "broken_arrow", "name": "Broken Arrow", "icon": "res://assets/icons/icon_3.png", "count": 6},
+		{"id": "suero_vitalidad", "name": "Suero Vitalidad", "icon": "res://assets/icons/icon_4.png", "count": 2},
+		{"id": "field_data", "name": "Field Data", "icon": "res://assets/icons/icon_5.png", "count": 8},
+	]
+	player_save.gold = 50
 
 	print("GameState loaded")
 	print("owned ids in GameState: ", player_save.owned_card_ids)

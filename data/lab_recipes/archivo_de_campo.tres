@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1_labrecipe"]
+
+[resource]
+script = ExtResource("1_labrecipe")
+id = "archivo_de_campo"
+recipe_name = "Archivo de Campo"
+item_name = "Archivo de Campo"
+description = "Compila observaciones utiles para futuras investigaciones."
+craft_time = 9.0
+location = "analisis"
+action_type = "loop"
+reward = {"type": "item", "id": "archivo_campo", "amount": 1}
+ingredients = [{"id": "datos", "amount": 2}]
+starts_unlocked = false
+needs_research = true

@@ -3,6 +3,8 @@ class_name PlayerSaveData
 
 @export var owned_card_ids: Array[String] = []
 @export var equipped_deck_ids: Array[String] = []
+@export var inventory_slots: int = 20
+@export var inventory_items: Array[Dictionary] = []
 
 @export var gold: int = 0
 @export var unlocked_relic_ids: Array[String] = []

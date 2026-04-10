@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1_labrecipe"]
+
+[resource]
+script = ExtResource("1_labrecipe")
+id = "kit_de_topografia"
+recipe_name = "Kit de Topografia"
+item_name = "Kit de Topografia"
+description = "Prepara instrumental base para estudiar un cruce seguro sobre el rio. Idealmente deberia costar 100 de oro."
+craft_time = 0.0
+location = "infraestructura"
+action_type = "instant"
+reward = {"type": "unlock_recipe", "id": "estudio_de_puente_ligero"}
+extra_rewards = [{"type": "item", "id": "kit_topografia", "amount": 1}]
+ingredients = []
+starts_unlocked = false
+needs_research = true

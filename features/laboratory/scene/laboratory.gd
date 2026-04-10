@@ -6,6 +6,7 @@ const RecipeEntry := preload("res://features/laboratory/scene/recipe_entry.tscn"
 const ACTION_TYPES := ["instant", "loop", "upgrade", "next", "dungeon"]
 
 @export var standalone_mode := true
+@export var interaction_enabled := true
 
 @onready var location_list = $RootVBox/ContentHBox/LocationPanel/LocationList
 @onready var output_list = $RootVBox/ContentHBox/OutputPanel/VBox/Scroll/OutputList
@@ -32,6 +33,7 @@ func _ready() -> void:
 		ZoneManager.set_world_visible(false)
 		PartyManager.set_party_visible(false)
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		interaction_enabled = false
 	take_all_button.pressed.connect(_on_take_all)
 	recipes_button.pressed.connect(func(): _set_view("recipes"))
 	tech_tree_button.pressed.connect(func(): _set_view("tech_tree"))
@@ -39,9 +41,18 @@ func _ready() -> void:
 	LaboratoryState.recipe_unlocked.connect(_on_recipe_unlocked)
 	LaboratoryState.pending_output_changed.connect(_sync_pending_output)
 	LaboratoryState.recipes_loaded.connect(_on_recipes_loaded)
-	close_button.pressed.connect(func(): close_requested.emit())
+	close_button.pressed.connect(_close_or_return)
+	_apply_mode_state()
 	if LaboratoryState.all_recipes.size() > 0:
 		_on_recipes_loaded()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if standalone_mode and event.is_action_pressed("ui_cancel"):
+		_close_or_return()
+
+func _apply_mode_state() -> void:
+	take_all_button.disabled = not interaction_enabled
+	take_all_button.text = "Solo disponible el laboratorio" if not interaction_enabled else "Sacar todo"
 
 func _set_view(view: String) -> void:
 	var is_recipes := view == "recipes"
@@ -64,11 +75,15 @@ func _build_location_sidebar() -> void:
 	location_buttons.clear()
 	var seen: Array = []
 	for recipe in LaboratoryState.all_recipes:
+		if not LaboratoryState.is_recipe_unlocked(recipe.id) and not LaboratoryState.is_recipe_completed(recipe.id):
+			continue
 		if recipe.location not in seen:
 			seen.append(recipe.location)
 			_add_location_button(recipe.location)
 	if seen.size() > 0:
 		_select_location(seen[0])
+	else:
+		selected_location = ""
 
 func _add_location_button(location: String) -> void:
 	var btn := Button.new()
@@ -121,8 +136,9 @@ func _refresh_columns() -> void:
 		for recipe in filtered:
 			var entry := RecipeEntry.instantiate()
 			recipe_list.add_child(entry)
-			entry.setup(recipe)
-			entry.activate_requested.connect(_on_activate_requested)
+			entry.setup(recipe, interaction_enabled)
+			if interaction_enabled:
+				entry.activate_requested.connect(_on_activate_requested)
 
 			if recipe.id == LaboratoryState.active_recipe_id:
 				entry.set_active()
@@ -140,6 +156,10 @@ func _on_recipe_completed(_recipe: Resource) -> void:
 	_sync_pending_output()
 
 func _on_recipe_unlocked(recipe: Resource) -> void:
+	if not location_buttons.has(recipe.location):
+		_add_location_button(recipe.location)
+		if selected_location == "":
+			_select_location(recipe.location)
 	_set_notification(recipe.location)
 	if recipe.location == selected_location:
 		_refresh_columns()
@@ -155,9 +175,19 @@ func _sync_pending_output() -> void:
 		output_list.add_child(label)
 
 func _on_take_all() -> void:
+	if not interaction_enabled:
+		return
 	var taken := LaboratoryState.take_all_output()
 	for item_id in taken:
 		# TODO: agregar item al inventario del jugador (id: item_id, count: taken[item_id]["count"])
 		pass
 	for child in output_list.get_children():
 		child.queue_free()
+
+func _close_or_return() -> void:
+	if standalone_mode and GameState.ui_return_scene_path != "":
+		var return_scene := GameState.ui_return_scene_path
+		GameState.ui_return_scene_path = ""
+		get_tree().change_scene_to_file(return_scene)
+		return
+	close_requested.emit()
