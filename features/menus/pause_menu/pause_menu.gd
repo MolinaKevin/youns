@@ -4,14 +4,17 @@ var enabled := false
 var _clock_was_visible := true
 var _status_was_visible := false
 
+@onready var title_label = $Panel/VBox/Title
 @onready var continue_button = $Panel/VBox/ContinueButton
 @onready var deck_button = $Panel/VBox/DeckButton
 @onready var quit_button = $Panel/VBox/QuitButton
 
 func _ready() -> void:
+	LocalizationState.language_changed.connect(_apply_localized_text)
 	continue_button.pressed.connect(close)
 	deck_button.pressed.connect(_on_deck)
 	quit_button.pressed.connect(_on_quit)
+	_apply_localized_text()
 	hide()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -53,3 +56,9 @@ func _is_menu_pressed(event: InputEvent) -> bool:
 	if event is InputEventKey:
 		return not event.echo
 	return true
+
+func _apply_localized_text(_language: String = "") -> void:
+	title_label.text = LocalizationState.t("pause.title")
+	continue_button.text = LocalizationState.t("pause.continue")
+	deck_button.text = LocalizationState.t("pause.deck")
+	quit_button.text = LocalizationState.t("pause.exit")

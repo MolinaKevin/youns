@@ -167,7 +167,7 @@ func _process_reward(reward: Dictionary, _recipe_name: String) -> void:
 				var item_name: String = item_id
 				if item_recipe:
 					item_name = item_recipe.item_name if item_recipe.item_name != "" else item_recipe.recipe_name
-				pending_output[item_id] = {"name": item_name, "count": mini(current_count + amount, 99)}
+				pending_output[item_id] = {"id": item_id, "name": item_name, "count": mini(current_count + amount, 99)}
 				pending_output_changed.emit()
 			_check_indirect_unlocks(item_id)
 

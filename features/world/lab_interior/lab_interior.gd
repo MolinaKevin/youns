@@ -26,6 +26,8 @@ func _ready() -> void:
 	terminal_area.body_exited.connect(_on_terminal_exited)
 	lab_ui.close_requested.connect(_toggle_lab)
 	LaboratoryState.recipe_completed.connect(_on_recipe_completed)
+	LocalizationState.language_changed.connect(_apply_localized_text)
+	_apply_localized_text()
 	_refresh_analysis_terminal()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -101,7 +103,7 @@ func _toggle_terminal_clock(showing: bool) -> void:
 	GameState.set_clock_visible(showing or GameState.has_persistent_clock_ui())
 	GameState.set_clock_paused(showing)
 	GameState.set_youns_status_visible(showing or GameState.has_persistent_care_ui())
-	terminal_prompt.text = "Cerrar reloj [Esc]" if showing else "Ver reloj [E]"
+	terminal_prompt.text = LocalizationState.t("world.prompt.close_clock") if showing else LocalizationState.t("world.prompt.view_clock")
 
 func _toggle_menu() -> void:
 	var showing := not menu.visible
@@ -135,3 +137,8 @@ func _is_interact_pressed(event: InputEvent) -> bool:
 
 func _exit_tree() -> void:
 	PauseMenu.enabled = false
+
+func _apply_localized_text(_language: String = "") -> void:
+	prompt.text = LocalizationState.t("world.prompt.talk")
+	if not _terminal_clock_open:
+		terminal_prompt.text = LocalizationState.t("world.prompt.view_clock")

@@ -6,6 +6,7 @@ extends Panel
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = GameState.clock_visible
+	LocalizationState.language_changed.connect(_refresh_language)
 	_refresh_clock(GameState.time_of_day_hours, GameState.current_day)
 	GameState.clock_changed.connect(_refresh_clock)
 	GameState.clock_visibility_changed.connect(_on_clock_visibility_changed)
@@ -38,8 +39,11 @@ func _draw() -> void:
 
 func _refresh_clock(_current_hour: float, current_day: int) -> void:
 	time_label.text = GameState.get_time_string()
-	day_label.text = "Dia %d" % current_day
+	day_label.text = LocalizationState.t("day_clock.day", [current_day])
 	queue_redraw()
 
 func _on_clock_visibility_changed(clock_is_visible: bool) -> void:
 	visible = clock_is_visible
+
+func _refresh_language(_language: String = "") -> void:
+	_refresh_clock(GameState.time_of_day_hours, GameState.current_day)

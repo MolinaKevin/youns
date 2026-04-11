@@ -56,8 +56,8 @@ func set_card(card: CardData) -> void:
 
 func _apply_card_data(card: CardData) -> void:
 	art_rect.texture = card.image if card.image != null else FALLBACK_IMAGE
-	name_label.text = card.name
-	desc_label.text = card.description
+	name_label.text = LocalizationState.card_name(card.id, card.name)
+	desc_label.text = LocalizationState.card_description(card.id, card.description)
 	if card.damage > 0:
 		stat1_label.text = str(card.damage)
 	elif card.block_amount > 0:

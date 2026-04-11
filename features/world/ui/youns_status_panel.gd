@@ -3,16 +3,21 @@ extends Panel
 const MAX_DISCIPLINE := 100.0
 const MAX_CARE_MISTAKES := 10.0
 
+@onready var header_label: Label = $Margin/VBox/Header
+@onready var discipline_name: Label = $Margin/VBox/DisciplineRow/Top/Name
 @onready var discipline_value: Label = $Margin/VBox/DisciplineRow/Top/Value
 @onready var discipline_bar: ColorRect = $Margin/VBox/DisciplineRow/BarFrame/BarFill
+@onready var care_name: Label = $Margin/VBox/CareRow/Top/Name
 @onready var care_value: Label = $Margin/VBox/CareRow/Top/Value
 @onready var care_bar: ColorRect = $Margin/VBox/CareRow/BarFrame/BarFill
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	visible = GameState.youns_status_visible
+	LocalizationState.language_changed.connect(_apply_localized_text)
 	GameState.youns_status_changed.connect(_refresh_status)
 	GameState.youns_status_visibility_changed.connect(_on_visibility_changed)
+	_apply_localized_text()
 	_refresh_status(GameState.player_save.discipline, GameState.player_save.care_mistakes)
 
 func _exit_tree() -> void:
@@ -33,3 +38,8 @@ func _set_fill_width(fill: Control, ratio: float) -> void:
 
 func _on_visibility_changed(panel_is_visible: bool) -> void:
 	visible = panel_is_visible
+
+func _apply_localized_text(_language: String = "") -> void:
+	header_label.text = LocalizationState.t("status.title")
+	discipline_name.text = LocalizationState.t("status.discipline")
+	care_name.text = LocalizationState.t("status.care_mistakes")

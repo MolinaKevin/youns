@@ -3,7 +3,9 @@ extends Control
 @onready var card_grid = $MarginContainer/MainVBox/Body/LeftPanel/CardGrid
 @onready var preview_panel = $MarginContainer/MainVBox/Body/RightPanel/PreviewPanel
 @onready var deck_list = $MarginContainer/MainVBox/Body/RightPanel/DeckScroll/DeckList
+@onready var title_label = $MarginContainer/MainVBox/Header/TitleLabel
 @onready var deck_count_label = $MarginContainer/MainVBox/Body/RightPanel/DeckHeader/DeckCountLabel
+@onready var deck_title_label = $MarginContainer/MainVBox/Body/RightPanel/DeckHeader/DeckTitleLabel
 @onready var save_button = $MarginContainer/MainVBox/Header/SaveButton
 @onready var add_button = $MarginContainer/MainVBox/Body/RightPanel/PreviewPanel/VBox/AddButton
 
@@ -18,6 +20,7 @@ func _ready() -> void:
 	ZoneManager.set_world_visible(false)
 	PartyManager.set_party_visible(false)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	LocalizationState.language_changed.connect(_apply_localized_text)
 	owned_cards = _get_owned_cards()
 	current_deck = GameState.player_save.equipped_deck_ids.duplicate()
 
@@ -50,7 +53,8 @@ func _refresh_deck_panel() -> void:
 	for child in deck_list.get_children():
 		child.queue_free()
 
-	deck_count_label.text = "%d cartas" % current_deck.size()
+	deck_count_label.text = LocalizationState.t("deck.count", [current_deck.size()])
+	_apply_localized_text()
 
 	for i in current_deck.size():
 		var card_id = current_deck[i]
@@ -60,12 +64,12 @@ func _refresh_deck_panel() -> void:
 		deck_list.add_child(row)
 
 		var lbl = Label.new()
-		lbl.text = card_data.name if card_data != null else card_id
+		lbl.text = LocalizationState.card_name(card_id, card_data.name if card_data != null else card_id)
 		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(lbl)
 
 		var btn = Button.new()
-		btn.text = "X"
+		btn.text = LocalizationState.t("deck.remove")
 		btn.pressed.connect(_remove_card_from_deck.bind(i))
 		row.add_child(btn)
 
@@ -77,3 +81,14 @@ func _get_owned_cards() -> Array[CardData]:
 	if GameState.player_save == null:
 		return []
 	return CardDatabase.get_cards_from_ids(GameState.player_save.owned_card_ids)
+
+func _apply_localized_text(_language: String = "") -> void:
+	title_label.text = LocalizationState.t("deck.title")
+	save_button.text = LocalizationState.t("deck.save")
+	add_button.text = LocalizationState.t("deck.add")
+	deck_title_label.text = LocalizationState.t("deck.my_deck")
+	deck_count_label.text = LocalizationState.t("deck.count", [current_deck.size()])
+	if selected_card == null:
+		preview_panel.show_card(null)
+	elif selected_card != null:
+		preview_panel.show_card(selected_card)

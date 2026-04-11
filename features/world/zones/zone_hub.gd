@@ -9,8 +9,10 @@ func _ready() -> void:
 	$DemoMonzaemon/InteractArea.body_entered.connect(_on_demo_monzaemon_entered)
 	$DemoMonzaemon/InteractArea.body_exited.connect(_on_demo_monzaemon_exited)
 	LaboratoryState.recipe_completed.connect(_on_recipe_completed)
+	LocalizationState.language_changed.connect(_apply_localized_text)
 	_build_floor_collision()
 	_fix_map_vertex_colors()
+	_apply_localized_text()
 	_refresh_demo_bridge_visibility()
 
 func _on_body_entered(body: Node3D) -> void:
@@ -97,3 +99,7 @@ func _build_floor_collision() -> void:
 	col.position.y = -0.05
 	body.add_child(col)
 	add_child(body)
+
+func _apply_localized_text(_language: String = "") -> void:
+	$DemoMonzaemon/Prompt.text = LocalizationState.t("world.prompt.talk")
+	$DemoDialog/Panel/Margin/Text.text = LocalizationState.t("world.demo.monzaemon")

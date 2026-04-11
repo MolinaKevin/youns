@@ -32,9 +32,10 @@ func _ready() -> void:
 func setup(item: Dictionary) -> void:
 	var icon_path: String = str(item.get("icon", ""))
 	icon_rect.texture = load(icon_path) as Texture2D if icon_path != "" else null
-	name_label.text = str(item.get("name", "Item"))
+	var item_id := str(item.get("id", ""))
+	name_label.text = LocalizationState.item_name(item_id, str(item.get("name", LocalizationState.t("inventory.item_default"))))
 	var count: int = int(item.get("count", 1))
-	count_label.text = "x%d" % count
+	count_label.text = LocalizationState.t("inventory.count_short", [count])
 
 func set_selected(selected: bool) -> void:
 	add_theme_stylebox_override("panel", _selected_style if selected else _normal_style)

@@ -31,6 +31,7 @@ func _ready() -> void:
 	ZoneManager.set_world_visible(false)
 	PartyManager.set_party_visible(false)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	LocalizationState.language_changed.connect(_apply_localized_text)
 	close_button.pressed.connect(_on_close_pressed)
 	use_button.pressed.connect(_on_use_pressed)
 	drop_button.pressed.connect(_on_drop_pressed)
@@ -78,8 +79,8 @@ func _refresh_inventory() -> void:
 		entry.setup(item)
 		_entry_nodes.append(entry)
 
-	title_label.text = "Inventario"
-	count_label.text = "%d / %d" % [items.size(), capacity]
+	title_label.text = LocalizationState.t("inventory.title")
+	count_label.text = LocalizationState.t("inventory.count", [items.size(), capacity])
 	_update_window_height(capacity)
 	if _entry_nodes.is_empty():
 		_selected_index = -1
@@ -113,7 +114,10 @@ func _open_popup() -> void:
 	if _selected_index < 0 or _selected_index >= GameState.player_save.inventory_items.size():
 		return
 	var item: Dictionary = GameState.player_save.inventory_items[_selected_index]
-	popup_title.text = str(item.get("name", "Item"))
+	popup_title.text = LocalizationState.item_name(
+		str(item.get("id", "")),
+		str(item.get("name", LocalizationState.t("inventory.item_default")))
+	)
 	action_popup.visible = true
 	_popup_open = true
 	use_button.grab_focus()
@@ -147,3 +151,10 @@ func _drop_selected_item() -> void:
 
 func _on_close_pressed() -> void:
 	get_tree().change_scene_to_file("res://features/world/game_world/game_world.tscn")
+
+func _apply_localized_text(_language: String = "") -> void:
+	title_label.text = LocalizationState.t("inventory.title")
+	close_button.text = LocalizationState.t("inventory.close")
+	use_button.text = LocalizationState.t("inventory.use")
+	drop_button.text = LocalizationState.t("inventory.drop")
+	cancel_button.text = LocalizationState.t("inventory.cancel")

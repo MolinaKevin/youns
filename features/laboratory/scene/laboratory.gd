@@ -44,8 +44,10 @@ func _ready() -> void:
 	LaboratoryState.recipe_unlocked.connect(_on_recipe_unlocked)
 	LaboratoryState.pending_output_changed.connect(_sync_pending_output)
 	LaboratoryState.recipes_loaded.connect(_on_recipes_loaded)
+	LocalizationState.language_changed.connect(_apply_localized_text)
 	close_button.pressed.connect(_close_or_return)
 	_apply_mode_state()
+	_apply_localized_text()
 	if LaboratoryState.all_recipes.size() > 0:
 		_on_recipes_loaded()
 
@@ -56,7 +58,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _apply_mode_state() -> void:
 	take_all_button.disabled = not interaction_enabled
-	take_all_button.text = "Solo disponible el laboratorio" if not interaction_enabled else "Sacar todo"
+	take_all_button.text = LocalizationState.t("lab.take_all_disabled") if not interaction_enabled else LocalizationState.t("lab.take_all")
 
 func _set_view(view: String) -> void:
 	var is_recipes := view == "recipes"
@@ -91,7 +93,7 @@ func _build_location_sidebar() -> void:
 
 func _add_location_button(location: String) -> void:
 	var btn := Button.new()
-	btn.text = location.capitalize()
+	btn.text = LocalizationState.location_name(location)
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.toggle_mode = true
 	btn.size_flags_horizontal = Control.SIZE_FILL
@@ -111,14 +113,14 @@ func _set_notification(location: String) -> void:
 		return
 	notified_locations.append(location)
 	if location_buttons.has(location):
-		location_buttons[location].text = location.capitalize() + "  !"
+		location_buttons[location].text = LocalizationState.location_name(location) + "  !"
 
 func _clear_notification(location: String) -> void:
 	if not notified_locations.has(location):
 		return
 	notified_locations.erase(location)
 	if location_buttons.has(location):
-		location_buttons[location].text = location.capitalize()
+		location_buttons[location].text = LocalizationState.location_name(location)
 
 # ── Columnas ──────────────────────────────────────────────────────────────────
 
@@ -174,7 +176,11 @@ func _sync_pending_output() -> void:
 	for item_id in LaboratoryState.pending_output:
 		var entry: Dictionary = LaboratoryState.pending_output[item_id]
 		var label := Label.new()
-		label.text = "%s x%d" % [entry["name"], entry["count"]]
+		var localized_item_id := str(entry.get("id", item_id))
+		label.text = LocalizationState.t(
+			"lab.output_count",
+			[LocalizationState.item_name(localized_item_id, str(entry["name"])), entry["count"]]
+		)
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD
 		output_list.add_child(label)
 
@@ -195,3 +201,19 @@ func _close_or_return() -> void:
 		get_tree().change_scene_to_file(return_scene)
 		return
 	close_requested.emit()
+
+func _apply_localized_text(_language: String = "") -> void:
+	recipes_button.text = LocalizationState.t("lab.recipes")
+	tech_tree_button.text = LocalizationState.t("lab.tech_tree")
+	close_button.text = LocalizationState.t("lab.close")
+	$RootVBox/ContentHBox/OutputPanel/VBox/Header.text = LocalizationState.t("lab.generated")
+	_apply_mode_state()
+	columns["instant"].title = LocalizationState.action_type_name("instant")
+	columns["loop"].title = LocalizationState.action_type_name("loop")
+	columns["upgrade"].title = LocalizationState.action_type_name("upgrade")
+	columns["next"].title = LocalizationState.action_type_name("next")
+	columns["dungeon"].title = LocalizationState.action_type_name("dungeon")
+	for location in location_buttons:
+		location_buttons[location].text = LocalizationState.location_name(location)
+	_sync_pending_output()
+	_refresh_columns()

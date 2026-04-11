@@ -84,7 +84,10 @@ func _apply_enemy_data() -> void:
 	var touch := SphereShape3D.new()
 	touch.radius = enemy_data.collision_radius + 0.35
 	touch_shape.shape = touch
-	popup_label.text = "%s te intercepto" % enemy_data.enemy_name
+	popup_label.text = LocalizationState.t(
+		"world.enemy.intercepted",
+		[LocalizationState.enemy_name(enemy_data.id, enemy_data.enemy_name)]
+	)
 
 func _tick_idle() -> void:
 	velocity.x = 0.0
@@ -283,7 +286,10 @@ func _engage_combat() -> void:
 			rotation.y = atan2(to_player.x, to_player.z)
 
 	set_physics_process(false)
-	popup_label.text = "%s te intercepto" % enemy_data.enemy_name
+	popup_label.text = LocalizationState.t(
+		"world.enemy.intercepted",
+		[LocalizationState.enemy_name(enemy_data.id, enemy_data.enemy_name)]
+	)
 	popup_panel.visible = true
 	_popup_timer = CONTACT_POPUP_TIME
 	_start_combat_transition.call_deferred()

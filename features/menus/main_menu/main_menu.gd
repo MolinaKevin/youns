@@ -4,12 +4,12 @@ const MenuItem := preload("res://features/menus/main_menu/menu_item.tscn")
 const COLUMNS := 3
 
 const MENU_ITEMS := [
-	{name = "Laboratorio", icon = "res://assets/icons/icon_1.png", scene = "res://features/laboratory/scene/laboratory.tscn"},
-	{name = "Combate",     icon = "res://assets/icons/icon_2.png", scene = "res://features/combat/scene/combat.tscn"},
-	{name = "Mazo",        icon = "res://assets/icons/icon_3.png", scene = "res://features/deck_builder/ui/deck_builder_screen.tscn"},
-	{name = "Mapa",        icon = "res://assets/icons/icon_4.png", scene = ""},
-	{name = "Inventario",  icon = "res://assets/icons/icon_5.png", scene = "res://features/items/ui/item_inventory_screen.tscn"},
-	{name = "Guardar",     icon = "res://assets/icons/icon_6.png", scene = ""},
+	{name_key = "main_menu.lab",       icon = "res://assets/icons/icon_1.png", scene = "res://features/laboratory/scene/laboratory.tscn"},
+	{name_key = "main_menu.combat",    icon = "res://assets/icons/icon_2.png", scene = "res://features/combat/scene/combat.tscn"},
+	{name_key = "main_menu.deck",      icon = "res://assets/icons/icon_3.png", scene = "res://features/deck_builder/ui/deck_builder_screen.tscn"},
+	{name_key = "main_menu.map",       icon = "res://assets/icons/icon_4.png", scene = ""},
+	{name_key = "main_menu.inventory", icon = "res://assets/icons/icon_5.png", scene = "res://features/items/ui/item_inventory_screen.tscn"},
+	{name_key = "main_menu.save",      icon = "res://assets/icons/icon_6.png", scene = ""},
 ]
 
 @export var overlay_mode: bool = false
@@ -19,9 +19,12 @@ const MENU_ITEMS := [
 @onready var stats_bar: Panel = $StatsBar
 @onready var gold_panel: PanelContainer = $GoldPanel
 @onready var gold_label: Label = $GoldPanel/GoldMargin/GoldLabel
+@onready var year_label: Label = $StatsBar/HBox/YearLabel
+@onready var day_label: Label = $StatsBar/HBox/DayLabel
 
 var _selected := 0
 var _items: Array = []
+var _item_textures: Array[Texture2D] = []
 
 func _ready() -> void:
 	if overlay_mode:
@@ -32,6 +35,7 @@ func _ready() -> void:
 		GameState.set_clock_visible(false)
 	GameState.set_clock_paused(true)
 	GameState.set_youns_status_visible(false)
+	LocalizationState.language_changed.connect(_apply_localized_text)
 	_refresh_gold()
 
 	grid.columns = COLUMNS
@@ -39,8 +43,10 @@ func _ready() -> void:
 		var item := MenuItem.instantiate()
 		grid.add_child(item)
 		var tex := load(data.icon) as Texture2D if data.icon != "" else null
-		item.setup(data.name, tex)
+		item.setup(LocalizationState.t(data.name_key), tex)
 		_items.append(item)
+		_item_textures.append(tex)
+	_apply_localized_text()
 	_update_selection()
 
 func _input(event: InputEvent) -> void:
@@ -70,9 +76,19 @@ func _update_selection() -> void:
 
 func _refresh_gold() -> void:
 	if GameState.player_save == null:
-		gold_label.text = "Oro: 0"
+		gold_label.text = LocalizationState.t("main_menu.gold", [0])
 		return
-	gold_label.text = "Oro: %d" % GameState.player_save.gold
+	gold_label.text = LocalizationState.t("main_menu.gold", [GameState.player_save.gold])
+
+func _apply_localized_text(_language: String = "") -> void:
+	for index in _items.size():
+		_items[index].setup(LocalizationState.t(MENU_ITEMS[index].name_key), _item_textures[index])
+	var current_day := maxi(GameState.current_day, 1)
+	var current_year := int((current_day - 1) / 365) + 1
+	var day_of_year := ((current_day - 1) % 365) + 1
+	year_label.text = LocalizationState.t("main_menu.year", [current_year])
+	day_label.text = LocalizationState.t("main_menu.day", [day_of_year])
+	_refresh_gold()
 
 func _activate() -> void:
 	var scene: String = MENU_ITEMS[_selected].scene

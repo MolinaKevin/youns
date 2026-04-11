@@ -171,3 +171,79 @@ theme_override_font_sizes/font_size = 20
 text = "Flechas para navegar. Enter para confirmar."
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="LanguageOverlay" type="Control" parent="." unique_id=796451201]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+
+[node name="Shade" type="ColorRect" parent="LanguageOverlay" unique_id=955337401]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.55)
+
+[node name="Dialog" type="PanelContainer" parent="LanguageOverlay" unique_id=850995116]
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -210.0
+offset_top = -150.0
+offset_right = 210.0
+offset_bottom = 150.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="LanguageOverlay/Dialog" unique_id=831339149]
+layout_mode = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 22
+
+[node name="VBox" type="VBoxContainer" parent="LanguageOverlay/Dialog/Margin" unique_id=160551237]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="LanguageOverlay/Dialog/Margin/VBox" unique_id=193818414]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+horizontal_alignment = 1
+text = "Elegi idioma"
+
+[node name="Subtitle" type="Label" parent="LanguageOverlay/Dialog/Margin/VBox" unique_id=586818937]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.78, 0.82, 0.84, 1)
+theme_override_font_sizes/font_size = 18
+horizontal_alignment = 1
+autowrap_mode = 3
+text = "Podes cambiarlo mas tarde desde este menu."
+
+[node name="SpanishButton" type="Button" parent="LanguageOverlay/Dialog/Margin/VBox" unique_id=30842111]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+text = "Espanol"
+
+[node name="EnglishButton" type="Button" parent="LanguageOverlay/Dialog/Margin/VBox" unique_id=116503219]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 52)
+text = "English"
+
+[node name="CurrentLanguageLabel" type="Label" parent="LanguageOverlay/Dialog/Margin/VBox" unique_id=113286640]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.901961, 0.878431, 0.713726, 1)
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+text = "Idioma actual: Espanol"

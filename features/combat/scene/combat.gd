@@ -24,6 +24,7 @@ const _EnemyData  = preload("res://data/enemies/enemy_data.gd")
 @onready var pile_popup_grid = $UI/PilePopup/VBox/CardGrid
 @onready var pile_close_button = $UI/PilePopup/VBox/Header/CloseButton
 @onready var confirm_popup = $UI/ConfirmPopup
+@onready var confirm_label = $UI/ConfirmPopup/VBox/Label
 @onready var confirm_yes_button = $UI/ConfirmPopup/VBox/Buttons/YesButton
 @onready var confirm_no_button = $UI/ConfirmPopup/VBox/Buttons/NoButton
 @onready var confirm_fin_button = $UI/ConfirmPopup/VBox/Buttons/FinButton
@@ -40,6 +41,7 @@ func _ready() -> void:
 	ZoneManager.set_world_visible(false)
 	PartyManager.set_party_visible(false)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	LocalizationState.language_changed.connect(_apply_localized_text)
 	randomize()
 	var cam: Camera3D = $CombatWorld/Camera3D
 	cam.look_at_from_position(Vector3(-10.0, 35.0, 78.0), Vector3(30.0, 0.0, 30.0), Vector3.UP)
@@ -83,18 +85,19 @@ func _ready() -> void:
 	if map_area.has_signal("position_selected"):
 		map_area.position_selected.connect(player_actions._on_position_selected)
 
-	hand_section.set_title("Mano")
+	hand_section.set_title(LocalizationState.t("combat.hand"))
 	hand_section.card_selected.connect(player_actions._on_card_selected)
 
 	setup_draw_pile()
 	draw_cards(HAND_SIZE)
 	refresh_hand()
 	enemy_ai.pick_intent()
+	_apply_localized_text()
 	update_ui()
 
 	PauseMenu.enabled = true
 
-	log_message("Combat started against %s." % enemy_data.enemy_name)
+	log_message(LocalizationState.t("combat.started", [LocalizationState.enemy_name(enemy_data.id, enemy_data.enemy_name)]))
 
 func _exit_tree() -> void:
 	ZoneManager.set_world_visible(true)
@@ -117,7 +120,7 @@ func draw_cards(n: int) -> void:
 			state.draw_pile.assign(state.discard_pile)
 			state.draw_pile.shuffle()
 			state.discard_pile.clear()
-			log_message("Mazo vacío — se mezcló el descarte.")
+			log_message(LocalizationState.t("combat.reshuffle"))
 		state.hand.append(state.draw_pile.pop_back())
 
 func discard_hand() -> void:
@@ -126,22 +129,22 @@ func discard_hand() -> void:
 
 func refresh_hand() -> void:
 	hand_section.set_cards(state.hand)
-	draw_pile_button.text = "Mazo (%d)" % state.draw_pile.size()
-	discard_pile_button.text = "Descarte (%d)" % state.discard_pile.size()
+	draw_pile_button.text = LocalizationState.t("combat.draw_pile", [state.draw_pile.size()])
+	discard_pile_button.text = LocalizationState.t("combat.discard_pile", [state.discard_pile.size()])
 
 # ── Pile popup ────────────────────────────────────────────────────────────────
 
 func _on_draw_pile_button_pressed() -> void:
 	var cards: Array[CardData] = []
 	cards.assign(state.draw_pile)
-	pile_popup_title.text = "Mazo (%d)" % cards.size()
+	pile_popup_title.text = LocalizationState.t("combat.draw_pile", [cards.size()])
 	pile_popup_grid.set_cards(cards)
 	pile_popup.visible = true
 
 func _on_discard_pile_button_pressed() -> void:
 	var cards: Array[CardData] = []
 	cards.assign(state.discard_pile)
-	pile_popup_title.text = "Descarte (%d)" % cards.size()
+	pile_popup_title.text = LocalizationState.t("combat.discard_pile", [cards.size()])
 	pile_popup_grid.set_cards(cards)
 	pile_popup.visible = true
 
@@ -182,26 +185,26 @@ func deal_damage_to_player(amount: int) -> void:
 # ── UI ────────────────────────────────────────────────────────────────────────
 
 func update_ui() -> void:
-	player_stats.text = "HP: %d | Block: %d | Energy: %d | Enemy HP: %d" % [
+	player_stats.text = LocalizationState.t("combat.player_stats", [
 		state.player_hp, state.player_block, state.player_energy, state.enemy_hp
-	]
+	])
 	match state.enemy_intent["type"]:
 		"attack":
-			enemy_intent_label.text = "Intent: Attack %d" % state.enemy_intent["value"]
+			enemy_intent_label.text = LocalizationState.t("combat.intent.attack", [state.enemy_intent["value"]])
 		"range_attack":
-			enemy_intent_label.text = "Intent: Shoot %d" % state.enemy_intent["value"]
+			enemy_intent_label.text = LocalizationState.t("combat.intent.range_attack", [state.enemy_intent["value"]])
 		"move":
-			enemy_intent_label.text = "Intent: Move"
+			enemy_intent_label.text = LocalizationState.t("combat.intent.move")
 		"retreat":
-			enemy_intent_label.text = "Intent: Retreat"
+			enemy_intent_label.text = LocalizationState.t("combat.intent.retreat")
 		"block":
-			enemy_intent_label.text = "Intent: Block %d" % state.enemy_intent["value"]
+			enemy_intent_label.text = LocalizationState.t("combat.intent.block", [state.enemy_intent["value"]])
 		"wait":
-			enemy_intent_label.text = "Intent: Wait"
+			enemy_intent_label.text = LocalizationState.t("combat.intent.wait")
 
 func check_combat_end() -> bool:
 	if state.enemy_hp <= 0:
-		log_message("You win.")
+		log_message(LocalizationState.t("combat.win"))
 		hand_section.disable_cards()
 		end_turn_button.disabled = true
 		if not _combat_finished:
@@ -209,7 +212,7 @@ func check_combat_end() -> bool:
 			_return_to_world_after_victory.call_deferred()
 		return true
 	if state.player_hp <= 0:
-		log_message("You lose.")
+		log_message(LocalizationState.t("combat.lose"))
 		hand_section.disable_cards()
 		end_turn_button.disabled = true
 		return true
@@ -225,3 +228,15 @@ func _return_to_world_after_victory() -> void:
 	GameState.save_player_save()
 	await get_tree().create_timer(0.8).timeout
 	get_tree().change_scene_to_file("res://features/world/game_world/game_world.tscn")
+
+func _apply_localized_text(_language: String = "") -> void:
+	hand_section.set_title(LocalizationState.t("combat.hand"))
+	move_mode_button.text = LocalizationState.t("combat.move")
+	end_turn_button.text = LocalizationState.t("combat.end_turn")
+	end_move_button.text = LocalizationState.t("combat.end_move")
+	confirm_label.text = LocalizationState.t("combat.confirm_action")
+	confirm_yes_button.text = LocalizationState.t("combat.yes")
+	confirm_no_button.text = LocalizationState.t("combat.no")
+	confirm_fin_button.text = LocalizationState.t("combat.finish")
+	refresh_hand()
+	update_ui()

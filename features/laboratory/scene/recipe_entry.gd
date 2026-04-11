@@ -39,16 +39,17 @@ func _set_progress(value: float) -> void:
 func setup(recipe: Resource, interactive := true) -> void:
 	_recipe = recipe
 	_interactive = interactive
-	name_label.text = recipe.recipe_name
-	description_label.text = recipe.description
+	name_label.text = LocalizationState.recipe_name(recipe.id, recipe.recipe_name)
+	description_label.text = LocalizationState.recipe_description(recipe.id, recipe.description)
 	time_label.text = "" if recipe.action_type == "instant" else "%.0fs" % recipe.craft_time
 
 	var parts: Array = []
 	if recipe.gold_cost > 0:
-		parts.append("%d oro" % recipe.gold_cost)
+		parts.append(LocalizationState.t("lab.gold_cost", [recipe.gold_cost]))
 	for ing in recipe.ingredients:
-		parts.append("%s x%d" % [ing["id"], ing["amount"]])
-	ingredients_label.text = "" if parts.is_empty() else "Necesita: " + ", ".join(parts)
+		var ing_id := str(ing["id"])
+		parts.append("%s x%d" % [LocalizationState.item_name(ing_id, ing_id), ing["amount"]])
+	ingredients_label.text = "" if parts.is_empty() else LocalizationState.t("lab.need_prefix") + ", ".join(parts)
 
 	if not recipe.ingredients.is_empty():
 		LaboratoryState.pending_output_changed.connect(_update_availability)

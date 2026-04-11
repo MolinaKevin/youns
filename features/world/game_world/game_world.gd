@@ -8,20 +8,20 @@ extends Node3D
 
 const INTRO_PAGES := [
 	{
-		"title": "Bienvenido",
-		"body": "[center]Esto es un demo corto youns.[/center]"
+		"title_key": "world.intro.page_1.title",
+		"body_key": "world.intro.page_1.body"
 	},
 	{
-		"title": "Moverse",
-		"body": "Usa [b]WASD[/b] para moverte.\nMueve la camara con el mouse.\nCon Tab abris menu"
+		"title_key": "world.intro.page_2.title",
+		"body_key": "world.intro.page_2.body"
 	},
 	{
-		"title": "Enemigos",
-		"body": "Si un enemigo te toca, te intercepta y entras en combate.\n El sistema de combate es una suerte de deck builder tactico."
+		"title_key": "world.intro.page_3.title",
+		"body_key": "world.intro.page_3.body"
 	},
 	{
-		"title": "LAB",
-		"body": "Otra mecanica importante del juego va a ser una mecanica incremental.\nPodemos acceder a esto hablando con el npc en el lab."
+		"title_key": "world.intro.page_4.title",
+		"body_key": "world.intro.page_4.body"
 	}
 ]
 
@@ -37,6 +37,7 @@ func _ready() -> void:
 	_setup_environment()
 	_setup_screen_fx()
 	_restore_after_combat()
+	LocalizationState.language_changed.connect(_refresh_intro_language)
 	_setup_intro()
 
 func _input(event: InputEvent) -> void:
@@ -114,9 +115,9 @@ func _setup_intro() -> void:
 
 func _show_intro_page() -> void:
 	var page: Dictionary = INTRO_PAGES[_intro_index]
-	intro_title.text = page["title"]
-	intro_body.text = page["body"]
-	intro_hint.text = "Enter o Espacio para continuar  (%d/%d)" % [_intro_index + 1, INTRO_PAGES.size()]
+	intro_title.text = LocalizationState.t(page["title_key"])
+	intro_body.text = LocalizationState.t(page["body_key"])
+	intro_hint.text = LocalizationState.t("world.intro.hint", [_intro_index + 1, INTRO_PAGES.size()])
 
 func _handle_intro_input(event: InputEvent) -> bool:
 	if not _intro_active:
@@ -160,3 +161,7 @@ func _is_menu_pressed(event: InputEvent) -> bool:
 
 func _exit_tree() -> void:
 	PauseMenu.enabled = false
+
+func _refresh_intro_language(_language: String = "") -> void:
+	if _intro_active:
+		_show_intro_page()
