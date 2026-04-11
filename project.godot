@@ -17,8 +17,8 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-LaboratoryState="*res://autoload/laboratory_state.gd"
 GameState="*uid://brso0bxv83214"
+LaboratoryState="*res://autoload/laboratory_state.gd"
 CardDatabase="*uid://d2esdbav6afwl"
 PauseMenu="*res://features/menus/pause_menu/pause_menu.tscn"
 PartyManager="*uid://cuca14l87sjvn"

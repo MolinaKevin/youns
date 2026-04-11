@@ -18,11 +18,19 @@ var unlocked_columns: Array = []
 var _loading := true
 
 func _ready() -> void:
-	call_deferred("_load_recipes")
+	call_deferred("_load_recipes_when_ready")
+
+func _load_recipes_when_ready() -> void:
+	while GameState.player_save == null:
+		await get_tree().process_frame
+	_load_recipes()
 
 # ── Carga ─────────────────────────────────────────────────────────────────────
 
 func _load_recipes() -> void:
+	all_recipes.clear()
+	recipes_by_ingredient.clear()
+	unlocked_columns.clear()
 	var dir := DirAccess.open(RECIPES_PATH)
 	if not dir:
 		return
