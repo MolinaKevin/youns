@@ -1,19 +1,19 @@
-[gd_scene format=3 uid="uid://menu_item"]
+[gd_scene format=3 uid="uid://n5w21gq5dhjt"]
 
-[ext_resource type="Script" path="res://features/menus/main_menu/menu_item.gd" id="1_itemscr"]
+[ext_resource type="Script" uid="uid://blurbfruxn26i" path="res://features/menus/main_menu/menu_item.gd" id="1_itemscr"]
 
-[node name="MenuItem" type="PanelContainer"]
+[node name="MenuItem" type="PanelContainer" unique_id=342681389]
 custom_minimum_size = Vector2(88, 88)
 size_flags_horizontal = 4
 size_flags_vertical = 4
 script = ExtResource("1_itemscr")
 
-[node name="VBox" type="VBoxContainer" parent="."]
+[node name="VBox" type="VBoxContainer" parent="." unique_id=430319161]
 layout_mode = 2
-alignment = 1
 theme_override_constants/separation = 2
+alignment = 1
 
-[node name="Icon" type="TextureRect" parent="VBox"]
+[node name="Icon" type="TextureRect" parent="VBox" unique_id=1550235122]
 custom_minimum_size = Vector2(30, 30)
 layout_mode = 2
 size_flags_horizontal = 4
@@ -21,8 +21,8 @@ size_flags_vertical = 4
 expand_mode = 1
 stretch_mode = 5
 
-[node name="NameLabel" type="Label" parent="VBox"]
+[node name="NameLabel" type="Label" parent="VBox" unique_id=595849625]
 layout_mode = 2
-horizontal_alignment = 1
-text = "Item"
 theme_override_font_sizes/font_size = 11
+text = "Item"
+horizontal_alignment = 1

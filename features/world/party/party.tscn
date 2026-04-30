@@ -1,10 +1,10 @@
 [gd_scene format=3 uid="uid://party"]
 
 [ext_resource type="Script" path="res://features/world/world_map/player_3d.gd"  id="1_player"]
-[ext_resource type="Script" path="res://features/world/world_map/enemy_3d.gd"   id="2_youn"]
+[ext_resource type="Script" path="res://features/world/party/youn_3d.gd"        id="2_youn"]
 [ext_resource type="Script" path="res://features/world/world_map/camera_rig.gd" id="3_camera"]
-[ext_resource type="ArrayMesh" path="res://assets/Player/Player 1.obj"  id="4_player_mesh"]
-[ext_resource type="ArrayMesh" path="res://assets/youns/Agumon PS1.obj" id="5_youn_mesh"]
+[ext_resource type="ArrayMesh" path="res://assets/Player/Player 1.obj"          id="4_player_mesh"]
+[ext_resource type="Resource" path="res://data/youns/pombero.tres"               id="5_youn_data"]
 
 [sub_resource type="CapsuleShape3D" id="1"]
 radius = 0.35
@@ -25,10 +25,7 @@ shape = SubResource("1")
 
 [node name="Youn" type="CharacterBody3D" parent="."]
 script = ExtResource("2_youn")
-
-[node name="Body" type="MeshInstance3D" parent="Youn"]
-transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.3, 0, -0.8, 0)
-mesh = ExtResource("5_youn_mesh")
+youn_data = ExtResource("5_youn_data")
 
 [node name="Collision" type="CollisionShape3D" parent="Youn"]
 shape = SubResource("1")

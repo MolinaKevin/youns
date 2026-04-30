@@ -37,18 +37,24 @@ func _load_recipes() -> void:
 	dir.list_dir_begin()
 	var file := dir.get_next()
 	while file != "":
-		if file.ends_with(".tres"):
-			var recipe := load(RECIPES_PATH + file) as Resource
-			if recipe:
-				all_recipes.append(recipe)
-				if GameState.player_save.unlocked_recipe_ids.has(recipe.id):
-					_unlock_column(recipe.location, recipe.action_type)
-				if recipe.starts_unlocked and not GameState.player_save.unlocked_recipe_ids.has(recipe.id):
-					unlock_recipe(recipe.id)
-				for ing in recipe.ingredients:
-					if not recipes_by_ingredient.has(ing["id"]):
-						recipes_by_ingredient[ing["id"]] = []
-					recipes_by_ingredient[ing["id"]].append(recipe)
+		if not dir.current_is_dir():
+			var recipe_path := ""
+			if file.ends_with(".tres"):
+				recipe_path = RECIPES_PATH + file
+			elif file.ends_with(".tres.remap"):
+				recipe_path = RECIPES_PATH + file.trim_suffix(".remap")
+			if recipe_path != "":
+				var recipe := load(recipe_path) as Resource
+				if recipe:
+					all_recipes.append(recipe)
+					if GameState.player_save.unlocked_recipe_ids.has(recipe.id):
+						_unlock_column(recipe.location, recipe.action_type)
+					if recipe.starts_unlocked and not GameState.player_save.unlocked_recipe_ids.has(recipe.id):
+						unlock_recipe(recipe.id)
+					for ing in recipe.ingredients:
+						if not recipes_by_ingredient.has(ing["id"]):
+							recipes_by_ingredient[ing["id"]] = []
+						recipes_by_ingredient[ing["id"]].append(recipe)
 		file = dir.get_next()
 	_loading = false
 	recipes_loaded.emit()

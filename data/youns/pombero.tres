@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="YounData" format=3 uid="uid://ctpvd6ffvqhhm"]
+
+[ext_resource type="PackedScene" uid="uid://cutmi5jqs1ftp" path="res://assets/youns/pombero/idle.glb" id="1_e7jbd"]
+[ext_resource type="Script" uid="uid://dkniy614ehfbc" path="res://data/youns/youn_data.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://bi37ts8118vvw" path="res://assets/youns/pombero/rig.fbx" id="2_scene"]
+[ext_resource type="Texture2D" uid="uid://b63i01qwdnlhg" path="res://assets/youns/pombero/texture.png" id="3_texture"]
+
+[resource]
+script = ExtResource("1_script")
+id = "pombero"
+youn_name = "Pombero"
+scene = ExtResource("2_scene")
+idle_scene = ExtResource("1_e7jbd")
+texture = ExtResource("3_texture")
+mesh_scale = 0.2
+mesh_y_offset = -0.8
+chase_speed = 4.0
