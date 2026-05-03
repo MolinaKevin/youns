@@ -22,6 +22,7 @@ LocalizationState="*res://autoload/localization_state.gd"
 LaboratoryState="*res://autoload/laboratory_state.gd"
 CardDatabase="*uid://d2esdbav6afwl"
 PauseMenu="*res://features/menus/pause_menu/pause_menu.tscn"
+QuickMenu="*res://features/menus/quick_menu/quick_menu.tscn"
 PartyManager="*uid://cuca14l87sjvn"
 ZoneManager="*uid://brjjvk68i1rvr"
 

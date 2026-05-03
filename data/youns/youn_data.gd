@@ -22,6 +22,14 @@ extends Resource
 @export_range(0.0, 10.0, 0.1) var notice_delay_min: float = 0.4
 @export_range(0.0, 10.0, 0.1) var notice_delay_max: float = 1.3
 
+@export_range(0, 100, 1) var base_discipline: int = 55
+@export_range(0, 100, 1) var base_felicidad: int = 70
+@export_range(0, 10, 1) var base_care_mistakes: int = 0
+@export_range(0, 100, 1) var base_confianza: int = 50
+@export_range(0, 100, 1) var base_estres: int = 10
+@export_range(0, 100, 1) var base_aburrimiento: int = 20
+@export_range(0, 100, 1) var base_autocontrol: int = 50
+
 @export var anim_idle: String = "idle"
 @export var anim_walk: String = "walk"
 @export var anim_run: String = "run"

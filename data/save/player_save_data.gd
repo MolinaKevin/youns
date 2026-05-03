@@ -10,9 +10,19 @@ class_name PlayerSaveData
 @export var unlocked_relic_ids: Array[String] = []
 @export var player_level: int = 1
 @export_range(0, 100, 1) var discipline: int = 55
+@export_range(0, 100, 1) var felicidad: int = 70
 @export_range(0, 10, 1) var care_mistakes: int = 1
 @export var clock_ui_unlocked: bool = false
 @export var care_ui_unlocked: bool = false
+
+# Métricas ocultas — no se muestran al jugador directamente
+@export_range(0, 100, 1) var confianza: int = 50
+@export_range(0, 100, 1) var estres: int = 10
+@export_range(0, 100, 1) var aburrimiento: int = 20
+@export_range(0, 100, 1) var autocontrol: int = 50
+
+# Hábitos activos del Youn — cada entrada tendrá un id y un porcentaje
+@export var habitos: Array[Dictionary] = []
 
 @export var unlocked_recipe_ids: Array[String] = []
 @export var completed_recipe_ids: Array[String] = []

@@ -10,6 +10,9 @@ const HOURS_PER_DAY := 24.0
 const DAY_DURATION_SECONDS := 60.0
 const DAY_CLOCK_SCENE: PackedScene = preload("res://features/world/ui/day_clock.tscn")
 const YOUNS_STATUS_SCENE: PackedScene = preload("res://features/world/ui/youns_status_panel.tscn")
+const DEBUG_STATS_SCRIPT: GDScript = preload("res://features/world/ui/debug_stats_panel.gd")
+
+var test_mode := true
 
 var player_save: PlayerSaveData
 var current_run: RunStateData
@@ -26,6 +29,7 @@ var clock_paused := false
 var youns_status_visible := false
 var _day_clock_ui: CanvasLayer
 var _youns_status_ui: CanvasLayer
+var _debug_stats_ui: CanvasLayer
 
 const SAVE_PATH := "user://player_save.tres"
 const RUN_PATH := "user://current_run.tres"
@@ -62,6 +66,8 @@ func _ready() -> void:
 	print("owned ids in GameState: ", player_save.owned_card_ids)
 	_ensure_day_clock_ui()
 	_ensure_youns_status_ui()
+	if test_mode:
+		_ensure_debug_stats_ui()
 	clock_changed.emit(time_of_day_hours, current_day)
 	clock_visibility_changed.emit(clock_visible)
 	clock_pause_changed.emit(clock_paused)
@@ -118,6 +124,17 @@ func set_discipline(value: int) -> void:
 	player_save.discipline = clampi(value, 0, 100)
 	_emit_youns_status_changed()
 
+func add_discipline(delta: int) -> void:
+	set_discipline(player_save.discipline + delta)
+
+func set_felicidad(value: int) -> void:
+	if player_save == null:
+		return
+	player_save.felicidad = clampi(value, 0, 100)
+
+func add_felicidad(delta: int) -> void:
+	set_felicidad(player_save.felicidad + delta)
+
 func add_care_mistake(amount: int = 1) -> void:
 	if player_save == null:
 		return
@@ -129,6 +146,38 @@ func clear_care_mistakes() -> void:
 		return
 	player_save.care_mistakes = 0
 	_emit_youns_status_changed()
+
+func set_confianza(value: int) -> void:
+	if player_save == null:
+		return
+	player_save.confianza = clampi(value, 0, 100)
+
+func add_confianza(delta: int) -> void:
+	set_confianza(player_save.confianza + delta)
+
+func set_estres(value: int) -> void:
+	if player_save == null:
+		return
+	player_save.estres = clampi(value, 0, 100)
+
+func add_estres(delta: int) -> void:
+	set_estres(player_save.estres + delta)
+
+func set_aburrimiento(value: int) -> void:
+	if player_save == null:
+		return
+	player_save.aburrimiento = clampi(value, 0, 100)
+
+func add_aburrimiento(delta: int) -> void:
+	set_aburrimiento(player_save.aburrimiento + delta)
+
+func set_autocontrol(value: int) -> void:
+	if player_save == null:
+		return
+	player_save.autocontrol = clampi(value, 0, 100)
+
+func add_autocontrol(delta: int) -> void:
+	set_autocontrol(player_save.autocontrol + delta)
 
 func _ensure_day_clock_ui() -> void:
 	if is_instance_valid(_day_clock_ui):
@@ -162,6 +211,23 @@ func _ensure_youns_status_ui() -> void:
 	panel.offset_bottom = 884.0
 	_youns_status_ui.add_child(panel)
 	get_tree().root.call_deferred("add_child", _youns_status_ui)
+
+func _ensure_debug_stats_ui() -> void:
+	if is_instance_valid(_debug_stats_ui):
+		return
+	_debug_stats_ui = CanvasLayer.new()
+	_debug_stats_ui.name = "GlobalDebugStats"
+	_debug_stats_ui.layer = 80
+	_debug_stats_ui.process_mode = Node.PROCESS_MODE_ALWAYS
+
+	var panel := PanelContainer.new()
+	panel.set_script(DEBUG_STATS_SCRIPT)
+	panel.offset_left = 1404.0
+	panel.offset_top = 16.0
+	panel.offset_right = 1584.0
+	panel.offset_bottom = 230.0
+	_debug_stats_ui.add_child(panel)
+	get_tree().root.call_deferred("add_child", _debug_stats_ui)
 
 func _emit_youns_status_changed() -> void:
 	youns_status_changed.emit(player_save.discipline, player_save.care_mistakes)

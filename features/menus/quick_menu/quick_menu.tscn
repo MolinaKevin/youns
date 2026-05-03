@@ -1,0 +1,28 @@
+[gd_scene format=3 uid="uid://quick_menu_scene"]
+
+[ext_resource type="Script" path="res://features/menus/quick_menu/quick_menu.gd" id="1_qmscr"]
+
+[node name="QuickMenu" type="CanvasLayer"]
+layer = 90
+process_mode = 3
+script = ExtResource("1_qmscr")
+
+[node name="Background" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.55)
+
+[node name="Center" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Cross" type="GridContainer" parent="Center"]
+columns = 3
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
