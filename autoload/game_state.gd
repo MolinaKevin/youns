@@ -3,6 +3,7 @@ extends Node
 signal clock_changed(current_hour: float, current_day: int)
 signal clock_visibility_changed(visible: bool)
 signal clock_pause_changed(paused: bool)
+signal clock_style_changed(style: int)
 signal youns_status_changed(discipline: int, care_mistakes: int)
 signal youns_status_visibility_changed(visible: bool)
 
@@ -26,6 +27,7 @@ var current_day := 1
 var time_of_day_hours := 8.0
 var clock_visible := true
 var clock_paused := false
+var clock_style := 0  # 0 = analógico, 1 = sectores
 var youns_status_visible := false
 var _day_clock_ui: CanvasLayer
 var _youns_status_ui: CanvasLayer
@@ -102,6 +104,10 @@ func set_clock_paused(paused: bool) -> void:
 	clock_paused = paused
 	clock_pause_changed.emit(paused)
 
+func set_clock_style(style: int) -> void:
+	clock_style = style
+	clock_style_changed.emit(style)
+
 func set_youns_status_visible(visible: bool) -> void:
 	youns_status_visible = visible
 	if is_instance_valid(_youns_status_ui):
@@ -109,7 +115,7 @@ func set_youns_status_visible(visible: bool) -> void:
 	youns_status_visibility_changed.emit(visible)
 
 func has_persistent_clock_ui() -> bool:
-	return player_save != null and player_save.clock_ui_unlocked
+	return test_mode or (player_save != null and player_save.clock_ui_unlocked)
 
 func has_persistent_care_ui() -> bool:
 	return player_save != null and player_save.care_ui_unlocked
@@ -190,8 +196,8 @@ func _ensure_day_clock_ui() -> void:
 	var clock := DAY_CLOCK_SCENE.instantiate()
 	clock.offset_left = 16.0
 	clock.offset_top = 16.0
-	clock.offset_right = 166.0
-	clock.offset_bottom = 146.0
+	clock.offset_right = 126.0
+	clock.offset_bottom = 126.0
 	_day_clock_ui.add_child(clock)
 	get_tree().root.call_deferred("add_child", _day_clock_ui)
 
@@ -222,10 +228,14 @@ func _ensure_debug_stats_ui() -> void:
 
 	var panel := PanelContainer.new()
 	panel.set_script(DEBUG_STATS_SCRIPT)
-	panel.offset_left = 1404.0
-	panel.offset_top = 16.0
-	panel.offset_right = 1584.0
-	panel.offset_bottom = 230.0
+	panel.anchor_left = 0.0
+	panel.anchor_top = 1.0
+	panel.anchor_right = 0.0
+	panel.anchor_bottom = 1.0
+	panel.offset_left = 16.0
+	panel.offset_top = -230.0
+	panel.offset_right = 196.0
+	panel.offset_bottom = -16.0
 	_debug_stats_ui.add_child(panel)
 	get_tree().root.call_deferred("add_child", _debug_stats_ui)
 

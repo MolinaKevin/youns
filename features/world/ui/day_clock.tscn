@@ -15,35 +15,8 @@ corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 
 [node name="DayClock" type="Panel"]
-custom_minimum_size = Vector2(150, 130)
-offset_right = 150.0
-offset_bottom = 130.0
+custom_minimum_size = Vector2(110, 110)
+offset_right = 110.0
+offset_bottom = 110.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 script = ExtResource("1_clock")
-
-[node name="Margin" type="MarginContainer" parent="."]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 88
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 10
-
-[node name="VBox" type="VBoxContainer" parent="Margin"]
-layout_mode = 2
-theme_override_constants/separation = 0
-
-[node name="TimeLabel" type="Label" parent="Margin/VBox"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 20
-horizontal_alignment = 1
-text = "08:00"
-
-[node name="DayLabel" type="Label" parent="Margin/VBox"]
-layout_mode = 2
-modulate = Color(0.807843, 0.85098, 0.882353, 0.8)
-horizontal_alignment = 1
-text = "Dia 1"
