@@ -54,7 +54,7 @@ func _draw_analog(clock_center: Vector2, radius: float) -> void:
 		var inner := clock_center + direction * (radius - (10.0 if hour % 4 == 0 else 5.0))
 		draw_line(inner, outer, Color(0.23, 0.2, 0.14), 2.0)
 
-	var hand_angle := TAU * GameState.get_time_ratio() - PI * 0.5
+	var hand_angle := TAU * (floorf(GameState.time_of_day_hours) / 24.0) - PI * 0.5
 	var hand_end := clock_center + Vector2(cos(hand_angle), sin(hand_angle)) * (radius - 12.0)
 	draw_line(clock_center, hand_end, Color(0.72, 0.18, 0.13), 3.0)
 	draw_circle(clock_center, 4.5, Color(0.2, 0.08, 0.07))
@@ -73,7 +73,7 @@ func _draw_sectors(clock_center: Vector2, radius: float) -> void:
 		var a: float = TAU * (p["start_h"] as float) / 24.0 - PI * 0.5
 		draw_line(clock_center, clock_center + Vector2(cos(a), sin(a)) * (radius + 7.0), Color(0.06, 0.11, 0.16, 0.9), 2.0)
 
-	var hand_angle := TAU * GameState.get_time_ratio() - PI * 0.5
+	var hand_angle := TAU * (floorf(GameState.time_of_day_hours) / 24.0) - PI * 0.5
 	var hand_end := clock_center + Vector2(cos(hand_angle), sin(hand_angle)) * (radius - 6.0)
 	draw_line(clock_center, hand_end, Color(1.0, 1.0, 1.0, 0.95), 2.5)
 	draw_circle(clock_center, 3.5, Color(1.0, 1.0, 1.0, 0.95))

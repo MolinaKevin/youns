@@ -22,6 +22,11 @@ extends Resource
 @export_range(0.0, 10.0, 0.1) var notice_delay_min: float = 0.4
 @export_range(0.0, 10.0, 0.1) var notice_delay_max: float = 1.3
 
+@export_range(0, 23, 1) var sleep_hour: int = 22
+@export_range(0, 23, 1) var wake_hour: int = 7
+
+@export_range(0.0, 999.0, 0.1) var base_weight: float = 10.0
+
 @export_range(0, 100, 1) var base_discipline: int = 55
 @export_range(0, 100, 1) var base_felicidad: int = 70
 @export_range(0, 10, 1) var base_care_mistakes: int = 0

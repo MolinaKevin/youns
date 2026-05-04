@@ -8,7 +8,8 @@ signal youns_status_changed(discipline: int, care_mistakes: int)
 signal youns_status_visibility_changed(visible: bool)
 
 const HOURS_PER_DAY := 24.0
-const DAY_DURATION_SECONDS := 60.0
+const DAY_DURATION_MINUTES := 1.0  # duración de un día en minutos reales
+const DAY_DURATION_SECONDS := DAY_DURATION_MINUTES * 60.0
 const DAY_CLOCK_SCENE: PackedScene = preload("res://features/world/ui/day_clock.tscn")
 const YOUNS_STATUS_SCENE: PackedScene = preload("res://features/world/ui/youns_status_panel.tscn")
 const DEBUG_STATS_SCRIPT: GDScript = preload("res://features/world/ui/debug_stats_panel.gd")
@@ -185,6 +186,53 @@ func set_autocontrol(value: int) -> void:
 func add_autocontrol(delta: int) -> void:
 	set_autocontrol(player_save.autocontrol + delta)
 
+func set_cansancio(value: int) -> void:
+	if player_save == null:
+		return
+	player_save.cansancio = clampi(value, 0, 100)
+
+func add_cansancio(delta: int) -> void:
+	set_cansancio(player_save.cansancio + delta)
+
+func drain_cansancio(amount: int) -> void:
+	add_cansancio(-amount)
+	_check_sick_chance()
+
+func _check_sick_chance() -> void:
+	if player_save == null or player_save.enfermo:
+		return
+	var salud := player_save.salud
+	if salud >= 80:
+		return
+	# t=0 en salud=80, t=1 en salud=5 (capped)
+	var t := clampf((80.0 - float(salud)) / 75.0, 0.0, 1.0)
+	# curva exponencial: 0% en t=0, 60% en t=1
+	const K := 3.5
+	var prob := 0.60 * (exp(K * t) - 1.0) / (exp(K) - 1.0)
+	if randf() < prob:
+		set_enfermo(true)
+
+func set_salud(value: int) -> void:
+	if player_save == null:
+		return
+	player_save.salud = clampi(value, 0, 100)
+
+func add_salud(delta: int) -> void:
+	set_salud(player_save.salud + delta)
+
+func set_enfermo(value: bool) -> void:
+	if player_save == null:
+		return
+	player_save.enfermo = value
+
+func set_weight(value: float) -> void:
+	if player_save == null:
+		return
+	player_save.weight = maxf(0.0, value)
+
+func add_weight(delta: float) -> void:
+	set_weight(player_save.weight + delta)
+
 func _ensure_day_clock_ui() -> void:
 	if is_instance_valid(_day_clock_ui):
 		return
@@ -228,14 +276,14 @@ func _ensure_debug_stats_ui() -> void:
 
 	var panel := PanelContainer.new()
 	panel.set_script(DEBUG_STATS_SCRIPT)
-	panel.anchor_left = 0.0
-	panel.anchor_top = 1.0
-	panel.anchor_right = 0.0
-	panel.anchor_bottom = 1.0
-	panel.offset_left = 16.0
-	panel.offset_top = -230.0
-	panel.offset_right = 196.0
-	panel.offset_bottom = -16.0
+	panel.anchor_left = 1.0
+	panel.anchor_top = 0.0
+	panel.anchor_right = 1.0
+	panel.anchor_bottom = 0.0
+	panel.offset_left = -196.0
+	panel.offset_top = 16.0
+	panel.offset_right = -16.0
+	panel.offset_bottom = 246.0
 	_debug_stats_ui.add_child(panel)
 	get_tree().root.call_deferred("add_child", _debug_stats_ui)
 

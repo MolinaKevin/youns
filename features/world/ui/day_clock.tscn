@@ -2,21 +2,11 @@
 
 [ext_resource type="Script" path="res://features/world/ui/day_clock.gd" id="1_clock"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
-bg_color = Color(0.0392157, 0.0627451, 0.0901961, 0.8)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.67451, 0.764706, 0.839216, 0.35)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_panel"]
 
 [node name="DayClock" type="Panel"]
 custom_minimum_size = Vector2(110, 110)
 offset_right = 110.0
 offset_bottom = 110.0
-theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_panel")
 script = ExtResource("1_clock")

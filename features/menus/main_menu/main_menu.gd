@@ -9,8 +9,12 @@ const MENU_ITEMS := [
 	{name_key = "main_menu.deck",      icon = "res://assets/icons/icon_3.png", scene = "res://features/deck_builder/ui/deck_builder_screen.tscn"},
 	{name_key = "main_menu.map",       icon = "res://assets/icons/icon_4.png", scene = ""},
 	{name_key = "main_menu.inventory", icon = "res://assets/icons/icon_5.png", scene = "res://features/items/ui/item_inventory_screen.tscn"},
-	{name_key = "main_menu.save",      icon = "res://assets/icons/icon_6.png", scene = ""},
+	{name_key = "main_menu.sleep",     icon = "res://assets/icons/icon_6.png", scene = ""},
 ]
+
+const SLEEP_ITEM_INDEX := 5
+
+signal sleep_requested
 
 @export var overlay_mode: bool = false
 
@@ -36,6 +40,7 @@ func _ready() -> void:
 	GameState.set_clock_paused(true)
 	GameState.set_youns_status_visible(false)
 	LocalizationState.language_changed.connect(_apply_localized_text)
+	GameState.clock_changed.connect(_on_clock_changed)
 	_refresh_gold()
 
 	grid.columns = COLUMNS
@@ -47,6 +52,7 @@ func _ready() -> void:
 		_items.append(item)
 		_item_textures.append(tex)
 	_apply_localized_text()
+	_update_sleep_state()
 	_update_selection()
 
 func _input(event: InputEvent) -> void:
@@ -91,7 +97,28 @@ func _apply_localized_text(_language: String = "") -> void:
 	_refresh_gold()
 
 func _activate() -> void:
+	if _selected == SLEEP_ITEM_INDEX:
+		if _is_sleep_time():
+			sleep_requested.emit()
+		return
 	var scene: String = MENU_ITEMS[_selected].scene
 	if scene != "":
 		GameState.ui_return_scene_path = "res://features/world/game_world/game_world.tscn" if overlay_mode else ""
 		get_tree().change_scene_to_file(scene)
+
+func _is_sleep_time() -> bool:
+	var youn_node = PartyManager.youn if PartyManager else null
+	if not is_instance_valid(youn_node) or youn_node.youn_data == null:
+		return false
+	var data: YounData = youn_node.youn_data
+	var hour := GameState.time_of_day_hours
+	if data.sleep_hour > data.wake_hour:
+		return hour >= data.sleep_hour or hour < data.wake_hour
+	return hour >= data.sleep_hour and hour < data.wake_hour
+
+func _update_sleep_state() -> void:
+	if _items.size() > SLEEP_ITEM_INDEX:
+		_items[SLEEP_ITEM_INDEX].set_disabled(not _is_sleep_time())
+
+func _on_clock_changed(_hour: float, _day: int) -> void:
+	_update_sleep_state()
