@@ -1,13 +1,21 @@
-# Godot 4+ specific ignores
+# Godot 4+ generated files
 .godot/
+
+# Android export/build folder
 /android/
+
+# Exported builds
+/beta
+/beta.*
+/beta-*
+/beta_*
+*.zip
+
+# Local AI/tool files
+.codex
+CLAUDE.md
 
 # Local editor / OS files
 .DS_Store
 Thumbs.db
-
-# Exported builds
-/beta.zip
-/beta-w.zip
-/beta*
-*.zip
+*.tmp
