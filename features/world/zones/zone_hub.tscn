@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://clt8bogmchxf5"]
 
 [ext_resource type="Script" uid="uid://dhi3bn5obu37b" path="res://features/world/zones/zone_hub.gd" id="1_hub"]
+[ext_resource type="Resource" path="res://data/toilets/hub_toilet.tres" id="2_toilet"]
 [ext_resource type="PackedScene" uid="uid://bfo5wpg0ptqcr" path="res://assets/maps/hub/city_map.glb" id="2_map"]
 [ext_resource type="PackedScene" uid="uid://c6sj4ql5s1p65" path="res://assets/maps/hub/lab.glb" id="3_lab"]
 [ext_resource type="ArrayMesh" uid="uid://chrobcjle3fog" path="res://assets/youns/Monzaemon.obj" id="4_monzaemon"]
@@ -20,6 +21,21 @@ size = Vector3(10, 1.2, 22)
 [sub_resource type="BoxShape3D" id="5"]
 size = Vector3(10, 1.2, 22)
 
+[sub_resource type="CylinderMesh" id="10"]
+top_radius = 1.8
+bottom_radius = 2.0
+height = 3.5
+
+[sub_resource type="CylinderShape3D" id="11"]
+radius = 1.9
+height = 3.5
+
+[sub_resource type="StandardMaterial3D" id="12"]
+albedo_color = Color(0.88, 0.86, 0.8, 1)
+
+[sub_resource type="SphereShape3D" id="13"]
+radius = 9.0
+
 [sub_resource type="CapsuleShape3D" id="8"]
 radius = 0.7
 height = 2.1
@@ -29,6 +45,7 @@ radius = 3.2
 
 [node name="ZoneHub" type="Node3D" unique_id=1690177326]
 script = ExtResource("1_hub")
+toilet_data = ExtResource("2_toilet")
 
 [node name="CityMap" parent="." unique_id=1388604364 instance=ExtResource("2_map")]
 
@@ -86,6 +103,24 @@ shape = SubResource("9")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0)
 visible = false
 text = "Hablar [E]"
+
+[node name="Toilet" type="StaticBody3D" parent="." unique_id=100000001]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 1.75, -5)
+
+[node name="Mesh" type="MeshInstance3D" parent="Toilet" unique_id=100000002]
+material_override = SubResource("12")
+mesh = SubResource("10")
+
+[node name="Collision" type="CollisionShape3D" parent="Toilet" unique_id=100000003]
+shape = SubResource("11")
+
+[node name="StartPoint" type="Node3D" parent="Toilet" unique_id=100000006]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.75, 5)
+
+[node name="ToiletArea" type="Area3D" parent="Toilet" unique_id=100000004]
+
+[node name="Col" type="CollisionShape3D" parent="Toilet/ToiletArea" unique_id=100000005]
+shape = SubResource("13")
 
 [node name="DemoDialog" type="CanvasLayer" parent="." unique_id=1644363126]
 visible = false

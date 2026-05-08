@@ -26,6 +26,15 @@ class_name PlayerSaveData
 @export var enfermo: bool = false
 @export var weight: float = 10.0
 
+# Necesidades fisiológicas
+@export_range(0, 100, 1) var hambre: int = 0
+@export_range(0, 100, 1) var ganas_bano: int = 0
+@export var needs_bathroom: bool = false
+@export var bathroom_need_since_total_hour: float = -1.0
+@export var last_meal_total_hour: float = -1.0
+@export var hungry_since_total_hour: float = -1.0
+@export var bathroom_pending_after_combat: bool = false
+
 # Hábitos activos del Youn — cada entrada tendrá un id y un porcentaje
 @export var habitos: Array[Dictionary] = []
 

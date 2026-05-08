@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ToiletData" format=3]
+
+[ext_resource type="Script" path="res://data/toilet_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+world_position = Vector3(15, 1.75, -5)
+start_point = Vector3(15, 0, 0)
+meeting_distance = 2.0
+entrance_distance = 3.0
+cam_pivot_height = 1.0
+cam_distance = 8.0
+cam_pitch = 0.6
+cam_side = 1.0
+wait_inside = 2.5

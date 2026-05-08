@@ -4,11 +4,19 @@ extends Resource
 @export var id: String = ""
 @export var youn_name: String = ""
 
-@export var scene: PackedScene
-@export var idle_scene: PackedScene
 @export var texture: Texture2D
 @export var mesh_scale: float = 1.0
 @export var mesh_y_offset: float = 0.0
+
+@export_group("Animations")
+@export var scene_idle: PackedScene
+@export var scene_walk: PackedScene
+@export var scene_run: PackedScene
+@export var scene_attack: PackedScene
+@export var scene_range: PackedScene
+@export var scene_damage: PackedScene
+@export var scene_die: PackedScene
+@export var scene_evolve: PackedScene
 
 @export_range(0.1, 20.0, 0.1) var wander_speed: float = 2.2
 @export_range(0.1, 20.0, 0.1) var chase_speed: float = 5.8
@@ -16,6 +24,8 @@ extends Resource
 @export_range(0.0, 50.0, 0.1) var detect_range: float = 12.0
 @export_range(0.0, 50.0, 0.1) var lose_range: float = 18.0
 @export_range(0.0, 50.0, 0.1) var wander_radius: float = 8.0
+
+@export_range(0.0, 10.0, 0.1) var body_height: float = 1.0
 
 @export_range(0.0, 10.0, 0.1) var idle_time_min: float = 0.8
 @export_range(0.0, 10.0, 0.1) var idle_time_max: float = 2.5
@@ -35,8 +45,3 @@ extends Resource
 @export_range(0, 100, 1) var base_aburrimiento: int = 20
 @export_range(0, 100, 1) var base_autocontrol: int = 50
 
-@export var anim_idle: String = "idle"
-@export var anim_walk: String = "walk"
-@export var anim_run: String = "run"
-@export var anim_die: String = "die"
-@export var anim_evolve: String = "evolve"

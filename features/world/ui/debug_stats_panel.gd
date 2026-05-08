@@ -12,12 +12,17 @@ const METRICS := [
 	["cansancio",    "status.cansancio"],
 	["salud",        "status.salud"],
 	["weight",       "status.weight"],
+	null,
+	["hambre",       "status.hambre"],
+	["ganas_bano",   "status.ganas_bano"],
 ]
 
 var _value_labels: Dictionary = {}
 var _name_labels: Dictionary = {}
 var _clock_val: Label
 var _states_val: Label
+var _anim_youn_val: Label
+var _anim_player_val: Label
 
 
 func _ready() -> void:
@@ -135,6 +140,27 @@ func _ready() -> void:
 	_states_val.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(_states_val)
 
+	var sep5 := HSeparator.new()
+	sep5.add_theme_constant_override("separation", 2)
+	vbox.add_child(sep5)
+
+	for pair in [["Youn anim", "_anim_youn"], ["Player", "_anim_player"]]:
+		var row := HBoxContainer.new()
+		vbox.add_child(row)
+		var lbl := Label.new()
+		lbl.text = pair[0]
+		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		lbl.add_theme_font_size_override("font_size", 11)
+		row.add_child(lbl)
+		var val := Label.new()
+		val.add_theme_font_size_override("font_size", 11)
+		val.add_theme_color_override("font_color", Color(0.4, 1.0, 0.6))
+		row.add_child(val)
+		if pair[1] == "_anim_youn":
+			_anim_youn_val = val
+		else:
+			_anim_player_val = val
+
 	LocalizationState.language_changed.connect(_on_language_changed)
 	_refresh()
 
@@ -149,6 +175,16 @@ func _refresh() -> void:
 	if _states_val:
 		var states := _get_current_states()
 		_states_val.text = "\n".join(states) if not states.is_empty() else "-"
+	if _anim_youn_val:
+		var youn = PartyManager.youn if PartyManager else null
+		_anim_youn_val.text = youn.get_current_anim() if is_instance_valid(youn) else "-"
+	if _anim_player_val:
+		var player = PartyManager.player if PartyManager else null
+		if is_instance_valid(player):
+			var spd := Vector2(player.velocity.x, player.velocity.z).length()
+			_anim_player_val.text = "move" if spd > 0.5 else "idle"
+		else:
+			_anim_player_val.text = "-"
 	var ps := GameState.player_save
 	if ps == null:
 		return
@@ -175,6 +211,10 @@ func _get_current_states() -> Array[String]:
 		states.append(LocalizationState.t("debug.state.tired"))
 	if ps != null and ps.enfermo:
 		states.append(LocalizationState.t("debug.state.sick"))
+	if ps != null and ps.hambre > 70:
+		states.append(LocalizationState.t("debug.state.hungry"))
+	if ps != null and ps.needs_bathroom:
+		states.append(LocalizationState.t("debug.state.bathroom"))
 	return states
 
 

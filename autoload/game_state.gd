@@ -233,6 +233,22 @@ func set_weight(value: float) -> void:
 func add_weight(delta: float) -> void:
 	set_weight(player_save.weight + delta)
 
+func get_total_hours() -> float:
+	return current_day * 24.0 + time_of_day_hours
+
+func add_hambre(delta: int) -> void:
+	if player_save == null:
+		return
+	player_save.hambre = clampi(player_save.hambre + delta, 0, 100)
+
+func on_meal_eaten() -> void:
+	if player_save == null:
+		return
+	player_save.hambre = 0
+	player_save.hungry_since_total_hour = -1.0
+	player_save.last_meal_total_hour = get_total_hours()
+	player_save.ganas_bano = mini(player_save.ganas_bano + 25, 100)
+
 func _ensure_day_clock_ui() -> void:
 	if is_instance_valid(_day_clock_ui):
 		return

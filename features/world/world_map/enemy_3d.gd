@@ -32,9 +32,10 @@ func load_youn(data: YounData) -> void:
 	_load_model(data)
 
 func _load_model(data: YounData) -> void:
-	if not data.scene:
+	var packed := data.scene_idle
+	if not packed:
 		return
-	var body: Node3D = data.scene.instantiate()
+	var body: Node3D = packed.instantiate()
 	body.name = "Body"
 	body.position = Vector3(0.0, data.mesh_y_offset, 0.0)
 	body.scale = Vector3.ONE * data.mesh_scale
@@ -47,8 +48,10 @@ func _load_model(data: YounData) -> void:
 			mesh.material_override = _mat
 
 	_anim = _find_anim_player(body)
-	if _anim and _anim.has_animation(data.anim_idle):
-		_anim.play(data.anim_idle)
+	if _anim:
+		var list := _anim.get_animation_list()
+		if not list.is_empty():
+			_anim.play(list[0])
 
 func _physics_process(delta: float) -> void:
 	if not is_on_floor():
@@ -88,7 +91,7 @@ func _tick_wander(delta: float) -> void:
 	velocity.x = dir.x * _wander_speed()
 	velocity.z = dir.z * _wander_speed()
 	_face_dir(dir, delta)
-	_play(youn_data.anim_walk if youn_data else "walk")
+	_play("walk")
 
 func _tick_notice(delta: float) -> void:
 	velocity.x = 0.0
@@ -112,21 +115,21 @@ func _tick_chase(delta: float) -> void:
 	if dist < 0.6:
 		velocity.x = 0.0
 		velocity.z = 0.0
-		_play(youn_data.anim_idle if youn_data else "idle")
+		_play("idle")
 		return
 	var dir := to_player.normalized()
 	var speed := _chase_speed() * randf_range(0.9, 1.05)
 	velocity.x = dir.x * speed
 	velocity.z = dir.z * speed
 	_face_dir(dir, delta)
-	_play(youn_data.anim_run if youn_data else "run")
+	_play("run")
 
 # ── Transitions ───────────────────────────────────────────────────────────────
 
 func _start_idle() -> void:
 	_set_state(State.IDLE)
 	_timer = randf_range(_idle_min(), _idle_max())
-	_play(youn_data.anim_idle if youn_data else "idle")
+	_play("idle")
 
 func _start_wander() -> void:
 	_set_state(State.WANDER)

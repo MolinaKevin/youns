@@ -1,37 +1,45 @@
 [gd_scene format=3 uid="uid://party"]
 
-[ext_resource type="Script" path="res://features/world/world_map/player_3d.gd"  id="1_player"]
-[ext_resource type="Script" path="res://features/world/party/youn_3d.gd"        id="2_youn"]
-[ext_resource type="Script" path="res://features/world/world_map/camera_rig.gd" id="3_camera"]
-[ext_resource type="ArrayMesh" path="res://assets/Player/Player 1.obj"          id="4_player_mesh"]
-[ext_resource type="Resource" path="res://data/youns/pombero.tres"               id="5_youn_data"]
+[ext_resource type="Script" uid="uid://b5w2to2dpwlvl" path="res://features/world/world_map/player_3d.gd" id="1_player"]
+[ext_resource type="Script" uid="uid://dk56v0lver72g" path="res://features/world/party/youn_3d.gd" id="2_youn"]
+[ext_resource type="Script" uid="uid://gwfx6glk2ehg" path="res://features/world/world_map/camera_rig.gd" id="3_camera"]
+[ext_resource type="ArrayMesh" uid="uid://coexakq0deec7" path="res://assets/Player/Player 1.obj" id="4_player_mesh"]
+[ext_resource type="Resource" uid="uid://ctpvd6ffvqhhm" path="res://data/youns/pombero.tres" id="5_youn_data"]
+[ext_resource type="Script" uid="uid://26ebcltnj7aj" path="res://features/world/party/emotion_bubble.gd" id="7_ec2iw"]
 
 [sub_resource type="CapsuleShape3D" id="1"]
 radius = 0.35
 height = 1.6
 
-[node name="Party" type="Node3D"]
+[sub_resource type="SpriteFrames" id="SpriteFrames_qchsl"]
 
-[node name="Player" type="CharacterBody3D" parent="."]
+[node name="Party" type="Node3D" unique_id=1192261195]
+
+[node name="Player" type="CharacterBody3D" parent="." unique_id=1299522672]
 script = ExtResource("1_player")
 
-[node name="Body" type="MeshInstance3D" parent="Player"]
+[node name="Body" type="MeshInstance3D" parent="Player" unique_id=1067969072]
 transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, 0, -0.1, 0)
 mesh = ExtResource("4_player_mesh")
 
-[node name="Collision" type="CollisionShape3D" parent="Player"]
+[node name="Collision" type="CollisionShape3D" parent="Player" unique_id=753560908]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 shape = SubResource("1")
 
-[node name="Youn" type="CharacterBody3D" parent="."]
+[node name="Youn" type="CharacterBody3D" parent="." unique_id=1993663338]
 script = ExtResource("2_youn")
 youn_data = ExtResource("5_youn_data")
 
-[node name="Collision" type="CollisionShape3D" parent="Youn"]
+[node name="Collision" type="CollisionShape3D" parent="Youn" unique_id=1829609166]
 shape = SubResource("1")
 
-[node name="CameraRig" type="Node3D" parent="."]
+[node name="EmotionBubble" type="AnimatedSprite3D" parent="Youn" unique_id=1782212704]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.80588275, 0)
+sprite_frames = SubResource("SpriteFrames_qchsl")
+script = ExtResource("7_ec2iw")
+
+[node name="CameraRig" type="Node3D" parent="." unique_id=107486294]
 script = ExtResource("3_camera")
 
-[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+[node name="Camera3D" type="Camera3D" parent="CameraRig" unique_id=1731746417]
 current = true

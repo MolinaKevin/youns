@@ -66,6 +66,7 @@ func _ready() -> void:
 	GameState.clock_changed.connect(_check_sleep_penalty)
 	GameState.clock_changed.connect(_drain_cansancio)
 	GameState.clock_changed.connect(_check_end_of_night)
+	GameState.clock_changed.connect(_tick_bathroom_system)
 	_setup_screen_fx()
 	_restore_after_combat()
 	LocalizationState.language_changed.connect(_refresh_intro_language)
@@ -208,6 +209,11 @@ func _restore_after_combat() -> void:
 	PartyManager.youn.global_position = pos + Vector3(1.5, 0, 1.5)
 	PartyManager.youn.velocity = Vector3.ZERO
 	ZoneManager.resolve_pending_world_combat_victory()
+	GameState.add_hambre(30)  # combate ganado: esfuerzo físico
+	if GameState.player_save != null and GameState.player_save.bathroom_pending_after_combat:
+		GameState.player_save.bathroom_pending_after_combat = false
+		_defecate()
+
 
 var _intro_index := 0
 var _intro_active := false
@@ -218,6 +224,8 @@ var _was_in_sleep_range := false
 var _slept_this_cycle := false
 var _sleep_tracking_initialized := false
 var _sick_sleep_count := 0
+var _last_hambre_drain_hour := -1
+var _had_bathroom_need_at_sleep := false
 
 func _setup_intro() -> void:
 	if GameState.combat_return_pending or GameState.world_intro_seen:
@@ -300,10 +308,18 @@ func _on_sleep_requested() -> void:
 			_sick_sleep_count = 0
 			GameState.set_enfermo(false)
 			GameState.add_care_mistake(1)
+	_had_bathroom_need_at_sleep = GameState.player_save != null \
+			and GameState.player_save.ganas_bano >= 80
 	_toggle_menu()
 	_sleeping = true
 	var overlay := SleepOverlay.new()
-	overlay.tree_exiting.connect(func(): _sleeping = false)
+	overlay.tree_exiting.connect(func():
+		_sleeping = false
+		GameState.add_hambre(20)  # ayuno durante el sueño
+		if _had_bathroom_need_at_sleep:
+			_had_bathroom_need_at_sleep = false
+			_defecate()
+	)
 	add_child(overlay)
 
 func _check_sleep_penalty(hour: float, _day: int) -> void:
@@ -355,3 +371,58 @@ func _hour_in_range(hour: float, from_h: int, to_h: int) -> bool:
 func _refresh_intro_language(_language: String = "") -> void:
 	if _intro_active:
 		_show_intro_page()
+
+
+# ── Sistema de baño ───────────────────────────────────────────────────────────
+
+func _tick_bathroom_system(hour: float, day: int) -> void:
+	var ps := GameState.player_save
+	if ps == null:
+		return
+
+	var current_hour := floori(hour)
+	if current_hour == _last_hambre_drain_hour:
+		return
+	_last_hambre_drain_hour = current_hour
+
+	GameState.add_hambre(10)
+	if ps.hambre > 70 and ps.hungry_since_total_hour < 0.0:
+		ps.hungry_since_total_hour = day * 24.0 + hour
+	elif ps.hambre <= 70:
+		ps.hungry_since_total_hour = -1.0
+
+	if not ps.needs_bathroom:
+		# Métrica sube solo mientras el estado no está activo
+		ps.ganas_bano = mini(ps.ganas_bano + 10, 100)
+		var chance := _bathroom_chance(ps.ganas_bano)
+		if chance > 0.0 and randf() < chance:
+			ps.needs_bathroom = true
+			ps.bathroom_need_since_total_hour = float(current_hour)
+	elif ps.bathroom_need_since_total_hour >= 0.0:
+		# Estado activo: si pasó 1 hora de juego sin ir al baño → accidente
+		if float(current_hour) - ps.bathroom_need_since_total_hour >= 1.0:
+			_defecate()
+
+
+func _bathroom_chance(ganas: int) -> float:
+	if ganas >= 100: return 1.0
+	if ganas >= 90:  return 0.75
+	if ganas >= 80:  return 0.50
+	if ganas >= 75:  return 0.25
+	if ganas >= 70:  return 0.20
+	if ganas >= 65:  return 0.15
+	if ganas >= 60:  return 0.10
+	return 0.0
+
+
+func _defecate() -> void:
+	var ps := GameState.player_save
+	if ps == null:
+		return
+	ps.ganas_bano = 0
+	ps.needs_bathroom = false
+	ps.bathroom_need_since_total_hour = -1.0
+	GameState.add_care_mistake(1)
+	GameState.add_felicidad(-10)
+	GameState.add_salud(-5)
+	# TODO: spawnear objeto visual de caca en la posición del Youn
