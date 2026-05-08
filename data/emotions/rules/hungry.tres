@@ -13,3 +13,6 @@ priority = 60
 stat_key = "hambre"
 probability_curve = SubResource("Curve_rkehu")
 blocks = PackedStringArray("bathroom")
+expire_stats = {"energia": -30, "estres": 30, "salud": -60}
+expire_reset_hambre = true
+expire_care_mistakes = 1

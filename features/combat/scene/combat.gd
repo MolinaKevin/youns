@@ -35,9 +35,9 @@ var enemy_ai
 var _combat_finished := false
 
 func _ready() -> void:
-	GameState.set_clock_visible(false)
-	GameState.set_clock_paused(true)
-	GameState.set_youns_status_visible(false)
+	GlobalHUD.set_clock_visible(false)
+	GlobalHUD.set_clock_paused(true)
+	GlobalHUD.set_youns_status_visible(false)
 	ZoneManager.set_world_visible(false)
 	PartyManager.set_party_visible(false)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

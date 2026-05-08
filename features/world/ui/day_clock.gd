@@ -9,27 +9,27 @@ const PERIODS := [
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	visible = GameState.clock_visible
+	visible = GlobalHUD.clock_visible
 	LocalizationState.language_changed.connect(_refresh_language)
 	_refresh_clock(GameState.time_of_day_hours, GameState.current_day)
 	GameState.clock_changed.connect(_refresh_clock)
-	GameState.clock_visibility_changed.connect(_on_clock_visibility_changed)
-	GameState.clock_style_changed.connect(_on_style_changed)
+	GlobalHUD.clock_visibility_changed.connect(_on_clock_visibility_changed)
+	GlobalHUD.clock_style_changed.connect(_on_style_changed)
 
 func _exit_tree() -> void:
 	if GameState.clock_changed.is_connected(_refresh_clock):
 		GameState.clock_changed.disconnect(_refresh_clock)
-	if GameState.clock_visibility_changed.is_connected(_on_clock_visibility_changed):
-		GameState.clock_visibility_changed.disconnect(_on_clock_visibility_changed)
-	if GameState.clock_style_changed.is_connected(_on_style_changed):
-		GameState.clock_style_changed.disconnect(_on_style_changed)
+	if GlobalHUD.clock_visibility_changed.is_connected(_on_clock_visibility_changed):
+		GlobalHUD.clock_visibility_changed.disconnect(_on_clock_visibility_changed)
+	if GlobalHUD.clock_style_changed.is_connected(_on_style_changed):
+		GlobalHUD.clock_style_changed.disconnect(_on_style_changed)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not GameState.test_mode:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_F2:
-			GameState.set_clock_style((GameState.clock_style + 1) % 2)
+			GlobalHUD.set_clock_style((GlobalHUD.clock_style + 1) % 2)
 
 func _on_style_changed(_style: int) -> void:
 	_refresh_clock(GameState.time_of_day_hours, GameState.current_day)
@@ -37,7 +37,7 @@ func _on_style_changed(_style: int) -> void:
 func _draw() -> void:
 	var clock_center := Vector2(size.x * 0.5, size.y * 0.5)
 	var radius := minf(size.x, size.y) * 0.36
-	if GameState.clock_style == 0:
+	if GlobalHUD.clock_style == 0:
 		_draw_analog(clock_center, radius)
 	else:
 		_draw_sectors(clock_center, radius)

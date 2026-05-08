@@ -36,9 +36,9 @@ func _ready() -> void:
 		stats_bar.visible = false
 		gold_panel.visible = true
 	else:
-		GameState.set_clock_visible(false)
-	GameState.set_clock_paused(true)
-	GameState.set_youns_status_visible(false)
+		GlobalHUD.set_clock_visible(false)
+	GlobalHUD.set_clock_paused(true)
+	GlobalHUD.set_youns_status_visible(false)
 	LocalizationState.language_changed.connect(_apply_localized_text)
 	GameState.clock_changed.connect(_on_clock_changed)
 	_refresh_gold()

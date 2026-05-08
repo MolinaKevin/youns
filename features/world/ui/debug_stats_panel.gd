@@ -194,28 +194,10 @@ func _refresh() -> void:
 
 
 func _get_current_states() -> Array[String]:
-	var states: Array[String] = []
 	var youn_node = PartyManager.youn if PartyManager else null
-	if is_instance_valid(youn_node) and youn_node.youn_data != null:
-		var data: YounData = youn_node.youn_data
-		var hour := GameState.time_of_day_hours
-		var in_sleep: bool
-		if data.sleep_hour > data.wake_hour:
-			in_sleep = hour >= float(data.sleep_hour) or hour < float(data.wake_hour)
-		else:
-			in_sleep = hour >= float(data.sleep_hour) and hour < float(data.wake_hour)
-		if in_sleep:
-			states.append(LocalizationState.t("debug.state.sleep"))
-	var ps := GameState.player_save
-	if ps != null and ps.energia < 20:
-		states.append(LocalizationState.t("debug.state.tired"))
-	if ps != null and ps.enfermo:
-		states.append(LocalizationState.t("debug.state.sick"))
-	if ps != null and ps.hambre > 70:
-		states.append(LocalizationState.t("debug.state.hungry"))
-	if ps != null and ps.needs_bathroom:
-		states.append(LocalizationState.t("debug.state.bathroom"))
-	return states
+	if not is_instance_valid(youn_node):
+		return []
+	return youn_node.get_active_emotions()
 
 
 func _on_language_changed(_language: String) -> void:

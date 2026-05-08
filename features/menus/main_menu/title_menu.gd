@@ -31,9 +31,9 @@ var _language_options := ["es", "en"]
 var _language_selected_index := 0
 
 func _ready() -> void:
-	GameState.set_clock_visible(false)
-	GameState.set_clock_paused(true)
-	GameState.set_youns_status_visible(false)
+	GlobalHUD.set_clock_visible(false)
+	GlobalHUD.set_clock_paused(true)
+	GlobalHUD.set_youns_status_visible(false)
 	spanish_button.pressed.connect(func(): _set_language("es"))
 	english_button.pressed.connect(func(): _set_language("en"))
 	LocalizationState.language_changed.connect(_apply_localized_text)

@@ -16,7 +16,7 @@ func _ready() -> void:
 	_build_ui()
 	_apply_text()
 	LocalizationState.language_changed.connect(_apply_text)
-	GameState.set_clock_paused(true)
+	GlobalHUD.set_clock_paused(true)
 	_freeze_world()
 	_fade_in()
 
@@ -117,7 +117,7 @@ func _skip_time() -> void:
 	if GameState.time_of_day_hours >= float(wake_h):
 		GameState.current_day += 1
 	GameState.time_of_day_hours = float(wake_h)
-	GameState.add_energia(_calc_energia_recovery(hours_slept))
+	StatsManager.add_energia(_calc_energia_recovery(hours_slept))
 	GameState.clock_changed.emit(GameState.time_of_day_hours, GameState.current_day)
 
 
@@ -142,7 +142,7 @@ func _fade_out() -> void:
 
 
 func _finish() -> void:
-	GameState.set_clock_paused(false)
+	GlobalHUD.set_clock_paused(false)
 	_unfreeze_world()
 	queue_free()
 

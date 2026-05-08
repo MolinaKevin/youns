@@ -157,7 +157,7 @@ func _run_bathroom_sequence() -> void:
 	youn.set_physics_process(false)
 	youn.velocity = Vector3.ZERO
 	cam.enabled = false
-	GameState.set_clock_paused(true)
+	GlobalHUD.set_clock_paused(true)
 
 	var player_original_rot_y := player.rotation.y
 
@@ -294,7 +294,7 @@ func _run_bathroom_sequence() -> void:
 	await tw.finished
 
 	# Restaurar todo
-	GameState.set_clock_paused(false)
+	GlobalHUD.set_clock_paused(false)
 	cam.enabled = true
 	player.set_physics_process(true)
 	youn.set_physics_process(true)

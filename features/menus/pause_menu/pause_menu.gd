@@ -27,18 +27,18 @@ func _unhandled_input(event: InputEvent) -> void:
 			open()
 
 func open() -> void:
-	_clock_was_visible = GameState.clock_visible
-	_status_was_visible = GameState.youns_status_visible
-	GameState.set_clock_visible(false)
-	GameState.set_clock_paused(true)
-	GameState.set_youns_status_visible(false)
+	_clock_was_visible = GlobalHUD.clock_visible
+	_status_was_visible = GlobalHUD.youns_status_visible
+	GlobalHUD.set_clock_visible(false)
+	GlobalHUD.set_clock_paused(true)
+	GlobalHUD.set_youns_status_visible(false)
 	show()
 	get_tree().paused = true
 
 func close() -> void:
-	GameState.set_clock_paused(false)
-	GameState.set_clock_visible(_clock_was_visible)
-	GameState.set_youns_status_visible(_status_was_visible)
+	GlobalHUD.set_clock_paused(false)
+	GlobalHUD.set_clock_visible(_clock_was_visible)
+	GlobalHUD.set_youns_status_visible(_status_was_visible)
 	hide()
 	get_tree().paused = false
 

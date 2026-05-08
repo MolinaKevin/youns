@@ -13,9 +13,9 @@ var _near_terminal := false
 var _terminal_clock_open := false
 
 func _ready() -> void:
-	GameState.set_clock_visible(GameState.has_persistent_clock_ui())
-	GameState.set_clock_paused(false)
-	GameState.set_youns_status_visible(GameState.has_persistent_care_ui())
+	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
+	GlobalHUD.set_clock_paused(false)
+	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
 	PauseMenu.enabled = false
 	PartyManager.place_at_spawn(self)
 	PartyManager.camera_rig.yaw = 0.0
@@ -55,9 +55,9 @@ func _unhandled_input(event: InputEvent) -> void:
 func _toggle_lab() -> void:
 	var showing := not lab_ui.visible
 	lab_ui.visible = showing
-	GameState.set_clock_visible(false if showing else GameState.has_persistent_clock_ui())
-	GameState.set_clock_paused(showing)
-	GameState.set_youns_status_visible(false if showing else GameState.has_persistent_care_ui())
+	GlobalHUD.set_clock_visible(false if showing else GlobalHUD.has_persistent_clock_ui())
+	GlobalHUD.set_clock_paused(showing)
+	GlobalHUD.set_youns_status_visible(false if showing else GlobalHUD.has_persistent_care_ui())
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if showing else Input.MOUSE_MODE_CAPTURED
 
 func _on_interact_entered(body: Node3D) -> void:
@@ -100,17 +100,17 @@ func _refresh_analysis_terminal() -> void:
 
 func _toggle_terminal_clock(showing: bool) -> void:
 	_terminal_clock_open = showing
-	GameState.set_clock_visible(showing or GameState.has_persistent_clock_ui())
-	GameState.set_clock_paused(showing)
-	GameState.set_youns_status_visible(showing or GameState.has_persistent_care_ui())
+	GlobalHUD.set_clock_visible(showing or GlobalHUD.has_persistent_clock_ui())
+	GlobalHUD.set_clock_paused(showing)
+	GlobalHUD.set_youns_status_visible(showing or GlobalHUD.has_persistent_care_ui())
 	terminal_prompt.text = LocalizationState.t("world.prompt.close_clock") if showing else LocalizationState.t("world.prompt.view_clock")
 
 func _toggle_menu() -> void:
 	var showing := not menu.visible
 	menu.visible = showing
-	GameState.set_clock_visible(false if showing else GameState.has_persistent_clock_ui())
-	GameState.set_clock_paused(showing)
-	GameState.set_youns_status_visible(false if showing else GameState.has_persistent_care_ui())
+	GlobalHUD.set_clock_visible(false if showing else GlobalHUD.has_persistent_clock_ui())
+	GlobalHUD.set_clock_paused(showing)
+	GlobalHUD.set_youns_status_visible(false if showing else GlobalHUD.has_persistent_care_ui())
 	PartyManager.camera_rig.enabled = not showing
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if showing else Input.MOUSE_MODE_CAPTURED
 

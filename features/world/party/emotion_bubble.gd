@@ -37,7 +37,7 @@ func _ready() -> void:
 	visible         = false
 	_check_timer    = CHECK_INTERVAL
 	animation_finished.connect(_on_animation_finished)
-	GameState.stat_changed.connect(_on_stat_changed)
+	StatsManager.stat_changed.connect(_on_stat_changed)
 	_update_height()
 
 	_rules = _load_rules()
@@ -118,6 +118,14 @@ func _on_animation_finished() -> void:
 		_hide_bubble()
 
 
+func get_active_emotions() -> Array[String]:
+	var result: Array[String] = []
+	if _state == State.SHOWING and not _icon.animation.is_empty():
+		result.append(_icon.animation)
+	result.append_array(_queue)
+	return result
+
+
 func _hide_bubble() -> void:
 	visible    = false
 	position.y = _base_y
@@ -127,7 +135,7 @@ func _hide_bubble() -> void:
 
 
 func _evaluate_and_show() -> void:
-	if _state != State.HIDDEN or GameState.emotions_blocked:
+	if _state != State.HIDDEN or StatsManager.emotions_blocked:
 		return
 	if debug_random:
 		_show_random_emotion()

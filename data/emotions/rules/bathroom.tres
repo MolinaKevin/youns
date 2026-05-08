@@ -14,3 +14,5 @@ stat_key = "ganas_bano"
 threshold = 50.0
 probability_curve = SubResource("Curve_khwnl")
 blocks = PackedStringArray("hungry")
+expire_stats = {"felicidad": -10, "salud": -5}
+expire_care_mistakes = 1

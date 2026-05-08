@@ -29,9 +29,9 @@ var location_buttons: Dictionary = {}  # location -> Button
 var notified_locations: Array = []
 
 func _ready() -> void:
-	GameState.set_clock_visible(false if standalone_mode else true)
-	GameState.set_clock_paused(true)
-	GameState.set_youns_status_visible(false)
+	GlobalHUD.set_clock_visible(false if standalone_mode else true)
+	GlobalHUD.set_clock_paused(true)
+	GlobalHUD.set_youns_status_visible(false)
 	if standalone_mode:
 		ZoneManager.set_world_visible(false)
 		PartyManager.set_party_visible(false)

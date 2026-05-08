@@ -133,6 +133,12 @@ func show_emotion(state_name: String) -> void:
 		_emotion_bubble.show_emotion(state_name)
 
 
+func get_active_emotions() -> Array[String]:
+	if _emotion_bubble:
+		return _emotion_bubble.get_active_emotions()
+	return []
+
+
 func _face_dir(dir: Vector3, delta: float) -> void:
 	var rotate_speed := youn_data.rotate_speed if youn_data else 8.0
 	var target_angle := atan2(dir.x, dir.z)

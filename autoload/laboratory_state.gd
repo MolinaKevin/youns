@@ -159,11 +159,11 @@ func _process_reward(reward: Dictionary, _recipe_name: String) -> void:
 		"unlock_clock_ui":
 			GameState.player_save.clock_ui_unlocked = true
 			GameState.save_player_save()
-			GameState.sync_overworld_ui_visibility()
+			GlobalHUD.sync_overworld_ui_visibility()
 		"unlock_care_ui":
 			GameState.player_save.care_ui_unlocked = true
 			GameState.save_player_save()
-			GameState.sync_overworld_ui_visibility()
+			GlobalHUD.sync_overworld_ui_visibility()
 		"item":
 			var item_id: String = reward["id"]
 			var current_count: int = pending_output.get(item_id, {}).get("count", 0)

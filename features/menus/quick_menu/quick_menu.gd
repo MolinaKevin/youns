@@ -135,12 +135,12 @@ func open() -> void:
 	_selected = "up"
 	_refresh_selection()
 	show()
-	GameState.set_clock_paused(true)
+	GlobalHUD.set_clock_paused(true)
 	get_tree().paused = true
 
 
 func close() -> void:
-	GameState.set_clock_paused(false)
+	GlobalHUD.set_clock_paused(false)
 	hide()
 	get_tree().paused = false
 
@@ -155,30 +155,30 @@ func _activate() -> void:
 
 
 func _cmd_premiar() -> void:
-	GameState.add_discipline(-1)
-	GameState.add_felicidad(+3)
-	GameState.add_confianza(+2)
-	GameState.add_estres(-1)
-	GameState.add_aburrimiento(-1)
-	GameState.add_autocontrol(-1)
+	StatsManager.add_discipline(-1)
+	StatsManager.add_felicidad(+3)
+	StatsManager.add_confianza(+2)
+	StatsManager.add_estres(-1)
+	StatsManager.add_aburrimiento(-1)
+	StatsManager.add_autocontrol(-1)
 
 
 func _cmd_castigar() -> void:
-	GameState.add_felicidad(-4)
-	GameState.add_confianza(-3)
-	GameState.add_estres(+4)
-	GameState.add_autocontrol(-1)
+	StatsManager.add_felicidad(-4)
+	StatsManager.add_confianza(-3)
+	StatsManager.add_estres(+4)
+	StatsManager.add_autocontrol(-1)
 
 
 func _cmd_negar() -> void:
-	GameState.add_felicidad(-2)
-	GameState.add_confianza(-1)
-	GameState.add_estres(+1)
-	GameState.add_autocontrol(+1)
+	StatsManager.add_felicidad(-2)
+	StatsManager.add_confianza(-1)
+	StatsManager.add_estres(+1)
+	StatsManager.add_autocontrol(+1)
 
 
 func _cmd_jugar() -> void:
-	GameState.add_felicidad(+2)
-	GameState.add_confianza(+2)
-	GameState.add_estres(-2)
-	GameState.add_aburrimiento(-4)
+	StatsManager.add_felicidad(+2)
+	StatsManager.add_confianza(+2)
+	StatsManager.add_estres(-2)
+	StatsManager.add_aburrimiento(-4)

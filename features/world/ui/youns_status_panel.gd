@@ -13,18 +13,18 @@ const MAX_CARE_MISTAKES := 10.0
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	visible = GameState.youns_status_visible
+	visible = GlobalHUD.youns_status_visible
 	LocalizationState.language_changed.connect(_apply_localized_text)
-	GameState.youns_status_changed.connect(_refresh_status)
-	GameState.youns_status_visibility_changed.connect(_on_visibility_changed)
+	GlobalHUD.youns_status_changed.connect(_refresh_status)
+	GlobalHUD.youns_status_visibility_changed.connect(_on_visibility_changed)
 	_apply_localized_text()
 	_refresh_status(GameState.player_save.discipline, GameState.player_save.care_mistakes)
 
 func _exit_tree() -> void:
-	if GameState.youns_status_changed.is_connected(_refresh_status):
-		GameState.youns_status_changed.disconnect(_refresh_status)
-	if GameState.youns_status_visibility_changed.is_connected(_on_visibility_changed):
-		GameState.youns_status_visibility_changed.disconnect(_on_visibility_changed)
+	if GlobalHUD.youns_status_changed.is_connected(_refresh_status):
+		GlobalHUD.youns_status_changed.disconnect(_refresh_status)
+	if GlobalHUD.youns_status_visibility_changed.is_connected(_on_visibility_changed):
+		GlobalHUD.youns_status_visibility_changed.disconnect(_on_visibility_changed)
 
 func _refresh_status(discipline: int, care_mistakes: int) -> void:
 	discipline_value.text = "%d%%" % discipline
