@@ -1,6 +1,7 @@
 extends Node
 
 signal clock_changed(current_hour: float, current_day: int)
+signal stat_changed
 signal clock_visibility_changed(visible: bool)
 signal clock_pause_changed(paused: bool)
 signal clock_style_changed(style: int)
@@ -28,6 +29,9 @@ var current_day := 1
 var time_of_day_hours := 8.0
 var clock_visible := true
 var clock_paused := false
+var _emotion_block_count: int = 0
+var emotions_blocked: bool:
+	get: return _emotion_block_count > 0
 var clock_style := 0  # 0 = analógico, 1 = sectores
 var youns_status_visible := false
 var _day_clock_ui: CanvasLayer
@@ -113,6 +117,12 @@ func set_clock_visible(visible: bool) -> void:
 		_day_clock_ui.visible = visible
 	clock_visibility_changed.emit(visible)
 
+func block_emotions() -> void:
+	_emotion_block_count += 1
+
+func unblock_emotions() -> void:
+	_emotion_block_count = maxi(0, _emotion_block_count - 1)
+
 func set_clock_paused(paused: bool) -> void:
 	clock_paused = paused
 	clock_pause_changed.emit(paused)
@@ -150,6 +160,7 @@ func set_felicidad(value: int) -> void:
 	if player_save == null:
 		return
 	player_save.felicidad = clampi(value, 0, 100)
+	_notify_stat_changed()
 
 func add_felicidad(delta: int) -> void:
 	set_felicidad(player_save.felicidad + delta)
@@ -178,6 +189,7 @@ func set_estres(value: int) -> void:
 	if player_save == null:
 		return
 	player_save.estres = clampi(value, 0, 100)
+	_notify_stat_changed()
 
 func add_estres(delta: int) -> void:
 	set_estres(player_save.estres + delta)
@@ -186,6 +198,7 @@ func set_aburrimiento(value: int) -> void:
 	if player_save == null:
 		return
 	player_save.aburrimiento = clampi(value, 0, 100)
+	_notify_stat_changed()
 
 func add_aburrimiento(delta: int) -> void:
 	set_aburrimiento(player_save.aburrimiento + delta)
@@ -198,16 +211,17 @@ func set_autocontrol(value: int) -> void:
 func add_autocontrol(delta: int) -> void:
 	set_autocontrol(player_save.autocontrol + delta)
 
-func set_cansancio(value: int) -> void:
+func set_energia(value: int) -> void:
 	if player_save == null:
 		return
-	player_save.cansancio = clampi(value, 0, 100)
+	player_save.energia = clampi(value, 0, 100)
+	_notify_stat_changed()
 
-func add_cansancio(delta: int) -> void:
-	set_cansancio(player_save.cansancio + delta)
+func add_energia(delta: int) -> void:
+	set_energia(player_save.energia + delta)
 
-func drain_cansancio(amount: int) -> void:
-	add_cansancio(-amount)
+func drain_energia(amount: int) -> void:
+	add_energia(-amount)
 	_check_sick_chance()
 
 func _check_sick_chance() -> void:
@@ -236,6 +250,7 @@ func set_enfermo(value: bool) -> void:
 	if player_save == null:
 		return
 	player_save.enfermo = value
+	_notify_stat_changed()
 
 func set_weight(value: float) -> void:
 	if player_save == null:
@@ -252,11 +267,28 @@ func add_hambre(delta: int) -> void:
 	if player_save == null:
 		return
 	player_save.hambre = clampi(player_save.hambre + delta, 0, 100)
+	_notify_stat_changed()
 
 func on_meal_eaten() -> void:
 	if player_save == null:
 		return
 	player_save.hambre = 0
+	_notify_stat_changed()
+
+func set_ganas_bano(value: int) -> void:
+	if player_save == null:
+		return
+	player_save.ganas_bano = clampi(value, 0, 100)
+	_notify_stat_changed()
+
+func set_needs_bathroom(value: bool) -> void:
+	if player_save == null:
+		return
+	player_save.needs_bathroom = value
+	_notify_stat_changed()
+
+func _notify_stat_changed() -> void:
+	stat_changed.emit()
 	player_save.hungry_since_total_hour = -1.0
 	player_save.last_meal_total_hour = get_total_hours()
 	player_save.ganas_bano = mini(player_save.ganas_bano + 25, 100)

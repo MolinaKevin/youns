@@ -20,6 +20,7 @@ var _base_y        := 0.0
 var _icon          : AnimatedSprite3D
 var _queue         : Array[String] = []
 var _rules         : Array[EmotionRule] = []
+var _eval_pending  := false
 
 
 func _ready() -> void:
@@ -36,6 +37,7 @@ func _ready() -> void:
 	visible         = false
 	_check_timer    = CHECK_INTERVAL
 	animation_finished.connect(_on_animation_finished)
+	GameState.stat_changed.connect(_on_stat_changed)
 	_update_height()
 
 	_rules = _load_rules()
@@ -79,6 +81,15 @@ func _process(delta: float) -> void:
 		_debug_cycle_emotion()
 
 
+func _on_stat_changed() -> void:
+	if not _eval_pending:
+		_eval_pending = true
+		call_deferred("_deferred_evaluate")
+
+func _deferred_evaluate() -> void:
+	_eval_pending = false
+	_evaluate_and_show()
+
 func show_emotion(state_name: String) -> void:
 	if _icon.sprite_frames == null or not _icon.sprite_frames.has_animation(state_name):
 		push_warning("EmotionBubble: emoción '%s' no encontrada" % state_name)
@@ -116,7 +127,7 @@ func _hide_bubble() -> void:
 
 
 func _evaluate_and_show() -> void:
-	if _state != State.HIDDEN:
+	if _state != State.HIDDEN or GameState.emotions_blocked:
 		return
 	if debug_random:
 		_show_random_emotion()

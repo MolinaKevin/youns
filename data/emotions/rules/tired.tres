@@ -3,14 +3,14 @@
 [ext_resource type="Script" uid="uid://bej7xnoiw6b41" path="res://data/emotions/emotion_rule.gd" id="1"]
 
 [sub_resource type="Curve" id="Curve_fx8l1"]
-_data = [Vector2(0.5202312, 0), 0.0, 0.0, 0, 0, Vector2(0.6936416, 0.8314607), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+_data = [Vector2(0, 0.77528095), 0.0, 0.0, 0, 0, Vector2(0.20231211, 0.21348321), 0.0, 0.0, 0, 0, Vector2(0.58381504, 0), 0.0, 0.0, 0, 0]
 point_count = 3
 
 [resource]
 script = ExtResource("1")
 emotion_name = "tired"
 priority = 70
-stat_key = "cansancio"
+stat_key = "energia"
 threshold = 20.0
 comparison = 1
 probability_curve = SubResource("Curve_fx8l1")

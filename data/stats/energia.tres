@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1")
-stat_key = "cansancio"
+stat_key = "energia"
 rate_per_hour = -2.0
 min_value = 0.0
 max_value = 100.0

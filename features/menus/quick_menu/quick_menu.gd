@@ -135,10 +135,12 @@ func open() -> void:
 	_selected = "up"
 	_refresh_selection()
 	show()
+	GameState.set_clock_paused(true)
 	get_tree().paused = true
 
 
 func close() -> void:
+	GameState.set_clock_paused(false)
 	hide()
 	get_tree().paused = false
 

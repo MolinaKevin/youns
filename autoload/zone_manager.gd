@@ -31,6 +31,7 @@ var _loaded: Dictionary = {}   # id -> Node3D
 var _interior: Node3D = null   # escena interior activa (lab, dungeon, etc.)
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_PAUSABLE
 	_load_zone("hub")
 	for conn in ZONES["hub"]["connections"]:
 		_load_zone(conn)

@@ -8,6 +8,7 @@ var camera_rig: Node3D
 var next_spawn := "SpawnPoint"
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_PAUSABLE
 	var party := PARTY_SCENE.instantiate()
 	add_child(party)
 	player = party.get_node("Player")

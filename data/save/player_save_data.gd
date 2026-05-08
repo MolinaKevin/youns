@@ -21,7 +21,7 @@ class_name PlayerSaveData
 @export_range(0, 100, 1) var estres: int = 10
 @export_range(0, 100, 1) var aburrimiento: int = 20
 @export_range(0, 100, 1) var autocontrol: int = 50
-@export_range(0, 100, 1) var cansancio: int = 100
+@export_range(0, 100, 1) var energia: int = 100
 @export_range(0, 100, 1) var salud: int = 100
 @export var enfermo: bool = false
 @export var weight: float = 10.0

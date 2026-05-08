@@ -4,9 +4,20 @@
 [ext_resource type="PackedScene" path="res://features/menus/main_menu/main_menu.tscn" id="2_menu"]
 
 [node name="GameWorld" type="Node3D"]
+process_mode = 3
 script = ExtResource("1_gw")
 
 [node name="MenuLayer" type="CanvasLayer" parent="."]
+
+[node name="PauseOverlay" type="ColorRect" parent="MenuLayer"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0, 0.0, 0.0, 0.55)
+visible = false
 
 [node name="MainMenu" parent="MenuLayer" instance=ExtResource("2_menu")]
 visible = false

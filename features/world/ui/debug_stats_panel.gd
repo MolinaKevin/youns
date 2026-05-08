@@ -9,7 +9,7 @@ const METRICS := [
 	["estres",       "status.estres"],
 	["aburrimiento", "status.aburrimiento"],
 	["autocontrol",  "status.autocontrol"],
-	["cansancio",    "status.cansancio"],
+	["energia",    "status.energia"],
 	["salud",        "status.salud"],
 	["weight",       "status.weight"],
 	null,
@@ -207,7 +207,7 @@ func _get_current_states() -> Array[String]:
 		if in_sleep:
 			states.append(LocalizationState.t("debug.state.sleep"))
 	var ps := GameState.player_save
-	if ps != null and ps.cansancio < 20:
+	if ps != null and ps.energia < 20:
 		states.append(LocalizationState.t("debug.state.tired"))
 	if ps != null and ps.enfermo:
 		states.append(LocalizationState.t("debug.state.sick"))

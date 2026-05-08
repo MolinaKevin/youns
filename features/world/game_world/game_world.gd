@@ -3,6 +3,7 @@ extends Node3D
 const SleepOverlay := preload("res://features/world/ui/sleep_overlay.gd")
 
 @onready var menu: Control = $MenuLayer/MainMenu
+@onready var pause_overlay: ColorRect = $MenuLayer/PauseOverlay
 @onready var intro_layer: CanvasLayer = $IntroLayer
 @onready var intro_title: Label = $IntroLayer/Panel/Margin/VBox/Title
 @onready var intro_body: RichTextLabel = $IntroLayer/Panel/Margin/VBox/Body
@@ -64,7 +65,7 @@ func _ready() -> void:
 	_update_lighting(GameState.time_of_day_hours, GameState.current_day)
 	GameState.clock_changed.connect(_update_lighting)
 	GameState.clock_changed.connect(_check_sleep_penalty)
-	GameState.clock_changed.connect(_drain_cansancio)
+	GameState.clock_changed.connect(_drain_energia)
 	GameState.clock_changed.connect(_check_end_of_night)
 	GameState.clock_changed.connect(_tick_bathroom_system)
 	_setup_screen_fx()
@@ -84,11 +85,13 @@ func _input(event: InputEvent) -> void:
 func _toggle_menu() -> void:
 	var showing := not menu.visible
 	menu.visible = showing
+	pause_overlay.visible = showing
 	GameState.set_clock_visible(false if showing else GameState.has_persistent_clock_ui())
 	GameState.set_clock_paused(showing)
 	GameState.set_youns_status_visible(false if showing else GameState.has_persistent_care_ui())
 	PartyManager.camera_rig.enabled = not showing
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if showing else Input.MOUSE_MODE_CAPTURED
+	get_tree().paused = showing
 
 func _setup_environment() -> void:
 	var env := Environment.new()
@@ -219,7 +222,7 @@ var _intro_index := 0
 var _intro_active := false
 var _sleeping := false
 var _sleep_penalty_applied := false
-var _last_cansancio_drain_hour := -1
+var _last_energia_drain_hour := -1
 var _was_in_sleep_range := false
 var _slept_this_cycle := false
 var _sleep_tracking_initialized := false
@@ -294,8 +297,8 @@ func _exit_tree() -> void:
 		GameState.clock_changed.disconnect(_update_lighting)
 	if GameState.clock_changed.is_connected(_check_sleep_penalty):
 		GameState.clock_changed.disconnect(_check_sleep_penalty)
-	if GameState.clock_changed.is_connected(_drain_cansancio):
-		GameState.clock_changed.disconnect(_drain_cansancio)
+	if GameState.clock_changed.is_connected(_drain_energia):
+		GameState.clock_changed.disconnect(_drain_energia)
 	if GameState.clock_changed.is_connected(_check_end_of_night):
 		GameState.clock_changed.disconnect(_check_end_of_night)
 	PauseMenu.enabled = false
@@ -337,12 +340,12 @@ func _check_sleep_penalty(hour: float, _day: int) -> void:
 		_sleep_penalty_applied = true
 		GameState.add_care_mistake(1)
 
-func _drain_cansancio(hour: float, _day: int) -> void:
+func _drain_energia(hour: float, _day: int) -> void:
 	var current_hour := floori(hour)
-	if current_hour == _last_cansancio_drain_hour:
+	if current_hour == _last_energia_drain_hour:
 		return
-	_last_cansancio_drain_hour = current_hour
-	GameState.drain_cansancio(4)
+	_last_energia_drain_hour = current_hour
+	GameState.drain_energia(4)
 
 func _check_end_of_night(hour: float, _day: int) -> void:
 	var youn_node = PartyManager.youn if PartyManager else null
@@ -359,7 +362,7 @@ func _check_end_of_night(hour: float, _day: int) -> void:
 	if not in_sleep and _was_in_sleep_range:
 		if not _slept_this_cycle:
 			GameState.add_salud(-30)
-			if GameState.player_save != null and GameState.player_save.cansancio < 20:
+			if GameState.player_save != null and GameState.player_save.energia < 20:
 				GameState.set_enfermo(true)
 	_was_in_sleep_range = in_sleep
 
@@ -393,10 +396,10 @@ func _tick_bathroom_system(hour: float, day: int) -> void:
 
 	if not ps.needs_bathroom:
 		# Métrica sube solo mientras el estado no está activo
-		ps.ganas_bano = mini(ps.ganas_bano + 10, 100)
+		GameState.set_ganas_bano(ps.ganas_bano + 10)
 		var chance := _bathroom_chance(ps.ganas_bano)
 		if chance > 0.0 and randf() < chance:
-			ps.needs_bathroom = true
+			GameState.set_needs_bathroom(true)
 			ps.bathroom_need_since_total_hour = float(current_hour)
 	elif ps.bathroom_need_since_total_hour >= 0.0:
 		# Estado activo: si pasó 1 hora de juego sin ir al baño → accidente
@@ -419,10 +422,12 @@ func _defecate() -> void:
 	var ps := GameState.player_save
 	if ps == null:
 		return
-	ps.ganas_bano = 0
-	ps.needs_bathroom = false
+	GameState.set_ganas_bano(0)
+	GameState.set_needs_bathroom(false)
 	ps.bathroom_need_since_total_hour = -1.0
 	GameState.add_care_mistake(1)
 	GameState.add_felicidad(-10)
 	GameState.add_salud(-5)
 	# TODO: spawnear objeto visual de caca en la posición del Youn
+	# Al agregar la animación: GameState.block_emotions() al inicio,
+	# GameState.unblock_emotions() en el callback de fin de animación.

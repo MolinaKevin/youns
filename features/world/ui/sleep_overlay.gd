@@ -117,7 +117,7 @@ func _skip_time() -> void:
 	if GameState.time_of_day_hours >= float(wake_h):
 		GameState.current_day += 1
 	GameState.time_of_day_hours = float(wake_h)
-	GameState.add_cansancio(_calc_cansancio_recovery(hours_slept))
+	GameState.add_energia(_calc_energia_recovery(hours_slept))
 	GameState.clock_changed.emit(GameState.time_of_day_hours, GameState.current_day)
 
 
@@ -128,7 +128,7 @@ func _calc_hours_slept(current_hour: float, wake_h: int) -> int:
 	return roundi(diff)
 
 
-func _calc_cansancio_recovery(hours: int) -> int:
+func _calc_energia_recovery(hours: int) -> int:
 	if hours >= 7:
 		return 100
 	# primeras 2h: +8/h; desde la 3ra: +5/h (3 menos por hora adicional)

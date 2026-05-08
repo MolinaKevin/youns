@@ -12,3 +12,4 @@ emotion_name = "hungry"
 priority = 60
 stat_key = "hambre"
 probability_curve = SubResource("Curve_rkehu")
+blocks = PackedStringArray("bathroom")

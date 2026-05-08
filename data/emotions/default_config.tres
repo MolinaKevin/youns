@@ -25,12 +25,13 @@ priority = 80
 stat_key = "needs_bathroom"
 threshold = 0.5
 comparison = 2
+blocks = PackedStringArray("hungry")
 
 [sub_resource type="Resource" id="Rule_tired"]
 script = ExtResource("2_rule")
 emotion_name = "tired"
 priority = 70
-stat_key = "cansancio"
+stat_key = "energia"
 threshold = 20.0
 comparison = 1
 
@@ -39,6 +40,7 @@ script = ExtResource("2_rule")
 emotion_name = "hungry"
 priority = 60
 stat_key = "hambre"
+blocks = PackedStringArray("bathroom")
 
 [sub_resource type="Resource" id="Rule_sad"]
 script = ExtResource("2_rule")
