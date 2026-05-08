@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="EmotionRuleTimeWindow" format=3]
+
+[ext_resource type="Script" path="res://data/emotions/emotion_rule_time_window.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+emotion_name = "sleep"
+priority = 90
+stat_key = ""
+threshold = 0.0
+comparison = 0
+blocks = PackedStringArray("hungry")

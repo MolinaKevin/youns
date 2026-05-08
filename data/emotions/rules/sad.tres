@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EmotionRule" format=3 uid="uid://b566g0beuqu3r"]
+
+[ext_resource type="Script" uid="uid://bej7xnoiw6b41" path="res://data/emotions/emotion_rule.gd" id="1"]
+
+[sub_resource type="Curve" id="Curve_g7ipq"]
+_data = [Vector2(0, 0.6629214), 0.0, 0.0, 0, 0, Vector2(0.50289017, 0.3146068), 0.0, 0.0, 0, 0, Vector2(0.7745665, 0), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[resource]
+script = ExtResource("1")
+emotion_name = "sad"
+priority = 50
+stat_key = "felicidad"
+threshold = 30.0
+comparison = 1
+probability_curve = SubResource("Curve_g7ipq")

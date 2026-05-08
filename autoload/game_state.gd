@@ -34,6 +34,11 @@ var _day_clock_ui: CanvasLayer
 var _youns_status_ui: CanvasLayer
 var _debug_stats_ui: CanvasLayer
 
+const STATS_DIR := "res://data/stats/"
+var _stat_configs: Array[StatConfig] = []
+var _stat_accumulators: Dictionary = {}
+var _last_total_hour_tick: int = 0
+
 const SAVE_PATH := "user://player_save.tres"
 const RUN_PATH := "user://current_run.tres"
 
@@ -65,6 +70,9 @@ func _ready() -> void:
 	]
 	player_save.gold = 100
 
+	_stat_configs = _load_stat_configs()
+	_last_total_hour_tick = int(get_total_hours())
+
 	print("GameState loaded")
 	print("owned ids in GameState: ", player_save.owned_card_ids)
 	_ensure_day_clock_ui()
@@ -85,6 +93,10 @@ func _process(delta: float) -> void:
 		time_of_day_hours -= HOURS_PER_DAY
 		current_day += 1
 	clock_changed.emit(time_of_day_hours, current_day)
+	var current_tick := int(get_total_hours())
+	while _last_total_hour_tick < current_tick:
+		_last_total_hour_tick += 1
+		_apply_stat_rates()
 
 func get_time_string() -> String:
 	var total_minutes := int(floor(time_of_day_hours * 60.0))
@@ -328,3 +340,36 @@ func save_run_state() -> void:
 func reset_run_state() -> void:
 	current_run = RunStateData.new()
 	save_run_state()
+
+
+func _load_stat_configs() -> Array[StatConfig]:
+	var result: Array[StatConfig] = []
+	var dir := DirAccess.open(STATS_DIR)
+	if dir == null:
+		return result
+	dir.list_dir_begin()
+	var file := dir.get_next()
+	while file != "":
+		if file.ends_with(".tres"):
+			var cfg = load(STATS_DIR + file)
+			if cfg is StatConfig:
+				result.append(cfg)
+		file = dir.get_next()
+	return result
+
+
+func _apply_stat_rates() -> void:
+	if player_save == null:
+		return
+	for cfg: StatConfig in _stat_configs:
+		if cfg.stat_key.is_empty() or cfg.rate_per_hour == 0.0:
+			continue
+		var acc: float = _stat_accumulators.get(cfg.stat_key, 0.0) + cfg.rate_per_hour
+		var to_apply := int(acc)
+		_stat_accumulators[cfg.stat_key] = acc - float(to_apply)
+		if to_apply == 0:
+			continue
+		var current = player_save.get(cfg.stat_key)
+		if current == null:
+			continue
+		player_save.set(cfg.stat_key, clampi(int(current) + to_apply, int(cfg.min_value), int(cfg.max_value)))

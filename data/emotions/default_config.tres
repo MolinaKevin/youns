@@ -1,0 +1,65 @@
+[gd_resource type="Resource" script_class="EmotionConfig" format=3 uid="uid://dehk20oplklmj"]
+
+[ext_resource type="Script" path="res://data/emotions/emotion_config.gd" id="1_config"]
+[ext_resource type="Script" uid="uid://bej7xnoiw6b41" path="res://data/emotions/emotion_rule.gd" id="2_rule"]
+[ext_resource type="Script" uid="uid://byh2ifj5rk1yw" path="res://data/emotions/emotion_rule_time_window.gd" id="3_time"]
+
+[sub_resource type="Resource" id="Rule_sick"]
+script = ExtResource("2_rule")
+emotion_name = "sick"
+priority = 100
+stat_key = "enfermo"
+threshold = 0.5
+comparison = 2
+
+[sub_resource type="Resource" id="Rule_sleep"]
+script = ExtResource("3_time")
+emotion_name = "sleep"
+priority = 90
+threshold = 0.0
+
+[sub_resource type="Resource" id="Rule_bathroom"]
+script = ExtResource("2_rule")
+emotion_name = "bathroom"
+priority = 80
+stat_key = "needs_bathroom"
+threshold = 0.5
+comparison = 2
+
+[sub_resource type="Resource" id="Rule_tired"]
+script = ExtResource("2_rule")
+emotion_name = "tired"
+priority = 70
+stat_key = "cansancio"
+threshold = 20.0
+comparison = 1
+
+[sub_resource type="Resource" id="Rule_hungry"]
+script = ExtResource("2_rule")
+emotion_name = "hungry"
+priority = 60
+stat_key = "hambre"
+
+[sub_resource type="Resource" id="Rule_sad"]
+script = ExtResource("2_rule")
+emotion_name = "sad"
+priority = 50
+stat_key = "felicidad"
+threshold = 30.0
+comparison = 1
+
+[sub_resource type="Resource" id="Rule_stressed"]
+script = ExtResource("2_rule")
+emotion_name = "stressed"
+priority = 40
+stat_key = "estres"
+
+[sub_resource type="Resource" id="Rule_bored"]
+script = ExtResource("2_rule")
+emotion_name = "bored"
+priority = 30
+stat_key = "aburrimiento"
+
+[resource]
+script = ExtResource("1_config")
+rules = Array[ExtResource("2_rule")]([SubResource("Rule_sick"), SubResource("Rule_sleep"), SubResource("Rule_bathroom"), SubResource("Rule_tired"), SubResource("Rule_hungry"), SubResource("Rule_sad"), SubResource("Rule_stressed"), SubResource("Rule_bored")])

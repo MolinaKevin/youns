@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="EmotionRule" format=3 uid="uid://c0b5lt318rk20"]
+
+[ext_resource type="Script" uid="uid://bej7xnoiw6b41" path="res://data/emotions/emotion_rule.gd" id="1"]
+
+[sub_resource type="Curve" id="Curve_l8ici"]
+_data = [Vector2(0.4219653, 0), 0.0, 0.0, 0, 0, Vector2(0.8323699, 0.1685394), 0.0, 0.0, 0, 0, Vector2(1, 0.7865169), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[resource]
+script = ExtResource("1")
+emotion_name = "stressed"
+priority = 40
+stat_key = "estres"
+probability_curve = SubResource("Curve_l8ici")

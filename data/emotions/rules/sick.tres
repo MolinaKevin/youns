@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EmotionRule" format=3 uid="uid://cbvbxkxmnu554"]
+
+[ext_resource type="Script" uid="uid://bej7xnoiw6b41" path="res://data/emotions/emotion_rule.gd" id="1"]
+
+[sub_resource type="Curve" id="Curve_q2epa"]
+_data = [Vector2(0, 0.73033714), 0.0, 0.0, 0, 0, Vector2(0.3699422, 0.52808994), 0.0, 0.0, 0, 0, Vector2(0.51445085, 0), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[resource]
+script = ExtResource("1")
+emotion_name = "sick"
+priority = 100
+stat_key = "salud"
+threshold = 50.0
+comparison = 1
+probability_curve = SubResource("Curve_q2epa")

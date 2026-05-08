@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="EmotionRule" format=3 uid="uid://kgdi72d0wvt1"]
+
+[ext_resource type="Script" uid="uid://bej7xnoiw6b41" path="res://data/emotions/emotion_rule.gd" id="1"]
+
+[sub_resource type="Curve" id="Curve_khwnl"]
+_data = [Vector2(0.31791908, 0), 0.0, 0.0, 0, 0, Vector2(0.6936416, 0.17977536), 0.0, 0.0, 0, 0, Vector2(0.7745665, 0.44943827), 0.0, 0.0, 0, 0, Vector2(0.88439304, 0.84269667), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+point_count = 5
+
+[resource]
+script = ExtResource("1")
+emotion_name = "bathroom"
+priority = 80
+stat_key = "ganas_bano"
+threshold = 50.0
+probability_curve = SubResource("Curve_khwnl")
