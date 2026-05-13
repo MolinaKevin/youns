@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" uid="uid://bfo5wpg0ptqcr" path="res://assets/maps/hub/city_map.glb" id="2_map"]
 [ext_resource type="PackedScene" uid="uid://c6sj4ql5s1p65" path="res://assets/maps/hub/lab.glb" id="3_lab"]
 [ext_resource type="ArrayMesh" uid="uid://chrobcjle3fog" path="res://assets/youns/Monzaemon.obj" id="4_monzaemon"]
+[ext_resource type="Script" uid="uid://70sgg88cyq53" path="res://features/world/lab_interior/face_player.gd" id="5_face"]
 
 [sub_resource type="BoxShape3D" id="1"]
 size = Vector3(130, 20, 130)
@@ -43,7 +44,15 @@ height = 2.1
 [sub_resource type="SphereShape3D" id="9"]
 radius = 3.2
 
+[sub_resource type="CapsuleShape3D" id="14"]
+radius = 0.7
+height = 2.1
+
+[sub_resource type="SphereShape3D" id="15"]
+radius = 3.2
+
 [node name="ZoneHub" type="Node3D" unique_id=1690177326]
+process_mode = 3
 script = ExtResource("1_hub")
 toilet_data = ExtResource("2_toilet")
 
@@ -121,6 +130,105 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.75, 5)
 
 [node name="Col" type="CollisionShape3D" parent="Toilet/ToiletArea" unique_id=100000005]
 shape = SubResource("13")
+
+[node name="HubNPC" type="StaticBody3D" parent="." unique_id=200000001]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 1, 10)
+script = ExtResource("5_face")
+
+[node name="Mesh" type="MeshInstance3D" parent="HubNPC" unique_id=200000002]
+transform = Transform3D(0.22, 0, 0, 0, 0.22, 0, 0, 0, 0.22, 0, 0, 0)
+mesh = ExtResource("4_monzaemon")
+
+[node name="Collision" type="CollisionShape3D" parent="HubNPC" unique_id=200000003]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 0)
+shape = SubResource("14")
+
+[node name="InteractArea" type="Area3D" parent="HubNPC" unique_id=200000004]
+
+[node name="InteractCol" type="CollisionShape3D" parent="HubNPC/InteractArea" unique_id=200000005]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("15")
+
+[node name="Prompt" type="Label3D" parent="HubNPC" unique_id=200000006]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0)
+visible = false
+text = "Hablar [E]"
+
+[node name="HubNPCDialog" type="CanvasLayer" parent="." unique_id=200000007]
+visible = false
+
+[node name="Backdrop" type="ColorRect" parent="HubNPCDialog" unique_id=200000008]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.03, 0.04, 0.52)
+
+[node name="TextPanel" type="Panel" parent="HubNPCDialog" unique_id=200000009]
+anchors_preset = -1
+anchor_left = 0.1
+anchor_top = 0.82
+anchor_right = 0.9
+anchor_bottom = 0.97
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="Margin" type="MarginContainer" parent="HubNPCDialog/TextPanel" unique_id=200000010]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 14
+
+[node name="Text" type="Label" parent="HubNPCDialog/TextPanel/Margin" unique_id=200000011]
+layout_mode = 2
+text = "Monzaemon: ..."
+autowrap_mode = 3
+
+[node name="ChoicePopup" type="Panel" parent="HubNPCDialog" unique_id=200000018]
+visible = false
+anchors_preset = -1
+anchor_left = 0.35
+anchor_top = 0.28
+anchor_right = 0.65
+anchor_bottom = 0.72
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Margin" type="MarginContainer" parent="HubNPCDialog/ChoicePopup" unique_id=200000019]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 14
+
+[node name="VBox" type="VBoxContainer" parent="HubNPCDialog/ChoicePopup/Margin" unique_id=200000012]
+layout_mode = 2
+
+[node name="AntidoteButton" type="Button" parent="HubNPCDialog/ChoicePopup/Margin/VBox" unique_id=200000014]
+layout_mode = 2
+text = "Antidoto"
+
+[node name="AntistressButton" type="Button" parent="HubNPCDialog/ChoicePopup/Margin/VBox" unique_id=200000015]
+layout_mode = 2
+text = "Anti-estres"
+
+[node name="FoodButton" type="Button" parent="HubNPCDialog/ChoicePopup/Margin/VBox" unique_id=200000016]
+layout_mode = 2
+text = "Comida"
+
+[node name="RestButton" type="Button" parent="HubNPCDialog/ChoicePopup/Margin/VBox" unique_id=200000017]
+layout_mode = 2
+text = "Descansar"
 
 [node name="DemoDialog" type="CanvasLayer" parent="." unique_id=1644363126]
 visible = false

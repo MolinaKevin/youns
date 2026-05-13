@@ -89,7 +89,8 @@ func _input(event: InputEvent) -> void:
 	if _sleeping or _handle_intro_input(event):
 		return
 	if _is_menu_pressed(event) and not intro_layer.visible:
-		_toggle_menu()
+		if menu.visible or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+			_toggle_menu()
 	elif _is_cancel_pressed(event) and menu.visible:
 		_toggle_menu()
 
