@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://bej7xnoiw6b41" path="res://data/emotions/emotion_rule.gd" id="1"]
 
 [sub_resource type="Curve" id="Curve_khqrx"]
-_data = [Vector2(0.57803464, 0), 0.0, 0.0, 0, 0, Vector2(1, 0.64044946), 0.0, 0.0, 0, 0]
+_data = [Vector2(0.7745665, 0), 0.0, 0.0, 0, 0, Vector2(1, 0.3820225), 0.0, 0.0, 0, 0]
 point_count = 2
 
 [resource]

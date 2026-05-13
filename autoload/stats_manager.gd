@@ -12,6 +12,7 @@ var _stat_accumulators: Dictionary = {}
 var _emotion_block_count: int = 0
 var _hungry_rule: EmotionRule = null
 var _bathroom_rule: EmotionRule = null
+var _stat_change_pending := false
 
 var emotions_blocked: bool:
 	get: return _emotion_block_count > 0
@@ -33,7 +34,7 @@ func add_stat(key: String, delta: int) -> void:
 	if current == null:
 		return
 	GameState.player_save.set(key, clampi(int(current) + delta, 0, 100))
-	stat_changed.emit()
+	_queue_stat_changed()
 
 func set_stat(key: String, value: int) -> void:
 	if GameState.player_save == null:
@@ -41,7 +42,7 @@ func set_stat(key: String, value: int) -> void:
 	if GameState.player_save.get(key) == null:
 		return
 	GameState.player_save.set(key, clampi(value, 0, 100))
-	stat_changed.emit()
+	_queue_stat_changed()
 
 # ── Wrappers nombrados ────────────────────────────────────────────────────────
 
@@ -99,7 +100,7 @@ func set_enfermo(value: bool) -> void:
 	if GameState.player_save == null:
 		return
 	GameState.player_save.enfermo = value
-	stat_changed.emit()
+	_queue_stat_changed()
 
 func set_weight(value: float) -> void:
 	if GameState.player_save == null:
@@ -113,7 +114,7 @@ func set_needs_bathroom(value: bool) -> void:
 	if GameState.player_save == null:
 		return
 	GameState.player_save.needs_bathroom = value
-	stat_changed.emit()
+	_queue_stat_changed()
 
 # ── Hambre ────────────────────────────────────────────────────────────────────
 
@@ -127,14 +128,14 @@ func tick_hunger(total_h: float) -> void:
 		ps.is_hungry = false
 		ps.hungry_since_total_hour = -1.0
 		ps.hungry_until_total_hour = -1.0
-		stat_changed.emit()
+		_queue_stat_changed()
 	elif not ps.is_hungry and _hungry_rule != null:
 		var ctx := {"save": ps, "youn_data": null}
 		if _hungry_rule.evaluate(ctx) > 0.0:
 			ps.is_hungry = true
 			ps.hungry_since_total_hour = total_h
 			ps.hungry_until_total_hour = float(floori(total_h) + 2)
-			stat_changed.emit()
+			_queue_stat_changed()
 
 # ── Baño ─────────────────────────────────────────────────────────────────────
 
@@ -182,7 +183,7 @@ func on_meal_eaten() -> void:
 	ps.hungry_until_total_hour = -1.0
 	ps.last_meal_total_hour = GameState.get_total_hours()
 	ps.ganas_bano = mini(ps.ganas_bano + 25, 100)
-	stat_changed.emit()
+	_queue_stat_changed()
 
 # ── Tick por hora ─────────────────────────────────────────────────────────────
 
@@ -201,6 +202,15 @@ func apply_hour_tick() -> void:
 		if current == null:
 			continue
 		GameState.player_save.set(cfg.stat_key, clampi(int(current) + to_apply, int(cfg.min_value), int(cfg.max_value)))
+
+func _queue_stat_changed() -> void:
+	if not _stat_change_pending:
+		_stat_change_pending = true
+		call_deferred("_emit_stat_changed")
+
+func _emit_stat_changed() -> void:
+	_stat_change_pending = false
+	stat_changed.emit()
 
 func _load_stat_configs() -> Array[StatConfig]:
 	var result: Array[StatConfig] = []

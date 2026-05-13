@@ -1,6 +1,5 @@
 extends AnimatedSprite3D
 
-const CHECK_INTERVAL   := 5.0
 const DISPLAY_SECONDS  := 3.0
 const FLOAT_AMPLITUDE  := 0.05
 const FLOAT_PERIOD     := 1.6
@@ -14,13 +13,11 @@ const RULES_DIR        := "res://data/emotions/rules/"
 enum State { HIDDEN, SHOWING, POPPING }
 var _state         := State.HIDDEN
 var _display_timer := 0.0
-var _check_timer   := 0.0
 var _float_time    := 0.0
 var _base_y        := 0.0
 var _icon          : AnimatedSprite3D
 var _queue         : Array[String] = []
 var _rules         : Array[EmotionRule] = []
-var _eval_pending  := false
 
 
 func _ready() -> void:
@@ -35,7 +32,6 @@ func _ready() -> void:
 	pixel_size      = pixel_size_override
 	render_priority = 0
 	visible         = false
-	_check_timer    = CHECK_INTERVAL
 	animation_finished.connect(_on_animation_finished)
 	StatsManager.stat_changed.connect(_on_stat_changed)
 	_update_height()
@@ -71,23 +67,13 @@ func _process(delta: float) -> void:
 			else:
 				_float_time += delta
 				position.y = _base_y + sin(_float_time * TAU / FLOAT_PERIOD) * FLOAT_AMPLITUDE
-		State.HIDDEN:
-			_check_timer -= delta
-			if _check_timer <= 0.0:
-				_check_timer = CHECK_INTERVAL
-				_evaluate_and_show()
+
 
 	if OS.is_debug_build() and Input.is_action_just_pressed("ui_focus_next"):
 		_debug_cycle_emotion()
 
 
 func _on_stat_changed() -> void:
-	if not _eval_pending:
-		_eval_pending = true
-		call_deferred("_deferred_evaluate")
-
-func _deferred_evaluate() -> void:
-	_eval_pending = false
 	_evaluate_and_show()
 
 func show_emotion(state_name: String) -> void:

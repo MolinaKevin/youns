@@ -10,7 +10,7 @@ class_name PlayerSaveData
 @export var unlocked_relic_ids: Array[String] = []
 @export var player_level: int = 1
 @export_range(0, 100, 1) var discipline: int = 55
-@export_range(0, 100, 1) var felicidad: int = 70
+@export_range(0, 100, 1) var felicidad: int = 100
 @export_range(0, 10, 1) var care_mistakes: int = 0
 @export var clock_ui_unlocked: bool = false
 @export var care_ui_unlocked: bool = false

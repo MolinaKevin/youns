@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://bej7xnoiw6b41" path="res://data/emotions/emotion_rule.gd" id="1"]
 
 [sub_resource type="Curve" id="Curve_rkehu"]
-_data = [Vector2(0.4219653, 0.06741583), 0.0, 0.0, 0, 0, Vector2(0.76878613, 0.1685394), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+_data = [Vector2(0.7052023, 0.033707857), 0.0, 0.0, 0, 0, Vector2(0.9248554, 0.20224726), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
 point_count = 3
 
 [resource]
@@ -12,7 +12,10 @@ emotion_name = "hungry"
 priority = 60
 stat_key = "hambre"
 probability_curve = SubResource("Curve_rkehu")
-blocks = PackedStringArray("bathroom")
-expire_stats = {"energia": -30, "estres": 30, "salud": -60}
+expire_stats = {
+"energia": -30,
+"estres": 30,
+"salud": -40
+}
 expire_reset_hambre = true
 expire_care_mistakes = 1

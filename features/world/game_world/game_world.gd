@@ -360,7 +360,7 @@ func _check_end_of_night(hour: float, _day: int) -> void:
 		_slept_this_cycle = false
 	if not in_sleep and _was_in_sleep_range:
 		if not _slept_this_cycle:
-			StatsManager.add_salud(-30)
+			StatsManager.add_salud(-20)
 			if GameState.player_save != null and GameState.player_save.energia < 20:
 				StatsManager.set_enfermo(true)
 	_was_in_sleep_range = in_sleep
