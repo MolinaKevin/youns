@@ -96,6 +96,10 @@ func _ensure_youns_status_ui() -> void:
 	_youns_status_ui.add_child(panel)
 	get_tree().root.call_deferred("add_child", _youns_status_ui)
 
+func set_debug_stats_visible(visible: bool) -> void:
+	if is_instance_valid(_debug_stats_ui):
+		_debug_stats_ui.visible = visible
+
 func _ensure_debug_stats_ui() -> void:
 	if is_instance_valid(_debug_stats_ui):
 		return

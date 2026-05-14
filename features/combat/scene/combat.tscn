@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://beqywnotcyb30" path="res://features/combat/scene/ui/top_bar.tscn" id="3_topbar"]
 [ext_resource type="PackedScene" uid="uid://cwurnr3gybe06" path="res://features/cards/presentation/card_section.tscn" id="4_handsec"]
 [ext_resource type="PackedScene" uid="uid://cd40uh020beps" path="res://features/cards/ui/CardGrid/card_grid.tscn" id="5_cgrid"]
+[ext_resource type="PackedScene" uid="uid://slsjny8g2aor" path="res://features/cards/presentation/card_view.tscn" id="7_cardview"]
 
 [node name="Combat" type="Node"]
 script = ExtResource("1_vj48t")
@@ -89,6 +90,11 @@ layout_mode = 2
 text = "Fin movimiento"
 visible = false
 
+[node name="BottomSpacer" type="Control" parent="UI/MainVBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 70)
+mouse_filter = 2
+
 [node name="PilePopup" type="Panel" parent="UI"]
 layout_mode = 0
 anchor_left = 0.1
@@ -165,4 +171,17 @@ text = "No"
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 text = "Terminar"
+visible = false
+
+[node name="CardPreview" parent="UI" instance=ExtResource("7_cardview")]
+layout_mode = 0
+anchor_left = 0.0
+anchor_top = 0.15
+anchor_right = 0.0
+anchor_bottom = 0.15
+offset_left = 20
+offset_top = 0
+offset_right = 215
+offset_bottom = 293
+scale = Vector2(1.3, 1.3)
 visible = false

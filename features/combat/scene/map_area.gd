@@ -1,6 +1,8 @@
 extends Node3D
 
 signal position_selected(pos: Vector2)
+signal player_anim_finished
+signal enemy_anim_finished
 
 # ── World bounds ──────────────────────────────────────────────────────────────
 const WORLD_W := 60.0
@@ -46,27 +48,74 @@ var _trap_disc:       MeshInstance3D
 var _dest_marker:     MeshInstance3D
 var _path_highlight:  MeshInstance3D
 var _hover_cell:      MeshInstance3D
-var _player_body:     MeshInstance3D
-var _enemy_body:      MeshInstance3D
+var _player_shadow:        MeshInstance3D
+var _enemy_shadow:         MeshInstance3D
+var _player_shadow_radius: float = 0.65
+var _enemy_shadow_radius:  float = 0.65
+var _player_body:         Node3D
+var _player_bodies:       Dictionary = {}
+var _player_current_anim: String = ""
+var _player_rotate_speed: float = 8.0
+var _enemy_body:          Node3D
+var _enemy_bodies:        Dictionary = {}
+var _enemy_current_anim:  String = ""
+var _enemy_rotate_speed:  float = 8.0
+var _enemy_fallback_mesh: MeshInstance3D
+
+const _PRIORITY_ANIMS       := ["attack", "range", "damage", "die"]
+const _ENEMY_PRIORITY_ANIMS := ["attack", "damage"]
 
 # ── Movement animation ────────────────────────────────────────────────────────
-const ACTOR_MOVE_SPEED := 12.0   # unidades/segundo
+const ACTOR_MOVE_SPEED  := 12.0
+const MIN_SEPARATION    := 0.8
 
 var _player_target: Vector3
 var _enemy_target:  Vector3
 
+var _enemy_highlight:     MeshInstance3D
+var _enemy_highlight_mat: StandardMaterial3D
+var _self_highlight:      MeshInstance3D
+var _self_highlight_mat:  StandardMaterial3D
+var _enemy_hover:         MeshInstance3D
+var _enemy_hover_mat:     StandardMaterial3D
+var _self_hover:          MeshInstance3D
+var _self_hover_mat:      StandardMaterial3D
+
 # ── Init ──────────────────────────────────────────────────────────────────────
 func _ready() -> void:
 	_setup_ground()
-	_move_disc      = _make_disc(Color(0.2,  0.45, 0.85, 0.35))
+	_move_disc       = _make_disc(Color(0.2,  0.45, 0.85, 0.35))
 	_move_disc_inner = _make_disc(Color(0.55, 0.80, 1.0,  0.55))
-	_player_circle  = _make_disc(Color(0.6,  0.85, 1.0,  0.50))
-	_attack_disc    = _make_disc(Color(0.9,  0.35, 0.1,  0.40))
-	_grenade_disc   = _make_disc(Color(0.9,  0.8,  0.1,  0.45))
-	_trap_disc      = _make_disc(Color(0.75, 0.4,  0.75, 0.35))
-	_dest_marker    = _make_disc(Color(0.2,  0.95, 0.3,  0.80))
-	_path_highlight = _make_disc(Color(0.3,  0.95, 0.45, 0.70))
-	_hover_cell     = _make_disc(Color(1.0,  1.0,  1.0,  0.55))
+	_player_circle   = _make_disc(Color(0.6,  0.85, 1.0,  0.50))
+	_attack_disc     = _make_disc(Color(0.9,  0.35, 0.1,  0.40))
+	_grenade_disc    = _make_disc(Color(0.9,  0.8,  0.1,  0.45))
+	_trap_disc       = _make_disc(Color(0.75, 0.4,  0.75, 0.35))
+	_dest_marker     = _make_disc(Color(0.2,  0.95, 0.3,  0.80))
+	_path_highlight  = _make_disc(Color(0.3,  0.95, 0.45, 0.70))
+	_hover_cell      = _make_disc(Color(1.0,  1.0,  1.0,  0.55))
+	_player_shadow   = _make_disc(Color(0.3,  0.6,  1.0,  0.35))
+	_enemy_shadow    = _make_disc(Color(1.0,  0.3,  0.2,  0.35))
+
+	_enemy_highlight_mat = _make_mat(Color(1.0, 0.25, 0.1, 0.65))
+	_enemy_highlight = MeshInstance3D.new()
+	_enemy_highlight.visible = false
+	add_child(_enemy_highlight)
+
+	_self_highlight_mat = _make_mat(Color(0.2, 0.75, 1.0, 0.55))
+	_self_highlight = MeshInstance3D.new()
+	_self_highlight.visible = false
+	add_child(_self_highlight)
+
+	_enemy_hover_mat = _make_mat(Color(1.0, 0.75, 0.1, 0.9))
+	_enemy_hover = MeshInstance3D.new()
+	_enemy_hover.visible = false
+	add_child(_enemy_hover)
+
+	_self_hover_mat = _make_mat(Color(0.5, 1.0, 1.0, 0.9))
+	_self_hover = MeshInstance3D.new()
+	_self_hover.visible = false
+	add_child(_self_hover)
+
 	_setup_obstacles()
 	_setup_actors()
 
@@ -213,34 +262,211 @@ func _show_smooth_circle(mi: MeshInstance3D, center: Vector2, radius: float, seg
 	mi.visible = true
 
 func _setup_actors() -> void:
-	_player_body = MeshInstance3D.new()
-	var pm = load("res://assets/youns/Agumon PS1.obj")
-	if pm: _player_body.mesh = pm
-	_player_body.scale = Vector3(0.3, 0.3, 0.3)
+	_player_body = Node3D.new()
 	add_child(_player_body)
 
-	_enemy_body = MeshInstance3D.new()
+	_enemy_body = Node3D.new()
+	var fallback_mi := MeshInstance3D.new()
 	var fallback := CapsuleMesh.new()
 	fallback.radius = 0.4
 	fallback.height = 1.2
-	_enemy_body.mesh  = fallback
-	_enemy_body.scale = Vector3(1.0, 1.0, 1.0)
+	fallback_mi.mesh = fallback
+	_enemy_fallback_mesh = fallback_mi
+	_enemy_body.add_child(fallback_mi)
 	add_child(_enemy_body)
 
-	_player_target = Vector3(player_pos.x, -0.1, player_pos.y)
+	_player_target = Vector3(player_pos.x, 0.0, player_pos.y)
 	_enemy_target  = Vector3(enemy_pos.x,   0.0, enemy_pos.y)
 	_player_body.position = _player_target
 	_enemy_body.position  = _enemy_target
 
-func setup_enemy(mesh: Mesh, mesh_scale: float) -> void:
-	if mesh:
-		_enemy_body.mesh  = mesh
-		_enemy_body.scale = Vector3(mesh_scale, mesh_scale, mesh_scale)
+func setup_player(data: YounData) -> void:
+	if not data:
+		return
+	_player_shadow_radius = data.combat_shadow_radius
+	for child in _player_body.get_children():
+		child.queue_free()
+	_player_bodies.clear()
+	_player_current_anim = ""
+	_player_rotate_speed = data.rotate_speed
+
+	var mat: StandardMaterial3D = null
+	if data.texture:
+		mat = StandardMaterial3D.new()
+		mat.albedo_texture = data.texture
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+
+	var scene_map := {
+		"idle":   data.scene_idle,
+		"walk":   data.scene_walk,
+		"run":    data.scene_run,
+		"attack": data.scene_attack,
+		"range":  data.scene_range,
+		"damage": data.scene_damage,
+		"die":    data.scene_die,
+	}
+	for key in scene_map:
+		var packed: PackedScene = scene_map[key]
+		if not packed:
+			continue
+		var body: Node3D = packed.instantiate()
+		body.scale = Vector3.ONE * data.mesh_scale
+		body.position.y = 0.0
+		body.visible = false
+		if mat:
+			for mesh in _find_meshes(body):
+				mesh.material_override = mat
+		_player_body.add_child(body)
+		_player_bodies[key] = body
+
+	_switch_player_to("idle")
+
+func play_player_anim(anim_key: String) -> void:
+	_switch_player_to(anim_key)
+
+func _switch_player_to(anim_key: String) -> void:
+	var target := anim_key if anim_key in _player_bodies else "idle"
+	if _player_current_anim == target:
+		return
+	if _player_current_anim in _player_bodies:
+		_player_bodies[_player_current_anim].visible = false
+	_player_current_anim = target
+	var is_priority := anim_key in _PRIORITY_ANIMS
+	if target not in _player_bodies:
+		if is_priority:
+			player_anim_finished.emit()
+		return
+	var body: Node3D = _player_bodies[target]
+	body.visible = true
+	var anim_player := _find_anim_player(body)
+	if anim_player:
+		var list := anim_player.get_animation_list()
+		if not list.is_empty():
+			var anim := anim_player.get_animation(list[0])
+			if anim:
+				anim.loop_mode = Animation.LOOP_NONE if is_priority else Animation.LOOP_LINEAR
+			if is_priority:
+				anim_player.animation_finished.connect(
+					func(_n: StringName) -> void: player_anim_finished.emit(),
+					CONNECT_ONE_SHOT
+				)
+			anim_player.play(list[0])
+	elif is_priority:
+		player_anim_finished.emit()
+
+func _find_meshes(node: Node) -> Array[MeshInstance3D]:
+	var result: Array[MeshInstance3D] = []
+	if node is MeshInstance3D:
+		result.append(node)
+	for child in node.get_children():
+		result.append_array(_find_meshes(child))
+	return result
+
+func _find_anim_player(node: Node) -> AnimationPlayer:
+	if node is AnimationPlayer:
+		return node
+	for child in node.get_children():
+		var found := _find_anim_player(child)
+		if found:
+			return found
+	return null
+
+func setup_enemy(mesh: Mesh, mesh_scale: float, shadow_radius: float = 0.65) -> void:
+	_enemy_shadow_radius = shadow_radius
+	if _enemy_fallback_mesh:
+		_enemy_fallback_mesh.visible = true
+		if mesh:
+			_enemy_fallback_mesh.mesh  = mesh
+			_enemy_fallback_mesh.scale = Vector3.ONE * mesh_scale
+
+func setup_enemy_youn(data: YounData) -> void:
+	if not data:
+		return
+	_enemy_shadow_radius = data.combat_shadow_radius
+	_enemy_rotate_speed  = data.rotate_speed
+	if _enemy_fallback_mesh:
+		_enemy_fallback_mesh.visible = false
+	for child in _enemy_body.get_children():
+		child.queue_free()
+	_enemy_bodies.clear()
+	_enemy_current_anim = ""
+
+	var mat: StandardMaterial3D = null
+	if data.texture:
+		mat = StandardMaterial3D.new()
+		mat.albedo_texture = data.texture
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+
+	var scene_map := {
+		"idle":   data.scene_idle,
+		"walk":   data.scene_walk,
+		"run":    data.scene_run,
+		"attack": data.scene_attack,
+		"damage": data.scene_damage,
+	}
+	for key in scene_map:
+		var packed: PackedScene = scene_map[key]
+		if not packed:
+			continue
+		var body: Node3D = packed.instantiate()
+		body.scale = Vector3.ONE * data.mesh_scale
+		body.position.y = 0.0
+		body.visible = false
+		if mat:
+			for mesh_inst in _find_meshes(body):
+				mesh_inst.material_override = mat
+		_enemy_body.add_child(body)
+		_enemy_bodies[key] = body
+
+	if _enemy_bodies.is_empty() and data.mesh and _enemy_fallback_mesh:
+		_enemy_fallback_mesh.mesh  = data.mesh
+		_enemy_fallback_mesh.scale = Vector3.ONE * data.mesh_scale
+		_enemy_fallback_mesh.visible = true
 	else:
-		_enemy_body.scale = Vector3(1.0, 1.0, 1.0)
+		_switch_enemy_to("idle")
+
+func play_enemy_anim(anim_key: String) -> void:
+	_switch_enemy_to(anim_key)
+
+func _switch_enemy_to(anim_key: String) -> void:
+	var is_priority := anim_key in _ENEMY_PRIORITY_ANIMS
+	if _enemy_bodies.is_empty():
+		if is_priority:
+			enemy_anim_finished.emit()
+		return
+	var target := anim_key if anim_key in _enemy_bodies else "idle"
+	if is_priority and target != anim_key:
+		enemy_anim_finished.emit()
+		return
+	if _enemy_current_anim == target and not is_priority:
+		return
+	if _enemy_current_anim in _enemy_bodies:
+		_enemy_bodies[_enemy_current_anim].visible = false
+	_enemy_current_anim = target
+	if target not in _enemy_bodies:
+		if is_priority:
+			enemy_anim_finished.emit()
+		return
+	var body: Node3D = _enemy_bodies[target]
+	body.visible = true
+	var anim_player := _find_anim_player(body)
+	if anim_player:
+		var list := anim_player.get_animation_list()
+		if not list.is_empty():
+			var anim_res := anim_player.get_animation(list[0])
+			if anim_res:
+				anim_res.loop_mode = Animation.LOOP_NONE if is_priority else Animation.LOOP_LINEAR
+			if is_priority:
+				anim_player.animation_finished.connect(
+					func(_n: StringName) -> void: enemy_anim_finished.emit(),
+					CONNECT_ONE_SHOT
+				)
+			anim_player.play(list[0])
+	elif is_priority:
+		enemy_anim_finished.emit()
 
 func _update_actor_positions() -> void:
-	_player_target = Vector3(player_pos.x, -0.1, player_pos.y)
+	_player_target = Vector3(player_pos.x, 0.0, player_pos.y)
 	_enemy_target  = Vector3(enemy_pos.x,   0.0, enemy_pos.y)
 
 # ── Input ─────────────────────────────────────────────────────────────────────
@@ -264,27 +490,73 @@ func _process(delta: float) -> void:
 	if camera:
 		_update_hover(get_viewport().get_mouse_position(), camera)
 	var step := ACTOR_MOVE_SPEED * delta
+
+	var prev_pos := _player_body.position
 	_player_body.position = _player_body.position.move_toward(_player_target, step)
-	_enemy_body.position  = _enemy_body.position.move_toward(_enemy_target,  step)
+	var dist_moved := prev_pos.distance_to(_player_body.position)
+
+	if _player_current_anim not in _PRIORITY_ANIMS:
+		var face_dir: Vector3
+		if dist_moved > 0.001:
+			face_dir = _player_target - prev_pos
+			play_player_anim("run" if "run" in _player_bodies else "walk")
+		else:
+			face_dir = _enemy_body.position - _player_body.position
+			play_player_anim("idle")
+		face_dir.y = 0.0
+		if face_dir.length() > 0.001:
+			var target_angle := atan2(face_dir.x, face_dir.z)
+			_player_body.rotation.y = lerp_angle(_player_body.rotation.y, target_angle, _player_rotate_speed * delta)
+
+	var prev_enemy := _enemy_body.position
+	_enemy_body.position = _enemy_body.position.move_toward(_enemy_target, step)
+	var enemy_moved := prev_enemy.distance_to(_enemy_body.position)
+
+	var to_player := _player_body.position - _enemy_body.position
+	to_player.y = 0.0
+	if to_player.length() > 0.001:
+		_enemy_body.rotation.y = lerp_angle(
+			_enemy_body.rotation.y, atan2(to_player.x, to_player.z), _enemy_rotate_speed * delta)
+
+	if not _enemy_bodies.is_empty() and _enemy_current_anim not in _ENEMY_PRIORITY_ANIMS:
+		if enemy_moved > 0.001:
+			_switch_enemy_to("run" if "run" in _enemy_bodies else "walk")
+		else:
+			_switch_enemy_to("idle")
+
+	_show_disc(_player_shadow, Vector2(_player_body.position.x, _player_body.position.z), _player_shadow_radius)
+	_show_disc(_enemy_shadow,  Vector2(_enemy_body.position.x,  _enemy_body.position.z),  _enemy_shadow_radius)
 
 func _update_hover(screen_pos: Vector2, camera: Camera3D) -> void:
-	var any_active := _move_disc.visible or _attack_disc.visible \
+	var any_disc   := _move_disc.visible or _attack_disc.visible \
 		or _trap_disc.visible or _grenade_disc.visible
-	if not any_active:
-		_hover_cell.visible = false
+	var any_target := _enemy_highlight.visible or _self_highlight.visible or _attack_disc.visible
+	if not any_disc and not any_target:
+		_hover_cell.visible  = false
+		_enemy_hover.visible = false
+		_self_hover.visible  = false
 		return
 	var from := camera.project_ray_origin(screen_pos)
 	var dir  := camera.project_ray_normal(screen_pos)
 	if abs(dir.y) < 0.001:
-		_hover_cell.visible = false
+		_hover_cell.visible  = false
+		_enemy_hover.visible = false
+		_self_hover.visible  = false
 		return
 	var t := -from.y / dir.y
 	if t < 0.0:
-		_hover_cell.visible = false
+		_hover_cell.visible  = false
+		_enemy_hover.visible = false
+		_self_hover.visible  = false
 		return
 	var hit := from + dir * t
 	var pos := Vector2(clampf(hit.x, 0.0, WORLD_W), clampf(hit.z, 0.0, WORLD_H))
-	_show_single_cell(_hover_cell, pos)
+	if any_disc:
+		_show_single_cell(_hover_cell, pos)
+	else:
+		_hover_cell.visible = false
+	_enemy_hover.visible = (_enemy_highlight.visible or _attack_disc.visible) and is_click_on_enemy(pos)
+	_self_hover.visible  = _self_highlight.visible and is_click_on_player(pos)
 
 func _show_single_cell(mi: MeshInstance3D, world_pos: Vector2) -> void:
 	var cx: float = floor(world_pos.x / 0.08) * 0.08 + 0.04
@@ -524,6 +796,9 @@ func clear_path_preview() -> void:
 func try_move_player_to(pos: Vector2, _range: float) -> bool:
 	if not _in_bounds(pos): return false
 	if _last_path_cost > selected_move_range + 0.1: return false
+	var sep := pos - enemy_pos
+	if sep.length() < MIN_SEPARATION:
+		pos = enemy_pos + (sep.normalized() if sep.length() > 0.001 else Vector2(MIN_SEPARATION, 0.0)) * MIN_SEPARATION
 	player_pos = pos
 	_last_path = []
 	_last_path_cost = 0.0
@@ -633,10 +908,14 @@ func _reconstruct(came: Dictionary, cur: Vector2i, from: Vector2, to: Vector2) -
 func start_attack_selection(attack_range: float) -> void:
 	selected_attack_range = attack_range
 	_show_disc(_attack_disc, player_pos, attack_range)
+	_show_smooth_circle(_enemy_hover, enemy_pos, 1.1)
+	_enemy_hover.set_surface_override_material(0, _enemy_hover_mat)
+	_enemy_hover.visible = false
 
 func clear_attack_selection() -> void:
 	selected_attack_range = 0.0
 	_attack_disc.visible  = false
+	_enemy_hover.visible  = false
 
 func is_enemy_in_attack_range(attack_range: float) -> bool:
 	return movement_distance(player_pos, enemy_pos) <= attack_range \
@@ -692,6 +971,35 @@ func _segment_hits_circle(a: Vector2, b: Vector2, c: Vector2, r: float) -> bool:
 	var t2    := (-bv + sq) / denom
 	return (t1 >= 0.0 and t1 <= 1.0) or (t2 >= 0.0 and t2 <= 1.0)
 
+# ── Target highlights ─────────────────────────────────────────────────────────
+func start_enemy_highlight() -> void:
+	_show_smooth_circle(_enemy_highlight, enemy_pos, 2.0)
+	_enemy_highlight.set_surface_override_material(0, _enemy_highlight_mat)
+	_show_smooth_circle(_enemy_hover, enemy_pos, 1.1)
+	_enemy_hover.set_surface_override_material(0, _enemy_hover_mat)
+	_enemy_hover.visible = false
+
+func clear_enemy_highlight() -> void:
+	_enemy_highlight.visible = false
+	_enemy_hover.visible     = false
+
+func start_self_highlight() -> void:
+	_show_smooth_circle(_self_highlight, player_pos, 1.5)
+	_self_highlight.set_surface_override_material(0, _self_highlight_mat)
+	_show_smooth_circle(_self_hover, player_pos, 0.9)
+	_self_hover.set_surface_override_material(0, _self_hover_mat)
+	_self_hover.visible = false
+
+func clear_self_highlight() -> void:
+	_self_highlight.visible = false
+	_self_hover.visible     = false
+
+func is_click_on_enemy(pos: Vector2) -> bool:
+	return pos.distance_to(enemy_pos) <= 2.5
+
+func is_click_on_player(pos: Vector2) -> bool:
+	return pos.distance_to(player_pos) <= 2.0
+
 # ── Enemy ─────────────────────────────────────────────────────────────────────
 func set_enemy_hp(hp: int) -> void:
 	enemy_hp = hp
@@ -702,10 +1010,14 @@ func can_place_enemy(pos: Vector2) -> bool:
 func move_enemy_toward(target: Vector2, move_range: float) -> bool:
 	var dist := movement_distance(enemy_pos, target)
 	if dist < 0.01: return false
-	var dir   := (target - enemy_pos).normalized()
-	enemy_pos  = enemy_pos + dir * minf(dist, move_range)
-	enemy_pos.x = clampf(enemy_pos.x, 0.0, WORLD_W)
-	enemy_pos.y = clampf(enemy_pos.y, 0.0, WORLD_H)
+	var dir      := (target - enemy_pos).normalized()
+	var new_pos  := enemy_pos + dir * minf(dist, move_range)
+	new_pos.x = clampf(new_pos.x, 0.0, WORLD_W)
+	new_pos.y = clampf(new_pos.y, 0.0, WORLD_H)
+	var sep := new_pos - player_pos
+	if sep.length() < MIN_SEPARATION:
+		new_pos = player_pos + (sep.normalized() if sep.length() > 0.001 else Vector2(MIN_SEPARATION, 0.0)) * MIN_SEPARATION
+	enemy_pos = new_pos
 	_update_actor_positions()
 	return true
 

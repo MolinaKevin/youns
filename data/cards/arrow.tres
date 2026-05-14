@@ -1,7 +1,6 @@
 [gd_resource type="Resource" script_class="CardData" format=3 uid="uid://rrow00000001"]
 
 [ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_arrow"]
-[ext_resource type="Texture2D" uid="uid://ceoegcr6sfihl" path="res://assets/cards/v2_2.png" id="2_arrow"]
 
 [resource]
 script = ExtResource("1_arrow")
@@ -12,5 +11,4 @@ cost = 1
 card_type = "range_attack"
 card_range = 13
 damage = 4
-image = ExtResource("2_arrow")
 metadata/_custom_type_script = "uid://cb2fptd8ugdit"

@@ -1,7 +1,6 @@
 [gd_resource type="Resource" script_class="CardData" format=3 uid="uid://bt8ydfk7nrjl"]
 
 [ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_xm00l"]
-[ext_resource type="Texture2D" uid="uid://dvv55f4ccin7i" path="res://assets/cards/v2_1.png" id="2_xm00l"]
 
 [resource]
 script = ExtResource("1_xm00l")
@@ -12,5 +11,4 @@ cost = 1
 card_type = "melee_attack"
 card_range = 1
 damage = 15
-image = ExtResource("2_xm00l")
 metadata/_custom_type_script = "uid://cb2fptd8ugdit"

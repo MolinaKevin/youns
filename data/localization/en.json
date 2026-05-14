@@ -116,6 +116,7 @@
   "world.hub.npc.rest": "Rest",
   "world.demo.monzaemon": "Monzaemon: That's everything the demo has for now. Thanks for playing.",
   "world.enemy.intercepted": "%s intercepted you",
+  "world.enemy.press_enter": "Press Enter to continue",
   "world.intro.hint": "Enter or Space to continue (%d/%d)",
   "world.intro.page_1.title": "Welcome",
   "world.intro.page_1.body": "[center]This is a short Youns demo.[/center]",

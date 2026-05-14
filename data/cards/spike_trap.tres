@@ -1,7 +1,6 @@
 [gd_resource type="Resource" script_class="CardData" format=3 uid="uid://c8u21l3ag7iyy"]
 
 [ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_spiketrap"]
-[ext_resource type="Texture2D" uid="uid://c1osu43u6meov" path="res://assets/cards/v2_4.png" id="2_spiketrap"]
 
 [resource]
 script = ExtResource("1_spiketrap")
@@ -13,5 +12,4 @@ card_type = "trap_throw"
 card_range = 2
 damage = 10
 throw_range = 15
-image = ExtResource("2_spiketrap")
 metadata/_custom_type_script = "uid://cb2fptd8ugdit"

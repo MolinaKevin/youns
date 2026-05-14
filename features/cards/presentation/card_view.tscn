@@ -3,12 +3,12 @@
 [ext_resource type="Script" uid="uid://ce4ujkdt8y88f" path="res://features/cards/presentation/card_view.gd" id="1_two4k"]
 
 [node name="CardView" type="Control" unique_id=1772071006]
-custom_minimum_size = Vector2(130, 195)
+custom_minimum_size = Vector2(195, 293)
 size_flags_vertical = 0
 clip_contents = true
 script = ExtResource("1_two4k")
 
-[node name="ArtRect" type="TextureRect" parent="." unique_id=200000007]
+[node name="BackgroundRect" type="TextureRect" parent="." unique_id=200000030]
 layout_mode = 0
 anchors_preset = 15
 anchor_right = 1.0
@@ -18,47 +18,16 @@ grow_vertical = 2
 expand_mode = 1
 stretch_mode = 5
 
-[node name="Stat1Label" type="Label" parent="." unique_id=200000020]
+[node name="ArtRect" type="TextureRect" parent="." unique_id=200000007]
 layout_mode = 0
-anchor_left = 0.0
-anchor_top = 0.19
-anchor_right = 0.0
-anchor_bottom = 0.28
-offset_left = 3
-offset_right = 38
+anchor_left = 0.1
+anchor_top = 0.04
+anchor_right = 0.9
+anchor_bottom = 0.44
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_font_sizes/font_size = 9
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Stat2Label" type="Label" parent="." unique_id=200000021]
-layout_mode = 0
-anchor_left = 0.0
-anchor_top = 0.32
-anchor_right = 0.0
-anchor_bottom = 0.41
-offset_left = 3
-offset_right = 38
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_font_sizes/font_size = 9
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="Stat3Label" type="Label" parent="." unique_id=200000022]
-layout_mode = 0
-anchor_left = 0.0
-anchor_top = 0.45
-anchor_right = 0.0
-anchor_bottom = 0.54
-offset_left = 3
-offset_right = 38
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_font_sizes/font_size = 9
-horizontal_alignment = 1
-vertical_alignment = 1
+expand_mode = 1
+stretch_mode = 5
 
 [node name="NameLabel" type="Label" parent="." unique_id=200000005]
 layout_mode = 0
@@ -66,37 +35,81 @@ anchor_left = 0.0
 anchor_top = 0.0
 anchor_right = 1.0
 anchor_bottom = 0.0
-offset_left = 6
-offset_top = 10
-offset_right = -6
-offset_bottom = 24
-theme_override_font_sizes/font_size = 10
+offset_left = 39
+offset_top = 25
+offset_right = -9
+offset_bottom = 45
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 13
 clip_text = true
 
 [node name="CostLabel" type="Label" parent="." unique_id=200000023]
 layout_mode = 0
-anchor_left = 0.25
-anchor_top = 0.67
-anchor_right = 0.75
-anchor_bottom = 0.77
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_left = 3
+offset_top = 21
+offset_right = 33
+offset_bottom = 52
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 10
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DescLabel" type="Label" parent="." unique_id=200000011]
+layout_mode = 0
+anchor_left = 0.06
+anchor_top = 0.50
+anchor_right = 0.94
+anchor_bottom = 0.78
+offset_left = 15
+offset_top = 0
+offset_right = -20
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 10
+autowrap_mode = 3
+vertical_alignment = 1
+
+[node name="Stat1Label" type="Label" parent="." unique_id=200000020]
+layout_mode = 0
+anchor_left = 0.22
+anchor_top = 0.8
+anchor_right = 0.47
+anchor_bottom = 0.96
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_font_sizes/font_size = 11
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="DescLabel" type="Label" parent="." unique_id=200000011]
+[node name="Stat2Label" type="Label" parent="." unique_id=200000021]
 layout_mode = 0
-anchor_left = 0.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = 6
-offset_top = -48
-offset_right = -6
-offset_bottom = -16
-theme_override_font_sizes/font_size = 8
-autowrap_mode = 3
+anchor_left = 0.38
+anchor_top = 0.73
+anchor_right = 0.63
+anchor_bottom = 0.90
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 11
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Stat3Label" type="Label" parent="." unique_id=200000022]
+layout_mode = 0
+anchor_left = 0.57
+anchor_top = 0.8
+anchor_right = 0.82
+anchor_bottom = 0.96
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 11
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="CardButton" type="Button" parent="." unique_id=27698285]
 layout_mode = 0

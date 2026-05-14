@@ -15,6 +15,7 @@ var test_mode := true
 var player_save: PlayerSaveData
 var current_run: RunStateData
 var pending_enemy_data: EnemyData
+var pending_wild_youn_data
 var combat_return_pending := false
 var combat_return_position := Vector3.ZERO
 var combat_world_enemy_id := ""

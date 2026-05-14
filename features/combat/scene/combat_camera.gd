@@ -65,6 +65,21 @@ func _orbit(delta: Vector2) -> void:
 	global_position = pivot + offset
 	look_at(pivot, Vector3.UP)
 
+func _process(delta: float) -> void:
+	var right        := global_basis.x
+	var forward_flat := -global_basis.z
+	forward_flat.y   = 0.0
+	if forward_flat.length() > 0.001:
+		forward_flat = forward_flat.normalized()
+	var speed := pan_speed * (global_position.y / 10.0) * 200.0 * delta
+	var move  := Vector3.ZERO
+	if Input.is_key_pressed(KEY_W): move += forward_flat
+	if Input.is_key_pressed(KEY_S): move -= forward_flat
+	if Input.is_key_pressed(KEY_A): move -= right
+	if Input.is_key_pressed(KEY_D): move += right
+	if move.length() > 0.001:
+		global_position += move.normalized() * speed
+
 func _pan(delta: Vector2) -> void:
 	var right        := global_basis.x
 	var forward_flat := -global_basis.z

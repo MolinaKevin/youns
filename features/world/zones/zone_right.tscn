@@ -2,9 +2,9 @@
 
 [ext_resource type="Script" uid="uid://rx6q8c0t2q3m" path="res://features/world/zones/zone_right.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://cq54nofj1l3bn" path="res://assets/maps/hub/pradera_derecha.glb" id="2_pradera"]
-[ext_resource type="PackedScene" path="res://features/world/enemies/world_enemy.tscn" id="3_world_enemy"]
-[ext_resource type="Resource" path="res://data/enemies/agumon.tres" id="4_agumon_data"]
-[ext_resource type="Resource" path="res://data/enemies/monzaemon.tres" id="5_monzaemon_data"]
+[ext_resource type="PackedScene" path="res://features/world/enemies/world_wild_youn.tscn" id="3_world_enemy"]
+[ext_resource type="Resource" uid="uid://ctpvd6ffvqhhm" path="res://data/youns/pombero.tres" id="4_agumon_data"]
+[ext_resource type="Resource" path="res://data/youns/monzaemon.tres" id="5_monzaemon_data"]
 
 [sub_resource type="PlaneMesh" id="1"]
 size = Vector2(240, 240)
@@ -20,14 +20,14 @@ script = ExtResource("1")
 
 [node name="PraderaDerecha" parent="." unique_id=1560200473 instance=ExtResource("2_pradera")]
 
-[node name="Agumon" parent="." unique_id=460999112 instance=ExtResource("3_world_enemy")]
+[node name="Pombero" parent="." unique_id=460999112 instance=ExtResource("3_world_enemy")]
 transform = Transform3D(0.939693, 0, -0.34202, 0, 1, 0, 0.34202, 0, 0.939693, 60, 0.35, -34)
-enemy_data = ExtResource("4_agumon_data")
-world_enemy_id = "pradera_right_agumon_01"
+youn_data = ExtResource("4_agumon_data")
+world_enemy_id = "pradera_right_pombero_01"
 
 [node name="Monzaemon" parent="." unique_id=1903873719 instance=ExtResource("3_world_enemy")]
 transform = Transform3D(0.819152, 0, 0.573576, 0, 1, 0, -0.573576, 0, 0.819152, 97.46442, 0.35, -68)
-enemy_data = ExtResource("5_monzaemon_data")
+youn_data = ExtResource("5_monzaemon_data")
 world_enemy_id = "pradera_right_monzaemon_01"
 
 [node name="Floor" type="StaticBody3D" parent="." unique_id=1087452089]

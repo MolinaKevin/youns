@@ -12,6 +12,7 @@ extends Resource
 
 @export_range(0.1, 10.0, 0.1) var collision_radius: float = 0.35
 @export_range(0.1, 10.0, 0.1) var collision_height: float = 1.6
+@export_range(0.1, 5.0, 0.05) var combat_shadow_radius: float = 0.65
 
 @export_range(0.1, 20.0, 0.1) var wander_speed: float = 2.2
 @export_range(0.1, 20.0, 0.1) var chase_speed: float = 5.8

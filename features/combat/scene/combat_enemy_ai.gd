@@ -15,14 +15,14 @@ func setup(p_combat: Node, p_state, strategy: AiStrategy) -> void:
 func take_turn() -> void:
 	var trap_dmg: int = combat.map_area.check_and_trigger_traps(combat.map_area.enemy_pos)
 	if trap_dmg > 0:
-		combat.deal_damage_to_enemy(trap_dmg)
+		await combat.deal_damage_to_enemy(trap_dmg)
 		combat.log_message("Enemy triggered a trap! %d damage." % trap_dmg)
 		if combat.check_combat_end():
 			return
 
 	var action: AiAction = _pick_action()
 	if action:
-		_execute_action(action)
+		await _execute_action(action)
 
 	combat.update_ui()
 	pick_intent()
@@ -30,6 +30,8 @@ func take_turn() -> void:
 # ── Evaluation ────────────────────────────────────────────────────────────────
 
 func _pick_action() -> AiAction:
+	if _strategy == null:
+		return null
 	var best: AiAction = null
 	var best_score := -INF
 	for action in _strategy.actions:
@@ -84,11 +86,11 @@ func _execute_action(action: AiAction) -> void:
 	var map = combat.map_area
 	match action.action_type:
 		"melee_attack":
-			combat.deal_damage_to_player(action.damage)
 			combat.log_message("Enemy strikes for %d!" % action.damage)
+			await combat.deal_damage_to_player(action.damage)
 		"range_attack":
-			combat.deal_damage_to_player(action.damage)
 			combat.log_message("Enemy shoots for %d!" % action.damage)
+			await combat.deal_damage_to_player(action.damage)
 		"move_toward":
 			map.move_enemy_toward(map.player_pos, action.move_range)
 			combat.log_message("Enemy moves closer.")

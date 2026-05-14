@@ -11,16 +11,20 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_25jqy")
 
-[node name="Inner" type="VBoxContainer" parent="." unique_id=543559789]
+[node name="VBox" type="VBoxContainer" parent="." unique_id=543559789]
 layout_mode = 0
-offset_right = 240.0
-offset_bottom = 260.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="SectionLabel" type="Label" parent="Inner" unique_id=849671017]
+[node name="SectionLabel" type="Label" parent="VBox" unique_id=849671017]
 layout_mode = 2
+visible = false
 
-[node name="CardsWrapper" type="VBoxContainer" parent="Inner" unique_id=1531175746]
+[node name="FanContainer" type="Control" parent="VBox" unique_id=1531175746]
 layout_mode = 2
-
-[node name="CardsContainer" type="HBoxContainer" parent="Inner/CardsWrapper" unique_id=1692656029]
-layout_mode = 2
+custom_minimum_size = Vector2(0, 293)
+size_flags_vertical = 3
+mouse_filter = 2

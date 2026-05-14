@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="YounData" format=3]
+
+[ext_resource type="Script" path="res://data/youns/youn_data.gd" id="1"]
+[ext_resource type="ArrayMesh" path="res://assets/youns/Monzaemon.obj" id="2"]
+[ext_resource type="Texture2D" path="res://assets/youns/Monzaemon.png" id="3"]
+[ext_resource type="Resource" path="res://data/enemies/strategies/kiter.tres" id="4"]
+
+[resource]
+script = ExtResource("1")
+id = "monzaemon"
+youn_name = "Monzaemon"
+texture = ExtResource("3")
+mesh = ExtResource("2")
+mesh_scale = 0.22
+collision_radius = 0.75
+collision_height = 2.8
+wander_speed = 1.6
+chase_speed = 3.6
+rotate_speed = 5.5
+detect_range = 13.0
+lose_range = 19.0
+wander_radius = 6.5
+leash_range = 11.0
+idle_time_min = 1.2
+idle_time_max = 3.2
+notice_delay_min = 0.4
+notice_delay_max = 1.1
+max_hp = 34
+strategy = ExtResource("4")
+loot_item_name = "Bear Plush"
+loot_gold = 12

@@ -1,7 +1,6 @@
 [gd_resource type="Resource" script_class="CardData" format=3 uid="uid://dhhhamyi8bhhy"]
 
 [ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_qywro"]
-[ext_resource type="Texture2D" uid="uid://b6hagdwp4001o" path="res://assets/cards/v2_3.png" id="2_qywro"]
 
 [resource]
 script = ExtResource("1_qywro")
@@ -11,5 +10,4 @@ description = "Dash a long distance quickly."
 cost = 1
 card_type = "move"
 card_range = 13
-image = ExtResource("2_qywro")
 metadata/_custom_type_script = "uid://cb2fptd8ugdit"

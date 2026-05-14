@@ -1,7 +1,10 @@
 extends Control
 
 signal card_pressed(card_data: CardData)
+signal hover_entered
+signal hover_exited
 
+@onready var background_rect = $BackgroundRect
 @onready var art_rect = $ArtRect
 @onready var name_label = $NameLabel
 @onready var desc_label = $DescLabel
@@ -19,6 +22,17 @@ var _hover_tween: Tween
 
 const FALLBACK_IMAGE = preload("res://assets/cards/test.png")
 
+const BACKGROUNDS := {
+	"melee_attack":    "res://assets/cards/scratch.png",
+	"range_attack":    "res://assets/cards/gun.png",
+	"move":            "res://assets/cards/step.png",
+	"block":           "res://assets/cards/fist.png",
+	"trap_place":      "res://assets/cards/trap.png",
+	"trap_throw":      "res://assets/cards/trap.png",
+	"grenade":         "res://assets/cards/gun.png",
+	"targeted_attack": "res://assets/cards/sword.png",
+}
+
 func _ready() -> void:
 	card_button.pressed.connect(_on_card_button_pressed)
 	card_button.mouse_entered.connect(_on_hover_enter)
@@ -30,10 +44,12 @@ func _ready() -> void:
 
 func _on_hover_enter() -> void:
 	if hover_enabled:
+		hover_entered.emit()
 		_animate_to(-12.0)
 
 func _on_hover_exit() -> void:
 	if hover_enabled:
+		hover_exited.emit()
 		_animate_to(0.0)
 
 func _animate_to(target_y: float) -> void:
@@ -55,7 +71,9 @@ func set_card(card: CardData) -> void:
 	_apply_card_data(card)
 
 func _apply_card_data(card: CardData) -> void:
-	art_rect.texture = card.image if card.image != null else FALLBACK_IMAGE
+	var bg_path: String = BACKGROUNDS.get(card.card_type, "")
+	background_rect.texture = load(bg_path) if bg_path != "" else null
+	art_rect.texture = card.image if card.image != null else null
 	name_label.text = LocalizationState.card_name(card.id, card.name)
 	desc_label.text = LocalizationState.card_description(card.id, card.description)
 	if card.damage > 0:

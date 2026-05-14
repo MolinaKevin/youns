@@ -116,8 +116,13 @@
   "world.hub.npc.rest": "Descansar",
   "world.demo.monzaemon": "Monzaemon: Eso es todo lo que tiene el demo por ahora. Gracias por jugar.",
   "world.enemy.intercepted": "%s te interceptó",
+  "world.enemy.press_enter": "Enter para continuar",
   "world.intro.hint": "Enter o Espacio para continuar (%d/%d)",
   "world.intro.page_1.title": "Bienvenido",
+
+
+
+
   "world.intro.page_1.body": "[center]Esto es un demo corto de Youns.[/center]",
   "world.intro.page_2.title": "Moverse",
   "world.intro.page_2.body": "Usa [b]WASD[/b] para moverte.\nMueve la cámara con el mouse.\nCon Tab abrís menú.",
