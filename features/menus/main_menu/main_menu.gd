@@ -90,7 +90,7 @@ func _apply_localized_text(_language: String = "") -> void:
 	for index in _items.size():
 		_items[index].setup(LocalizationState.t(MENU_ITEMS[index].name_key), _item_textures[index])
 	var current_day := maxi(GameState.current_day, 1)
-	var current_year := int((current_day - 1) / 365) + 1
+	var current_year := (current_day - 1) / 365 + 1
 	var day_of_year := ((current_day - 1) % 365) + 1
 	year_label.text = LocalizationState.t("main_menu.year", [current_year])
 	day_label.text = LocalizationState.t("main_menu.day", [day_of_year])

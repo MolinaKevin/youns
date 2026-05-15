@@ -28,11 +28,19 @@ func _ready() -> void:
 		$HubNPCDialog/ChoicePopup/Margin/VBox/AntistressButton,
 		$HubNPCDialog/ChoicePopup/Margin/VBox/FoodButton,
 		$HubNPCDialog/ChoicePopup/Margin/VBox/RestButton,
+		$HubNPCDialog/ChoicePopup/Margin/VBox/CarnePodrida,
+		$HubNPCDialog/ChoicePopup/Margin/VBox/Estresor,
+		$HubNPCDialog/ChoicePopup/Margin/VBox/Cansador,
+		$HubNPCDialog/ChoicePopup/Margin/VBox/VaciadorEstomago,
 	]
 	_hub_options[0].pressed.connect(_on_hub_option_antidote)
 	_hub_options[1].pressed.connect(_on_hub_option_antistress)
 	_hub_options[2].pressed.connect(_on_hub_option_food)
 	_hub_options[3].pressed.connect(_on_hub_option_rest)
+	_hub_options[4].pressed.connect(_on_hub_option_carne_podrida)
+	_hub_options[5].pressed.connect(_on_hub_option_estresor)
+	_hub_options[6].pressed.connect(_on_hub_option_cansador)
+	_hub_options[7].pressed.connect(_on_hub_option_vaciador)
 	$Toilet/ToiletArea.body_entered.connect(_on_toilet_area_entered)
 	$Toilet/ToiletArea.body_exited.connect(_on_toilet_area_exited)
 	LaboratoryState.recipe_completed.connect(_on_recipe_completed)
@@ -61,10 +69,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			_hub_option_index = (_hub_option_index + 1) % _hub_options.size()
 			_hub_options[_hub_option_index].grab_focus()
-			return
-		if _is_accept_pressed(event):
-			get_viewport().set_input_as_handled()
-			(_hub_options[_hub_option_index] as Button).emit_signal("pressed")
 			return
 		if _is_cancel_pressed(event):
 			get_viewport().set_input_as_handled()
@@ -174,15 +178,15 @@ func _show_hub_choice_popup() -> void:
 	_hub_options[0].grab_focus()
 
 func _on_hub_option_antidote() -> void:
-	_give_item("antidoto", "res://assets/icons/icon_1.png")
+	_give_item("antidoto", "Antídoto", "res://assets/icons/icon_1.png", "res://data/items/antidoto.tres")
 	_set_hub_npc_dialog_visible(false)
 
 func _on_hub_option_antistress() -> void:
-	_give_item("antistres", "res://assets/icons/icon_2.png")
+	_give_item("antistres", "Anti-Estrés", "res://assets/icons/icon_2.png", "res://data/items/antistres.tres")
 	_set_hub_npc_dialog_visible(false)
 
 func _on_hub_option_food() -> void:
-	_give_item("comida", "res://assets/icons/icon_3.png")
+	_give_item("comida", "Comida", "res://assets/icons/icon_3.png", "res://data/items/comida.tres")
 	_set_hub_npc_dialog_visible(false)
 
 func _on_hub_option_rest() -> void:
@@ -192,16 +196,36 @@ func _on_hub_option_rest() -> void:
 		GlobalHUD.notify_youns_status_changed()
 	_set_hub_npc_dialog_visible(false)
 
-func _give_item(id: String, icon: String) -> void:
+func _on_hub_option_carne_podrida() -> void:
+	_give_item("carne_podrida", "Carne Podrida", "res://assets/icons/icon_4.png", "res://data/items/carne_podrida.tres")
+	_set_hub_npc_dialog_visible(false)
+
+func _on_hub_option_estresor() -> void:
+	_give_item("estresor", "Estresor", "res://assets/icons/icon_5.png", "res://data/items/estresor.tres")
+	_set_hub_npc_dialog_visible(false)
+
+func _on_hub_option_cansador() -> void:
+	_give_item("cansador", "Cansador", "res://assets/icons/icon_6.png", "res://data/items/cansador.tres")
+	_set_hub_npc_dialog_visible(false)
+
+func _on_hub_option_vaciador() -> void:
+	_give_item("vaciador_estomago", "Vaciador de Estómago", "res://assets/icons/icon_4.png", "res://data/items/vaciador_estomago.tres")
+	_set_hub_npc_dialog_visible(false)
+
+func _give_item(id: String, display_name: String, icon: String, data_path: String) -> void:
 	var ps := GameState.player_save
 	if ps == null:
 		return
-	for item in ps.inventory_items:
+	for i in ps.inventory_items.size():
+		var item: Dictionary = ps.inventory_items[i]
 		if item.get("id") == id:
 			item["count"] = item.get("count", 0) + 1
+			ps.inventory_items[i] = item
+			GlobalHUD.show_toast(LocalizationState.t("world.hub.received", [display_name]))
 			return
 	if ps.inventory_items.size() < ps.inventory_slots:
-		ps.inventory_items.append({"id": id, "name": id, "icon": icon, "count": 1})
+		ps.inventory_items.append({"id": id, "name": display_name, "icon": icon, "data_path": data_path, "count": 1})
+		GlobalHUD.show_toast(LocalizationState.t("world.hub.received", [display_name]))
 
 func _is_accept_pressed(event: InputEvent) -> bool:
 	if not event.is_action_pressed("ui_accept"):
@@ -292,7 +316,7 @@ func _try_bathroom_sequence() -> void:
 	if _bathroom_sequence_running:
 		return
 	var ps := GameState.player_save
-	if ps == null or not ps.needs_bathroom:
+	if ps == null or "bathroom" not in StatsManager.active_states:
 		return
 	_run_bathroom_sequence()
 
@@ -306,9 +330,9 @@ func _run_bathroom_sequence() -> void:
 	# Resolver necesidad inmediatamente
 	var ps := GameState.player_save
 	if ps != null:
-		ps.needs_bathroom = false
+		StatsManager.clear_emotion("bathroom")
 		ps.ganas_bano = 0
-		ps.bathroom_need_since_total_hour = -1.0
+		
 
 	# Freezar controles y reloj
 	player.set_physics_process(false)
@@ -352,7 +376,7 @@ func _run_bathroom_sequence() -> void:
 		cam.distance = lerpf(cam_dist_start, td.cam_distance, t),
 		0.0, 1.0, 1.2)
 
-	# ── 0. Player y Youn caminan lento al punto de arranque ──────────────────
+	# ── 0. Player y Youn caminan distto al punto de arranque ──────────────────
 	var youn_start := youn.global_position
 	var y_to_p    := Vector3(youn_start.x - start_pos.x, 0.0, youn_start.z - start_pos.z)
 	var side_dir  := perp if perp.dot(y_to_p) >= 0.0 else -perp
@@ -477,13 +501,13 @@ func _angle_toward(from: Vector3, to: Vector3) -> float:
 func _path_passes_near(from: Vector3, to: Vector3, obstacle: Vector3, radius: float) -> bool:
 	var d := to - from
 	d.y = 0.0
-	var len := d.length()
-	if len < 0.01:
+	var dist := d.length()
+	if dist < 0.01:
 		return false
-	var dir := d / len
+	var dir := d / dist
 	var obs := obstacle - from
 	obs.y = 0.0
-	var proj    := clampf(dir.dot(obs), 0.0, len)
+	var proj    := clampf(dir.dot(obs), 0.0, dist)
 	var closest := from + dir * proj
 	closest.y   = obstacle.y
 	return closest.distance_to(obstacle) < radius

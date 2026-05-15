@@ -178,8 +178,8 @@ func _set_language(language: String) -> void:
 	LocalizationState.set_language(language)
 	_set_language_overlay_visible(false)
 
-func _set_language_overlay_visible(visible: bool) -> void:
-	language_overlay.visible = visible
+func _set_language_overlay_visible(shown: bool) -> void:
+	language_overlay.visible = shown
 	if visible:
 		_language_selected_index = _language_options.find(LocalizationState.current_language)
 		if _language_selected_index == -1:

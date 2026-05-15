@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="ItemData" format=3 uid="uid://d0wlrx84e0ela"]
+
+[ext_resource type="Script" uid="uid://utilcb2pt1mr" path="res://data/items/item_data.gd" id="1_itemdata"]
+[ext_resource type="Script" uid="uid://dherd17v654fn" path="res://data/items/item_effect.gd" id="1_vytf7"]
+[ext_resource type="Script" uid="uid://cd8hh52jqo54y" path="res://data/items/item_effect_stat.gd" id="2_stat"]
+[ext_resource type="Texture2D" uid="uid://uqgky6t72sco" path="res://assets/icons/icon_3.png" id="3_icon"]
+
+[sub_resource type="Resource" id="Resource_hambre"]
+script = ExtResource("2_stat")
+stat_key = "hambre"
+delta = -25.0
+
+[sub_resource type="Resource" id="Resource_bano"]
+script = ExtResource("2_stat")
+stat_key = "ganas_bano"
+delta = 70.0
+
+[resource]
+script = ExtResource("1_itemdata")
+id = "comida"
+name = "Comida"
+description = "Sacia parte del hambre del Youn."
+icon = ExtResource("3_icon")
+effects = Array[ExtResource("1_vytf7")]([SubResource("Resource_hambre"), SubResource("Resource_bano")])
+weight_gain = 1.0

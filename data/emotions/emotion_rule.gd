@@ -11,6 +11,9 @@ enum Comparison { GREATER = 0, LESS = 1, BOOL_TRUE = 2 }
 @export var probability_curve: Curve
 @export var blocks: PackedStringArray = []
 
+@export_group("Duration")
+@export var max_duration_hours: float = 0.0
+
 @export_group("Expire Penalty")
 @export var expire_stats: Dictionary = {}
 @export var expire_reset_hambre: bool = false

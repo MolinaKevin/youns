@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=5 format=3 uid="uid://item_carne_podrida"]
+
+[ext_resource type="Script" uid="uid://utilcb2pt1mr" path="res://data/items/item_data.gd" id="1_itemdata"]
+[ext_resource type="Script" uid="uid://cwagkiwwms41h" path="res://data/items/item_effect_status.gd" id="2_status"]
+[ext_resource type="Script" path="res://data/items/item_effect_force_emotion.gd" id="3_force"]
+[ext_resource type="Texture2D" path="res://assets/icons/icon_4.png" id="4_icon"]
+
+[sub_resource type="Resource" id="Resource_enfermo"]
+script = ExtResource("2_status")
+status_key = "enfermo"
+value = true
+
+[sub_resource type="Resource" id="Resource_emotion"]
+script = ExtResource("3_force")
+emotion_name = "sick"
+
+[resource]
+script = ExtResource("1_itemdata")
+id = "carne_podrida"
+name = "Carne Podrida"
+description = "Huele terrible. Enferma al Youn al instante."
+icon = ExtResource("4_icon")
+effects = [SubResource("Resource_enfermo"), SubResource("Resource_emotion")]

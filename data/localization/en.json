@@ -114,6 +114,7 @@
   "world.hub.npc.antistress": "Anti-stress",
   "world.hub.npc.food": "Food",
   "world.hub.npc.rest": "Rest",
+  "world.hub.received": "Received: %s",
   "world.demo.monzaemon": "Monzaemon: That's everything the demo has for now. Thanks for playing.",
   "world.enemy.intercepted": "%s intercepted you",
   "world.enemy.press_enter": "Press Enter to continue",

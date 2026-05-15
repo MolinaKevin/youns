@@ -11,6 +11,7 @@ script = ExtResource("1")
 emotion_name = "bathroom"
 priority = 80
 stat_key = "ganas_bano"
+max_duration_hours = 1.0
 threshold = 50.0
 probability_curve = SubResource("Curve_khwnl")
 expire_stats = {

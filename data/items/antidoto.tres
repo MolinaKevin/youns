@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=6 format=3 uid="uid://item_antidoto"]
+
+[ext_resource type="Script" uid="uid://utilcb2pt1mr" path="res://data/items/item_data.gd" id="1_itemdata"]
+[ext_resource type="Script" uid="uid://cd8hh52jqo54y" path="res://data/items/item_effect_stat.gd" id="2_stat"]
+[ext_resource type="Script" uid="uid://cwagkiwwms41h" path="res://data/items/item_effect_status.gd" id="3_status"]
+[ext_resource type="Texture2D" path="res://assets/icons/icon_1.png" id="4_icon"]
+
+[sub_resource type="Resource" id="Resource_enfermo"]
+script = ExtResource("3_status")
+status_key = "enfermo"
+value = false
+
+[sub_resource type="Resource" id="Resource_salud"]
+script = ExtResource("2_stat")
+stat_key = "salud"
+delta = 30.0
+
+[resource]
+script = ExtResource("1_itemdata")
+id = "antidoto"
+name = "Antídoto"
+description = "Cura la enfermedad y restaura parte de la salud."
+icon = ExtResource("4_icon")
+effects = [SubResource("Resource_enfermo"), SubResource("Resource_salud")]

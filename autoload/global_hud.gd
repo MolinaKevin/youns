@@ -17,6 +17,9 @@ var youns_status_visible := false
 var _day_clock_ui: CanvasLayer
 var _youns_status_ui: CanvasLayer
 var _debug_stats_ui: CanvasLayer
+var _toast_ui: CanvasLayer
+var _toast_label: Label
+var _toast_tween: Tween
 
 func _ready() -> void:
 	_ensure_day_clock_ui()
@@ -95,6 +98,44 @@ func _ensure_youns_status_ui() -> void:
 	panel.offset_bottom = 884.0
 	_youns_status_ui.add_child(panel)
 	get_tree().root.call_deferred("add_child", _youns_status_ui)
+
+func show_toast(text: String, duration: float = 2.5) -> void:
+	_ensure_toast_ui()
+	_toast_label.text = text
+	_toast_label.modulate.a = 1.0
+	_toast_ui.visible = true
+	if _toast_tween:
+		_toast_tween.kill()
+	_toast_tween = get_tree().create_tween()
+	_toast_tween.tween_interval(duration - 0.6)
+	_toast_tween.tween_property(_toast_label, "modulate:a", 0.0, 0.6)
+	_toast_tween.tween_callback(func(): _toast_ui.visible = false)
+
+func _ensure_toast_ui() -> void:
+	if is_instance_valid(_toast_ui):
+		return
+	_toast_ui = CanvasLayer.new()
+	_toast_ui.name = "GlobalToast"
+	_toast_ui.layer = 90
+	_toast_ui.process_mode = Node.PROCESS_MODE_ALWAYS
+	_toast_ui.visible = false
+
+	_toast_label = Label.new()
+	_toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_toast_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_toast_label.anchor_left = 0.0
+	_toast_label.anchor_top = 1.0
+	_toast_label.anchor_right = 1.0
+	_toast_label.anchor_bottom = 1.0
+	_toast_label.offset_top = -120.0
+	_toast_label.offset_bottom = -60.0
+	_toast_label.add_theme_font_size_override("font_size", 22)
+	_toast_label.add_theme_color_override("font_color", Color(1.0, 1.0, 0.85))
+	_toast_label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.8))
+	_toast_label.add_theme_constant_override("shadow_offset_x", 2)
+	_toast_label.add_theme_constant_override("shadow_offset_y", 2)
+	_toast_ui.add_child(_toast_label)
+	get_tree().root.call_deferred("add_child", _toast_ui)
 
 func set_debug_stats_visible(visible: bool) -> void:
 	if is_instance_valid(_debug_stats_ui):

@@ -56,3 +56,10 @@ extends Resource
 @export_range(0, 100, 1) var base_aburrimiento: int = 20
 @export_range(0, 100, 1) var base_autocontrol: int = 50
 
+@export_group("Stat Multipliers")
+@export_range(0.1, 3.0, 0.05) var mult_hambre: float = 1.0
+@export_range(0.1, 3.0, 0.05) var mult_estres: float = 1.0
+@export_range(0.1, 3.0, 0.05) var mult_energia: float = 1.0
+@export_range(0.1, 3.0, 0.05) var mult_felicidad: float = 1.0
+@export_range(0.1, 3.0, 0.05) var mult_aburrimiento: float = 1.0
+@export_range(0.1, 3.0, 0.05) var mult_ganas_bano: float = 1.0

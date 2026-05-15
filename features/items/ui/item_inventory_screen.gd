@@ -127,12 +127,22 @@ func _close_popup() -> void:
 	_popup_open = false
 
 func _on_use_pressed() -> void:
-	_drop_selected_item()
+	if _selected_index < 0 or _selected_index >= GameState.player_save.inventory_items.size():
+		_close_popup()
+		return
+	var item: Dictionary = GameState.player_save.inventory_items[_selected_index]
+	var data_path: String = item.get("data_path", "")
+	if not data_path.is_empty():
+		var data := load(data_path) as ItemData
+		if data:
+			data.apply_effects(GameState.player_save)
+			GlobalHUD.notify_youns_status_changed()
+	_consume_selected_item()
 
 func _on_drop_pressed() -> void:
-	_drop_selected_item()
+	_consume_selected_item()
 
-func _drop_selected_item() -> void:
+func _consume_selected_item() -> void:
 	if _selected_index < 0 or _selected_index >= GameState.player_save.inventory_items.size():
 		_close_popup()
 		return

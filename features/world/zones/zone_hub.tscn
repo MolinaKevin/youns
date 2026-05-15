@@ -230,6 +230,22 @@ text = "Comida"
 layout_mode = 2
 text = "Descansar"
 
+[node name="CarnePodrida" type="Button" parent="HubNPCDialog/ChoicePopup/Margin/VBox" unique_id=200000021]
+layout_mode = 2
+text = "[DEBUG] Carne Podrida"
+
+[node name="Estresor" type="Button" parent="HubNPCDialog/ChoicePopup/Margin/VBox" unique_id=200000022]
+layout_mode = 2
+text = "[DEBUG] Estresor"
+
+[node name="Cansador" type="Button" parent="HubNPCDialog/ChoicePopup/Margin/VBox" unique_id=200000023]
+layout_mode = 2
+text = "[DEBUG] Cansador"
+
+[node name="VaciadorEstomago" type="Button" parent="HubNPCDialog/ChoicePopup/Margin/VBox" unique_id=200000024]
+layout_mode = 2
+text = "[DEBUG] Vaciador de Estómago"
+
 [node name="DemoDialog" type="CanvasLayer" parent="." unique_id=1644363126]
 visible = false
 

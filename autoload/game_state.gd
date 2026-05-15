@@ -1,7 +1,7 @@
 extends Node
 
 signal clock_changed(current_hour: float, current_day: int)
-signal hour_ticked
+signal twenty_min_ticked
 
 const HOURS_PER_DAY := 24.0
 const DAY_DURATION_MINUTES := 24.0
@@ -25,7 +25,7 @@ var current_day := 1
 var time_of_day_hours := 8.0
 var clock_paused := false
 
-var _last_total_hour_tick: int = 0
+var _last_total_twenty_min_tick: int = 0
 
 func _ready() -> void:
 	player_save = PlayerSaveData.new()
@@ -55,7 +55,7 @@ func _ready() -> void:
 	]
 	player_save.gold = 100
 
-	_last_total_hour_tick = int(get_total_hours())
+	_last_total_twenty_min_tick = int(get_total_hours() * 3.0)
 
 	print("GameState loaded")
 	print("owned ids in GameState: ", player_save.owned_card_ids)
@@ -69,10 +69,10 @@ func _process(delta: float) -> void:
 		time_of_day_hours -= HOURS_PER_DAY
 		current_day += 1
 	clock_changed.emit(time_of_day_hours, current_day)
-	var current_tick := int(get_total_hours())
-	while _last_total_hour_tick < current_tick:
-		_last_total_hour_tick += 1
-		hour_ticked.emit()
+	var current_twenty_tick := int(get_total_hours() * 3.0)
+	while _last_total_twenty_min_tick < current_twenty_tick:
+		_last_total_twenty_min_tick += 1
+		twenty_min_ticked.emit()
 
 func get_time_string() -> String:
 	var total_minutes := int(floor(time_of_day_hours * 60.0))

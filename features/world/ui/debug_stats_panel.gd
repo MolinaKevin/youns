@@ -194,10 +194,15 @@ func _refresh() -> void:
 
 
 func _get_current_states() -> Array[String]:
-	var youn_node = PartyManager.youn if PartyManager else null
-	if not is_instance_valid(youn_node):
-		return []
-	return youn_node.get_active_emotions()
+	var result: Array[String] = []
+	for emotion_name in StatsManager.active_states:
+
+
+
+		var since_hour: float = StatsManager.active_states[emotion_name].get("hour", 0.0)
+		var elapsed := GameState.get_total_hours() - since_hour
+		result.append("%s (%.1fh)" % [emotion_name, elapsed])
+	return result
 
 
 func _on_language_changed(_language: String) -> void:

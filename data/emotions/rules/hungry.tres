@@ -11,6 +11,7 @@ script = ExtResource("1")
 emotion_name = "hungry"
 priority = 60
 stat_key = "hambre"
+max_duration_hours = 1.5
 probability_curve = SubResource("Curve_rkehu")
 expire_stats = {
 "energia": -30,

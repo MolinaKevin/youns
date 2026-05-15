@@ -313,7 +313,7 @@ func _start_combat_transition() -> void:
 	GameState.combat_return_position = _player.global_position if _player else global_position
 	GameState.combat_world_enemy_id = world_enemy_id
 	GameState.pending_enemy_data = enemy_data
-	if GameState.player_save != null and GameState.player_save.needs_bathroom:
+	if GameState.player_save != null and "bathroom" in StatsManager.active_states:
 		GameState.player_save.bathroom_pending_after_combat = true
 	get_tree().change_scene_to_file("res://features/combat/scene/combat.tscn")
 

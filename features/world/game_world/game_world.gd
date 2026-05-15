@@ -76,8 +76,6 @@ func _ready() -> void:
 	GameState.clock_changed.connect(_update_lighting)
 	GameState.clock_changed.connect(_check_sleep_penalty)
 	GameState.clock_changed.connect(_check_end_of_night)
-	GameState.hour_ticked.connect(_drain_energia)
-	GameState.hour_ticked.connect(_tick_bathroom_system)
 	StatsManager.bathroom_accident.connect(_on_bathroom_accident)
 	_setup_screen_fx()
 	_restore_after_combat()
@@ -299,10 +297,6 @@ func _exit_tree() -> void:
 		GameState.clock_changed.disconnect(_check_sleep_penalty)
 	if GameState.clock_changed.is_connected(_check_end_of_night):
 		GameState.clock_changed.disconnect(_check_end_of_night)
-	if GameState.hour_ticked.is_connected(_drain_energia):
-		GameState.hour_ticked.disconnect(_drain_energia)
-	if GameState.hour_ticked.is_connected(_tick_bathroom_system):
-		GameState.hour_ticked.disconnect(_tick_bathroom_system)
 	if StatsManager.bathroom_accident.is_connected(_on_bathroom_accident):
 		StatsManager.bathroom_accident.disconnect(_on_bathroom_accident)
 	PauseMenu.enabled = false
@@ -316,7 +310,7 @@ func _on_sleep_requested() -> void:
 			StatsManager.set_enfermo(false)
 			StatsManager.add_care_mistake(1)
 	_had_bathroom_need_at_sleep = GameState.player_save != null \
-			and GameState.player_save.needs_bathroom
+			and "bathroom" in StatsManager.active_states
 	_toggle_menu()
 	_sleeping = true
 	var overlay := SleepOverlay.new()
@@ -343,9 +337,6 @@ func _check_sleep_penalty(hour: float, _day: int) -> void:
 	if _hour_in_range(hour, penalty_h, data.wake_hour):
 		_sleep_penalty_applied = true
 		StatsManager.add_care_mistake(1)
-
-func _drain_energia() -> void:
-	StatsManager.drain_energia(4)
 
 func _check_end_of_night(hour: float, _day: int) -> void:
 	var youn_node = PartyManager.youn if PartyManager else null
@@ -375,13 +366,6 @@ func _refresh_intro_language(_language: String = "") -> void:
 	if _intro_active:
 		_show_intro_page()
 
-
-# ── Sistema de baño ───────────────────────────────────────────────────────────
-
-func _tick_bathroom_system() -> void:
-	var total_h := GameState.get_total_hours()
-	StatsManager.tick_hunger(total_h)
-	StatsManager.tick_bathroom(total_h)
 
 func _on_bathroom_accident() -> void:
 	pass # TODO: spawnear objeto visual de caca en la posición del Youn

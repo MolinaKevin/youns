@@ -1,14 +1,14 @@
-[gd_resource type="Resource" script_class="YounData" format=3 uid="uid://ctpvd6ffvqhhm" load_steps=9]
+[gd_resource type="Resource" script_class="YounData" format=3 uid="uid://ctpvd6ffvqhhm"]
 
 [ext_resource type="PackedScene" uid="uid://cwduflo7tikx6" path="res://assets/youns/pombero/idle.fbx" id="1_e7jbd"]
 [ext_resource type="Script" uid="uid://dkniy614ehfbc" path="res://data/youns/youn_data.gd" id="1_script"]
-[ext_resource type="Resource" path="res://data/enemies/strategies/aggressive.tres" id="strategy"]
 [ext_resource type="PackedScene" uid="uid://bm2gtctft65a4" path="res://assets/youns/pombero/punch.fbx" id="1_x0k2r"]
 [ext_resource type="PackedScene" uid="uid://c8ihbe1o2ajra" path="res://assets/youns/pombero/damage.fbx" id="2_aoj80"]
 [ext_resource type="Texture2D" uid="uid://b63i01qwdnlhg" path="res://assets/youns/pombero/texture.png" id="3_texture"]
 [ext_resource type="PackedScene" uid="uid://db5u2tfq1cebc" path="res://assets/youns/pombero/range.fbx" id="4_jx040"]
 [ext_resource type="PackedScene" uid="uid://d2ip2vgeao42i" path="res://assets/youns/pombero/run.fbx" id="5_3312o"]
 [ext_resource type="PackedScene" uid="uid://cxamcaaq168ko" path="res://assets/youns/pombero/walk.fbx" id="6_ytd22"]
+[ext_resource type="Resource" uid="uid://77c1dhq2qnsc" path="res://data/enemies/strategies/aggressive.tres" id="strategy"]
 
 [resource]
 script = ExtResource("1_script")
@@ -23,12 +23,16 @@ scene_run = ExtResource("5_3312o")
 scene_attack = ExtResource("1_x0k2r")
 scene_range = ExtResource("4_jx040")
 scene_damage = ExtResource("2_aoj80")
+chase_speed = 4.0
+body_height = 4.6
 max_hp = 18
 strategy = ExtResource("strategy")
 loot_item_name = "Pombero Claw"
 loot_gold = 4
-chase_speed = 4.0
-body_height = 4.6
 sleep_hour = 20
 wake_hour = 4
 base_weight = 12.0
+base_felicidad = 90
+base_confianza = 70
+base_aburrimiento = 0
+mult_hambre = 3.0
