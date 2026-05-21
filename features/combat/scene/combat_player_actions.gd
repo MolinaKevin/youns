@@ -5,7 +5,11 @@ const MOVE_MODE_RANGE := 3
 const MELEE_RANGE     := 2
 
 var state
-var combat: Node
+var map_area: Node
+
+var _deal_damage_to_enemy: Callable
+var _deal_damage_to_player: Callable
+var _check_combat_end: Callable
 
 var move_mode := false
 
@@ -24,9 +28,22 @@ var pending_self_index    := -1
 
 var pending_cell := Vector2(-1.0, -1.0)
 
-func setup(p_combat: Node, p_state) -> void:
-	combat = p_combat
+signal log_requested(text: String)
+signal hand_refresh_requested()
+signal ui_update_requested()
+signal card_preview_show_requested(card: CardData)
+signal card_preview_hide_requested()
+signal confirm_popup_show_requested(show_fin_button: bool)
+signal confirm_popup_hide_requested()
+signal end_move_button_visible_changed(visible: bool)
+signal move_mode_button_reset_requested()
+
+func setup(p_state, p_map_area: Node, p_damage_enemy: Callable, p_damage_player: Callable, p_check_end: Callable) -> void:
 	state = p_state
+	map_area = p_map_area
+	_deal_damage_to_enemy = p_damage_enemy
+	_deal_damage_to_player = p_damage_player
+	_check_combat_end = p_check_end
 
 # ── Card selection ────────────────────────────────────────────────────────────
 
@@ -59,22 +76,22 @@ func _on_move_mode_toggled(pressed: bool) -> void:
 func play_as_move(index: int) -> void:
 	var card = state.hand[index]
 	if card.cost > state.player_energy:
-		combat.log_message("Not enough energy.")
+		log_requested.emit("Not enough energy.")
 		return
-	combat.show_card_preview(card)
+	card_preview_show_requested.emit(card)
 	pending_move_section = "hand"
 	pending_move_index = index
 	pending_move_range = MOVE_MODE_RANGE
-	combat.map_area.start_move_selection(MOVE_MODE_RANGE)
-	combat.log_message("Move mode: choose a tile up to %d spaces away." % MOVE_MODE_RANGE)
+	map_area.start_move_selection(MOVE_MODE_RANGE)
+	log_requested.emit("Move mode: choose a tile up to %d spaces away." % MOVE_MODE_RANGE)
 
 func play_card(index: int) -> void:
 	var card = state.hand[index]
 	if card.cost > state.player_energy:
-		combat.log_message("Not enough energy for %s." % card.name)
+		log_requested.emit("Not enough energy for %s." % card.name)
 		return
 
-	combat.show_card_preview(card)
+	card_preview_show_requested.emit(card)
 	match card.card_type:
 		"move":
 			start_move_selection("hand", index, card.card_range, card.cost, card.name)
@@ -99,46 +116,46 @@ func play_card(index: int) -> void:
 
 func start_move_selection(section_name: String, index: int, move_range: int, energy_cost: int, card_name: String) -> void:
 	if energy_cost > state.player_energy:
-		combat.log_message("Not enough energy for %s." % card_name)
+		log_requested.emit("Not enough energy for %s." % card_name)
 		return
 	pending_move_section = section_name
 	pending_move_index = index
 	pending_move_range = move_range
-	combat.map_area.start_move_selection(move_range)
-	combat.log_message("Selected %s. Choose a tile up to %d spaces away." % [card_name, move_range])
+	map_area.start_move_selection(move_range)
+	log_requested.emit("Selected %s. Choose a tile up to %d spaces away." % [card_name, move_range])
 
 func start_range_attack_selection(index: int, card: CardData, range_override: int = 0) -> void:
 	pending_attack_section = "hand"
 	pending_attack_index   = index
 	pending_attack_range   = range_override if range_override > 0 else card.card_range
-	combat.map_area.start_attack_selection(pending_attack_range)
+	map_area.start_attack_selection(pending_attack_range)
 
 func start_grenade_selection(index: int, card: CardData) -> void:
 	if card.cost > state.player_energy:
-		combat.log_message("Not enough energy for %s." % card.name)
+		log_requested.emit("Not enough energy for %s." % card.name)
 		return
 	pending_grenade_index = index
-	combat.map_area.start_trap_placement(card.throw_range)
-	combat.log_message("Selected %s. Choose a tile up to %d spaces away (bounce: %.1f)." % [card.name, card.throw_range, card.bounce])
+	map_area.start_trap_placement(card.throw_range)
+	log_requested.emit("Selected %s. Choose a tile up to %d spaces away (bounce: %.1f)." % [card.name, card.throw_range, card.bounce])
 
 func start_trap_selection(index: int, card: CardData, nearby: bool) -> void:
 	if card.cost > state.player_energy:
-		combat.log_message("Not enough energy for %s." % card.name)
+		log_requested.emit("Not enough energy for %s." % card.name)
 		return
 	pending_trap_index = index
 	if nearby:
-		combat.map_area.start_trap_placement(8)
-		combat.log_message("Place %s nearby (range 8)." % card.name)
+		map_area.start_trap_placement(8)
+		log_requested.emit("Place %s nearby (range 8)." % card.name)
 	else:
-		combat.map_area.start_trap_placement(card.throw_range)
-		combat.log_message("Throw %s — choose a tile up to %d spaces away." % [card.name, card.throw_range])
+		map_area.start_trap_placement(card.throw_range)
+		log_requested.emit("Throw %s — choose a tile up to %d spaces away." % [card.name, card.throw_range])
 
 func start_self_selection(index: int, card: CardData) -> void:
 	if card.cost > state.player_energy:
-		combat.log_message("Not enough energy for %s." % card.name)
+		log_requested.emit("Not enough energy for %s." % card.name)
 		return
 	pending_self_index = index
-	combat.map_area.start_self_highlight()
+	map_area.start_self_highlight()
 
 # ── Map tile selected & confirm popup ─────────────────────────────────────────
 
@@ -155,43 +172,41 @@ func _on_position_selected(pos: Vector2) -> void:
 		return
 
 	if pending_self_index >= 0:
-		if combat.map_area.is_click_on_player(pos):
+		if map_area.is_click_on_player(pos):
 			_confirm_self_action()
 		return
 
 	pending_cell = pos
 	var is_move_pending := pending_move_index >= 0 or pending_move_started
 	if is_move_pending:
-		var map: Node = combat.map_area
-		var player: Vector2 = map.get("player_pos")
+		var player: Vector2 = map_area.get("player_pos")
 		if player.distance_to(pos) > pending_move_range:
 			return
-		if map._tile_in_obstacle(pos):
+		if map_area._tile_in_obstacle(pos):
 			return
-		if not map.has_line_of_sight(player, pos):
+		if not map_area.has_line_of_sight(player, pos):
 			return
-		var cost: float = map.compute_path(player, pos)
+		var cost: float = map_area.compute_path(player, pos)
 		if cost > pending_move_range + 1.5:
 			return
-		map.show_path_preview(player, pos)
-	combat.confirm_fin_button.visible = pending_move_started
-	combat.confirm_popup.visible = true
+		map_area.show_path_preview(player, pos)
+	confirm_popup_show_requested.emit(pending_move_started)
 
 func _on_confirm_yes() -> void:
-	combat.confirm_popup.visible = false
+	confirm_popup_hide_requested.emit()
 	var cell := pending_cell
 	pending_cell = Vector2(-1.0, -1.0)
-	combat.map_area.clear_path_preview()
+	map_area.clear_path_preview()
 	_execute_tile_action(cell)
 
 func _on_confirm_no() -> void:
-	combat.confirm_popup.visible = false
-	combat.map_area.clear_path_preview()
+	confirm_popup_hide_requested.emit()
+	map_area.clear_path_preview()
 	pending_cell = Vector2(-1.0, -1.0)
 
 func _on_confirm_fin() -> void:
-	combat.confirm_popup.visible = false
-	combat.map_area.clear_path_preview()
+	confirm_popup_hide_requested.emit()
+	map_area.clear_path_preview()
 	pending_cell = Vector2(-1.0, -1.0)
 	_finish_movement()
 
@@ -199,13 +214,13 @@ func _on_end_move_pressed() -> void:
 	_finish_movement()
 
 func _finish_movement() -> void:
-	combat.hide_card_preview()
-	combat.end_move_button.visible = false
+	card_preview_hide_requested.emit()
+	end_move_button_visible_changed.emit(false)
 	clear_pending_move()
 	if move_mode:
-		combat.move_mode_button.button_pressed = false
-	combat.refresh_hand()
-	combat.update_ui()
+		move_mode_button_reset_requested.emit()
+	hand_refresh_requested.emit()
+	ui_update_requested.emit()
 
 # ── Execute actions ───────────────────────────────────────────────────────────
 
@@ -225,26 +240,26 @@ func _execute_tile_action(cell: Vector2) -> void:
 	if pending_move_index < 0 and not pending_move_started:
 		return
 
-	if not combat.map_area.has_method("try_move_player_to"):
+	if not map_area.has_method("try_move_player_to"):
 		return
 
-	var dist_moved: float = combat.map_area.get_path_cost(cell)
-	var moved: bool = combat.map_area.try_move_player_to(cell, pending_move_range)
+	var dist_moved: float = map_area.get_path_cost(cell)
+	var moved: bool = map_area.try_move_player_to(cell, pending_move_range)
 	if not moved:
-		combat.log_message("Invalid move.")
+		log_requested.emit("Invalid move.")
 		return
 
-	var trap_dmg: int = combat.map_area.check_and_trigger_traps_along_path(combat.map_area.player_pos, cell)
+	var trap_dmg: int = map_area.check_and_trigger_traps_along_path(map_area.player_pos, cell)
 	if trap_dmg > 0:
-		combat.deal_damage_to_player(trap_dmg)
-		combat.log_message("Pisaste una trampa en el camino! %d daño." % trap_dmg)
-		if combat.check_combat_end():
+		_deal_damage_to_player.call(trap_dmg)
+		log_requested.emit("Pisaste una trampa en el camino! %d daño." % trap_dmg)
+		if _check_combat_end.call():
 			return
 
 	if not pending_move_started:
 		var card = state.hand[pending_move_index]
 		state.player_energy -= card.cost
-		combat.log_message("Played %s." % card.name)
+		log_requested.emit("Played %s." % card.name)
 		state.discard_pile.append(state.hand[pending_move_index])
 		state.hand.remove_at(pending_move_index)
 		pending_move_index = -1
@@ -252,81 +267,79 @@ func _execute_tile_action(cell: Vector2) -> void:
 
 	var remaining := maxi(0, pending_move_range - roundi(dist_moved))
 	if remaining > 0:
-		combat.log_message("Rango restante: %d" % remaining)
+		log_requested.emit("Rango restante: %d" % remaining)
 		pending_move_range = remaining
-		combat.map_area.start_move_selection(remaining)
-		combat.end_move_button.visible = true
-		combat.refresh_hand()
-		combat.update_ui()
+		map_area.start_move_selection(remaining)
+		end_move_button_visible_changed.emit(true)
+		hand_refresh_requested.emit()
+		ui_update_requested.emit()
 	else:
-		combat.end_move_button.visible = false
+		end_move_button_visible_changed.emit(false)
 		clear_pending_move()
 		if move_mode:
-			combat.move_mode_button.button_pressed = false
-		combat.refresh_hand()
-		combat.update_ui()
+			move_mode_button_reset_requested.emit()
+		hand_refresh_requested.emit()
+		ui_update_requested.emit()
 
 func _place_trap(cell: Vector2) -> void:
 	var card: CardData = state.hand[pending_trap_index]
 	var is_nearby := card.card_type == "trap_place"
-	var map: Node = combat.map_area
 
-	if is_nearby and map.movement_distance(map.player_pos, cell) > 8.0:
-		combat.log_message("Too far to place %s." % card.name)
+	if is_nearby and map_area.movement_distance(map_area.player_pos, cell) > 8.0:
+		log_requested.emit("Too far to place %s." % card.name)
 		return
 
-	if not is_nearby and card.throw_range > 0 and map.movement_distance(map.player_pos, cell) > float(card.throw_range):
-		combat.log_message("Too far to throw %s." % card.name)
+	if not is_nearby and card.throw_range > 0 and map_area.movement_distance(map_area.player_pos, cell) > float(card.throw_range):
+		log_requested.emit("Too far to throw %s." % card.name)
 		return
 
-	if not map.has_line_of_sight(map.player_pos, cell):
-		combat.log_message("Obstacle in the way — can't place %s there." % card.name)
+	if not map_area.has_line_of_sight(map_area.player_pos, cell):
+		log_requested.emit("Obstacle in the way — can't place %s there." % card.name)
 		return
 
 	state.player_energy -= card.cost
-	combat.map_area.place_trap(cell, card.card_range, card.damage, card.name)
-	combat.log_message("Placed %s at (%.1f,%.1f)." % [card.name, cell.x, cell.y])
+	map_area.place_trap(cell, card.card_range, card.damage, card.name)
+	log_requested.emit("Placed %s at (%.1f,%.1f)." % [card.name, cell.x, cell.y])
 	state.discard_pile.append(state.hand[pending_trap_index])
 	state.hand.remove_at(pending_trap_index)
 	pending_trap_index = -1
-	combat.hide_card_preview()
-	combat.map_area.clear_trap_placement()
-	combat.refresh_hand()
-	combat.update_ui()
+	card_preview_hide_requested.emit()
+	map_area.clear_trap_placement()
+	hand_refresh_requested.emit()
+	ui_update_requested.emit()
 
 func _throw_grenade(target: Vector2) -> void:
 	var card: CardData = state.hand[pending_grenade_index]
-	var map: Node = combat.map_area
 
-	if card.throw_range > 0 and map.movement_distance(map.player_pos, target) > float(card.throw_range):
-		combat.log_message("Too far to throw %s." % card.name)
+	if card.throw_range > 0 and map_area.movement_distance(map_area.player_pos, target) > float(card.throw_range):
+		log_requested.emit("Too far to throw %s." % card.name)
 		return
 
-	if not map.has_line_of_sight(map.player_pos, target):
-		combat.log_message("Obstacle in the way — can't throw %s there." % card.name)
+	if not map_area.has_line_of_sight(map_area.player_pos, target):
+		log_requested.emit("Obstacle in the way — can't throw %s there." % card.name)
 		return
 
-	map.clear_trap_placement()
-	var landing: Vector2 = map.calculate_grenade_landing(map.player_pos, target, card.bounce)
-	map.show_grenade_preview(landing, card.card_range)
+	map_area.clear_trap_placement()
+	var landing: Vector2 = map_area.calculate_grenade_landing(map_area.player_pos, target, card.bounce)
+	map_area.show_grenade_preview(landing, card.card_range)
 
 	state.player_energy -= card.cost
-	if map.is_enemy_in_explosion(landing, card.card_range):
-		combat.log_message("%s lands at (%.1f,%.1f) — %d damage!" % [card.name, landing.x, landing.y, card.damage])
-		await combat.deal_damage_to_enemy(card.damage)
+	if map_area.is_enemy_in_explosion(landing, card.card_range):
+		log_requested.emit("%s lands at (%.1f,%.1f) — %d damage!" % [card.name, landing.x, landing.y, card.damage])
+		await _deal_damage_to_enemy.call(card.damage)
 	else:
-		combat.log_message("%s lands at (%.1f,%.1f) — miss!" % [card.name, landing.x, landing.y])
+		log_requested.emit("%s lands at (%.1f,%.1f) — miss!" % [card.name, landing.x, landing.y])
 
 	state.discard_pile.append(state.hand[pending_grenade_index])
 	state.hand.remove_at(pending_grenade_index)
 	pending_grenade_index = -1
 
-	await combat.get_tree().create_timer(0.6).timeout
-	combat.hide_card_preview()
-	combat.map_area.clear_grenade_preview()
-	combat.refresh_hand()
-	combat.update_ui()
-	combat.check_combat_end()
+	await (Engine.get_main_loop() as SceneTree).create_timer(0.6).timeout
+	card_preview_hide_requested.emit()
+	map_area.clear_grenade_preview()
+	hand_refresh_requested.emit()
+	ui_update_requested.emit()
+	_check_combat_end.call()
 
 func _confirm_range_attack() -> void:
 	if pending_attack_index < 0 or pending_attack_index >= state.hand.size():
@@ -334,39 +347,39 @@ func _confirm_range_attack() -> void:
 		return
 
 	var card = state.hand[pending_attack_index]
-	if not combat.map_area.is_enemy_in_attack_range(pending_attack_range):
-		combat.log_message("%s: el enemigo está fuera de rango." % card.name)
+	if not map_area.is_enemy_in_attack_range(pending_attack_range):
+		log_requested.emit("%s: el enemigo está fuera de rango." % card.name)
 		clear_pending_attack()
 		return
 
 	state.player_energy -= card.cost
-	combat.log_message("Played %s for %d damage." % [card.name, card.damage])
+	log_requested.emit("Played %s for %d damage." % [card.name, card.damage])
 	var idx := pending_attack_index
 	clear_pending_attack()
-	combat.hide_card_preview()
-	await combat.deal_damage_to_enemy(card.damage)
+	card_preview_hide_requested.emit()
+	await _deal_damage_to_enemy.call(card.damage)
 	state.discard_pile.append(state.hand[idx])
 	state.hand.remove_at(idx)
-	combat.refresh_hand()
-	combat.update_ui()
-	combat.check_combat_end()
+	hand_refresh_requested.emit()
+	ui_update_requested.emit()
+	_check_combat_end.call()
 
 func _confirm_self_action() -> void:
 	if pending_self_index < 0 or pending_self_index >= state.hand.size():
 		pending_self_index = -1
-		combat.map_area.clear_self_highlight()
+		map_area.clear_self_highlight()
 		return
 	var card: CardData = state.hand[pending_self_index]
 	state.player_block += card.block_amount
 	state.player_energy -= card.cost
-	combat.log_message("Played %s. Block: %d" % [card.name, state.player_block])
+	log_requested.emit("Played %s. Block: %d" % [card.name, state.player_block])
 	state.discard_pile.append(state.hand[pending_self_index])
 	state.hand.remove_at(pending_self_index)
 	pending_self_index = -1
-	combat.hide_card_preview()
-	combat.map_area.clear_self_highlight()
-	combat.refresh_hand()
-	combat.update_ui()
+	card_preview_hide_requested.emit()
+	map_area.clear_self_highlight()
+	hand_refresh_requested.emit()
+	ui_update_requested.emit()
 
 # ── Clear pending ─────────────────────────────────────────────────────────────
 
@@ -374,17 +387,17 @@ func clear_pending_attack() -> void:
 	pending_attack_section = ""
 	pending_attack_index = -1
 	pending_attack_range = 0
-	combat.map_area.clear_attack_selection()
+	map_area.clear_attack_selection()
 
 func clear_pending_move() -> void:
 	pending_move_section = ""
 	pending_move_index = -1
 	pending_move_range = 0
 	pending_move_started = false
-	combat.end_move_button.visible = false
-	combat.map_area.clear_path_preview()
-	if combat.map_area.has_method("clear_move_selection"):
-		combat.map_area.clear_move_selection()
+	end_move_button_visible_changed.emit(false)
+	map_area.clear_path_preview()
+	if map_area.has_method("clear_move_selection"):
+		map_area.clear_move_selection()
 
 func cancel_selection() -> void:
 	if pending_move_started:
@@ -394,28 +407,28 @@ func cancel_selection() -> void:
 		clear_pending_attack()
 	if pending_trap_index >= 0:
 		pending_trap_index = -1
-		combat.map_area.clear_trap_placement()
+		map_area.clear_trap_placement()
 	if pending_grenade_index >= 0:
 		pending_grenade_index = -1
-		combat.map_area.clear_trap_placement()
+		map_area.clear_trap_placement()
 	if pending_self_index >= 0:
 		pending_self_index = -1
-		combat.map_area.clear_self_highlight()
+		map_area.clear_self_highlight()
 	if pending_move_index >= 0:
 		clear_pending_move()
-	combat.hide_card_preview()
-	combat.refresh_hand()
-	combat.update_ui()
+	card_preview_hide_requested.emit()
+	hand_refresh_requested.emit()
+	ui_update_requested.emit()
 
 func reset() -> void:
-	combat.hide_card_preview()
+	card_preview_hide_requested.emit()
 	clear_pending_move()
 	clear_pending_attack()
 	pending_grenade_index = -1
 	pending_trap_index    = -1
 	pending_self_index    = -1
-	combat.map_area.clear_grenade_preview()
-	combat.map_area.clear_trap_placement()
-	combat.map_area.clear_self_highlight()
-	combat.move_mode_button.button_pressed = false
+	map_area.clear_grenade_preview()
+	map_area.clear_trap_placement()
+	map_area.clear_self_highlight()
+	move_mode_button_reset_requested.emit()
 	move_mode = false

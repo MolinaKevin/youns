@@ -61,8 +61,18 @@ func _ready() -> void:
 	$CombatWorld.add_child(we)
 
 	state = _CombatState.new()
+
 	player_actions = _CombatPlayerActions.new()
-	player_actions.setup(self, state)
+	player_actions.setup(state, map_area, deal_damage_to_enemy, deal_damage_to_player, check_combat_end)
+	player_actions.log_requested.connect(log_message)
+	player_actions.hand_refresh_requested.connect(refresh_hand)
+	player_actions.ui_update_requested.connect(update_ui)
+	player_actions.card_preview_show_requested.connect(show_card_preview)
+	player_actions.card_preview_hide_requested.connect(hide_card_preview)
+	player_actions.confirm_popup_show_requested.connect(_on_confirm_popup_show)
+	player_actions.confirm_popup_hide_requested.connect(func(): confirm_popup.visible = false)
+	player_actions.end_move_button_visible_changed.connect(func(v): end_move_button.visible = v)
+	player_actions.move_mode_button_reset_requested.connect(func(): move_mode_button.button_pressed = false)
 
 	var enemy_name_str := ""
 	var wild_youn: YounData = GameState.pending_wild_youn_data
@@ -73,7 +83,7 @@ func _ready() -> void:
 		map_area.set_enemy_hp(state.enemy_hp)
 		map_area.setup_enemy_youn(wild_youn)
 		enemy_ai = _CombatEnemyAI.new()
-		enemy_ai.setup(self, state, wild_youn.strategy)
+		enemy_ai.setup(state, map_area, wild_youn.strategy, deal_damage_to_enemy, deal_damage_to_player, check_combat_end)
 		enemy_name_str = wild_youn.youn_name
 	else:
 		var enemy_data: _EnemyData = GameState.pending_enemy_data
@@ -85,8 +95,11 @@ func _ready() -> void:
 		map_area.set_enemy_hp(state.enemy_hp)
 		map_area.setup_enemy(enemy_data.mesh, enemy_data.mesh_scale, enemy_data.combat_shadow_radius)
 		enemy_ai = _CombatEnemyAI.new()
-		enemy_ai.setup(self, state, enemy_data.strategy)
+		enemy_ai.setup(state, map_area, enemy_data.strategy, deal_damage_to_enemy, deal_damage_to_player, check_combat_end)
 		enemy_name_str = LocalizationState.enemy_name(enemy_data.id, enemy_data.enemy_name)
+
+	enemy_ai.log_requested.connect(log_message)
+	enemy_ai.ui_update_requested.connect(update_ui)
 
 	var _youn = PartyManager.youn
 	if is_instance_valid(_youn) and _youn.youn_data:
@@ -287,6 +300,10 @@ func hide_card_preview() -> void:
 	_preview_tween = create_tween()
 	_preview_tween.tween_property(card_preview, "modulate:a", 0.0, 0.1)
 	_preview_tween.tween_callback(func(): card_preview.visible = false)
+
+func _on_confirm_popup_show(show_fin: bool) -> void:
+	confirm_fin_button.visible = show_fin
+	confirm_popup.visible = true
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel") and card_preview.visible:
