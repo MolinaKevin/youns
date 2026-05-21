@@ -312,6 +312,7 @@ func setup_player(data: YounData) -> void:
 		var body: Node3D = packed.instantiate()
 		body.scale = Vector3.ONE * data.mesh_scale
 		body.position.y = 0.0
+		body.rotation.y = data.mesh_rotation_y
 		body.visible = false
 		if mat:
 			for mesh in _find_meshes(body):
@@ -411,6 +412,7 @@ func setup_enemy_youn(data: YounData) -> void:
 		var body: Node3D = packed.instantiate()
 		body.scale = Vector3.ONE * data.mesh_scale
 		body.position.y = 0.0
+		body.rotation.y = data.mesh_rotation_y
 		body.visible = false
 		if mat:
 			for mesh_inst in _find_meshes(body):

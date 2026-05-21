@@ -46,13 +46,7 @@ func _ready() -> void:
 		"spike_trap", "spike_trap",
 	]
 	player_save.inventory_slots = 20
-	player_save.inventory_items = [
-		{"id": "agumon_fang", "name": "Agumon Fang", "icon": "res://assets/icons/icon_1.png", "count": 3},
-		{"id": "bear_plush", "name": "Bear Plush", "icon": "res://assets/icons/icon_2.png", "count": 1},
-		{"id": "broken_arrow", "name": "Broken Arrow", "icon": "res://assets/icons/icon_3.png", "count": 6},
-		{"id": "suero_vitalidad", "name": "Suero Vitalidad", "icon": "res://assets/icons/icon_4.png", "count": 2},
-		{"id": "field_data", "name": "Field Data", "icon": "res://assets/icons/icon_5.png", "count": 8},
-	]
+	player_save.inventory_items = []
 	player_save.gold = 100
 
 	_last_total_twenty_min_tick = int(get_total_hours() * 3.0)

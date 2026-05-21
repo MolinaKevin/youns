@@ -8,6 +8,7 @@ extends Resource
 @export var mesh: Mesh
 @export var mesh_scale: float = 1.0
 @export var mesh_y_offset: float = 0.0
+@export var mesh_rotation_y: float = 0.0
 
 @export_group("Animations")
 @export var scene_idle: PackedScene

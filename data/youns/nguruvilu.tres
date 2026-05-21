@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="YounData" format=3 uid="uid://cng7r4v1l2x5k"]
+
+[ext_resource type="PackedScene" uid="uid://3sm6l2wo4urs" path="res://assets/youns/nguruvilu/idle.fbx" id="1_idle"]
+[ext_resource type="Script" uid="uid://dkniy614ehfbc" path="res://data/youns/youn_data.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://dpr155ilv2vjg" path="res://assets/youns/nguruvilu/punch.fbx" id="1_x0k2r"]
+[ext_resource type="PackedScene" uid="uid://dpnosd6muiufl" path="res://assets/youns/nguruvilu/damage.fbx" id="2_damage"]
+[ext_resource type="Texture2D" uid="uid://cd3gvo4xbftwr" path="res://assets/youns/nguruvilu/texture.png" id="3_texture"]
+[ext_resource type="PackedScene" uid="uid://6k7va8am6ouy" path="res://assets/youns/nguruvilu/run.fbx" id="5_run"]
+[ext_resource type="PackedScene" uid="uid://b2p3y0m2gtm5c" path="res://assets/youns/nguruvilu/walk.fbx" id="6_walk"]
+[ext_resource type="Resource" uid="uid://77c1dhq2qnsc" path="res://data/enemies/strategies/aggressive.tres" id="strategy"]
+
+[resource]
+script = ExtResource("1_script")
+id = "nguruvilu"
+youn_name = "Nguruvilu"
+texture = ExtResource("3_texture")
+mesh_scale = 0.2
+mesh_y_offset = -0.8
+mesh_rotation_y = 3.14159265
+scene_idle = ExtResource("1_idle")
+scene_walk = ExtResource("6_walk")
+scene_run = ExtResource("5_run")
+scene_attack = ExtResource("1_x0k2r")
+scene_damage = ExtResource("2_damage")
+chase_speed = 5.0
+body_height = 4.0
+max_hp = 20
+strategy = ExtResource("strategy")
+loot_item_name = "Nguruvilu Claw"
+loot_gold = 5
+sleep_hour = 21
+wake_hour = 5
+base_weight = 10.0
+base_felicidad = 80
+base_confianza = 60
+base_aburrimiento = 10
+mult_hambre = 2.0

@@ -55,6 +55,7 @@ func _load_model(data: YounData) -> void:
 		var body: Node3D = packed.instantiate()
 		body.scale = Vector3.ONE * data.mesh_scale
 		body.position.y = data.mesh_y_offset
+		body.rotation.y = data.mesh_rotation_y
 		body.visible = false
 		add_child(body)
 		if mat:

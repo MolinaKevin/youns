@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://dk56v0lver72g" path="res://features/world/party/youn_3d.gd" id="2_youn"]
 [ext_resource type="Script" uid="uid://gwfx6glk2ehg" path="res://features/world/world_map/camera_rig.gd" id="3_camera"]
 [ext_resource type="ArrayMesh" uid="uid://coexakq0deec7" path="res://assets/Player/Player 1.obj" id="4_player_mesh"]
-[ext_resource type="Resource" uid="uid://ctpvd6ffvqhhm" path="res://data/youns/pombero.tres" id="5_youn_data"]
+[ext_resource type="Resource" uid="uid://cng7r4v1l2x5k" path="res://data/youns/nguruvilu.tres" id="5_youn_data"]
 [ext_resource type="Script" uid="uid://26ebcltnj7aj" path="res://features/world/party/emotion_bubble.gd" id="7_ec2iw"]
 
 [sub_resource type="CapsuleShape3D" id="1"]
