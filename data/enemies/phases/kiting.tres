@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="AiPhase" format=3]
+
+[ext_resource type="Script" path="res://data/enemies/ai_condition.gd" id="1_Cond"]
+[ext_resource type="Script" path="res://data/enemies/ai_action.gd" id="2_Act"]
+[ext_resource type="Script" path="res://data/enemies/ai_phase.gd" id="3_Phase"]
+
+[sub_resource type="Resource" id="Cond_InRange"]
+script = ExtResource("1_Cond")
+type = "player_in_range"
+range = 12.0
+
+[sub_resource type="Resource" id="Cond_Adjacent"]
+script = ExtResource("1_Cond")
+type = "player_adjacent"
+range = 3.5
+
+[sub_resource type="Resource" id="Action_RangeAttack"]
+script = ExtResource("2_Act")
+action_type = "range_attack"
+base_score = 85.0
+conditions = Array[ExtResource("1_Cond")]([SubResource("Cond_InRange")])
+damage = 5
+
+[sub_resource type="Resource" id="Action_Reposition"]
+script = ExtResource("2_Act")
+action_type = "move_away"
+base_score = 90.0
+conditions = Array[ExtResource("1_Cond")]([SubResource("Cond_Adjacent")])
+move_range = 5.0
+
+[resource]
+script = ExtResource("3_Phase")
+phase_name = "kiting"
+actions = Array[ExtResource("2_Act")]([SubResource("Action_RangeAttack"), SubResource("Action_Reposition")])

@@ -10,7 +10,6 @@ const _AiStrategy = preload("res://data/enemies/ai_strategy.gd")
 const _EnemyData  = preload("res://data/enemies/enemy_data.gd")
 
 @onready var player_stats = $UI/MainVBox/TopBar/PlayerStats
-@onready var enemy_intent_label = $UI/MainVBox/TopBar/EnemyIntent
 @onready var move_mode_button = $UI/MainVBox/TopBar/MoveModeButton
 @onready var end_turn_button = $UI/MainVBox/TopBar/EndTurnButton
 @onready var message_log = $UI/MainVBox/MiddleRow/SidePanel/MessageLog
@@ -33,6 +32,7 @@ const _EnemyData  = preload("res://data/enemies/enemy_data.gd")
 var state
 var player_actions
 var enemy_ai
+var deck_manager: CombatDeckManager
 var _combat_finished := false
 var _preview_card: CardData = null
 var _preview_tween: Tween = null
@@ -61,6 +61,10 @@ func _ready() -> void:
 	$CombatWorld.add_child(we)
 
 	state = _CombatState.new()
+
+	deck_manager = CombatDeckManager.new()
+	deck_manager.setup(state)
+	deck_manager.reshuffled.connect(func(): log_message(LocalizationState.t("combat.reshuffle")))
 
 	player_actions = _CombatPlayerActions.new()
 	player_actions.setup(state, map_area, deal_damage_to_enemy, deal_damage_to_player, check_combat_end)
@@ -122,9 +126,8 @@ func _ready() -> void:
 	hand_section.card_selected.connect(player_actions._on_card_selected)
 
 	setup_draw_pile()
-	draw_cards(HAND_SIZE)
+	deck_manager.draw_cards(HAND_SIZE)
 	refresh_hand()
-	enemy_ai.pick_intent()
 	_apply_localized_text()
 	update_ui()
 
@@ -147,21 +150,6 @@ func setup_draw_pile() -> void:
 	state.draw_pile.assign(deck_cards)
 	state.draw_pile.shuffle()
 	state.discard_pile.clear()
-	state.hand.clear()
-
-func draw_cards(n: int) -> void:
-	for i in n:
-		if state.draw_pile.is_empty():
-			if state.discard_pile.is_empty():
-				break
-			state.draw_pile.assign(state.discard_pile)
-			state.draw_pile.shuffle()
-			state.discard_pile.clear()
-			log_message(LocalizationState.t("combat.reshuffle"))
-		state.hand.append(state.draw_pile.pop_back())
-
-func discard_hand() -> void:
-	state.discard_pile.append_array(state.hand)
 	state.hand.clear()
 
 func refresh_hand() -> void:
@@ -201,11 +189,8 @@ func _on_end_turn_pressed() -> void:
 	end_turn_button.disabled = false
 
 func reset_turn() -> void:
-	state.player_energy = state.max_energy
-	state.player_block = 0
 	player_actions.reset()
-	discard_hand()
-	draw_cards(HAND_SIZE)
+	deck_manager.reset_turn(HAND_SIZE)
 	refresh_hand()
 	update_ui()
 
@@ -245,20 +230,6 @@ func update_ui() -> void:
 	player_stats.text = LocalizationState.t("combat.player_stats", [
 		state.player_hp, state.player_block, state.player_energy, state.enemy_hp
 	])
-	match state.enemy_intent["type"]:
-		"attack":
-			enemy_intent_label.text = LocalizationState.t("combat.intent.attack", [state.enemy_intent["value"]])
-		"range_attack":
-			enemy_intent_label.text = LocalizationState.t("combat.intent.range_attack", [state.enemy_intent["value"]])
-		"move":
-			enemy_intent_label.text = LocalizationState.t("combat.intent.move")
-		"retreat":
-			enemy_intent_label.text = LocalizationState.t("combat.intent.retreat")
-		"block":
-			enemy_intent_label.text = LocalizationState.t("combat.intent.block", [state.enemy_intent["value"]])
-		"wait":
-			enemy_intent_label.text = LocalizationState.t("combat.intent.wait")
-
 func check_combat_end() -> bool:
 	if state.enemy_hp <= 0:
 		log_message(LocalizationState.t("combat.win"))

@@ -12,11 +12,20 @@ static func evaluate(rules: Array[EmotionRule], ctx: Dictionary) -> Array[String
 	var active: Array[String] = []
 	var blocked: Array[String] = []
 
+	for active_name: String in ctx.get("active", [] as Array):
+		for rule: EmotionRule in sorted:
+			if rule.emotion_name == active_name:
+				for b: String in rule.blocks:
+					if b not in blocked:
+						blocked.append(b)
+				break
+
 	for rule: EmotionRule in sorted:
 		if rule.emotion_name.is_empty() or rule.emotion_name in blocked:
 			continue
 		var prob := rule.evaluate(ctx)
-		if prob > 0.0 and randf() < prob:
+		var rng: RandomNumberGenerator = ctx.get("rng")
+		if prob > 0.0 and (rng.randf() if rng else randf()) < prob:
 			active.append(rule.emotion_name)
 			for b: String in rule.blocks:
 				if b not in blocked:

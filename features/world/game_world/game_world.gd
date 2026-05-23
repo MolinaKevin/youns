@@ -37,7 +37,7 @@ var _was_in_sleep_range := false
 var _slept_this_cycle := false
 var _sleep_tracking_initialized := false
 var _sick_sleep_count := 0
-var _had_bathroom_need_at_sleep := false
+var _sleep_start_hour := 0.0
 
 const INTRO_PAGES := [
 	{
@@ -309,17 +309,15 @@ func _on_sleep_requested() -> void:
 			_sick_sleep_count = 0
 			StatsManager.set_enfermo(false)
 			StatsManager.add_care_mistake(1)
-	_had_bathroom_need_at_sleep = GameState.player_save != null \
-			and "bathroom" in StatsManager.active_states
+	_sleep_start_hour = GameState.get_total_hours()
 	_toggle_menu()
 	_sleeping = true
 	var overlay := SleepOverlay.new()
 	overlay.tree_exiting.connect(func():
 		_sleeping = false
-		StatsManager.add_hambre(20)  # ayuno durante el sueño
-		if _had_bathroom_need_at_sleep:
-			_had_bathroom_need_at_sleep = false
-			StatsManager.apply_bathroom_accident()
+		var sleep_duration := GameState.get_total_hours() - _sleep_start_hour
+		StatsManager.add_hambre(20)
+		StatsManager.on_wake_up(sleep_duration)
 	)
 	add_child(overlay)
 

@@ -9,4 +9,3 @@ priority = 90
 stat_key = ""
 threshold = 0.0
 comparison = 0
-blocks = PackedStringArray("hungry")

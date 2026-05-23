@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="AiPhase" format=3]
+
+[ext_resource type="Script" path="res://data/enemies/ai_condition.gd" id="1_Cond"]
+[ext_resource type="Script" path="res://data/enemies/ai_action.gd" id="2_Act"]
+[ext_resource type="Script" path="res://data/enemies/ai_phase.gd" id="3_Phase"]
+
+[sub_resource type="Resource" id="Cond_Always"]
+script = ExtResource("1_Cond")
+type = "always"
+range = 12.0
+
+[sub_resource type="Resource" id="Action_MoveAway"]
+script = ExtResource("2_Act")
+action_type = "move_away"
+base_score = 95.0
+conditions = Array[ExtResource("1_Cond")]([SubResource("Cond_Always")])
+move_range = 8.0
+
+[resource]
+script = ExtResource("3_Phase")
+phase_name = "flee"
+actions = Array[ExtResource("2_Act")]([SubResource("Action_MoveAway")])

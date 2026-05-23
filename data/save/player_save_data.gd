@@ -31,6 +31,7 @@ class_name PlayerSaveData
 @export_range(0, 100, 1) var ganas_bano: int = 0
 @export var last_meal_total_hour: float = -1.0
 @export var bathroom_pending_after_combat: bool = false
+@export var poop_pending: float = 0.0
 
 # Hábitos activos del Youn — cada entrada tendrá un id y un porcentaje
 @export var habitos: Array[Dictionary] = []

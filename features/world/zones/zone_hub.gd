@@ -327,12 +327,8 @@ func _run_bathroom_sequence() -> void:
 	var youn   := PartyManager.youn
 	var cam    := PartyManager.camera_rig
 
-	# Resolver necesidad inmediatamente
-	var ps := GameState.player_save
-	if ps != null:
-		StatsManager.clear_emotion("bathroom")
-		ps.ganas_bano = 0
-		
+	StatsManager.attend_bathroom()
+
 
 	# Freezar controles y reloj
 	player.set_physics_process(false)

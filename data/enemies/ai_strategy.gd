@@ -1,7 +1,10 @@
 class_name AiStrategy
 extends Resource
 
-## Define el conjunto de acciones posibles para un tipo de enemigo.
-## El evaluador prueba todas las acciones cada turno y ejecuta la de mayor score.
+@export var initial_phase: String = ""
+@export var phases: Array[AiPhase] = []
+@export var transitions: Array[AiPhaseTransition] = []
 
+## Lista plana de acciones — usada cuando initial_phase está vacío.
+## Mantener para compatibilidad con estrategias sin fases.
 @export var actions: Array[AiAction] = []

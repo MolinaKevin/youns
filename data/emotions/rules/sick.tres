@@ -14,3 +14,4 @@ stat_key = "salud"
 threshold = 50.0
 comparison = 1
 probability_curve = SubResource("Curve_q2epa")
+blocks = PackedStringArray("sad", "stressed", "bored")

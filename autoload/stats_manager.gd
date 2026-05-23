@@ -26,6 +26,15 @@ func _ready() -> void:
 
 # ── Acceso genérico ───────────────────────────────────────────────────────────
 
+func calc_hambre_delta(delta: int, mult: float, weight: float, base_weight: float) -> int:
+	var m := mult
+	if delta < 0:
+		var kg_over := weight - base_weight
+		if kg_over > 0.0:
+			m *= maxf(1.0 - kg_over * 0.03, 0.3)
+	return roundi(delta * m)
+
+
 func add_stat(key: String, delta: int) -> void:
 	if GameState.player_save == null:
 		return
@@ -39,11 +48,12 @@ func add_stat(key: String, delta: int) -> void:
 		var val = youn_data.get("mult_" + key)
 		if val != null:
 			multiplier = val
-		if key == "hambre" and delta < 0:
-			var kg_over := GameState.player_save.weight - youn_data.base_weight
-			if kg_over > 0.0:
-				multiplier *= maxf(1.0 - kg_over * 0.03, 0.3)
-	GameState.player_save.set(key, clampi(int(current) + roundi(delta * multiplier), 0, 100))
+	var final_delta: int
+	if key == "hambre" and youn_data:
+		final_delta = calc_hambre_delta(delta, multiplier, GameState.player_save.weight, youn_data.base_weight)
+	else:
+		final_delta = roundi(delta * multiplier)
+	GameState.player_save.set(key, clampi(int(current) + final_delta, 0, 100))
 	_queue_stat_changed()
 
 func set_stat(key: String, value: int) -> void:
@@ -140,12 +150,32 @@ func set_weight(value: float) -> void:
 func add_weight(delta: float) -> void:
 	set_weight(GameState.player_save.weight + delta)
 
+func on_bathroom_used(rng: RandomNumberGenerator = null) -> void:
+	var ps := GameState.player_save
+	if ps == null:
+		return
+	var random_factor := rng.randf() if rng else randf()
+	var loss := ps.poop_pending + random_factor * ps.weight * 0.1
+	set_weight(ps.weight - loss)
+	ps.poop_pending = 0.0
+
+
+func attend_bathroom(rng: RandomNumberGenerator = null) -> void:
+	var ps := GameState.player_save
+	if ps == null:
+		return
+	on_bathroom_used(rng)
+	set_ganas_bano(0)
+	clear_emotion("bathroom")
+
+
 func apply_bathroom_accident() -> void:
 	var ps := GameState.player_save
 	if ps == null:
 		return
 	var rule := _find_emotion_rule("bathroom")
 	_apply_expire_penalty(rule)
+	on_bathroom_used()
 	set_ganas_bano(0)
 	clear_emotion("bathroom")
 	bathroom_accident.emit()
@@ -197,6 +227,28 @@ func _emit_stat_changed() -> void:
 	_stat_change_pending = false
 	stat_changed.emit()
 
+# ── sueño ────────────────────────────────────────────────────────────────────
+
+func on_wake_up(sleep_duration_hours: float) -> void:
+	clear_emotion("tired")
+
+	var bathroom_rule := _find_emotion_rule("bathroom")
+	if "bathroom" in active_states and bathroom_rule:
+		var activation_hour: float = active_states["bathroom"].get("hour", 0.0)
+		var elapsed := GameState.get_total_hours() - activation_hour
+		if elapsed >= bathroom_rule.max_duration_hours * 0.5:
+			_apply_expire_penalty(bathroom_rule)
+			clear_emotion("bathroom")
+			bathroom_accident.emit()
+		else:
+			active_states["bathroom"]["hour"] += sleep_duration_hours
+
+	for emotion_name in active_states.keys():
+		if emotion_name == "bathroom":
+			continue
+		active_states[emotion_name]["hour"] += sleep_duration_hours
+
+
 # ── check_status ──────────────────────────────────────────────────────────────
 
 func check_status() -> void:
@@ -224,6 +276,7 @@ func _evaluate_emotion_rules() -> void:
 	var ctx := {
 		"save": ps,
 		"youn_data": youn.get("youn_data") if youn else null,
+		"active": active_states.keys(),
 	}
 	var triggered := EmotionEngine.evaluate(_emotion_rules, ctx)
 	for emotion_name in triggered:

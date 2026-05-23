@@ -7,84 +7,254 @@ func before_each() -> void:
 	save = PlayerSaveData.new()
 
 
-func _make_rule(emotion: String, stat: String, threshold: float, comparison: EmotionRule.Comparison, priority: int = 0) -> EmotionRule:
-	var rule := EmotionRule.new()
-	rule.emotion_name = emotion
-	rule.stat_key = stat
-	rule.threshold = threshold
-	rule.comparison = comparison
-	rule.priority = priority
-	return rule
+# Busca dinámicamente seeds cuyo primer randf() caiga a cada lado de prob.
+func _find_seeds(prob: float) -> Dictionary:
+	var probe := RandomNumberGenerator.new()
+	var seed_on := -1
+	var seed_off := -1
+	for s in range(5000):
+		probe.seed = s
+		var v := probe.randf()
+		if seed_on == -1 and v < prob:
+			seed_on = s
+		if seed_off == -1 and v >= prob:
+			seed_off = s
+		if seed_on != -1 and seed_off != -1:
+			break
+	return {"on": seed_on, "off": seed_off}
 
 
-# ── básico ────────────────────────────────────────────────────────────────────
+# ── hungry ────────────────────────────────────────────────────────────────────
 
-func test_evaluate_empty_rules_returns_empty() -> void:
-	var result := EmotionEngine.evaluate([], {"save": save})
-	assert_eq(result, [])
-
-
-func test_evaluate_triggers_matching_rule() -> void:
-	save.felicidad = 90
-	var rule := _make_rule("happy", "felicidad", 70.0, EmotionRule.Comparison.GREATER)
-	var result := EmotionEngine.evaluate([rule], {"save": save})
-	assert_has(result, "happy")
+func test_hungry_dispara_con_hambre_maxima() -> void:
+	save.hambre = 100  # prob=1.0, determinístico
+	var rules: Array[EmotionRule] = [load("res://data/emotions/rules/hungry.tres")]
+	assert_has(EmotionEngine.evaluate(rules, {"save": save}), "hungry")
 
 
-func test_evaluate_does_not_trigger_non_matching_rule() -> void:
-	save.felicidad = 30
-	var rule := _make_rule("happy", "felicidad", 70.0, EmotionRule.Comparison.GREATER)
-	var result := EmotionEngine.evaluate([rule], {"save": save})
-	assert_does_not_have(result, "happy")
+func test_hungry_no_dispara_con_hambre_minima() -> void:
+	save.hambre = 0  # prob=0.0, determinístico
+	var rules: Array[EmotionRule] = [load("res://data/emotions/rules/hungry.tres")]
+	assert_does_not_have(EmotionEngine.evaluate(rules, {"save": save}), "hungry")
 
 
-# ── blocks ────────────────────────────────────────────────────────────────────
+func test_hungry_dispara_en_zona_probabilistica() -> void:
+	save.hambre = 85
+	var rule: EmotionRule = load("res://data/emotions/rules/hungry.tres")
+	var seeds := _find_seeds(rule.evaluate({"save": save}))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seeds.on
+	assert_has(EmotionEngine.evaluate([rule], {"save": save, "rng": rng}), "hungry")
 
-func test_higher_priority_rule_blocks_lower() -> void:
-	save.felicidad = 90
-	save.estres = 20
 
-	var happy := _make_rule("happy", "felicidad", 70.0, EmotionRule.Comparison.GREATER, 10)
-	happy.blocks = PackedStringArray(["stressed"])
+func test_hungry_no_dispara_en_zona_probabilistica() -> void:
+	save.hambre = 85
+	var rule: EmotionRule = load("res://data/emotions/rules/hungry.tres")
+	var seeds := _find_seeds(rule.evaluate({"save": save}))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seeds.off
+	assert_does_not_have(EmotionEngine.evaluate([rule], {"save": save, "rng": rng}), "hungry")
 
-	var stressed := _make_rule("stressed", "estres", 30.0, EmotionRule.Comparison.LESS, 5)
 
-	var result := EmotionEngine.evaluate([stressed, happy], {"save": save})
-	assert_has(result, "happy")
+# ── bathroom ──────────────────────────────────────────────────────────────────
+
+func test_bathroom_dispara_con_ganas_maximas() -> void:
+	save.ganas_bano = 100  # prob=1.0, determinístico
+	var rules: Array[EmotionRule] = [load("res://data/emotions/rules/bathroom.tres")]
+	assert_has(EmotionEngine.evaluate(rules, {"save": save}), "bathroom")
+
+
+func test_bathroom_no_dispara_con_ganas_minimas() -> void:
+	save.ganas_bano = 0  # prob=0.0, determinístico
+	var rules: Array[EmotionRule] = [load("res://data/emotions/rules/bathroom.tres")]
+	assert_does_not_have(EmotionEngine.evaluate(rules, {"save": save}), "bathroom")
+
+
+func test_bathroom_dispara_en_zona_probabilistica() -> void:
+	save.ganas_bano = 70
+	var rule: EmotionRule = load("res://data/emotions/rules/bathroom.tres")
+	var seeds := _find_seeds(rule.evaluate({"save": save}))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seeds.on
+	assert_has(EmotionEngine.evaluate([rule], {"save": save, "rng": rng}), "bathroom")
+
+
+func test_bathroom_no_dispara_en_zona_probabilistica() -> void:
+	save.ganas_bano = 70
+	var rule: EmotionRule = load("res://data/emotions/rules/bathroom.tres")
+	var seeds := _find_seeds(rule.evaluate({"save": save}))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seeds.off
+	assert_does_not_have(EmotionEngine.evaluate([rule], {"save": save, "rng": rng}), "bathroom")
+
+
+# ── sick ──────────────────────────────────────────────────────────────────────
+
+func test_sick_dispara_en_zona_probabilistica() -> void:
+	save.salud = 15
+	var rule: EmotionRule = load("res://data/emotions/rules/sick.tres")
+	var seeds := _find_seeds(rule.evaluate({"save": save}))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seeds.on
+	assert_has(EmotionEngine.evaluate([rule], {"save": save, "rng": rng}), "sick")
+
+
+func test_sick_no_dispara_en_zona_probabilistica() -> void:
+	save.salud = 15
+	var rule: EmotionRule = load("res://data/emotions/rules/sick.tres")
+	var seeds := _find_seeds(rule.evaluate({"save": save}))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seeds.off
+	assert_does_not_have(EmotionEngine.evaluate([rule], {"save": save, "rng": rng}), "sick")
+
+
+# ── tired ─────────────────────────────────────────────────────────────────────
+
+func test_tired_dispara_en_zona_probabilistica() -> void:
+	save.energia = 15
+	var rule: EmotionRule = load("res://data/emotions/rules/tired.tres")
+	var seeds := _find_seeds(rule.evaluate({"save": save}))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seeds.on
+	assert_has(EmotionEngine.evaluate([rule], {"save": save, "rng": rng}), "tired")
+
+
+func test_tired_no_dispara_en_zona_probabilistica() -> void:
+	save.energia = 15
+	var rule: EmotionRule = load("res://data/emotions/rules/tired.tres")
+	var seeds := _find_seeds(rule.evaluate({"save": save}))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seeds.off
+	assert_does_not_have(EmotionEngine.evaluate([rule], {"save": save, "rng": rng}), "tired")
+
+
+# ── sad ───────────────────────────────────────────────────────────────────────
+
+func test_sad_dispara_en_zona_probabilistica() -> void:
+	save.felicidad = 10
+	var rule: EmotionRule = load("res://data/emotions/rules/sad.tres")
+	var seeds := _find_seeds(rule.evaluate({"save": save}))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seeds.on
+	assert_has(EmotionEngine.evaluate([rule], {"save": save, "rng": rng}), "sad")
+
+
+func test_sad_no_dispara_en_zona_probabilistica() -> void:
+	save.felicidad = 10
+	var rule: EmotionRule = load("res://data/emotions/rules/sad.tres")
+	var seeds := _find_seeds(rule.evaluate({"save": save}))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seeds.off
+	assert_does_not_have(EmotionEngine.evaluate([rule], {"save": save, "rng": rng}), "sad")
+
+
+# ── stressed ──────────────────────────────────────────────────────────────────
+
+func test_stressed_dispara_en_zona_probabilistica() -> void:
+	save.estres = 80
+	var rule: EmotionRule = load("res://data/emotions/rules/stressed.tres")
+	var seeds := _find_seeds(rule.evaluate({"save": save}))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seeds.on
+	assert_has(EmotionEngine.evaluate([rule], {"save": save, "rng": rng}), "stressed")
+
+
+func test_stressed_no_dispara_en_zona_probabilistica() -> void:
+	save.estres = 80
+	var rule: EmotionRule = load("res://data/emotions/rules/stressed.tres")
+	var seeds := _find_seeds(rule.evaluate({"save": save}))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seeds.off
+	assert_does_not_have(EmotionEngine.evaluate([rule], {"save": save, "rng": rng}), "stressed")
+
+
+# ── bored ─────────────────────────────────────────────────────────────────────
+
+func test_bored_dispara_en_zona_probabilistica() -> void:
+	save.aburrimiento = 90
+	var rule: EmotionRule = load("res://data/emotions/rules/bored.tres")
+	var seeds := _find_seeds(rule.evaluate({"save": save}))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seeds.on
+	assert_has(EmotionEngine.evaluate([rule], {"save": save, "rng": rng}), "bored")
+
+
+func test_bored_no_dispara_en_zona_probabilistica() -> void:
+	save.aburrimiento = 90
+	var rule: EmotionRule = load("res://data/emotions/rules/bored.tres")
+	var seeds := _find_seeds(rule.evaluate({"save": save}))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seeds.off
+	assert_does_not_have(EmotionEngine.evaluate([rule], {"save": save, "rng": rng}), "bored")
+
+
+# ── bloqueos por emocion ya activa ───────────────────────────────────────────
+
+func test_hungry_activo_bloquea_bathroom() -> void:
+	save.ganas_bano = 100  # bathroom querría activarse (prob=1.0)
+	var rules: Array[EmotionRule] = [
+		load("res://data/emotions/rules/hungry.tres"),
+		load("res://data/emotions/rules/bathroom.tres"),
+	]
+	var result := EmotionEngine.evaluate(rules, {"save": save, "active": ["hungry"]})
+	assert_does_not_have(result, "bathroom")
+
+
+func test_bathroom_activo_bloquea_hungry() -> void:
+	save.hambre = 100  # hungry querría activarse (prob=1.0)
+	var rules: Array[EmotionRule] = [
+		load("res://data/emotions/rules/hungry.tres"),
+		load("res://data/emotions/rules/bathroom.tres"),
+	]
+	var result := EmotionEngine.evaluate(rules, {"save": save, "active": ["bathroom"]})
+	assert_does_not_have(result, "hungry")
+
+
+func test_sad_activo_bloquea_stressed() -> void:
+	save.estres = 100
+	var rules: Array[EmotionRule] = [
+		load("res://data/emotions/rules/sad.tres"),
+		load("res://data/emotions/rules/stressed.tres"),
+	]
+	var result := EmotionEngine.evaluate(rules, {"save": save, "active": ["sad"]})
 	assert_does_not_have(result, "stressed")
 
 
-func test_lower_priority_rule_does_not_block_higher() -> void:
-	save.felicidad = 90
-	save.estres = 20
-
-	var happy := _make_rule("happy", "felicidad", 70.0, EmotionRule.Comparison.GREATER, 5)
-	var stressed := _make_rule("stressed", "estres", 30.0, EmotionRule.Comparison.LESS, 10)
-	stressed.blocks = PackedStringArray(["happy"])
-
-	var result := EmotionEngine.evaluate([stressed, happy], {"save": save})
-	assert_does_not_have(result, "happy")
-	assert_has(result, "stressed")
+func test_sad_activo_bloquea_bored() -> void:
+	save.aburrimiento = 100
+	var rules: Array[EmotionRule] = [
+		load("res://data/emotions/rules/sad.tres"),
+		load("res://data/emotions/rules/bored.tres"),
+	]
+	var result := EmotionEngine.evaluate(rules, {"save": save, "active": ["sad"]})
+	assert_does_not_have(result, "bored")
 
 
-# ── múltiples reglas sin conflicto ────────────────────────────────────────────
-
-func test_multiple_independent_rules_all_trigger() -> void:
-	save.felicidad = 90
-	save.estres = 5
-
-	var happy := _make_rule("happy", "felicidad", 70.0, EmotionRule.Comparison.GREATER)
-	var calm := _make_rule("calm", "estres", 20.0, EmotionRule.Comparison.LESS)
-
-	var result := EmotionEngine.evaluate([happy, calm], {"save": save})
-	assert_has(result, "happy")
-	assert_has(result, "calm")
+func test_sick_activo_bloquea_sad() -> void:
+	save.felicidad = 0
+	var rules: Array[EmotionRule] = [
+		load("res://data/emotions/rules/sick.tres"),
+		load("res://data/emotions/rules/sad.tres"),
+	]
+	var result := EmotionEngine.evaluate(rules, {"save": save, "active": ["sick"]})
+	assert_does_not_have(result, "sad")
 
 
-# ── emotion_name vacío se ignora ──────────────────────────────────────────────
+func test_sick_activo_bloquea_stressed() -> void:
+	save.estres = 100
+	var rules: Array[EmotionRule] = [
+		load("res://data/emotions/rules/sick.tres"),
+		load("res://data/emotions/rules/stressed.tres"),
+	]
+	var result := EmotionEngine.evaluate(rules, {"save": save, "active": ["sick"]})
+	assert_does_not_have(result, "stressed")
 
-func test_rule_with_empty_name_is_skipped() -> void:
-	save.felicidad = 90
-	var rule := _make_rule("", "felicidad", 70.0, EmotionRule.Comparison.GREATER)
-	var result := EmotionEngine.evaluate([rule], {"save": save})
-	assert_eq(result.size(), 0)
+
+func test_sick_activo_bloquea_bored() -> void:
+	save.aburrimiento = 100
+	var rules: Array[EmotionRule] = [
+		load("res://data/emotions/rules/sick.tres"),
+		load("res://data/emotions/rules/bored.tres"),
+	]
+	var result := EmotionEngine.evaluate(rules, {"save": save, "active": ["sick"]})
+	assert_does_not_have(result, "bored")

@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="AiPhase" format=3]
+
+[ext_resource type="Script" path="res://data/enemies/ai_condition.gd" id="1_Cond"]
+[ext_resource type="Script" path="res://data/enemies/ai_action.gd" id="2_Act"]
+[ext_resource type="Script" path="res://data/enemies/ai_phase.gd" id="3_Phase"]
+
+[sub_resource type="Resource" id="Cond_Adjacent"]
+script = ExtResource("1_Cond")
+type = "player_adjacent"
+range = 2.0
+
+[sub_resource type="Resource" id="Cond_Always"]
+script = ExtResource("1_Cond")
+type = "always"
+range = 12.0
+
+[sub_resource type="Resource" id="Action_MeleeAttack"]
+script = ExtResource("2_Act")
+action_type = "melee_attack"
+base_score = 90.0
+conditions = Array[ExtResource("1_Cond")]([SubResource("Cond_Adjacent")])
+damage = 8
+score_multiplier_low_hp = 1.6
+
+[sub_resource type="Resource" id="Action_Chase"]
+script = ExtResource("2_Act")
+action_type = "move_toward"
+base_score = 50.0
+conditions = Array[ExtResource("1_Cond")]([SubResource("Cond_Always")])
+move_range = 6.0
+score_multiplier_low_hp = 1.3
+
+[resource]
+script = ExtResource("3_Phase")
+phase_name = "melee_aggro"
+actions = Array[ExtResource("2_Act")]([SubResource("Action_MeleeAttack"), SubResource("Action_Chase")])

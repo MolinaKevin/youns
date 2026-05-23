@@ -19,3 +19,4 @@ expire_stats = {
 "salud": -5
 }
 expire_care_mistakes = 1
+blocks = PackedStringArray("hungry")

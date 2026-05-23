@@ -14,3 +14,4 @@ stat_key = "felicidad"
 threshold = 30.0
 comparison = 1
 probability_curve = SubResource("Curve_g7ipq")
+blocks = PackedStringArray("stressed", "bored")

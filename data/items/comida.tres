@@ -23,3 +23,4 @@ description = "Sacia parte del hambre del Youn."
 icon = ExtResource("3_icon")
 effects = Array[ExtResource("1_vytf7")]([SubResource("Resource_hambre"), SubResource("Resource_bano")])
 weight_gain = 1.0
+poop_size = 1.0
