@@ -7,12 +7,13 @@
 [ext_resource type="Texture2D" uid="uid://cd3gvo4xbftwr" path="res://assets/youns/nguruvilu/texture.png" id="3_texture"]
 [ext_resource type="PackedScene" uid="uid://6k7va8am6ouy" path="res://assets/youns/nguruvilu/run.fbx" id="5_run"]
 [ext_resource type="PackedScene" uid="uid://b2p3y0m2gtm5c" path="res://assets/youns/nguruvilu/walk.fbx" id="6_walk"]
-[ext_resource type="Resource" uid="uid://77c1dhq2qnsc" path="res://data/enemies/strategies/aggressive.tres" id="strategy"]
+[ext_resource type="Resource" path="res://data/enemies/strategies/aggressive.tres" id="strategy"]
 
 [resource]
 script = ExtResource("1_script")
 id = "nguruvilu"
 youn_name = "Nguruvilu"
+stage = "adolescente"
 texture = ExtResource("3_texture")
 mesh_scale = 0.2
 mesh_y_offset = -0.8

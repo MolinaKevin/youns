@@ -214,5 +214,12 @@
   "enemy.name.goblin": "Goblin",
   "enemy.name.agumon": "Agumon",
   "enemy.name.archer": "Archer",
-  "enemy.name.monzaemon": "Monzaemon"
+  "item.name.semilla_embrujada": "Enchanted Seed",
+  "item.name.brebaje_mapuche": "Mapuche Brew",
+  "enemy.name.monzaemon": "Monzaemon",
+  "youn.stage.bebe": "Baby",
+  "youn.stage.nino": "Child",
+  "youn.stage.adolescente": "Rookie",
+  "youn.stage.campeon": "Champion",
+  "youn.stage.ultimate": "Ultimate"
 }

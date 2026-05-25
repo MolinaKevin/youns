@@ -38,3 +38,7 @@ class_name PlayerSaveData
 
 @export var unlocked_recipe_ids: Array[String] = []
 @export var completed_recipe_ids: Array[String] = []
+
+@export var current_youn_path: String = ""
+@export var pending_evolution_path: String = ""
+@export var stage_entered_total_hour: float = 0.0

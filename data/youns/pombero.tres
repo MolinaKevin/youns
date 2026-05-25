@@ -8,12 +8,13 @@
 [ext_resource type="PackedScene" uid="uid://db5u2tfq1cebc" path="res://assets/youns/pombero/range.fbx" id="4_jx040"]
 [ext_resource type="PackedScene" uid="uid://d2ip2vgeao42i" path="res://assets/youns/pombero/run.fbx" id="5_3312o"]
 [ext_resource type="PackedScene" uid="uid://cxamcaaq168ko" path="res://assets/youns/pombero/walk.fbx" id="6_ytd22"]
-[ext_resource type="Resource" uid="uid://77c1dhq2qnsc" path="res://data/enemies/strategies/aggressive.tres" id="strategy"]
+[ext_resource type="Resource" path="res://data/enemies/strategies/aggressive.tres" id="strategy"]
 
 [resource]
 script = ExtResource("1_script")
 id = "pombero"
 youn_name = "Pombero"
+stage = "adolescente"
 texture = ExtResource("3_texture")
 mesh_scale = 0.2
 mesh_y_offset = -0.8

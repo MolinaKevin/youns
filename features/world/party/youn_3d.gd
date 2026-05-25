@@ -187,6 +187,9 @@ func _setup_emotion_bubble() -> void:
 	var icon_frames: SpriteFrames
 	if ResourceLoader.exists(icon_path):
 		icon_frames = load(icon_path)
+		if not icon_frames.has_animation("evolving"):
+			_patch_emotion_frames(icon_frames)
+			ResourceSaver.save(icon_frames, icon_path)
 	else:
 		icon_frames = _build_emotion_frames()
 		ResourceSaver.save(icon_frames, icon_path)
@@ -218,6 +221,21 @@ func _build_bubble_frames() -> SpriteFrames:
 	return sf
 
 
+func _patch_emotion_frames(sf: SpriteFrames) -> void:
+	const CELL_W   := 40
+	const CELL_H   := 58
+	const OFFSET_X := 15
+	var tex: Texture2D = load("res://assets/emotions/mixed.png")
+	sf.add_animation("evolving")
+	sf.set_animation_speed("evolving", 4.0)
+	sf.set_animation_loop("evolving", true)
+	for cell in [[4, 0], [5, 0], [6, 0]]:
+		var atlas := AtlasTexture.new()
+		atlas.atlas = tex
+		atlas.region = Rect2(OFFSET_X + cell[0] * CELL_W, cell[1] * CELL_H, CELL_W, CELL_H)
+		sf.add_frame("evolving", atlas)
+
+
 # SpriteFrames de los íconos de emoción
 func _build_emotion_frames() -> SpriteFrames:
 	const CELL_W   := 40
@@ -237,6 +255,7 @@ func _build_emotion_frames() -> SpriteFrames:
 		["bored",    6.0, true, [[2,1],[3,1]]],
 		["sad",      4.0, true, [[3,2],[4,2]]],
 		["sleep",    3.0, true, [[5,2],[6,2],[7,2]]],
+		["evolving", 4.0, true, [[4,0],[5,0],[6,0]]],  # placeholder: mismas frames que tired
 	]
 
 	var tex: Texture2D = load("res://assets/emotions/mixed.png")

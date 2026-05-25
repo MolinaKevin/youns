@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://data/items/item_data.gd" id="1_itemdata"]
+[ext_resource type="Script" path="res://data/items/item_effect_evolve.gd" id="2_evolve"]
+
+[sub_resource type="Resource" id="Effect_Evolve"]
+script = ExtResource("2_evolve")
+youn_data_path = "res://data/youns/nguruvilu.tres"
+
+[resource]
+script = ExtResource("1_itemdata")
+id = "brebaje_mapuche"
+name = "Brebaje Mapuche"
+description = "Una preparación ancestral de la tierra. El Youn que lo bebe evoluciona en Nguruvilu."
+effects = [SubResource("Effect_Evolve")]

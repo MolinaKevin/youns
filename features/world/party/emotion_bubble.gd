@@ -3,10 +3,12 @@ extends AnimatedSprite3D
 const DISPLAY_SECONDS  := 3.0
 const FLOAT_AMPLITUDE  := 0.05
 const FLOAT_PERIOD     := 1.6
-const CYCLE_PAUSE      := 10.0
+const CYCLE_PAUSE      := 5.0
 
 @export var debug_emotion      : String = ""
 @export var debug_random       : bool   = false
+
+
 @export var pixel_size_override: float  = 0.008
 @export var height_margin      : float  = 0.3
 
@@ -18,6 +20,7 @@ var _float_time    := 0.0
 var _base_y        := 0.0
 var _icon          : AnimatedSprite3D
 var _queue         : Array[String] = []
+var _frozen        := false
 
 
 func _ready() -> void:
@@ -78,12 +81,31 @@ func _process(delta: float) -> void:
 
 
 func _on_stat_changed() -> void:
+	var new_queue := EmotionDisplayQueue.build(
+		StatsManager.active_states, StatsManager.emotions_blocked, _icon.sprite_frames)
+	if new_queue.is_empty():
+		return
 	if _state == State.HIDDEN or _state == State.PAUSING:
 		_state = State.HIDDEN
 		_start_cycle()
+	elif _state == State.SHOWING and "evolving" in new_queue and _icon.animation != "evolving":
+		_queue = new_queue
+		_queue.erase("evolving")
+		show_emotion("evolving")
+
+
+func freeze() -> void:
+	_frozen = true
+	visible = false
+
+
+func unfreeze() -> void:
+	_frozen = false
 
 
 func show_emotion(state_name: String) -> void:
+	if _frozen:
+		return
 	if _icon.sprite_frames == null or not _icon.sprite_frames.has_animation(state_name):
 		push_warning("EmotionBubble: emoción '%s' no encontrada" % state_name)
 		return
@@ -122,15 +144,13 @@ func _on_pop_finished() -> void:
 
 
 func _start_cycle() -> void:
-	if StatsManager.emotions_blocked:
-		_state = State.HIDDEN
-		return
-	_queue.clear()
-	for emotion_name in StatsManager.active_states:
-		if _icon.sprite_frames != null and _icon.sprite_frames.has_animation(emotion_name):
-			_queue.append(emotion_name)
+	_queue = EmotionDisplayQueue.build(
+		StatsManager.active_states, StatsManager.emotions_blocked, _icon.sprite_frames)
 	if not _queue.is_empty():
 		show_emotion(_queue.pop_front())
+	else:
+		_state = State.PAUSING
+		_pause_timer = CYCLE_PAUSE
 
 
 func get_active_emotions() -> Array[String]:

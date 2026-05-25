@@ -1,13 +1,11 @@
-[gd_resource type="Resource" script_class="AiPhase" format=3]
+[gd_resource type="Resource" script_class="AiPhase" format=3 uid="uid://dykwvwt3t8kje"]
 
-[ext_resource type="Script" path="res://data/enemies/ai_condition.gd" id="1_Cond"]
-[ext_resource type="Script" path="res://data/enemies/ai_action.gd" id="2_Act"]
-[ext_resource type="Script" path="res://data/enemies/ai_phase.gd" id="3_Phase"]
+[ext_resource type="Script" uid="uid://41psoxaibt82" path="res://data/enemies/ai_condition.gd" id="1_Cond"]
+[ext_resource type="Script" uid="uid://dj0v604tswfky" path="res://data/enemies/ai_action.gd" id="2_Act"]
+[ext_resource type="Script" uid="uid://oy3cpg0ncoik" path="res://data/enemies/ai_phase.gd" id="3_Phase"]
 
 [sub_resource type="Resource" id="Cond_Always"]
 script = ExtResource("1_Cond")
-type = "always"
-range = 12.0
 
 [sub_resource type="Resource" id="Action_MoveAway"]
 script = ExtResource("2_Act")

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" path="res://data/items/item_data.gd" id="1_itemdata"]
+[ext_resource type="Script" path="res://data/items/item_effect_evolve.gd" id="2_evolve"]
+
+[sub_resource type="Resource" id="Effect_Evolve"]
+script = ExtResource("2_evolve")
+youn_data_path = "res://data/youns/pombero.tres"
+
+[resource]
+script = ExtResource("1_itemdata")
+id = "semilla_embrujada"
+name = "Semilla Embrujada"
+description = "Una semilla cargada de magia oscura. El Youn que la consume evoluciona en Pombero."
+effects = [SubResource("Effect_Evolve")]

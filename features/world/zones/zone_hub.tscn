@@ -246,6 +246,14 @@ text = "[DEBUG] Cansador"
 layout_mode = 2
 text = "[DEBUG] Vaciador de Estómago"
 
+[node name="SemillaEmbrujadaButton" type="Button" parent="HubNPCDialog/ChoicePopup/Margin/VBox" unique_id=200000025]
+layout_mode = 2
+text = "Semilla Embrujada"
+
+[node name="BrebajeMapucheButton" type="Button" parent="HubNPCDialog/ChoicePopup/Margin/VBox" unique_id=200000026]
+layout_mode = 2
+text = "Brebaje Mapuche"
+
 [node name="DemoDialog" type="CanvasLayer" parent="." unique_id=1644363126]
 visible = false
 

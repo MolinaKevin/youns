@@ -1,6 +1,7 @@
 extends Node3D
 
-const SleepOverlay := preload("res://features/world/ui/sleep_overlay.gd")
+const SleepOverlay    := preload("res://features/world/ui/sleep_overlay.gd")
+const EvolutionScene  := preload("res://features/world/evolution/evolution_scene.tscn")
 
 @onready var menu: Control = $MenuLayer/MainMenu
 @onready var pause_overlay: ColorRect = $MenuLayer/PauseOverlay
@@ -77,8 +78,10 @@ func _ready() -> void:
 	GameState.clock_changed.connect(_check_sleep_penalty)
 	GameState.clock_changed.connect(_check_end_of_night)
 	StatsManager.bathroom_accident.connect(_on_bathroom_accident)
+	StatsManager.evolution_triggered.connect(_on_evolution_triggered)
 	_setup_screen_fx()
 	_restore_after_combat()
+	_restore_pending_evolution()
 	LocalizationState.language_changed.connect(_refresh_intro_language)
 	menu.sleep_requested.connect(_on_sleep_requested)
 	_setup_intro()
@@ -299,6 +302,8 @@ func _exit_tree() -> void:
 		GameState.clock_changed.disconnect(_check_end_of_night)
 	if StatsManager.bathroom_accident.is_connected(_on_bathroom_accident):
 		StatsManager.bathroom_accident.disconnect(_on_bathroom_accident)
+	if StatsManager.evolution_triggered.is_connected(_on_evolution_triggered):
+		StatsManager.evolution_triggered.disconnect(_on_evolution_triggered)
 	PauseMenu.enabled = false
 
 func _on_sleep_requested() -> void:
@@ -369,3 +374,80 @@ func _on_bathroom_accident() -> void:
 	pass # TODO: spawnear objeto visual de caca en la posición del Youn
 	# Al agregar la animación: StatsManager.block_emotions() al inicio,
 	# StatsManager.unblock_emotions() en el callback de fin de animación.
+
+
+func _restore_pending_evolution() -> void:
+	if not "evolving" in StatsManager.active_states:
+		return
+	var target_path: String = StatsManager.active_states["evolving"].get("target_youn_path", "")
+	if target_path.is_empty():
+		return
+	var ps := GameState.player_save
+	var from_data: YounData = null
+	if ps and not ps.current_youn_path.is_empty() and ResourceLoader.exists(ps.current_youn_path):
+		from_data = load(ps.current_youn_path) as YounData
+	var to_data: YounData = null
+	if ResourceLoader.exists(target_path):
+		to_data = load(target_path) as YounData
+	call_deferred("_on_evolution_triggered", from_data, to_data)
+
+
+func _on_evolution_triggered(from_data: YounData, to_data: YounData) -> void:
+	await get_tree().create_timer(4.0).timeout
+	var cam_transform := get_viewport().get_camera_3d().global_transform
+	PartyManager.camera_rig.enabled = false
+	PartyManager.player.set_physics_process(false)
+	PartyManager.youn.set_physics_process(false)
+	GlobalHUD.set_clock_paused(true)
+
+	var evo := EvolutionScene.instantiate()
+	add_child(evo)
+	evo.global_position = PartyManager.youn.global_position
+
+	var saved_env := _world_env.environment
+	evo.approach_finished.connect(func():
+		_transition_t = 1.0
+		ZoneManager.set_world_visible(false)
+		PartyManager.player.visible = false
+		var bubble = PartyManager.youn.get_node_or_null("EmotionBubble")
+		if bubble:
+			bubble.freeze()
+		GlobalHUD.set_clock_visible(false)
+		GlobalHUD.set_youns_status_visible(false)
+		_sun.light_energy = 4.0
+		_sun.light_color = Color(1.0, 0.95, 0.9)
+		_sun.shadow_enabled = false
+		_fill.light_energy = 2.5
+		_fill.light_color = Color(0.85, 0.9, 1.0)
+		var black_env := Environment.new()
+		black_env.background_mode = Environment.BG_COLOR
+		black_env.background_color = _world_env.environment.background_color
+		black_env.fog_enabled = false
+		black_env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+		black_env.ambient_light_color = Color(1.0, 1.0, 1.0)
+		black_env.ambient_light_energy = 1.0
+		_world_env.environment = black_env
+		var bg_tw := create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+		bg_tw.tween_property(black_env, "background_color", Color.BLACK, 0.5)
+	)
+	evo.finished.connect(func() -> void:
+		_world_env.environment = saved_env
+		_apply_kf(_to_kf)
+		StatsManager.complete_evolution()
+		if to_data and PartyManager.youn.has_method("load_youn"):
+			PartyManager.youn.load_youn(to_data)
+		evo.queue_free()
+		ZoneManager.set_world_visible(true)
+		PartyManager.player.visible = true
+		PartyManager.set_party_visible(true)
+		PartyManager.camera_rig.enabled = true
+		PartyManager.player.set_physics_process(true)
+		PartyManager.youn.set_physics_process(true)
+		GlobalHUD.set_clock_paused(false)
+		GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
+		GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
+		var bubble = PartyManager.youn.get_node_or_null("EmotionBubble")
+		if bubble:
+			bubble.unfreeze()
+	)
+	evo.start(from_data, to_data, cam_transform)

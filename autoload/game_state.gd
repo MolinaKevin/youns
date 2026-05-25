@@ -4,7 +4,7 @@ signal clock_changed(current_hour: float, current_day: int)
 signal twenty_min_ticked
 
 const HOURS_PER_DAY := 24.0
-const DAY_DURATION_MINUTES := 24.0
+const DAY_DURATION_MINUTES := 12.0
 const DAY_DURATION_SECONDS := DAY_DURATION_MINUTES * 60.0
 
 const SAVE_PATH := "user://player_save.tres"

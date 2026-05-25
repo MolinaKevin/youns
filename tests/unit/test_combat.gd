@@ -193,10 +193,10 @@ func test_ai_score_hp_exactamente_30_porciento_no_aplica_multiplicador() -> void
 
 # ── AI — selección de acción ──────────────────────────────────────────────────
 
-func _make_condition(type: String, range: float = 12.0) -> AiCondition:
+func _make_condition(type: String, check_range: float = 12.0) -> AiCondition:
 	var c := AiCondition.new()
 	c.type = type
-	c.range = range
+	c.check_range = check_range
 	return c
 
 

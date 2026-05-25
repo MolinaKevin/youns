@@ -108,12 +108,12 @@ func _eval_condition(cond: AiCondition) -> bool:
 		"always":
 			return true
 		"player_adjacent":
-			return dist <= cond.range
+			return dist <= cond.check_range
 		"player_in_range":
-			return dist <= cond.range \
+			return dist <= cond.check_range \
 				and map_area.has_line_of_sight(map_area.enemy_pos, map_area.player_pos)
 		"player_out_of_range":
-			return dist > cond.range \
+			return dist > cond.check_range \
 				or not map_area.has_line_of_sight(map_area.enemy_pos, map_area.player_pos)
 		"player_far":
 			return dist > 15.0

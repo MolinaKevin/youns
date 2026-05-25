@@ -3,6 +3,8 @@ extends Resource
 
 @export var id: String = ""
 @export var youn_name: String = ""
+@export var stage: String = "bebe"
+@export var is_wildcard: bool = false
 
 @export var texture: Texture2D
 @export var mesh: Mesh
@@ -64,3 +66,14 @@ extends Resource
 @export_range(0.1, 3.0, 0.05) var mult_felicidad: float = 1.0
 @export_range(0.1, 3.0, 0.05) var mult_aburrimiento: float = 1.0
 @export_range(0.1, 3.0, 0.05) var mult_ganas_bano: float = 1.0
+
+
+static func get_active_stage(save: PlayerSaveData) -> String:
+	if save == null or save.current_youn_path.is_empty():
+		return "bebe"
+	if not ResourceLoader.exists(save.current_youn_path):
+		return "bebe"
+	var data := load(save.current_youn_path) as YounData
+	if data == null:
+		return "bebe"
+	return data.stage

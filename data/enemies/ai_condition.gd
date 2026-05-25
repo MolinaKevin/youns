@@ -13,4 +13,4 @@ extends Resource
 ##   player_hidden     — tenía LOS antes pero ahora no
 
 @export var type: String = "always"
-@export var range: float = 12.0
+@export var check_range: float = 12.0

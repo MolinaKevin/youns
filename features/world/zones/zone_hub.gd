@@ -32,6 +32,8 @@ func _ready() -> void:
 		$HubNPCDialog/ChoicePopup/Margin/VBox/Estresor,
 		$HubNPCDialog/ChoicePopup/Margin/VBox/Cansador,
 		$HubNPCDialog/ChoicePopup/Margin/VBox/VaciadorEstomago,
+		$HubNPCDialog/ChoicePopup/Margin/VBox/SemillaEmbrujadaButton,
+		$HubNPCDialog/ChoicePopup/Margin/VBox/BrebajeMapucheButton,
 	]
 	_hub_options[0].pressed.connect(_on_hub_option_antidote)
 	_hub_options[1].pressed.connect(_on_hub_option_antistress)
@@ -41,6 +43,8 @@ func _ready() -> void:
 	_hub_options[5].pressed.connect(_on_hub_option_estresor)
 	_hub_options[6].pressed.connect(_on_hub_option_cansador)
 	_hub_options[7].pressed.connect(_on_hub_option_vaciador)
+	_hub_options[8].pressed.connect(_on_hub_option_semilla_embrujada)
+	_hub_options[9].pressed.connect(_on_hub_option_brebaje_mapuche)
 	$Toilet/ToiletArea.body_entered.connect(_on_toilet_area_entered)
 	$Toilet/ToiletArea.body_exited.connect(_on_toilet_area_exited)
 	LaboratoryState.recipe_completed.connect(_on_recipe_completed)
@@ -212,6 +216,14 @@ func _on_hub_option_vaciador() -> void:
 	_give_item("vaciador_estomago", "Vaciador de Estómago", "res://assets/icons/icon_4.png", "res://data/items/vaciador_estomago.tres")
 	_set_hub_npc_dialog_visible(false)
 
+func _on_hub_option_semilla_embrujada() -> void:
+	_give_item("semilla_embrujada", LocalizationState.item_name("semilla_embrujada", "Semilla Embrujada"), "res://assets/icons/icon_1.png", "res://data/items/semilla_embrujada.tres")
+	_set_hub_npc_dialog_visible(false)
+
+func _on_hub_option_brebaje_mapuche() -> void:
+	_give_item("brebaje_mapuche", LocalizationState.item_name("brebaje_mapuche", "Brebaje Mapuche"), "res://assets/icons/icon_1.png", "res://data/items/brebaje_mapuche.tres")
+	_set_hub_npc_dialog_visible(false)
+
 func _give_item(id: String, display_name: String, icon: String, data_path: String) -> void:
 	var ps := GameState.player_save
 	if ps == null:
@@ -284,6 +296,8 @@ func _apply_localized_text(_language: String = "") -> void:
 	_hub_options[1].text = LocalizationState.t("world.hub.npc.antistress")
 	_hub_options[2].text = LocalizationState.t("world.hub.npc.food")
 	_hub_options[3].text = LocalizationState.t("world.hub.npc.rest")
+	_hub_options[8].text = LocalizationState.item_name("semilla_embrujada", "Semilla Embrujada")
+	_hub_options[9].text = LocalizationState.item_name("brebaje_mapuche", "Brebaje Mapuche")
 	$DemoMonzaemon/Prompt.text = LocalizationState.t("world.prompt.talk")
 	$DemoDialog/Panel/Margin/Text.text = LocalizationState.t("world.demo.monzaemon")
 

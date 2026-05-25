@@ -2,6 +2,7 @@ extends Node
 
 signal stat_changed
 signal bathroom_accident
+signal evolution_triggered(from_data: YounData, to_data: YounData)
 
 const STATS_DIR := "res://data/stats/"
 const RULES_DIR := "res://data/emotions/rules/"
@@ -254,6 +255,49 @@ func on_wake_up(sleep_duration_hours: float) -> void:
 func check_status() -> void:
 	check_emotions()
 	_evaluate_emotion_rules()
+	check_evolution()
+
+func check_evolution() -> void:
+	var ps := GameState.player_save
+	if ps == null or ps.current_youn_path.is_empty():
+		return
+	if not ResourceLoader.exists(ps.current_youn_path):
+		return
+	var youn_data := load(ps.current_youn_path) as YounData
+	var target := EvolutionChecker.try_evolve(ps, youn_data)
+	if target.is_empty() or target == EvolutionChecker.REINCARNATE:
+		return
+	start_evolution(target)
+
+func start_evolution(to_path: String) -> void:
+	var ps := GameState.player_save
+	if ps == null or to_path.is_empty():
+		return
+	var from_data: YounData = null
+	if not ps.current_youn_path.is_empty() and ResourceLoader.exists(ps.current_youn_path):
+		from_data = load(ps.current_youn_path) as YounData
+	var to_data: YounData = null
+	if ResourceLoader.exists(to_path):
+		to_data = load(to_path) as YounData
+	ps.pending_evolution_path = to_path
+	active_states.clear()
+	active_states["evolving"] = {
+		"hour": GameState.get_total_hours(),
+		"stat_value": 100.0,
+		"target_youn_path": to_path,
+	}
+	block_emotions()
+	evolution_triggered.emit(from_data, to_data)
+
+func complete_evolution() -> void:
+	var ps := GameState.player_save
+	if ps == null or ps.pending_evolution_path.is_empty():
+		return
+	ps.current_youn_path = ps.pending_evolution_path
+	ps.stage_entered_total_hour = GameState.get_total_hours()
+	ps.pending_evolution_path = ""
+	active_states.erase("evolving")
+	unblock_emotions()
 
 func check_emotions() -> void:
 	var total_h := GameState.get_total_hours()
