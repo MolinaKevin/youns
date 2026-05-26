@@ -18,6 +18,9 @@ func _load_cards() -> void:
 		preload("res://data/cards/grenade.tres"),
 		preload("res://data/cards/bear_trap.tres"),
 		preload("res://data/cards/spike_trap.tres"),
+		preload("res://data/cards/salto_rupestre.tres"),
+		preload("res://data/cards/envion.tres"),
+		preload("res://data/cards/charco.tres"),
 	]
 
 	for card in all_cards:

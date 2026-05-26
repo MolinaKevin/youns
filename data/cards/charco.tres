@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CardData" format=3 uid="uid://charco00001"]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_charco"]
+
+[resource]
+script = ExtResource("1_charco")
+id = "charco"
+name = "Charco"
+description = "Lanzá un charco de agua en el mapa. Quien pase por encima queda mojado y se mueve más lento por 3 turnos."
+cost = 1
+card_type = "puddle"
+card_range = 2
+throw_range = 7
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"

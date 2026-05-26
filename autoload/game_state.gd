@@ -31,7 +31,7 @@ func _ready() -> void:
 	player_save = PlayerSaveData.new()
 
 	# Mock para probar
-	player_save.owned_card_ids = ["step", "dash", "strike", "slash", "block", "meteor", "arrow", "snipe", "grenade"]
+	player_save.owned_card_ids = ["step", "dash", "strike", "slash", "block", "meteor", "arrow", "snipe", "grenade", "salto_rupestre", "envion", "charco"]
 	player_save.equipped_deck_ids = [
 		"step", "step", "step",
 		"dash", "dash",
@@ -44,10 +44,14 @@ func _ready() -> void:
 		"grenade", "grenade",
 		"bear_trap", "bear_trap",
 		"spike_trap", "spike_trap",
+		"salto_rupestre", "salto_rupestre",
+		"envion", "envion",
+		"charco", "charco",
 	]
 	player_save.inventory_slots = 20
 	player_save.inventory_items = []
 	player_save.gold = 100
+	pending_wild_youn_data = load("res://data/youns/pombero.tres")
 
 	_last_total_twenty_min_tick = int(get_total_hours() * 3.0)
 

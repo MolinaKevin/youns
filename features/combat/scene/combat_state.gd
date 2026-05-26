@@ -10,6 +10,9 @@ var enemy_hp := 35
 var enemy_max_hp := 35
 var enemy_block := 0
 
+var player_wet_turns: int = 0
+var enemy_wet_turns:  int = 0
+
 var hand: Array = []
 var draw_pile: Array = []
 var discard_pile: Array = []

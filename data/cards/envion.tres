@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CardData" format=3 uid="uid://bn7xqe2mpr4k1"]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_envion"]
+
+[resource]
+script = ExtResource("1_envion")
+id = "envion"
+name = "Envión"
+description = "Agarrá al enemigo cercano y empujalo en línea recta. Activa las trampas que cruce."
+cost = 1
+card_type = "push"
+card_range = 4
+throw_range = 7
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"

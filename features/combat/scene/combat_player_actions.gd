@@ -26,6 +26,17 @@ var pending_grenade_index := -1
 var pending_trap_index    := -1
 var pending_self_index    := -1
 
+var pending_jump_index:    int     = -1
+var pending_jump_phase:    int     = 0
+var pending_jump_rock_pos: Vector2 = Vector2(-1.0, -1.0)
+var pending_jump_card:     CardData = null
+
+var pending_push_index: int      = -1
+var pending_push_phase: int      = 0
+var pending_push_card:  CardData = null
+
+var pending_puddle_index: int = -1
+
 var pending_cell := Vector2(-1.0, -1.0)
 
 signal log_requested(text: String)
@@ -65,7 +76,10 @@ func _has_pending_selection() -> bool:
 		pending_move_started or
 		pending_trap_index >= 0 or
 		pending_grenade_index >= 0 or
-		pending_self_index >= 0
+		pending_self_index >= 0 or
+		pending_jump_index >= 0 or
+		pending_push_index >= 0 or
+		pending_puddle_index >= 0
 	)
 
 func _on_move_mode_toggled(pressed: bool) -> void:
@@ -79,11 +93,15 @@ func play_as_move(index: int) -> void:
 		log_requested.emit("Not enough energy.")
 		return
 	card_preview_show_requested.emit(card)
+	var effective_range := MOVE_MODE_RANGE
+	if state.player_wet_turns > 0:
+		effective_range = maxi(1, MOVE_MODE_RANGE - 1)
+		log_requested.emit("Estás mojado: movimiento reducido a %d." % effective_range)
 	pending_move_section = "hand"
 	pending_move_index = index
-	pending_move_range = MOVE_MODE_RANGE
-	map_area.start_move_selection(MOVE_MODE_RANGE)
-	log_requested.emit("Move mode: choose a tile up to %d spaces away." % MOVE_MODE_RANGE)
+	pending_move_range = effective_range
+	map_area.start_move_selection(effective_range)
+	log_requested.emit("Move mode: choose a tile up to %d spaces away." % effective_range)
 
 func play_card(index: int) -> void:
 	var card = state.hand[index]
@@ -111,6 +129,12 @@ func play_card(index: int) -> void:
 			start_trap_selection(index, card, false)
 		"block":
 			start_self_selection(index, card)
+		"rock_jump":
+			start_rock_jump_selection(index, card)
+		"push":
+			start_push_selection(index, card)
+		"puddle":
+			start_puddle_selection(index, card)
 
 # ── Selection starters ────────────────────────────────────────────────────────
 
@@ -118,11 +142,15 @@ func start_move_selection(section_name: String, index: int, move_range: int, ene
 	if energy_cost > state.player_energy:
 		log_requested.emit("Not enough energy for %s." % card_name)
 		return
+	var effective_range := move_range
+	if state.player_wet_turns > 0:
+		effective_range = maxi(1, move_range - 1)
+		log_requested.emit("Estás mojado: movimiento reducido a %d." % effective_range)
 	pending_move_section = section_name
 	pending_move_index = index
-	pending_move_range = move_range
-	map_area.start_move_selection(move_range)
-	log_requested.emit("Selected %s. Choose a tile up to %d spaces away." % [card_name, move_range])
+	pending_move_range = effective_range
+	map_area.start_move_selection(effective_range)
+	log_requested.emit("Selected %s. Choose a tile up to %d spaces away." % [card_name, effective_range])
 
 func start_range_attack_selection(index: int, card: CardData, range_override: int = 0) -> void:
 	pending_attack_section = "hand"
@@ -157,6 +185,39 @@ func start_self_selection(index: int, card: CardData) -> void:
 	pending_self_index = index
 	map_area.start_self_highlight()
 
+func start_push_selection(index: int, card: CardData) -> void:
+	if card.cost > state.player_energy:
+		log_requested.emit("No tenés energía para %s." % card.name)
+		return
+	pending_push_index = index
+	pending_push_phase = 0
+	pending_push_card  = card
+	map_area.start_push_enemy_selection(float(card.card_range))
+	log_requested.emit("Seleccioná al enemigo para agarrarlo.")
+
+func start_puddle_selection(index: int, card: CardData) -> void:
+	if card.cost > state.player_energy:
+		log_requested.emit("No tenés energía para %s." % card.name)
+		return
+	pending_puddle_index = index
+	map_area.start_puddle_placement(float(card.throw_range))
+	log_requested.emit("Elegí dónde lanzar el charco (rango %d)." % card.throw_range)
+
+func start_rock_jump_selection(index: int, card: CardData) -> void:
+	if card.cost > state.player_energy:
+		log_requested.emit("No tenés energía para %s." % card.name)
+		return
+	var rocks: Array[Dictionary] = map_area.get_rocks_in_range(map_area.player_pos, float(card.card_range))
+	if rocks.is_empty():
+		log_requested.emit("%s: no hay piedras al alcance." % card.name)
+		card_preview_hide_requested.emit()
+		return
+	pending_jump_index = index
+	pending_jump_phase = 0
+	pending_jump_card  = card
+	map_area.start_rock_jump_selection(float(card.card_range))
+	log_requested.emit("Seleccioná una piedra dentro de %d espacios." % card.card_range)
+
 # ── Map tile selected & confirm popup ─────────────────────────────────────────
 
 func _on_position_selected(pos: Vector2) -> void:
@@ -166,9 +227,17 @@ func _on_position_selected(pos: Vector2) -> void:
 		pending_attack_index >= 0 or
 		pending_move_index >= 0 or
 		pending_move_started or
-		pending_self_index >= 0
+		pending_self_index >= 0 or
+		pending_jump_index >= 0 or
+		pending_push_index >= 0 or
+		pending_puddle_index >= 0
 	)
 	if not has_pending:
+		return
+
+	if pending_puddle_index >= 0:
+		pending_cell = pos
+		confirm_popup_show_requested.emit(false)
 		return
 
 	if pending_self_index >= 0:
@@ -176,17 +245,54 @@ func _on_position_selected(pos: Vector2) -> void:
 			_confirm_self_action()
 		return
 
+	if pending_push_index >= 0:
+		if pending_push_phase == 0:
+			if not map_area.is_enemy_in_attack_range(float(pending_push_card.card_range)):
+				log_requested.emit("El enemigo está demasiado lejos para agarrarlo.")
+				return
+			if not map_area.is_click_on_enemy(pos):
+				return
+			pending_push_phase = 1
+			map_area.start_push_cone(float(pending_push_card.throw_range))
+			log_requested.emit("Elegí hacia dónde empujar al enemigo.")
+			return
+		else:
+			if not map_area.is_pos_in_push_cone(pos, float(pending_push_card.throw_range)):
+				return
+			pending_cell = pos
+			confirm_popup_show_requested.emit(false)
+			return
+
+	if pending_jump_index >= 0:
+		if pending_jump_phase == 0:
+			var rock: Dictionary = map_area.get_rock_near(pos)
+			if rock.is_empty():
+				return
+			pending_jump_rock_pos = rock["pos"]
+			pending_jump_phase = 1
+			map_area.start_jump_landing_selection(pending_jump_rock_pos, float(pending_jump_card.throw_range))
+			log_requested.emit("Piedra en (%.1f, %.1f). Elegí dónde aterrizar." % [pending_jump_rock_pos.x, pending_jump_rock_pos.y])
+			return
+		else:
+			if pending_jump_rock_pos.distance_to(pos) > float(pending_jump_card.throw_range):
+				return
+			if map_area._tile_in_obstacle(pos, 0):
+				return
+			pending_cell = pos
+			confirm_popup_show_requested.emit(false)
+			return
+
 	pending_cell = pos
 	var is_move_pending := pending_move_index >= 0 or pending_move_started
 	if is_move_pending:
 		var player: Vector2 = map_area.get("player_pos")
 		if player.distance_to(pos) > pending_move_range:
 			return
-		if map_area._tile_in_obstacle(pos):
+		if map_area._tile_in_obstacle(pos, map_area.player_elevation):
 			return
-		if not map_area.has_line_of_sight(player, pos):
+		if map_area.player_elevation == 0 and not map_area.has_line_of_sight(player, pos):
 			return
-		var cost: float = map_area.compute_path(player, pos)
+		var cost: float = map_area.compute_path(player, pos, map_area.player_elevation)
 		if cost > pending_move_range + 1.5:
 			return
 		map_area.show_path_preview(player, pos)
@@ -237,17 +343,34 @@ func _execute_tile_action(cell: Vector2) -> void:
 		_confirm_range_attack()
 		return
 
+	if pending_puddle_index >= 0:
+		_execute_puddle(cell)
+		return
+
+	if pending_push_index >= 0:
+		_execute_push(cell)
+		return
+
+	if pending_jump_index >= 0:
+		_execute_jump_attack(cell)
+		return
+
 	if pending_move_index < 0 and not pending_move_started:
 		return
 
 	if not map_area.has_method("try_move_player_to"):
 		return
 
+	var move_from: Vector2 = map_area.player_pos
 	var dist_moved: float = map_area.get_path_cost(cell)
 	var moved: bool = map_area.try_move_player_to(cell, pending_move_range)
 	if not moved:
 		log_requested.emit("Invalid move.")
 		return
+
+	if map_area.is_segment_in_puddle(move_from, map_area.player_pos):
+		state.player_wet_turns = 3
+		log_requested.emit("¡Pisaste el charco! Estás mojado por 3 turnos.")
 
 	var trap_dmg: int = map_area.check_and_trigger_traps_along_path(map_area.player_pos, cell)
 	if trap_dmg > 0:
@@ -280,6 +403,104 @@ func _execute_tile_action(cell: Vector2) -> void:
 			move_mode_button_reset_requested.emit()
 		hand_refresh_requested.emit()
 		ui_update_requested.emit()
+
+func _execute_push(direction_target: Vector2) -> void:
+	var card: CardData = state.hand[pending_push_index]
+	var idx := pending_push_index
+	var push_from: Vector2 = map_area.enemy_pos
+
+	state.player_energy -= card.cost
+
+	var landing: Vector2 = map_area.calculate_push_landing(direction_target, float(card.throw_range))
+	map_area.clear_push_selection()
+
+	# 1. Animación de ataque del jugador
+	map_area.play_player_anim("attack")
+	await map_area.player_anim_finished
+	map_area.play_player_anim("idle")
+
+	# 2. El enemigo vuela
+	map_area.push_enemy_to(landing)
+	await map_area.enemy_reached_target
+
+	# 3. Animación de daño del enemigo
+	map_area.play_enemy_anim("damage")
+	await map_area.enemy_anim_finished
+	if state.enemy_hp > 0:
+		map_area.play_enemy_anim("idle")
+
+	state.discard_pile.append(state.hand[idx])
+	state.hand.remove_at(idx)
+	pending_push_index = -1
+	pending_push_phase = 0
+	pending_push_card  = null
+	card_preview_hide_requested.emit()
+
+	var fx: Dictionary = map_area.trigger_zone_effects_along(push_from, landing)
+	if fx["wet"]:
+		state.enemy_wet_turns = 3
+		log_requested.emit("¡%s! El enemigo pasó por el charco. ¡Está mojado!" % card.name)
+	if fx["trap_damage"] > 0:
+		log_requested.emit("¡%s! El enemigo pasó por una trampa — %d de daño!" % [card.name, fx["trap_damage"]])
+		await _deal_damage_to_enemy.call(fx["trap_damage"])
+	if not fx["wet"] and fx["trap_damage"] == 0:
+		log_requested.emit("%s: empujaste al enemigo." % card.name)
+
+	hand_refresh_requested.emit()
+	ui_update_requested.emit()
+	_check_combat_end.call()
+
+func _execute_puddle(cell: Vector2) -> void:
+	var card: CardData = state.hand[pending_puddle_index]
+	var idx := pending_puddle_index
+	state.player_energy -= card.cost
+	map_area.clear_puddle_placement()
+	map_area.place_puddle(cell, card.card_range)
+	state.discard_pile.append(state.hand[idx])
+	state.hand.remove_at(idx)
+	pending_puddle_index = -1
+	card_preview_hide_requested.emit()
+	log_requested.emit("%s: charco colocado." % card.name)
+	hand_refresh_requested.emit()
+	ui_update_requested.emit()
+
+func _execute_jump_attack(landing_pos: Vector2) -> void:
+	var card: CardData = state.hand[pending_jump_index]
+	var idx := pending_jump_index
+
+	state.player_energy -= card.cost
+
+	var sep: Vector2 = landing_pos - map_area.enemy_pos
+	if sep.length() < map_area.MIN_SEPARATION:
+		landing_pos = map_area.enemy_pos + (sep.normalized() if sep.length() > 0.001 else Vector2(map_area.MIN_SEPARATION, 0.0)) * map_area.MIN_SEPARATION
+
+	map_area.player_pos       = landing_pos
+	map_area.player_elevation = map_area._elevation_at(landing_pos)
+	map_area._update_actor_positions()
+
+	var hit_enemy: bool = map_area.is_enemy_near_pos(landing_pos, 1.5)
+
+	map_area.clear_rock_jump_selection()
+	state.discard_pile.append(state.hand[idx])
+	state.hand.remove_at(idx)
+	_clear_pending_jump()
+	card_preview_hide_requested.emit()
+
+	if hit_enemy:
+		log_requested.emit("¡%s! Caíste sobre el enemigo — %d de daño!" % [card.name, card.damage])
+		await _deal_damage_to_enemy.call(card.damage)
+	else:
+		log_requested.emit("%s: aterrizaste en (%.1f, %.1f)." % [card.name, landing_pos.x, landing_pos.y])
+
+	hand_refresh_requested.emit()
+	ui_update_requested.emit()
+	_check_combat_end.call()
+
+func _clear_pending_jump() -> void:
+	pending_jump_index    = -1
+	pending_jump_phase    = 0
+	pending_jump_rock_pos = Vector2(-1.0, -1.0)
+	pending_jump_card     = null
 
 func _place_trap(cell: Vector2) -> void:
 	var card: CardData = state.hand[pending_trap_index]
@@ -414,6 +635,17 @@ func cancel_selection() -> void:
 	if pending_self_index >= 0:
 		pending_self_index = -1
 		map_area.clear_self_highlight()
+	if pending_push_index >= 0:
+		map_area.clear_push_selection()
+		pending_push_index = -1
+		pending_push_phase = 0
+		pending_push_card  = null
+	if pending_puddle_index >= 0:
+		map_area.clear_puddle_placement()
+		pending_puddle_index = -1
+	if pending_jump_index >= 0:
+		map_area.clear_rock_jump_selection()
+		_clear_pending_jump()
 	if pending_move_index >= 0:
 		clear_pending_move()
 	card_preview_hide_requested.emit()
@@ -430,5 +662,16 @@ func reset() -> void:
 	map_area.clear_grenade_preview()
 	map_area.clear_trap_placement()
 	map_area.clear_self_highlight()
+	if pending_push_index >= 0:
+		map_area.clear_push_selection()
+	pending_push_index = -1
+	pending_push_phase = 0
+	pending_push_card  = null
+	if pending_puddle_index >= 0:
+		map_area.clear_puddle_placement()
+	pending_puddle_index = -1
+	if pending_jump_index >= 0:
+		map_area.clear_rock_jump_selection()
+	_clear_pending_jump()
 	move_mode_button_reset_requested.emit()
 	move_mode = false

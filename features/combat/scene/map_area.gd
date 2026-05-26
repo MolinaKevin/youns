@@ -3,14 +3,15 @@ extends Node3D
 signal position_selected(pos: Vector2)
 signal player_anim_finished
 signal enemy_anim_finished
+signal enemy_reached_target
 
 # ── World bounds ──────────────────────────────────────────────────────────────
-const WORLD_W := 60.0
-const WORLD_H := 60.0
+const WORLD_W := 30.0
+const WORLD_H := 30.0
 
 # ── Positions (XZ world space) ────────────────────────────────────────────────
-var player_pos := Vector2(5.0, 55.0)
-var enemy_pos  := Vector2(55.0, 5.0)
+var player_pos := Vector2(3.0, 27.0)
+var enemy_pos  := Vector2(27.0, 3.0)
 
 # ── Selection state ───────────────────────────────────────────────────────────
 var selected_move_range   := 0.0
@@ -20,21 +21,40 @@ var grenade_aoe_radius    := 0.0
 var selected_trap_range   := 0.0
 var trap_zones: Array = []
 var _trap_visuals: Array = []
+var _enemy_move_pending := false
+var puddle_zones: Array[Dictionary] = []
+var _puddle_visuals: Array[MeshInstance3D] = []
 var enemy_hp := 35
+
+# ── Elevation ─────────────────────────────────────────────────────────────────
+# 0 = suelo, 1 = encima de una plataforma
+var player_elevation: int = 0
+var enemy_elevation:  int = 0
 
 # ── Pathfinding ───────────────────────────────────────────────────────────────
 const PATH_CELL := 0.5
 var _last_path: Array[Vector2] = []
 var _last_path_cost: float = 0.0
 
-# ── Obstacles (círculos en espacio mundo) ─────────────────────────────────────
+# ── Obstacles ─────────────────────────────────────────────────────────────────
+# type "solid"  → bloquea movimiento Y línea de visión
+# type "rock"   → bloquea movimiento, LOS pasa a través (piedra pequeña)
+# type "bridge" → movimiento permitido por debajo, LOS bloqueada (puente)
 var solid_obstacles := [
-	{"pos": Vector2(29.5, 29.5), "radius": 2.0},
-	{"pos": Vector2(12.0, 20.0), "radius": 1.5},
-	{"pos": Vector2(47.0, 18.0), "radius": 1.5},
-	{"pos": Vector2(20.0, 42.0), "radius": 3.0, "box": Vector2(6.0, 6.0)},
-	{"pos": Vector2(48.0, 44.0), "radius": 1.5},
+	{"pos": Vector2(14.0, 19.0), "radius": 1.5,                            "type": "solid"},
+	{"pos": Vector2(21.0,  9.0), "box": Vector2(3.0, 2.5),                 "type": "solid"},
+	{"pos": Vector2(7.0,  14.0), "radius": 0.55,                           "type": "rock"},
+	{"pos": Vector2(15.0, 15.0), "radius": 0.5,                            "type": "rock"},
+	{"pos": Vector2(23.0, 17.0), "radius": 0.55,                           "type": "rock"},
+	{"pos": Vector2(13.0, 24.0), "box": Vector2(5.0, 2.0),                 "type": "bridge"},
+	{"pos": Vector2(17.0,  6.0), "box": Vector2(2.0, 5.0),                 "type": "bridge"},
+	# platform: caja elevada con rampas. se sube por las rampas, bloquea LOS desde el suelo
+	{"pos": Vector2(8.0,  20.0), "box": Vector2(5.0, 5.0),                "type": "platform",
+	 "ramps": [{"side": "south", "width": 2.5}, {"side": "east", "width": 2.5}]},
 ]
+
+const PLATFORM_HEIGHT := 1.5
+const RAMP_DEPTH      := 1.5
 
 # ── Visual ────────────────────────────────────────────────────────────────────
 const PLAYER_ZONE_RADIUS := 0.6
@@ -81,6 +101,16 @@ var _enemy_hover_mat:     StandardMaterial3D
 var _self_hover:          MeshInstance3D
 var _self_hover_mat:      StandardMaterial3D
 
+var _jump_disc:               MeshInstance3D
+var _jump_landing_disc:       MeshInstance3D
+var _push_disc:               MeshInstance3D
+var _push_enemy_disc:         MeshInstance3D
+var _puddle_disc:             MeshInstance3D
+var _jump_rock_markers:       Array[MeshInstance3D] = []
+var _jump_selected_marker:    MeshInstance3D
+var _jump_selected_marker_mat: StandardMaterial3D
+var _jump_rocks_in_range:     Array[Dictionary] = []
+
 # ── Init ──────────────────────────────────────────────────────────────────────
 func _ready() -> void:
 	_setup_ground()
@@ -95,6 +125,17 @@ func _ready() -> void:
 	_hover_cell      = _make_disc(Color(1.0,  1.0,  1.0,  0.55))
 	_player_shadow   = _make_disc(Color(0.3,  0.6,  1.0,  0.35))
 	_enemy_shadow    = _make_disc(Color(1.0,  0.3,  0.2,  0.35))
+
+	_jump_disc         = _make_disc(Color(0.3, 0.9, 0.4, 0.35))
+	_jump_landing_disc = _make_disc(Color(0.95, 0.5, 0.1, 0.40))
+	_push_disc         = _make_disc(Color(0.9, 0.2, 0.6, 0.40))
+	_push_enemy_disc   = _make_disc(Color(1.0, 0.5, 0.1, 0.70))
+	_puddle_disc       = _make_disc(Color(0.1, 0.5, 0.9, 0.45))
+
+	_jump_selected_marker_mat = _make_mat(Color(0.9, 1.0, 0.2, 0.9))
+	_jump_selected_marker = MeshInstance3D.new()
+	_jump_selected_marker.visible = false
+	add_child(_jump_selected_marker)
 
 	_enemy_highlight_mat = _make_mat(Color(1.0, 0.25, 0.1, 0.65))
 	_enemy_highlight = MeshInstance3D.new()
@@ -120,27 +161,109 @@ func _ready() -> void:
 	_setup_actors()
 
 func _setup_obstacles() -> void:
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.30, 0.25, 0.20)
-	mat.roughness    = 0.9
+	var solid_mat := StandardMaterial3D.new()
+	solid_mat.albedo_color = Color(0.30, 0.25, 0.20)
+	solid_mat.roughness    = 0.9
+
+	var rock_mat := StandardMaterial3D.new()
+	rock_mat.albedo_color = Color(0.50, 0.47, 0.43)
+	rock_mat.roughness    = 0.95
+
+	var bridge_mat := StandardMaterial3D.new()
+	bridge_mat.albedo_color  = Color(0.55, 0.40, 0.22, 0.80)
+	bridge_mat.transparency  = BaseMaterial3D.TRANSPARENCY_ALPHA
+	bridge_mat.roughness     = 0.7
+
 	for obs in solid_obstacles:
-		var pos: Vector2 = obs["pos"]
-		var mi           := MeshInstance3D.new()
-		mi.material_override = mat
-		if obs.has("box"):
-			var size: Vector2 = obs["box"]
-			var box          := BoxMesh.new()
-			box.size          = Vector3(size.x, size.x * 1.5, size.y)
-			mi.mesh           = box
-			mi.position       = Vector3(pos.x, box.size.y * 0.5, pos.y)
-		else:
-			var r: float      = obs["radius"]
-			var cyl          := CylinderMesh.new()
-			cyl.top_radius    = r
-			cyl.bottom_radius = r
-			cyl.height        = r * 2.5
-			mi.mesh           = cyl
-			mi.position       = Vector3(pos.x, cyl.height * 0.5, pos.y)
+		var pos: Vector2      = obs["pos"]
+		var obs_type: String  = obs.get("type", "solid")
+		var mi               := MeshInstance3D.new()
+		match obs_type:
+			"platform":
+				var size: Vector2 = obs["box"]
+				var plat_mat := StandardMaterial3D.new()
+				plat_mat.albedo_color = Color(0.35, 0.30, 0.22)
+				plat_mat.roughness    = 0.8
+				var box := BoxMesh.new()
+				box.size = Vector3(size.x, PLATFORM_HEIGHT, size.y)
+				mi.mesh  = box
+				mi.position = Vector3(pos.x, PLATFORM_HEIGHT * 0.5, pos.y)
+				mi.material_override = plat_mat
+				add_child(mi)
+				# rampas
+				var ramp_mat := StandardMaterial3D.new()
+				ramp_mat.albedo_color = Color(0.45, 0.38, 0.26)
+				ramp_mat.roughness    = 0.85
+				ramp_mat.cull_mode    = BaseMaterial3D.CULL_DISABLED
+				var h := size * 0.5
+				for ramp in obs.get("ramps", []):
+					var rw: float = ramp.get("width", 2.0) * 0.5
+					var ramp_mi  := MeshInstance3D.new()
+					var verts    := PackedVector3Array()
+					var indices  := PackedInt32Array()
+					match ramp["side"]:
+						"south":
+							# Top edge at platform edge, base extends outward to ground
+							verts.append(Vector3(pos.x - rw, PLATFORM_HEIGHT, pos.y + h.y))
+							verts.append(Vector3(pos.x + rw, PLATFORM_HEIGHT, pos.y + h.y))
+							verts.append(Vector3(pos.x + rw, 0.0,             pos.y + h.y + RAMP_DEPTH))
+							verts.append(Vector3(pos.x - rw, 0.0,             pos.y + h.y + RAMP_DEPTH))
+						"north":
+							verts.append(Vector3(pos.x - rw, 0.0,             pos.y - h.y - RAMP_DEPTH))
+							verts.append(Vector3(pos.x + rw, 0.0,             pos.y - h.y - RAMP_DEPTH))
+							verts.append(Vector3(pos.x + rw, PLATFORM_HEIGHT, pos.y - h.y))
+							verts.append(Vector3(pos.x - rw, PLATFORM_HEIGHT, pos.y - h.y))
+						"east":
+							verts.append(Vector3(pos.x + h.x,              PLATFORM_HEIGHT, pos.y - rw))
+							verts.append(Vector3(pos.x + h.x + RAMP_DEPTH, 0.0,             pos.y - rw))
+							verts.append(Vector3(pos.x + h.x + RAMP_DEPTH, 0.0,             pos.y + rw))
+							verts.append(Vector3(pos.x + h.x,              PLATFORM_HEIGHT, pos.y + rw))
+						"west":
+							verts.append(Vector3(pos.x - h.x - RAMP_DEPTH, 0.0,             pos.y - rw))
+							verts.append(Vector3(pos.x - h.x,              PLATFORM_HEIGHT, pos.y - rw))
+							verts.append(Vector3(pos.x - h.x,              PLATFORM_HEIGHT, pos.y + rw))
+							verts.append(Vector3(pos.x - h.x - RAMP_DEPTH, 0.0,             pos.y + rw))
+					indices.append_array([0,1,2, 0,2,3])
+					var arr := []; arr.resize(Mesh.ARRAY_MAX)
+					arr[Mesh.ARRAY_VERTEX] = verts; arr[Mesh.ARRAY_INDEX] = indices
+					var rmesh := ArrayMesh.new()
+					rmesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+					ramp_mi.mesh = rmesh
+					ramp_mi.material_override = ramp_mat
+					add_child(ramp_mi)
+				continue
+			"bridge":
+				var size: Vector2 = obs["box"]
+				var box          := BoxMesh.new()
+				box.size          = Vector3(size.x, 0.22, size.y)
+				mi.mesh           = box
+				mi.position       = Vector3(pos.x, 0.9, pos.y)
+				mi.material_override = bridge_mat
+			"rock":
+				var r: float      = obs["radius"]
+				var cyl          := CylinderMesh.new()
+				cyl.top_radius    = r * 0.70
+				cyl.bottom_radius = r
+				cyl.height        = r * 0.9
+				mi.mesh           = cyl
+				mi.position       = Vector3(pos.x, cyl.height * 0.5, pos.y)
+				mi.material_override = rock_mat
+			_: # solid
+				if obs.has("box"):
+					var size: Vector2 = obs["box"]
+					var box          := BoxMesh.new()
+					box.size          = Vector3(size.x, size.x * 1.5, size.y)
+					mi.mesh           = box
+					mi.position       = Vector3(pos.x, box.size.y * 0.5, pos.y)
+				else:
+					var r: float      = obs["radius"]
+					var cyl          := CylinderMesh.new()
+					cyl.top_radius    = r
+					cyl.bottom_radius = r
+					cyl.height        = r * 2.5
+					mi.mesh           = cyl
+					mi.position       = Vector3(pos.x, cyl.height * 0.5, pos.y)
+				mi.material_override = solid_mat
 		add_child(mi)
 
 func _setup_ground() -> void:
@@ -200,8 +323,12 @@ func _build_tile_disc(mi: MeshInstance3D, center: Vector2, radius: float, inner_
 		for gy in range(min_gy, max_gy + 1):
 			var cx := (gx + 0.5) * CELL
 			var cy := (gy + 0.5) * CELL
-			var d  := Vector2(cx, cy).distance_to(center)
-			if d > radius or d < inner_radius:
+			var px := clampf(center.x, cx - half, cx + half)
+			var py := clampf(center.y, cy - half, cy + half)
+			if Vector2(px, py).distance_to(center) > radius:
+				continue
+			var d := Vector2(cx, cy).distance_to(center)
+			if inner_radius > 0.0 and d < inner_radius:
 				continue
 
 			# fill quad (slightly inset so border is visible)
@@ -327,15 +454,18 @@ func play_player_anim(anim_key: String) -> void:
 
 func _switch_player_to(anim_key: String) -> void:
 	var target := anim_key if anim_key in _player_bodies else "idle"
+	var is_priority := anim_key in _PRIORITY_ANIMS
+	if is_priority and target != anim_key:
+		player_anim_finished.emit.call_deferred()
+		return
 	if _player_current_anim == target:
 		return
 	if _player_current_anim in _player_bodies:
 		_player_bodies[_player_current_anim].visible = false
 	_player_current_anim = target
-	var is_priority := anim_key in _PRIORITY_ANIMS
 	if target not in _player_bodies:
 		if is_priority:
-			player_anim_finished.emit()
+			player_anim_finished.emit.call_deferred()
 		return
 	var body: Node3D = _player_bodies[target]
 	body.visible = true
@@ -352,8 +482,10 @@ func _switch_player_to(anim_key: String) -> void:
 					CONNECT_ONE_SHOT
 				)
 			anim_player.play(list[0])
+		elif is_priority:
+			player_anim_finished.emit.call_deferred()
 	elif is_priority:
-		player_anim_finished.emit()
+		player_anim_finished.emit.call_deferred()
 
 func _find_meshes(node: Node) -> Array[MeshInstance3D]:
 	var result: Array[MeshInstance3D] = []
@@ -434,11 +566,11 @@ func _switch_enemy_to(anim_key: String) -> void:
 	var is_priority := anim_key in _ENEMY_PRIORITY_ANIMS
 	if _enemy_bodies.is_empty():
 		if is_priority:
-			enemy_anim_finished.emit()
+			enemy_anim_finished.emit.call_deferred()
 		return
 	var target := anim_key if anim_key in _enemy_bodies else "idle"
 	if is_priority and target != anim_key:
-		enemy_anim_finished.emit()
+		enemy_anim_finished.emit.call_deferred()
 		return
 	if _enemy_current_anim == target and not is_priority:
 		return
@@ -447,7 +579,7 @@ func _switch_enemy_to(anim_key: String) -> void:
 	_enemy_current_anim = target
 	if target not in _enemy_bodies:
 		if is_priority:
-			enemy_anim_finished.emit()
+			enemy_anim_finished.emit.call_deferred()
 		return
 	var body: Node3D = _enemy_bodies[target]
 	body.visible = true
@@ -464,12 +596,25 @@ func _switch_enemy_to(anim_key: String) -> void:
 					CONNECT_ONE_SHOT
 				)
 			anim_player.play(list[0])
+		elif is_priority:
+			enemy_anim_finished.emit.call_deferred()
 	elif is_priority:
-		enemy_anim_finished.emit()
+		enemy_anim_finished.emit.call_deferred()
 
 func _update_actor_positions() -> void:
-	_player_target = Vector3(player_pos.x, 0.0, player_pos.y)
-	_enemy_target  = Vector3(enemy_pos.x,   0.0, enemy_pos.y)
+	var player_y: float = 0.0
+	if player_elevation > 0:
+		# On the platform interior: full height. On the ramp zone: at ground level.
+		for obs in solid_obstacles:
+			if obs.get("type", "solid") != "platform": continue
+			var p: Vector2 = obs["pos"]
+			var hh: Vector2 = obs["box"] * 0.5
+			if abs(player_pos.x - p.x) <= hh.x and abs(player_pos.y - p.y) <= hh.y:
+				player_y = PLATFORM_HEIGHT
+				break
+	_player_target = Vector3(player_pos.x, player_y, player_pos.y)
+	var enemy_y: float = float(enemy_elevation) * PLATFORM_HEIGHT
+	_enemy_target  = Vector3(enemy_pos.x, enemy_y, enemy_pos.y)
 
 # ── Input ─────────────────────────────────────────────────────────────────────
 func _unhandled_input(event: InputEvent) -> void:
@@ -481,10 +626,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		var from := camera.project_ray_origin(event.position)
 		var dir  := camera.project_ray_normal(event.position)
 		if abs(dir.y) < 0.001: return
-		var t := -from.y / dir.y
-		if t < 0.0: return
-		var hit := from + dir * t
-		var pos := Vector2(clampf(hit.x, 0.0, WORLD_W), clampf(hit.z, 0.0, WORLD_H))
+		var pos := _ray_to_terrain(from, dir)
 		position_selected.emit(pos)
 
 func _process(delta: float) -> void:
@@ -526,12 +668,19 @@ func _process(delta: float) -> void:
 		else:
 			_switch_enemy_to("idle")
 
+	if _enemy_move_pending and _enemy_body.position.distance_to(_enemy_target) < 0.05:
+		_enemy_move_pending = false
+		enemy_reached_target.emit()
+
 	_show_disc(_player_shadow, Vector2(_player_body.position.x, _player_body.position.z), _player_shadow_radius)
 	_show_disc(_enemy_shadow,  Vector2(_enemy_body.position.x,  _enemy_body.position.z),  _enemy_shadow_radius)
 
 func _update_hover(screen_pos: Vector2, camera: Camera3D) -> void:
 	var any_disc   := _move_disc.visible or _attack_disc.visible \
-		or _trap_disc.visible or _grenade_disc.visible
+		or _trap_disc.visible or _grenade_disc.visible \
+		or _jump_disc.visible or _jump_landing_disc.visible \
+		or _push_disc.visible or _push_enemy_disc.visible \
+		or _puddle_disc.visible
 	var any_target := _enemy_highlight.visible or _self_highlight.visible or _attack_disc.visible
 	if not any_disc and not any_target:
 		_hover_cell.visible  = false
@@ -545,14 +694,7 @@ func _update_hover(screen_pos: Vector2, camera: Camera3D) -> void:
 		_enemy_hover.visible = false
 		_self_hover.visible  = false
 		return
-	var t := -from.y / dir.y
-	if t < 0.0:
-		_hover_cell.visible  = false
-		_enemy_hover.visible = false
-		_self_hover.visible  = false
-		return
-	var hit := from + dir * t
-	var pos := Vector2(clampf(hit.x, 0.0, WORLD_W), clampf(hit.z, 0.0, WORLD_H))
+	var pos := _ray_to_terrain(from, dir)
 	if any_disc:
 		_show_single_cell(_hover_cell, pos)
 	else:
@@ -563,7 +705,8 @@ func _update_hover(screen_pos: Vector2, camera: Camera3D) -> void:
 func _show_single_cell(mi: MeshInstance3D, world_pos: Vector2) -> void:
 	var cx: float = floor(world_pos.x / 0.08) * 0.08 + 0.04
 	var cy: float = floor(world_pos.y / 0.08) * 0.08 + 0.04
-	_build_tile_disc(mi, Vector2(cx, cy), 0.04, 0.0, 0.03)
+	var ty: float = _terrain_height_at(Vector2(cx, cy)) + 0.03
+	_build_tile_disc(mi, Vector2(cx, cy), 0.04, 0.0, ty)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 func movement_distance(a: Vector2, b: Vector2) -> float:
@@ -572,13 +715,146 @@ func movement_distance(a: Vector2, b: Vector2) -> float:
 func _in_bounds(pos: Vector2) -> bool:
 	return pos.x >= 0.0 and pos.x <= WORLD_W and pos.y >= 0.0 and pos.y <= WORLD_H
 
+# ── Platform helpers ──────────────────────────────────────────────────────────
+func _elevation_at(pos: Vector2) -> int:
+	for obs in solid_obstacles:
+		if obs.get("type", "solid") != "platform": continue
+		var p: Vector2 = obs["pos"]
+		var h: Vector2 = obs["box"] * 0.5
+		if abs(pos.x - p.x) <= h.x and abs(pos.y - p.y) <= h.y:
+			return 1
+		if _pos_in_ramp(pos, obs):
+			return 1
+	return 0
+
+func _ray_to_terrain(from: Vector3, dir: Vector3) -> Vector2:
+	var best_t := INF
+
+	for obs in solid_obstacles:
+		if obs.get("type", "solid") != "platform": continue
+		var p: Vector2 = obs["pos"]
+		var h: Vector2 = obs["box"] * 0.5
+
+		# Platform top face (y = PLATFORM_HEIGHT plane, clipped to footprint)
+		if abs(dir.y) > 0.0001:
+			var t_top: float = (PLATFORM_HEIGHT - from.y) / dir.y
+			if t_top > 0.001 and t_top < best_t:
+				var hit := from + dir * t_top
+				if abs(hit.x - p.x) <= h.x and abs(hit.z - p.y) <= h.y:
+					best_t = t_top
+
+		# Ramp surfaces
+		for ramp in obs.get("ramps", []):
+			var t_ramp: float = _ray_to_ramp(from, dir, p, h, ramp)
+			if t_ramp > 0.001 and t_ramp < best_t:
+				best_t = t_ramp
+
+	# Ground plane y=0
+	if abs(dir.y) > 0.0001:
+		var t_ground: float = -from.y / dir.y
+		if t_ground > 0.001 and t_ground < best_t:
+			best_t = t_ground
+
+	if best_t == INF:
+		best_t = 1.0
+	var hit3 := from + dir * best_t
+	return Vector2(clampf(hit3.x, 0.0, WORLD_W), clampf(hit3.z, 0.0, WORLD_H))
+
+func _ray_to_ramp(from: Vector3, dir: Vector3, p: Vector2, h: Vector2, ramp: Dictionary) -> float:
+	var w: float = ramp.get("width", 2.0) * 0.5
+	var side: String = ramp["side"]
+	var denom: float
+	var numer: float
+	match side:
+		"south":
+			# Ramp plane: RAMP_DEPTH*y + PLATFORM_HEIGHT*(z - p.y - h.y) = RAMP_DEPTH*PLATFORM_HEIGHT
+			denom = RAMP_DEPTH * dir.y + PLATFORM_HEIGHT * dir.z
+			numer = PLATFORM_HEIGHT * (RAMP_DEPTH + p.y + h.y) - RAMP_DEPTH * from.y - PLATFORM_HEIGHT * from.z
+		"north":
+			# Ramp plane: RAMP_DEPTH*y - PLATFORM_HEIGHT*(z - p.y + h.y) = RAMP_DEPTH*PLATFORM_HEIGHT
+			denom = RAMP_DEPTH * dir.y - PLATFORM_HEIGHT * dir.z
+			numer = PLATFORM_HEIGHT * (RAMP_DEPTH - p.y + h.y) - RAMP_DEPTH * from.y + PLATFORM_HEIGHT * from.z
+		"east":
+			# Ramp plane: RAMP_DEPTH*y + PLATFORM_HEIGHT*(x - p.x - h.x) = RAMP_DEPTH*PLATFORM_HEIGHT
+			denom = RAMP_DEPTH * dir.y + PLATFORM_HEIGHT * dir.x
+			numer = PLATFORM_HEIGHT * (RAMP_DEPTH + p.x + h.x) - RAMP_DEPTH * from.y - PLATFORM_HEIGHT * from.x
+		"west":
+			# Ramp plane: RAMP_DEPTH*y - PLATFORM_HEIGHT*(x - p.x + h.x) = RAMP_DEPTH*PLATFORM_HEIGHT
+			denom = RAMP_DEPTH * dir.y - PLATFORM_HEIGHT * dir.x
+			numer = PLATFORM_HEIGHT * (RAMP_DEPTH - p.x + h.x) - RAMP_DEPTH * from.y + PLATFORM_HEIGHT * from.x
+		_:
+			return -1.0
+	if abs(denom) < 0.0001:
+		return -1.0
+	var t := numer / denom
+	if t <= 0.001:
+		return -1.0
+	var hit := from + dir * t
+	match side:
+		"south": if abs(hit.x - p.x) < w and hit.z >= p.y + h.y and hit.z <= p.y + h.y + RAMP_DEPTH: return t
+		"north": if abs(hit.x - p.x) < w and hit.z <= p.y - h.y and hit.z >= p.y - h.y - RAMP_DEPTH: return t
+		"east":  if abs(hit.z - p.y) < w and hit.x >= p.x + h.x and hit.x <= p.x + h.x + RAMP_DEPTH: return t
+		"west":  if abs(hit.z - p.y) < w and hit.x <= p.x - h.x and hit.x >= p.x - h.x - RAMP_DEPTH: return t
+	return -1.0
+
+func _terrain_height_at(pos: Vector2) -> float:
+	for obs in solid_obstacles:
+		if obs.get("type", "solid") != "platform": continue
+		var p: Vector2 = obs["pos"]
+		var h: Vector2 = obs["box"] * 0.5
+		if abs(pos.x - p.x) <= h.x and abs(pos.y - p.y) <= h.y:
+			return PLATFORM_HEIGHT
+		for ramp in obs.get("ramps", []):
+			var w: float = ramp.get("width", 2.0) * 0.5
+			match ramp["side"]:
+				"south":
+					if abs(pos.x - p.x) < w and pos.y > p.y + h.y and pos.y <= p.y + h.y + RAMP_DEPTH:
+						return PLATFORM_HEIGHT * (1.0 - (pos.y - (p.y + h.y)) / RAMP_DEPTH)
+				"north":
+					if abs(pos.x - p.x) < w and pos.y < p.y - h.y and pos.y >= p.y - h.y - RAMP_DEPTH:
+						return PLATFORM_HEIGHT * (1.0 - ((p.y - h.y) - pos.y) / RAMP_DEPTH)
+				"east":
+					if abs(pos.y - p.y) < w and pos.x > p.x + h.x and pos.x <= p.x + h.x + RAMP_DEPTH:
+						return PLATFORM_HEIGHT * (1.0 - (pos.x - (p.x + h.x)) / RAMP_DEPTH)
+				"west":
+					if abs(pos.y - p.y) < w and pos.x < p.x - h.x and pos.x >= p.x - h.x - RAMP_DEPTH:
+						return PLATFORM_HEIGHT * (1.0 - ((p.x - h.x) - pos.x) / RAMP_DEPTH)
+	return 0.0
+
+func _pos_in_ramp(pos: Vector2, obs: Dictionary) -> bool:
+	# Zona de rampa: FUERA del footprint, extendiéndose RAMP_DEPTH hacia afuera
+	var p: Vector2 = obs["pos"]
+	var h: Vector2 = obs["box"] * 0.5
+	for ramp in obs.get("ramps", []):
+		var w: float = ramp.get("width", 2.0) * 0.5
+		match ramp["side"]:
+			"north": if abs(pos.x - p.x) < w and pos.y < p.y - h.y and pos.y >= p.y - h.y - RAMP_DEPTH: return true
+			"south": if abs(pos.x - p.x) < w and pos.y > p.y + h.y and pos.y <= p.y + h.y + RAMP_DEPTH: return true
+			"west":  if abs(pos.y - p.y) < w and pos.x < p.x - h.x and pos.x >= p.x - h.x - RAMP_DEPTH: return true
+			"east":  if abs(pos.y - p.y) < w and pos.x > p.x + h.x and pos.x <= p.x + h.x + RAMP_DEPTH: return true
+	return false
+
+func _pos_in_ramp_exit(pos: Vector2, obs: Dictionary) -> bool:
+	# Tira de desmontaje: justo más allá del borde exterior de la rampa, permite bajar al suelo desde elevation=1
+	const EXIT := 0.6
+	var p: Vector2 = obs["pos"]
+	var h: Vector2 = obs["box"] * 0.5
+	for ramp in obs.get("ramps", []):
+		var w: float = ramp.get("width", 2.0) * 0.5
+		match ramp["side"]:
+			"north": if abs(pos.x - p.x) < w and pos.y < p.y - h.y - RAMP_DEPTH and pos.y >= p.y - h.y - RAMP_DEPTH - EXIT: return true
+			"south": if abs(pos.x - p.x) < w and pos.y > p.y + h.y + RAMP_DEPTH and pos.y <= p.y + h.y + RAMP_DEPTH + EXIT: return true
+			"west":  if abs(pos.y - p.y) < w and pos.x < p.x - h.x - RAMP_DEPTH and pos.x >= p.x - h.x - RAMP_DEPTH - EXIT: return true
+			"east":  if abs(pos.y - p.y) < w and pos.x > p.x + h.x + RAMP_DEPTH and pos.x <= p.x + h.x + RAMP_DEPTH + EXIT: return true
+	return false
+
 # ── Move ──────────────────────────────────────────────────────────────────────
 func start_move_selection(move_range: float) -> void:
 	selected_move_range = move_range
-	_show_reachable(_move_disc, _move_disc_inner, player_pos, move_range)
+	_show_reachable(_move_disc, _move_disc_inner, player_pos, move_range, player_elevation)
 	_show_smooth_circle(_player_circle, player_pos, PLAYER_ZONE_RADIUS)
 
-func _dijkstra_reachable(origin: Vector2, move_range: float) -> Dictionary:
+func _dijkstra_reachable(origin: Vector2, move_range: float, elevation: int = 0) -> Dictionary:
 	var start := _w2g(origin)
 	var dist  := {}
 	dist[start] = 0.0
@@ -593,7 +869,8 @@ func _dijkstra_reachable(origin: Vector2, move_range: float) -> Dictionary:
 			for dx in [-1, 0, 1]:
 				if dx == 0 and dy == 0: continue
 				var nb := cur + Vector2i(dx, dy)
-				if not _g_in_bounds(nb) or _g_blocked(nb): continue
+				if not _g_in_bounds(nb): continue
+				if _g_blocked(nb, elevation): continue
 				var step: float = (1.414 if (dx != 0 and dy != 0) else 1.0) * PATH_CELL
 				var nc: float   = cur_cost + step
 				if nc <= move_range + 0.01 and nc < dist.get(nb, INF):
@@ -601,7 +878,7 @@ func _dijkstra_reachable(origin: Vector2, move_range: float) -> Dictionary:
 					queue.append([nc, nb])
 	return dist
 
-func _show_reachable(outer: MeshInstance3D, inner: MeshInstance3D, origin: Vector2, move_range: float) -> void:
+func _show_reachable(outer: MeshInstance3D, inner: MeshInstance3D, origin: Vector2, move_range: float, elevation: int = 0) -> void:
 	const VCELL  := 0.08
 	const BORDER := 0.010
 	var half     := VCELL * 0.5
@@ -621,11 +898,13 @@ func _show_reachable(outer: MeshInstance3D, inner: MeshInstance3D, origin: Vecto
 			var cx: float = (gx + 0.5) * VCELL
 			var cy: float = (gy + 0.5) * VCELL
 			var cell_pos := Vector2(cx, cy)
-			if cell_pos.distance_to(origin) > move_range: continue
-			if _tile_in_obstacle(cell_pos):               continue
-			if not has_line_of_sight(origin, cell_pos):   continue
+			var px := clampf(origin.x, cx - half, cx + half)
+			var py := clampf(origin.y, cy - half, cy + half)
+			if Vector2(px, py).distance_to(origin) > move_range: continue
+			if _tile_in_obstacle(cell_pos, elevation): continue
 			var is_inner := cell_pos.distance_to(origin) <= PLAYER_ZONE_RADIUS
-			var y: float = 0.022 if is_inner else 0.02
+			var terrain_y: float = _terrain_height_at(cell_pos)
+			var y: float = terrain_y + (0.022 if is_inner else 0.02)
 			var fv := in_fv if is_inner else out_fv
 			var fi := in_fi if is_inner else out_fi
 			var bv := in_bv if is_inner else out_bv
@@ -653,8 +932,17 @@ func _show_reachable(outer: MeshInstance3D, inner: MeshInstance3D, origin: Vecto
 	_apply_two_surface_mesh(outer, out_fv, out_fi, out_bv, out_bi)
 	_apply_two_surface_mesh(inner, in_fv,  in_fi,  in_bv,  in_bi)
 
-func _tile_in_obstacle(pos: Vector2) -> bool:
+func _tile_in_obstacle(pos: Vector2, elevation: int = 0) -> bool:
 	for obs in solid_obstacles:
+		var obs_type: String = obs.get("type", "solid")
+		if obs_type == "bridge": continue
+		if obs_type == "platform":
+			if elevation > 0: continue  # elevado: footprint es transitable
+			var p: Vector2 = obs["pos"]
+			var h: Vector2 = obs["box"] * 0.5
+			if abs(pos.x - p.x) < h.x and abs(pos.y - p.y) < h.y:
+				return true  # footprint bloqueado al nivel del suelo
+			continue  # fuera del footprint (incl. rampa exterior) → libre
 		if obs.has("box"):
 			var half: Vector2 = obs["box"] * 0.5
 			var p: Vector2    = obs["pos"]
@@ -760,12 +1048,14 @@ func show_path_preview(_from: Vector2, _to: Vector2) -> void:
 			seen[key] = true
 			var cx: float = gx * CELL + CELL * 0.5
 			var cy: float = gy * CELL + CELL * 0.5
+			var ty: float = _terrain_height_at(Vector2(cx, cy)) + 0.025
 			var fi := fill_v.size()
-			fill_v.append(Vector3(cx-half+BORDER, 0.025, cy-half+BORDER))
-			fill_v.append(Vector3(cx+half-BORDER, 0.025, cy-half+BORDER))
-			fill_v.append(Vector3(cx+half-BORDER, 0.025, cy+half-BORDER))
-			fill_v.append(Vector3(cx-half+BORDER, 0.025, cy+half-BORDER))
+			fill_v.append(Vector3(cx-half+BORDER, ty, cy-half+BORDER))
+			fill_v.append(Vector3(cx+half-BORDER, ty, cy-half+BORDER))
+			fill_v.append(Vector3(cx+half-BORDER, ty, cy+half-BORDER))
+			fill_v.append(Vector3(cx-half+BORDER, ty, cy+half-BORDER))
 			fill_i.append_array([fi, fi+1, fi+2, fi, fi+2, fi+3])
+			var ty1: float = ty + 0.001
 			var strips := [
 				[cx-half, cy-half,        cx+half,        cy-half+BORDER],
 				[cx-half, cy+half-BORDER, cx+half,        cy+half],
@@ -776,8 +1066,8 @@ func show_path_preview(_from: Vector2, _to: Vector2) -> void:
 				var x0: float = s[0]; var z0: float = s[1]
 				var x1: float = s[2]; var z1: float = s[3]
 				var bi := bord_v.size()
-				bord_v.append(Vector3(x0, 0.026, z0)); bord_v.append(Vector3(x1, 0.026, z0))
-				bord_v.append(Vector3(x1, 0.026, z1)); bord_v.append(Vector3(x0, 0.026, z1))
+				bord_v.append(Vector3(x0, ty1, z0)); bord_v.append(Vector3(x1, ty1, z0))
+				bord_v.append(Vector3(x1, ty1, z1)); bord_v.append(Vector3(x0, ty1, z1))
 				bord_i.append_array([bi, bi+1, bi+2, bi, bi+2, bi+3])
 
 	var mesh := ArrayMesh.new()
@@ -801,9 +1091,10 @@ func try_move_player_to(pos: Vector2, _range: float) -> bool:
 	var sep := pos - enemy_pos
 	if sep.length() < MIN_SEPARATION:
 		pos = enemy_pos + (sep.normalized() if sep.length() > 0.001 else Vector2(MIN_SEPARATION, 0.0)) * MIN_SEPARATION
-	player_pos = pos
-	_last_path = []
-	_last_path_cost = 0.0
+	player_pos       = pos
+	player_elevation = _elevation_at(pos)
+	_last_path       = []
+	_last_path_cost  = 0.0
 	clear_move_selection()
 	_update_actor_positions()
 	return true
@@ -812,9 +1103,8 @@ func get_path_cost(_pos: Vector2) -> float:
 	return _last_path_cost
 
 # ── A* Pathfinding ────────────────────────────────────────────────────────────
-func compute_path(from: Vector2, to: Vector2) -> float:
-	# Direct LOS → straight line, no A* needed
-	if has_line_of_sight(from, to):
+func compute_path(from: Vector2, to: Vector2, elevation: int = 0) -> float:
+	if _has_movement_los(from, to, elevation):
 		_last_path      = [from, to]
 		_last_path_cost = from.distance_to(to)
 		return _last_path_cost
@@ -825,10 +1115,10 @@ func compute_path(from: Vector2, to: Vector2) -> float:
 	var start := _w2g(from)
 	var goal  := _w2g(to)
 
-	var open   := {}       # Vector2i -> true  (open set)
-	var came   := {}       # Vector2i -> Vector2i
-	var g      := {}       # Vector2i -> float
-	var f      := {}       # Vector2i -> float
+	var open   := {}
+	var came   := {}
+	var g      := {}
+	var f      := {}
 
 	g[start] = 0.0
 	f[start] = _heuristic(start, goal)
@@ -846,7 +1136,7 @@ func compute_path(from: Vector2, to: Vector2) -> float:
 				if dx == 0 and dy == 0: continue
 				var nb := cur + Vector2i(dx, dy)
 				if not _g_in_bounds(nb): continue
-				if _g_blocked(nb):       continue
+				if _g_blocked(nb, elevation): continue
 				var step: float = 1.414 if (dx != 0 and dy != 0) else 1.0
 				var tg: float   = g.get(cur, INF) + step
 				if tg < g.get(nb, INF):
@@ -855,7 +1145,7 @@ func compute_path(from: Vector2, to: Vector2) -> float:
 					f[nb]    = tg + _heuristic(nb, goal)
 					open[nb] = true
 
-	return INF  # no path
+	return INF
 
 func _w2g(pos: Vector2) -> Vector2i:
 	return Vector2i(int(round(pos.x / PATH_CELL)), int(round(pos.y / PATH_CELL)))
@@ -867,9 +1157,28 @@ func _g_in_bounds(cell: Vector2i) -> bool:
 	return cell.x >= 0 and cell.x <= int(WORLD_W / PATH_CELL) \
 		and cell.y >= 0 and cell.y <= int(WORLD_H / PATH_CELL)
 
-func _g_blocked(cell: Vector2i) -> bool:
+func _g_blocked(cell: Vector2i, elevation: int = 0) -> bool:
 	var wp := _g2w(cell)
+	# Elevado: solo puede moverse en el footprint de la plataforma, la rampa exterior o la tira de desmontaje
+	if elevation > 0:
+		for obs in solid_obstacles:
+			if obs.get("type", "solid") != "platform": continue
+			var p: Vector2 = obs["pos"]
+			var h: Vector2 = obs["box"] * 0.5
+			var in_footprint: bool = abs(wp.x - p.x) <= h.x + PATH_CELL * 0.5 and abs(wp.y - p.y) <= h.y + PATH_CELL * 0.5
+			if in_footprint or _pos_in_ramp(wp, obs) or _pos_in_ramp_exit(wp, obs):
+				return false
+		return true  # fuera de toda plataforma → bloqueado
+
 	for obs in solid_obstacles:
+		var obs_type: String = obs.get("type", "solid")
+		if obs_type == "bridge": continue
+		if obs_type == "platform":
+			var p: Vector2 = obs["pos"]
+			var h: Vector2 = obs["box"] * 0.5 + Vector2(PATH_CELL, PATH_CELL) * 0.5
+			if abs(wp.x - p.x) < h.x and abs(wp.y - p.y) < h.y:
+				return true  # footprint bloqueado al nivel del suelo
+			continue  # fuera del footprint (incl. rampa exterior) → no bloqueado
 		if obs.has("box"):
 			var half: Vector2 = obs["box"] * 0.5 + Vector2(PATH_CELL, PATH_CELL) * 0.5
 			var p: Vector2    = obs["pos"]
@@ -931,7 +1240,34 @@ func is_player_in_melee_range() -> bool:
 
 # ── LOS ───────────────────────────────────────────────────────────────────────
 func has_line_of_sight(from: Vector2, to: Vector2) -> bool:
+	var from_elev: int = _elevation_at(from)
+	var to_elev:   int = _elevation_at(to)
 	for obs in solid_obstacles:
+		var obs_type: String = obs.get("type", "solid")
+		if obs_type == "rock": continue
+		if obs_type == "platform":
+			# La plataforma solo bloquea LOS si AMBOS están a nivel del suelo
+			if from_elev > 0 or to_elev > 0: continue
+			if _segment_hits_box(from, to, obs["pos"], obs["box"] * 0.5):
+				return false
+			continue
+		if obs.has("box"):
+			if _segment_hits_box(from, to, obs["pos"], obs["box"] * 0.5):
+				return false
+		else:
+			if _segment_hits_circle(from, to, obs["pos"], obs["radius"]):
+				return false
+	return true
+
+func _has_movement_los(from: Vector2, to: Vector2, elevation: int = 0) -> bool:
+	for obs in solid_obstacles:
+		var obs_type: String = obs.get("type", "solid")
+		if obs_type == "bridge": continue
+		if obs_type == "platform":
+			if elevation > 0: continue  # encima → libre de moverse sobre el techo
+			if _segment_hits_box(from, to, obs["pos"], obs["box"] * 0.5):
+				return false
+			continue
 		if obs.has("box"):
 			if _segment_hits_box(from, to, obs["pos"], obs["box"] * 0.5):
 				return false
@@ -1019,16 +1355,17 @@ func move_enemy_toward(target: Vector2, move_range: float) -> bool:
 	var sep := new_pos - player_pos
 	if sep.length() < MIN_SEPARATION:
 		new_pos = player_pos + (sep.normalized() if sep.length() > 0.001 else Vector2(MIN_SEPARATION, 0.0)) * MIN_SEPARATION
-	enemy_pos = new_pos
+	enemy_pos       = new_pos
+	enemy_elevation = _elevation_at(new_pos)
 	_update_actor_positions()
 	return true
 
 # ── Traps ─────────────────────────────────────────────────────────────────────
 func start_trap_placement(trap_range: float) -> void:
 	selected_trap_range = trap_range
-	_show_disc_with_los(_trap_disc, player_pos, trap_range)
+	_show_disc_with_los(_trap_disc, player_pos, trap_range, player_elevation)
 
-func _show_disc_with_los(mi: MeshInstance3D, origin: Vector2, radius: float) -> void:
+func _show_disc_with_los(mi: MeshInstance3D, origin: Vector2, radius: float, elevation: int = 0) -> void:
 	const VCELL  := 0.08
 	const BORDER := 0.010
 	var half     := VCELL * 0.5
@@ -1043,10 +1380,12 @@ func _show_disc_with_los(mi: MeshInstance3D, origin: Vector2, radius: float) -> 
 			var cx: float = (gx + 0.5) * VCELL
 			var cy: float = (gy + 0.5) * VCELL
 			var cell_pos := Vector2(cx, cy)
-			if cell_pos.distance_to(origin) > radius:         continue
-			if _tile_in_obstacle(cell_pos):                    continue
-			if not has_line_of_sight(origin, cell_pos):        continue
-			var y: float = 0.02
+			var px := clampf(origin.x, cx - half, cx + half)
+			var py := clampf(origin.y, cy - half, cy + half)
+			if Vector2(px, py).distance_to(origin) > radius: continue
+			if _tile_in_obstacle(cell_pos, elevation):        continue
+			if not has_line_of_sight(origin, cell_pos):       continue
+			var y: float = _terrain_height_at(cell_pos) + 0.02
 			var f := fv.size()
 			fv.append(Vector3(cx-half+BORDER, y, cy-half+BORDER))
 			fv.append(Vector3(cx+half-BORDER, y, cy-half+BORDER))
@@ -1152,6 +1491,7 @@ func calculate_grenade_landing(from: Vector2, target: Vector2, bounce: float) ->
 func _clip_path_at_obstacle(from: Vector2, to: Vector2) -> Vector2:
 	var closest_t := 1.0
 	for obs in solid_obstacles:
+		if obs.get("type", "solid") == "rock": continue  # granadas vuelan por encima
 		var t: float
 		if obs.has("box"):
 			t = _segment_hit_t_box(from, to, obs["pos"], obs["box"] * 0.5)
@@ -1210,3 +1550,251 @@ func clear_grenade_preview() -> void:
 
 func is_enemy_in_explosion(center: Vector2, radius: int) -> bool:
 	return movement_distance(center, enemy_pos) <= float(radius)
+
+# ── Rock Jump ─────────────────────────────────────────────────────────────────
+func get_rocks_in_range(origin: Vector2, range: float) -> Array[Dictionary]:
+	var rocks: Array[Dictionary] = []
+	for obs in solid_obstacles:
+		if obs.get("type", "solid") != "rock":
+			continue
+		if origin.distance_to(obs["pos"]) <= range:
+			rocks.append(obs)
+	return rocks
+
+func start_rock_jump_selection(jump_range: float) -> void:
+	_show_disc(_jump_disc, player_pos, jump_range)
+	_jump_rocks_in_range = get_rocks_in_range(player_pos, jump_range)
+	for obs in _jump_rocks_in_range:
+		var mi := MeshInstance3D.new()
+		var mat := _make_mat(Color(0.2, 1.0, 0.5, 0.75))
+		mi.material_override = mat
+		add_child(mi)
+		_show_smooth_circle(mi, obs["pos"], obs.get("radius", 0.5) * 1.8)
+		_jump_rock_markers.append(mi)
+
+func get_rock_near(pos: Vector2) -> Dictionary:
+	for obs in _jump_rocks_in_range:
+		var r: float = obs.get("radius", 0.5)
+		if pos.distance_to(obs["pos"]) <= r + 1.5:
+			return obs
+	return {}
+
+func start_jump_landing_selection(rock_pos: Vector2, landing_range: float) -> void:
+	_jump_disc.visible = false
+	for marker in _jump_rock_markers:
+		marker.queue_free()
+	_jump_rock_markers.clear()
+	_show_disc(_jump_landing_disc, rock_pos, landing_range)
+	_show_smooth_circle(_jump_selected_marker, rock_pos, 0.7)
+	_jump_selected_marker.set_surface_override_material(0, _jump_selected_marker_mat)
+
+func clear_rock_jump_selection() -> void:
+	_jump_disc.visible            = false
+	_jump_landing_disc.visible    = false
+	_jump_selected_marker.visible = false
+	for marker in _jump_rock_markers:
+		marker.queue_free()
+	_jump_rock_markers.clear()
+	_jump_rocks_in_range.clear()
+
+func is_enemy_near_pos(pos: Vector2, radius: float) -> bool:
+	return pos.distance_to(enemy_pos) <= radius
+
+# ── Push ──────────────────────────────────────────────────────────────────────
+func start_push_enemy_selection(grab_range: float) -> void:
+	_show_disc(_attack_disc, player_pos, grab_range)
+	start_enemy_highlight()
+
+func start_push_cone(push_range: float) -> void:
+	_push_enemy_disc.visible = false
+	var dir: Vector2 = (enemy_pos - player_pos).normalized()
+	_build_cone_disc(_push_disc, enemy_pos, dir, push_range, 55.0)
+
+func clear_push_selection() -> void:
+	_push_disc.visible       = false
+	_push_enemy_disc.visible = false
+	_attack_disc.visible     = false
+	clear_enemy_highlight()
+
+func is_pos_in_push_cone(pos: Vector2, push_range: float) -> bool:
+	var to_pos: Vector2 = pos - enemy_pos
+	if to_pos.length() < 0.001:
+		return false
+	if to_pos.length() > push_range:
+		return false
+	var dir: Vector2 = (enemy_pos - player_pos).normalized()
+	return absf(dir.angle_to(to_pos.normalized())) <= deg_to_rad(55.0)
+
+func _build_cone_disc(mi: MeshInstance3D, origin: Vector2, direction: Vector2, max_range: float, half_angle_deg: float) -> void:
+	const CELL   := 0.08
+	const BORDER := 0.010
+	const Y      := 0.02
+	var half      := CELL * 0.5
+	var half_rad  := deg_to_rad(half_angle_deg)
+	var dir_norm  := direction.normalized()
+
+	var fill_v := PackedVector3Array()
+	var fill_i := PackedInt32Array()
+	var bord_v := PackedVector3Array()
+	var bord_i := PackedInt32Array()
+
+	var min_gx := int(floor((origin.x - max_range) / CELL))
+	var max_gx := int(ceil( (origin.x + max_range) / CELL))
+	var min_gy := int(floor((origin.y - max_range) / CELL))
+	var max_gy := int(ceil( (origin.y + max_range) / CELL))
+
+	for gx in range(min_gx, max_gx + 1):
+		for gy in range(min_gy, max_gy + 1):
+			var cx := (gx + 0.5) * CELL
+			var cy := (gy + 0.5) * CELL
+			var px := clampf(origin.x, cx - half, cx + half)
+			var py := clampf(origin.y, cy - half, cy + half)
+			if Vector2(px, py).distance_to(origin) > max_range:
+				continue
+			var to_tile := Vector2(cx, cy) - origin
+			if to_tile.length() < 0.001:
+				continue
+			if absf(dir_norm.angle_to(to_tile.normalized())) > half_rad:
+				continue
+			var fi := fill_v.size()
+			var f  := BORDER
+			fill_v.append(Vector3(cx - half + f, Y, cy - half + f))
+			fill_v.append(Vector3(cx + half - f, Y, cy - half + f))
+			fill_v.append(Vector3(cx + half - f, Y, cy + half - f))
+			fill_v.append(Vector3(cx - half + f, Y, cy + half - f))
+			fill_i.append_array([fi, fi+1, fi+2, fi, fi+2, fi+3])
+			var strips := [
+				[cx-half, cy-half,        cx+half,        cy-half+BORDER],
+				[cx-half, cy+half-BORDER, cx+half,        cy+half],
+				[cx-half, cy-half+BORDER, cx-half+BORDER, cy+half-BORDER],
+				[cx+half-BORDER, cy-half+BORDER, cx+half, cy+half-BORDER],
+			]
+			for s in strips:
+				var x0: float = s[0]; var z0: float = s[1]
+				var x1: float = s[2]; var z1: float = s[3]
+				var bi := bord_v.size()
+				bord_v.append(Vector3(x0, Y + 0.001, z0))
+				bord_v.append(Vector3(x1, Y + 0.001, z0))
+				bord_v.append(Vector3(x1, Y + 0.001, z1))
+				bord_v.append(Vector3(x0, Y + 0.001, z1))
+				bord_i.append_array([bi, bi+1, bi+2, bi, bi+2, bi+3])
+
+	var mesh := ArrayMesh.new()
+	var fa := []; fa.resize(Mesh.ARRAY_MAX)
+	fa[Mesh.ARRAY_VERTEX] = fill_v; fa[Mesh.ARRAY_INDEX] = fill_i
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, fa)
+	var ba := []; ba.resize(Mesh.ARRAY_MAX)
+	ba[Mesh.ARRAY_VERTEX] = bord_v; ba[Mesh.ARRAY_INDEX] = bord_i
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, ba)
+
+	mi.mesh = mesh
+	mi.set_surface_override_material(0, mi.get_meta("fill_mat") if mi.has_meta("fill_mat") else null)
+	mi.set_surface_override_material(1, mi.get_meta("bord_mat") if mi.has_meta("bord_mat") else null)
+	mi.visible = fill_v.size() > 0
+
+func calculate_push_landing(direction_target: Vector2, push_range: float) -> Vector2:
+	var dir: Vector2 = (direction_target - enemy_pos).normalized()
+	var target: Vector2 = enemy_pos + dir * push_range
+	target = Vector2(clampf(target.x, 0.0, WORLD_W), clampf(target.y, 0.0, WORLD_H))
+	return _clip_path_at_obstacle(enemy_pos, target)
+
+func push_enemy_to(landing: Vector2) -> void:
+	var sep: Vector2 = landing - player_pos
+	if sep.length() < MIN_SEPARATION:
+		landing = player_pos + (sep.normalized() if sep.length() > 0.001 else Vector2(MIN_SEPARATION, 0.0)) * MIN_SEPARATION
+	enemy_pos           = landing
+	enemy_elevation     = _elevation_at(landing)
+	_enemy_move_pending = true
+	_update_actor_positions()
+
+func check_traps_along_segment(from: Vector2, to: Vector2) -> int:
+	var total := 0
+	var triggered: Array = []
+	var steps := maxi(2, int(from.distance_to(to) / 0.4))
+	for i in range(steps + 1):
+		var t: float = float(i) / float(steps)
+		var pos: Vector2 = from.lerp(to, t)
+		for trap in trap_zones:
+			if trap in triggered:
+				continue
+			if movement_distance(trap["pos"], pos) <= trap["radius"]:
+				total += trap["damage"]
+				triggered.append(trap)
+	for trap in triggered:
+		var idx: int = trap_zones.find(trap)
+		if idx >= 0 and idx < _trap_visuals.size():
+			_trap_visuals[idx].queue_free()
+			_trap_visuals.remove_at(idx)
+		trap_zones.erase(trap)
+	return total
+
+# Devuelve {"trap_damage": int, "wet": bool} para un segmento de movimiento forzado.
+# Agregar nuevas zonas acá para que cualquier movimiento forzado las active automáticamente.
+func trigger_zone_effects_along(from: Vector2, to: Vector2) -> Dictionary:
+	return {
+		"trap_damage": check_traps_along_segment(from, to),
+		"wet":         is_segment_in_puddle(from, to),
+	}
+
+# ── Puddles ───────────────────────────────────────────────────────────────────
+func start_puddle_placement(throw_range: float) -> void:
+	_show_disc_with_los(_puddle_disc, player_pos, throw_range, player_elevation)
+
+func clear_puddle_placement() -> void:
+	_puddle_disc.visible = false
+
+func place_puddle(pos: Vector2, radius: int) -> void:
+	puddle_zones.append({"pos": pos, "radius": float(radius)})
+	_add_puddle_visual(pos, float(radius))
+
+func _add_puddle_visual(pos: Vector2, radius: float) -> void:
+	var mi := MeshInstance3D.new()
+	var fill_mat := _make_mat(Color(0.1, 0.4, 0.9, 0.35))
+	var ring_mat := _make_mat(Color(0.3, 0.7, 1.0, 0.80))
+	var segments := 48
+	var verts    := PackedVector3Array()
+	var indices  := PackedInt32Array()
+	verts.append(Vector3(pos.x, 0.013, pos.y))
+	for i in range(segments):
+		var a := float(i) / float(segments) * TAU
+		verts.append(Vector3(pos.x + cos(a) * radius, 0.013, pos.y + sin(a) * radius))
+	for i in range(segments):
+		indices.append_array([0, i + 1, (i + 1) % segments + 1])
+	var fa := []; fa.resize(Mesh.ARRAY_MAX)
+	fa[Mesh.ARRAY_VERTEX] = verts; fa[Mesh.ARRAY_INDEX] = indices
+	var ring_w   := minf(0.12, radius * 0.12)
+	var bverts   := PackedVector3Array()
+	var bindices := PackedInt32Array()
+	for i in range(segments):
+		var a0   := float(i)      / float(segments) * TAU
+		var a1   := float(i + 1) / float(segments) * TAU
+		var r_in  := radius - ring_w
+		var r_out := radius
+		var vi := bverts.size()
+		bverts.append(Vector3(pos.x + cos(a0) * r_in,  0.014, pos.y + sin(a0) * r_in))
+		bverts.append(Vector3(pos.x + cos(a0) * r_out, 0.014, pos.y + sin(a0) * r_out))
+		bverts.append(Vector3(pos.x + cos(a1) * r_out, 0.014, pos.y + sin(a1) * r_out))
+		bverts.append(Vector3(pos.x + cos(a1) * r_in,  0.014, pos.y + sin(a1) * r_in))
+		bindices.append_array([vi, vi+1, vi+2, vi, vi+2, vi+3])
+	var ba := []; ba.resize(Mesh.ARRAY_MAX)
+	ba[Mesh.ARRAY_VERTEX] = bverts; ba[Mesh.ARRAY_INDEX] = bindices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, fa)
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, ba)
+	mi.mesh = mesh
+	mi.set_surface_override_material(0, fill_mat)
+	mi.set_surface_override_material(1, ring_mat)
+	add_child(mi)
+	_puddle_visuals.append(mi)
+
+func is_segment_in_puddle(from: Vector2, to: Vector2) -> bool:
+	if puddle_zones.is_empty():
+		return false
+	var steps := maxi(2, int(from.distance_to(to) / 0.3))
+	for i in range(steps + 1):
+		var t: float = float(i) / float(steps)
+		var pos: Vector2 = from.lerp(to, t)
+		for puddle in puddle_zones:
+			if pos.distance_to(puddle["pos"]) <= puddle["radius"]:
+				return true
+	return false

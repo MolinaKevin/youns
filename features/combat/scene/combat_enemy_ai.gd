@@ -29,6 +29,11 @@ func setup(p_state, p_map_area: Node, strategy: AiStrategy, p_damage_enemy: Call
 # ── Turn ──────────────────────────────────────────────────────────────────────
 
 func take_turn() -> void:
+	if state.enemy_wet_turns > 0:
+		state.enemy_wet_turns -= 1
+		if state.enemy_wet_turns == 0:
+			log_requested.emit("El enemigo ya no está mojado.")
+
 	var trap_dmg: int = map_area.check_and_trigger_traps(map_area.enemy_pos)
 	if trap_dmg > 0:
 		await _deal_damage_to_enemy.call(trap_dmg)
@@ -146,17 +151,32 @@ func _execute_action(action: AiAction) -> void:
 			log_requested.emit("Enemy shoots for %d!" % action.damage)
 			await _deal_damage_to_player.call(action.damage)
 		"move_toward":
-			map_area.move_enemy_toward(map_area.player_pos, action.move_range)
+			var from_pos: Vector2 = map_area.enemy_pos
+			var eff_range := maxi(1, action.move_range - (1 if state.enemy_wet_turns > 0 else 0))
+			map_area.move_enemy_toward(map_area.player_pos, eff_range)
+			if map_area.is_segment_in_puddle(from_pos, map_area.enemy_pos):
+				state.enemy_wet_turns = 3
+				log_requested.emit("El enemigo pisó el charco. ¡Está mojado!")
 			log_requested.emit("Enemy moves closer.")
 		"move_away":
+			var from_pos: Vector2 = map_area.enemy_pos
+			var eff_range := maxi(1, action.move_range - (1 if state.enemy_wet_turns > 0 else 0))
 			var away_dir: Vector2 = (map_area.enemy_pos - map_area.player_pos).normalized()
-			var target: Vector2   = map_area.enemy_pos + away_dir * action.move_range
+			var target: Vector2   = map_area.enemy_pos + away_dir * eff_range
 			target.x = clampf(target.x, 0.0, map_area.WORLD_W)
 			target.y = clampf(target.y, 0.0, map_area.WORLD_H)
-			map_area.move_enemy_toward(target, action.move_range)
+			map_area.move_enemy_toward(target, eff_range)
+			if map_area.is_segment_in_puddle(from_pos, map_area.enemy_pos):
+				state.enemy_wet_turns = 3
+				log_requested.emit("El enemigo pisó el charco. ¡Está mojado!")
 			log_requested.emit("Enemy retreats!")
 		"move_to_last_known":
-			map_area.move_enemy_toward(last_known_player_pos, action.move_range)
+			var from_pos: Vector2 = map_area.enemy_pos
+			var eff_range := maxi(1, action.move_range - (1 if state.enemy_wet_turns > 0 else 0))
+			map_area.move_enemy_toward(last_known_player_pos, eff_range)
+			if map_area.is_segment_in_puddle(from_pos, map_area.enemy_pos):
+				state.enemy_wet_turns = 3
+				log_requested.emit("El enemigo pisó el charco. ¡Está mojado!")
 			log_requested.emit("Enemy searches last known position.")
 		"block":
 			state.enemy_block += action.block_amount

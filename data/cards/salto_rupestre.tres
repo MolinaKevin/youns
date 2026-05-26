@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" format=3 uid="uid://dkr8pn4m2xjq7"]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_saltrup"]
+
+[resource]
+script = ExtResource("1_saltrup")
+id = "salto_rupestre"
+name = "Salto Rupestre"
+description = "Saltá sobre una piedra cercana y lanzate desde allí. Si aterrizás sobre el enemigo, causás 8 de daño."
+cost = 2
+card_type = "rock_jump"
+card_range = 6
+throw_range = 8
+damage = 8
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"

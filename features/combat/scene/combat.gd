@@ -48,7 +48,7 @@ func _ready() -> void:
 	LocalizationState.language_changed.connect(_apply_localized_text)
 	randomize()
 	var cam: Camera3D = $CombatWorld/Camera3D
-	cam.look_at_from_position(Vector3(-10.0, 35.0, 78.0), Vector3(30.0, 0.0, 30.0), Vector3.UP)
+	cam.look_at_from_position(Vector3(-5.0, 18.0, 39.0), Vector3(15.0, 0.0, 15.0), Vector3.UP)
 
 	var env := Environment.new()
 	env.background_mode = Environment.BG_COLOR
@@ -189,6 +189,10 @@ func _on_end_turn_pressed() -> void:
 	end_turn_button.disabled = false
 
 func reset_turn() -> void:
+	if state.player_wet_turns > 0:
+		state.player_wet_turns -= 1
+		if state.player_wet_turns == 0:
+			log_message("Ya no estás mojado.")
 	player_actions.reset()
 	deck_manager.reset_turn(HAND_SIZE)
 	refresh_hand()
