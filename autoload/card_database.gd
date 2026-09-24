@@ -21,6 +21,16 @@ func _load_cards() -> void:
 		preload("res://data/cards/salto_rupestre.tres"),
 		preload("res://data/cards/envion.tres"),
 		preload("res://data/cards/charco.tres"),
+		preload("res://data/cards/charco_fuego.tres"),
+		preload("res://data/cards/charco_grasa.tres"),
+		preload("res://data/cards/enredadera.tres"),
+		preload("res://data/cards/charco_sangre.tres"),
+		preload("res://data/cards/charco_veneno.tres"),
+		preload("res://data/cards/charco_arena.tres"),
+		preload("res://data/cards/emboscada.tres"),
+		preload("res://data/cards/charco_hielo.tres"),
+		preload("res://data/cards/charco_planta.tres"),
+		preload("res://data/cards/proyectil_hielo.tres"),
 	]
 
 	for card in all_cards:

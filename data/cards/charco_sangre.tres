@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" format=3 uid="uid://charco_sang1"]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_charco_sangre"]
+
+[resource]
+script = ExtResource("1_charco_sangre")
+id = "charco_sangre"
+name = "Charco de Sangre"
+description = "Creás un charco de sangre. Quien pise queda sangrando por 4 turnos (2 de daño/turno)."
+cost = 1
+card_type = "puddle"
+puddle_effect = "blood"
+card_range = 1
+throw_range = 6
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"

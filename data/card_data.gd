@@ -11,4 +11,5 @@ class_name CardData
 @export var block_amount: int = 0
 @export var bounce: float = 0.0
 @export var throw_range: int = 0
+@export var puddle_effect: String = "wet"
 @export var image: Texture2D

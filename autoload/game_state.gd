@@ -31,7 +31,7 @@ func _ready() -> void:
 	player_save = PlayerSaveData.new()
 
 	# Mock para probar
-	player_save.owned_card_ids = ["step", "dash", "strike", "slash", "block", "meteor", "arrow", "snipe", "grenade", "salto_rupestre", "envion", "charco"]
+	player_save.owned_card_ids = ["step", "dash", "strike", "slash", "block", "meteor", "arrow", "snipe", "grenade", "salto_rupestre", "envion", "charco", "charco_fuego", "charco_grasa", "enredadera", "charco_sangre", "charco_veneno", "charco_arena", "emboscada"]
 	player_save.equipped_deck_ids = [
 		"step", "step", "step",
 		"dash", "dash",
@@ -47,6 +47,10 @@ func _ready() -> void:
 		"salto_rupestre", "salto_rupestre",
 		"envion", "envion",
 		"charco", "charco",
+		"charco_fuego", "charco_grasa",
+		"enredadera", "charco_sangre",
+		"charco_veneno", "charco_arena",
+		"emboscada", "emboscada",
 	]
 	player_save.inventory_slots = 20
 	player_save.inventory_items = []

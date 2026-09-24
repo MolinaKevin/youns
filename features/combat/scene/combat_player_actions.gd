@@ -35,7 +35,10 @@ var pending_push_index: int      = -1
 var pending_push_phase: int      = 0
 var pending_push_card:  CardData = null
 
-var pending_puddle_index: int = -1
+var pending_puddle_index:    int      = -1
+var pending_overwatch_index: int      = -1
+var pending_overwatch_card:  CardData = null
+var pending_overwatch_dir:   Vector2  = Vector2.ZERO
 
 var pending_cell := Vector2(-1.0, -1.0)
 
@@ -79,7 +82,8 @@ func _has_pending_selection() -> bool:
 		pending_self_index >= 0 or
 		pending_jump_index >= 0 or
 		pending_push_index >= 0 or
-		pending_puddle_index >= 0
+		pending_puddle_index >= 0 or
+		pending_overwatch_index >= 0
 	)
 
 func _on_move_mode_toggled(pressed: bool) -> void:
@@ -92,11 +96,23 @@ func play_as_move(index: int) -> void:
 	if card.cost > state.player_energy:
 		log_requested.emit("Not enough energy.")
 		return
+	if state.player_overwatch_active:
+		state.player_overwatch_active = false
+		map_area.clear_overwatch_zone()
+		log_requested.emit("Vigilancia cancelada.")
+	if state.player_entangled_turns > 0:
+		log_requested.emit("¡Estás enredado! No podés moverte (%d turnos)." % state.player_entangled_turns)
+		card_preview_hide_requested.emit()
+		return
+	if state.player_frozen_turns > 0:
+		log_requested.emit("¡Estás congelado! No podés moverte (%d turnos)." % state.player_frozen_turns)
+		card_preview_hide_requested.emit()
+		return
 	card_preview_show_requested.emit(card)
-	var effective_range := MOVE_MODE_RANGE
-	if state.player_wet_turns > 0:
-		effective_range = maxi(1, MOVE_MODE_RANGE - 1)
-		log_requested.emit("Estás mojado: movimiento reducido a %d." % effective_range)
+	var penalty := (1 if state.player_wet_turns > 0 else 0) + (2 if state.player_greasy_turns > 0 else 0)
+	var effective_range := maxi(1, MOVE_MODE_RANGE - penalty)
+	if penalty > 0:
+		log_requested.emit("Movimiento reducido a %d (penalización %d)." % [effective_range, penalty])
 	pending_move_section = "hand"
 	pending_move_index = index
 	pending_move_range = effective_range
@@ -109,6 +125,10 @@ func play_card(index: int) -> void:
 		log_requested.emit("Not enough energy for %s." % card.name)
 		return
 
+	if state.player_overwatch_active and card.card_type != "overwatch":
+		state.player_overwatch_active = false
+		map_area.clear_overwatch_zone()
+		log_requested.emit("Vigilancia cancelada.")
 	card_preview_show_requested.emit(card)
 	match card.card_type:
 		"move":
@@ -135,6 +155,8 @@ func play_card(index: int) -> void:
 			start_push_selection(index, card)
 		"puddle":
 			start_puddle_selection(index, card)
+		"overwatch":
+			start_overwatch_selection(index, card)
 
 # ── Selection starters ────────────────────────────────────────────────────────
 
@@ -142,10 +164,18 @@ func start_move_selection(section_name: String, index: int, move_range: int, ene
 	if energy_cost > state.player_energy:
 		log_requested.emit("Not enough energy for %s." % card_name)
 		return
-	var effective_range := move_range
-	if state.player_wet_turns > 0:
-		effective_range = maxi(1, move_range - 1)
-		log_requested.emit("Estás mojado: movimiento reducido a %d." % effective_range)
+	if state.player_entangled_turns > 0:
+		log_requested.emit("¡Estás enredado! No podés moverte (%d turnos)." % state.player_entangled_turns)
+		card_preview_hide_requested.emit()
+		return
+	if state.player_frozen_turns > 0:
+		log_requested.emit("¡Estás congelado! No podés moverte (%d turnos)." % state.player_frozen_turns)
+		card_preview_hide_requested.emit()
+		return
+	var penalty := (1 if state.player_wet_turns > 0 else 0) + (2 if state.player_greasy_turns > 0 else 0)
+	var effective_range := maxi(1, move_range - penalty)
+	if penalty > 0:
+		log_requested.emit("Movimiento reducido a %d (penalización %d)." % [effective_range, penalty])
 	pending_move_section = section_name
 	pending_move_index = index
 	pending_move_range = effective_range
@@ -155,7 +185,11 @@ func start_move_selection(section_name: String, index: int, move_range: int, ene
 func start_range_attack_selection(index: int, card: CardData, range_override: int = 0) -> void:
 	pending_attack_section = "hand"
 	pending_attack_index   = index
-	pending_attack_range   = range_override if range_override > 0 else card.card_range
+	var base_range := range_override if range_override > 0 else card.card_range
+	if state.player_blinded_turns > 0:
+		base_range = mini(base_range, 1)
+		log_requested.emit("¡Estás cegado! Rango reducido a 1.")
+	pending_attack_range = base_range
 	map_area.start_attack_selection(pending_attack_range)
 
 func start_grenade_selection(index: int, card: CardData) -> void:
@@ -172,10 +206,10 @@ func start_trap_selection(index: int, card: CardData, nearby: bool) -> void:
 		return
 	pending_trap_index = index
 	if nearby:
-		map_area.start_trap_placement(8)
+		map_area.start_trap_placement(8, float(card.card_range))
 		log_requested.emit("Place %s nearby (range 8)." % card.name)
 	else:
-		map_area.start_trap_placement(card.throw_range)
+		map_area.start_trap_placement(card.throw_range, float(card.card_range))
 		log_requested.emit("Throw %s — choose a tile up to %d spaces away." % [card.name, card.throw_range])
 
 func start_self_selection(index: int, card: CardData) -> void:
@@ -195,12 +229,21 @@ func start_push_selection(index: int, card: CardData) -> void:
 	map_area.start_push_enemy_selection(float(card.card_range))
 	log_requested.emit("Seleccioná al enemigo para agarrarlo.")
 
+func start_overwatch_selection(index: int, card: CardData) -> void:
+	if card.cost > state.player_energy:
+		log_requested.emit("No tenés energía para %s." % card.name)
+		return
+	pending_overwatch_index = index
+	pending_overwatch_card  = card
+	map_area.start_overwatch_selection(float(card.card_range), 10.0)
+	log_requested.emit("Apuntá el cono hacia donde querés vigilar.")
+
 func start_puddle_selection(index: int, card: CardData) -> void:
 	if card.cost > state.player_energy:
 		log_requested.emit("No tenés energía para %s." % card.name)
 		return
 	pending_puddle_index = index
-	map_area.start_puddle_placement(float(card.throw_range))
+	map_area.start_puddle_placement(float(card.throw_range), card.puddle_effect, float(card.card_range))
 	log_requested.emit("Elegí dónde lanzar el charco (rango %d)." % card.throw_range)
 
 func start_rock_jump_selection(index: int, card: CardData) -> void:
@@ -220,6 +263,7 @@ func start_rock_jump_selection(index: int, card: CardData) -> void:
 
 # ── Map tile selected & confirm popup ─────────────────────────────────────────
 
+
 func _on_position_selected(pos: Vector2) -> void:
 	var has_pending := (
 		pending_trap_index >= 0 or
@@ -230,9 +274,17 @@ func _on_position_selected(pos: Vector2) -> void:
 		pending_self_index >= 0 or
 		pending_jump_index >= 0 or
 		pending_push_index >= 0 or
-		pending_puddle_index >= 0
+		pending_puddle_index >= 0 or
+		pending_overwatch_index >= 0
 	)
 	if not has_pending:
+		return
+
+	if pending_overwatch_index >= 0:
+		var dir: Vector2 = pos - map_area.player_pos
+		if dir.length() > 0.2:
+			pending_overwatch_dir = dir.normalized()
+			confirm_popup_show_requested.emit(false)
 		return
 
 	if pending_puddle_index >= 0:
@@ -343,6 +395,10 @@ func _execute_tile_action(cell: Vector2) -> void:
 		_confirm_range_attack()
 		return
 
+	if pending_overwatch_index >= 0:
+		_execute_overwatch(pending_overwatch_dir)
+		return
+
 	if pending_puddle_index >= 0:
 		_execute_puddle(cell)
 		return
@@ -368,9 +424,40 @@ func _execute_tile_action(cell: Vector2) -> void:
 		log_requested.emit("Invalid move.")
 		return
 
-	if map_area.is_segment_in_puddle(move_from, map_area.player_pos):
+	var zone_fx: Dictionary = map_area.get_puddle_effects_along(move_from, map_area.player_pos)
+	if zone_fx.get("wet", false):
 		state.player_wet_turns = 3
 		log_requested.emit("¡Pisaste el charco! Estás mojado por 3 turnos.")
+	if zone_fx.get("fire", false) and state.player_burning_turns == 0:
+		state.player_burning_turns = 3
+		log_requested.emit("¡Pisaste fuego! Estás en llamas por 3 turnos.")
+	if zone_fx.get("grease", false) and state.player_greasy_turns == 0:
+		state.player_greasy_turns = 3
+		log_requested.emit("¡Pisaste grasa! Movimiento reducido por 3 turnos.")
+	if zone_fx.get("vine", false) and state.player_entangled_turns == 0:
+		state.player_entangled_turns = 2
+		log_requested.emit("¡Las enredaderas te atraparon! No podés moverte por 2 turnos.")
+	if zone_fx.get("blood", false) and state.player_bleeding_turns == 0:
+		state.player_bleeding_turns = 4
+		log_requested.emit("¡Pisaste sangre! Estás sangrando por 4 turnos.")
+	if zone_fx.get("poison", false) and state.player_poison_stacks == 0:
+		state.player_poison_stacks = 3
+		log_requested.emit("¡Pisaste veneno! Estás envenenado (3→2→1).")
+	if zone_fx.get("sand", false) and state.player_blinded_turns == 0:
+		state.player_blinded_turns = 2
+		log_requested.emit("¡Arena en los ojos! Rango de ataque reducido a 1 por 2 turnos.")
+	if zone_fx.get("ice", false) and state.player_frozen_turns == 0:
+		state.player_frozen_turns = 2
+		log_requested.emit("¡Pisaste hielo! Estás congelado por 2 turnos.")
+	if zone_fx.get("bloody_ice", false):
+		if state.player_frozen_turns == 0:
+			state.player_frozen_turns = 2
+		if state.player_bleeding_turns == 0:
+			state.player_bleeding_turns = 3
+		log_requested.emit("¡Pisaste hielo sangriento! Congelado y sangrando.")
+	if zone_fx.get("dark_smoke", false) and state.player_blinded_turns == 0:
+		state.player_blinded_turns = 3
+		log_requested.emit("¡Humo oscuro! No podés ver bien por 3 turnos.")
 
 	var trap_dmg: int = map_area.check_and_trigger_traps_along_path(map_area.player_pos, cell)
 	if trap_dmg > 0:
@@ -437,30 +524,78 @@ func _execute_push(direction_target: Vector2) -> void:
 	card_preview_hide_requested.emit()
 
 	var fx: Dictionary = map_area.trigger_zone_effects_along(push_from, landing)
-	if fx["wet"]:
+	var any_zone := false
+	if fx.get("wet", false):
 		state.enemy_wet_turns = 3
-		log_requested.emit("¡%s! El enemigo pasó por el charco. ¡Está mojado!" % card.name)
-	if fx["trap_damage"] > 0:
+		log_requested.emit("El enemigo pasó por agua. ¡Está mojado!")
+		any_zone = true
+	if fx.get("fire", false) and state.enemy_burning_turns == 0:
+		state.enemy_burning_turns = 3
+		log_requested.emit("El enemigo pasó por el fuego. ¡Está en llamas!")
+		any_zone = true
+	if fx.get("grease", false) and state.enemy_greasy_turns == 0:
+		state.enemy_greasy_turns = 3
+		log_requested.emit("El enemigo pasó por grasa. ¡Movimiento reducido!")
+		any_zone = true
+	if fx.get("vine", false) and state.enemy_entangled_turns == 0:
+		state.enemy_entangled_turns = 2
+		log_requested.emit("¡El enemigo quedó enredado por 2 turnos!")
+		any_zone = true
+	if fx.get("blood", false) and state.enemy_bleeding_turns == 0:
+		state.enemy_bleeding_turns = 4
+		log_requested.emit("El enemigo pasó por sangre. ¡Está sangrando!")
+		any_zone = true
+	if fx.get("poison", false) and state.enemy_poison_stacks == 0:
+		state.enemy_poison_stacks = 3
+		log_requested.emit("El enemigo pasó por veneno. ¡Está envenenado!")
+		any_zone = true
+	if fx.get("sand", false) and state.enemy_blinded_turns == 0:
+		state.enemy_blinded_turns = 2
+		log_requested.emit("¡El enemigo fue cegado por 2 turnos!")
+		any_zone = true
+	if fx.get("trap_damage", 0) > 0:
 		log_requested.emit("¡%s! El enemigo pasó por una trampa — %d de daño!" % [card.name, fx["trap_damage"]])
 		await _deal_damage_to_enemy.call(fx["trap_damage"])
-	if not fx["wet"] and fx["trap_damage"] == 0:
+		any_zone = true
+	if not any_zone:
 		log_requested.emit("%s: empujaste al enemigo." % card.name)
 
 	hand_refresh_requested.emit()
 	ui_update_requested.emit()
 	_check_combat_end.call()
 
+func _execute_overwatch(dir: Vector2) -> void:
+	var card: CardData = state.hand[pending_overwatch_index]
+	var idx := pending_overwatch_index
+	state.player_energy -= card.cost
+	map_area.clear_overwatch_selection()
+	map_area.place_overwatch(map_area.player_pos, dir, float(card.card_range), 10.0)
+	state.player_overwatch_active     = true
+	state.player_overwatch_origin     = map_area.player_pos
+	state.player_overwatch_dir        = dir
+	state.player_overwatch_range      = float(card.card_range)
+	state.player_overwatch_half_angle = 10.0
+	state.player_overwatch_damage     = card.damage
+	state.discard_pile.append(state.hand[idx])
+	state.hand.remove_at(idx)
+	pending_overwatch_index = -1
+	pending_overwatch_card  = null
+	card_preview_hide_requested.emit()
+	log_requested.emit("%s: zona de vigilancia activa. Si el enemigo entra, se dispara." % card.name)
+	hand_refresh_requested.emit()
+	ui_update_requested.emit()
+
 func _execute_puddle(cell: Vector2) -> void:
 	var card: CardData = state.hand[pending_puddle_index]
 	var idx := pending_puddle_index
 	state.player_energy -= card.cost
 	map_area.clear_puddle_placement()
-	map_area.place_puddle(cell, card.card_range)
+	map_area.place_puddle(cell, card.card_range, card.puddle_effect)
 	state.discard_pile.append(state.hand[idx])
 	state.hand.remove_at(idx)
 	pending_puddle_index = -1
 	card_preview_hide_requested.emit()
-	log_requested.emit("%s: charco colocado." % card.name)
+	log_requested.emit("%s: colocado." % card.name)
 	hand_refresh_requested.emit()
 	ui_update_requested.emit()
 
@@ -643,6 +778,11 @@ func cancel_selection() -> void:
 	if pending_puddle_index >= 0:
 		map_area.clear_puddle_placement()
 		pending_puddle_index = -1
+	if pending_overwatch_index >= 0:
+		map_area.clear_overwatch_selection()
+		pending_overwatch_index = -1
+		pending_overwatch_card  = null
+		pending_overwatch_dir   = Vector2.ZERO
 	if pending_jump_index >= 0:
 		map_area.clear_rock_jump_selection()
 		_clear_pending_jump()
@@ -670,6 +810,11 @@ func reset() -> void:
 	if pending_puddle_index >= 0:
 		map_area.clear_puddle_placement()
 	pending_puddle_index = -1
+	if pending_overwatch_index >= 0:
+		map_area.clear_overwatch_selection()
+	pending_overwatch_index = -1
+	pending_overwatch_card  = null
+	pending_overwatch_dir   = Vector2.ZERO
 	if pending_jump_index >= 0:
 		map_area.clear_rock_jump_selection()
 	_clear_pending_jump()

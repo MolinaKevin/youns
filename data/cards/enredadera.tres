@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" format=3 uid="uid://enredadera01"]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_enredadera"]
+
+[resource]
+script = ExtResource("1_enredadera")
+id = "enredadera"
+name = "Enredadera"
+description = "Creás una zona de enredaderas. Quien pise queda inmovilizado por 2 turnos."
+cost = 2
+card_type = "puddle"
+puddle_effect = "vine"
+card_range = 1
+throw_range = 5
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"

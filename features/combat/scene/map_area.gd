@@ -21,7 +21,8 @@ var grenade_aoe_radius    := 0.0
 var selected_trap_range   := 0.0
 var trap_zones: Array = []
 var _trap_visuals: Array = []
-var _enemy_move_pending := false
+var _enemy_move_pending  := false
+var _enemy_waypoints: Array[Vector3] = []
 var puddle_zones: Array[Dictionary] = []
 var _puddle_visuals: Array[MeshInstance3D] = []
 var enemy_hp := 35
@@ -32,7 +33,8 @@ var player_elevation: int = 0
 var enemy_elevation:  int = 0
 
 # ── Pathfinding ───────────────────────────────────────────────────────────────
-const PATH_CELL := 0.5
+const PATH_CELL    := 0.5
+const AGENT_RADIUS := 0.75
 var _last_path: Array[Vector2] = []
 var _last_path_cost: float = 0.0
 
@@ -49,7 +51,7 @@ var solid_obstacles := [
 	{"pos": Vector2(13.0, 24.0), "box": Vector2(5.0, 2.0),                 "type": "bridge"},
 	{"pos": Vector2(17.0,  6.0), "box": Vector2(2.0, 5.0),                 "type": "bridge"},
 	# platform: caja elevada con rampas. se sube por las rampas, bloquea LOS desde el suelo
-	{"pos": Vector2(8.0,  20.0), "box": Vector2(5.0, 5.0),                "type": "platform",
+	{"pos": Vector2(8.0,  10.0), "box": Vector2(5.0, 5.0),                "type": "platform",
 	 "ramps": [{"side": "south", "width": 2.5}, {"side": "east", "width": 2.5}]},
 ]
 
@@ -106,6 +108,21 @@ var _jump_landing_disc:       MeshInstance3D
 var _push_disc:               MeshInstance3D
 var _push_enemy_disc:         MeshInstance3D
 var _puddle_disc:             MeshInstance3D
+var _puddle_preview:          MeshInstance3D
+var _puddle_preview_effect:   String  = "wet"
+var _puddle_preview_radius:   float   = 1.0
+var _puddle_throw_range:      float   = 0.0
+var _puddle_preview_last_pos: Vector2 = Vector2(-999.0, -999.0)
+var _trap_preview:            MeshInstance3D
+var _trap_preview_radius:     float   = 1.0
+var _trap_preview_last_pos:   Vector2 = Vector2(-999.0, -999.0)
+
+var _overwatch_zone:              MeshInstance3D
+var _overwatch_preview_disc:      MeshInstance3D
+var _overwatch_selection_active:  bool    = false
+var _overwatch_selection_range:   float   = 0.0
+var _overwatch_selection_angle:   float   = 10.0
+var _overwatch_preview_last_dir:  Vector2 = Vector2.ZERO
 var _jump_rock_markers:       Array[MeshInstance3D] = []
 var _jump_selected_marker:    MeshInstance3D
 var _jump_selected_marker_mat: StandardMaterial3D
@@ -131,6 +148,19 @@ func _ready() -> void:
 	_push_disc         = _make_disc(Color(0.9, 0.2, 0.6, 0.40))
 	_push_enemy_disc   = _make_disc(Color(1.0, 0.5, 0.1, 0.70))
 	_puddle_disc       = _make_disc(Color(0.1, 0.5, 0.9, 0.45))
+	_puddle_preview    = MeshInstance3D.new()
+	_puddle_preview.visible = false
+	add_child(_puddle_preview)
+	_trap_preview      = MeshInstance3D.new()
+	_trap_preview.visible = false
+	add_child(_trap_preview)
+
+	_overwatch_zone = MeshInstance3D.new()
+	_overwatch_zone.visible = false
+	add_child(_overwatch_zone)
+	_overwatch_preview_disc = MeshInstance3D.new()
+	_overwatch_preview_disc.visible = false
+	add_child(_overwatch_preview_disc)
 
 	_jump_selected_marker_mat = _make_mat(Color(0.9, 1.0, 0.2, 0.9))
 	_jump_selected_marker = MeshInstance3D.new()
@@ -304,7 +334,7 @@ func _show_disc(mi: MeshInstance3D, center: Vector2, radius: float, _unused: int
 func _show_disc_ring(mi: MeshInstance3D, center: Vector2, radius: float, inner: float) -> void:
 	_build_tile_disc(mi, center, radius, inner, 0.02)
 
-func _build_tile_disc(mi: MeshInstance3D, center: Vector2, radius: float, inner_radius: float, y: float) -> void:
+func _build_tile_disc(mi: MeshInstance3D, center: Vector2, radius: float, inner_radius: float, y: float, exclusions: Array = []) -> void:
 	const CELL   := 0.08
 	const BORDER := 0.010
 	var half     := CELL * 0.5
@@ -330,6 +360,12 @@ func _build_tile_disc(mi: MeshInstance3D, center: Vector2, radius: float, inner_
 			var d := Vector2(cx, cy).distance_to(center)
 			if inner_radius > 0.0 and d < inner_radius:
 				continue
+			var cell_pos := Vector2(cx, cy)
+			var excluded := false
+			for ex in exclusions:
+				if cell_pos.distance_to(ex["pos"]) <= ex["radius"]:
+					excluded = true; break
+			if excluded: continue
 
 			# fill quad (slightly inset so border is visible)
 			var fi := fill_v.size()
@@ -653,7 +689,14 @@ func _process(delta: float) -> void:
 			_player_body.rotation.y = lerp_angle(_player_body.rotation.y, target_angle, _player_rotate_speed * delta)
 
 	var prev_enemy := _enemy_body.position
-	_enemy_body.position = _enemy_body.position.move_toward(_enemy_target, step)
+	var _current_enemy_target := _enemy_target
+	if not _enemy_waypoints.is_empty():
+		_current_enemy_target = _enemy_waypoints[0]
+		_enemy_body.position = _enemy_body.position.move_toward(_current_enemy_target, step)
+		if _enemy_body.position.distance_to(_current_enemy_target) < 0.05:
+			_enemy_waypoints.pop_front()
+	else:
+		_enemy_body.position = _enemy_body.position.move_toward(_enemy_target, step)
 	var enemy_moved := prev_enemy.distance_to(_enemy_body.position)
 
 	var to_player := _player_body.position - _enemy_body.position
@@ -682,17 +725,19 @@ func _update_hover(screen_pos: Vector2, camera: Camera3D) -> void:
 		or _push_disc.visible or _push_enemy_disc.visible \
 		or _puddle_disc.visible
 	var any_target := _enemy_highlight.visible or _self_highlight.visible or _attack_disc.visible
-	if not any_disc and not any_target:
-		_hover_cell.visible  = false
-		_enemy_hover.visible = false
-		_self_hover.visible  = false
+	if not any_disc and not any_target and not _overwatch_selection_active:
+		_hover_cell.visible             = false
+		_enemy_hover.visible            = false
+		_self_hover.visible             = false
+		_overwatch_preview_disc.visible = false
 		return
 	var from := camera.project_ray_origin(screen_pos)
 	var dir  := camera.project_ray_normal(screen_pos)
 	if abs(dir.y) < 0.001:
-		_hover_cell.visible  = false
-		_enemy_hover.visible = false
-		_self_hover.visible  = false
+		_hover_cell.visible             = false
+		_enemy_hover.visible            = false
+		_self_hover.visible             = false
+		_overwatch_preview_disc.visible = false
 		return
 	var pos := _ray_to_terrain(from, dir)
 	if any_disc:
@@ -701,6 +746,55 @@ func _update_hover(screen_pos: Vector2, camera: Camera3D) -> void:
 		_hover_cell.visible = false
 	_enemy_hover.visible = (_enemy_highlight.visible or _attack_disc.visible) and is_click_on_enemy(pos)
 	_self_hover.visible  = _self_highlight.visible and is_click_on_player(pos)
+
+	if _puddle_disc.visible:
+		var in_range := pos.distance_to(player_pos) <= _puddle_throw_range \
+			and not _tile_in_obstacle(pos, player_elevation)
+		if in_range:
+			var snapped := Vector2(round(pos.x * 2.0) / 2.0, round(pos.y * 2.0) / 2.0)
+			if snapped.distance_to(_puddle_preview_last_pos) > 0.01:
+				_puddle_preview_last_pos = snapped
+				var base := _puddle_base_color(_puddle_preview_effect)
+				_puddle_preview.set_meta("fill_mat", _make_mat(Color(base.r, base.g, base.b, 0.22)))
+				_puddle_preview.set_meta("bord_mat", _make_mat(Color(
+					minf(base.r + 0.2, 1.0), minf(base.g + 0.2, 1.0), minf(base.b + 0.2, 1.0), 0.60)))
+				_build_tile_disc(_puddle_preview, snapped, _puddle_preview_radius, 0.0, 0.015)
+			_puddle_preview.visible = true
+		else:
+			_puddle_preview.visible = false
+	else:
+		_puddle_preview.visible = false
+
+	if _trap_disc.visible:
+		var in_range := pos.distance_to(player_pos) <= selected_trap_range \
+			and not _tile_in_obstacle(pos, player_elevation)
+		if in_range:
+			var snapped := Vector2(round(pos.x * 2.0) / 2.0, round(pos.y * 2.0) / 2.0)
+			if snapped.distance_to(_trap_preview_last_pos) > 0.01:
+				_trap_preview_last_pos = snapped
+				_trap_preview.set_meta("fill_mat", _make_mat(Color(0.8, 0.2, 0.8, 0.22)))
+				_trap_preview.set_meta("bord_mat", _make_mat(Color(1.0, 0.5, 1.0, 0.60)))
+				_build_tile_disc(_trap_preview, snapped, _trap_preview_radius, 0.0, 0.015)
+			_trap_preview.visible = true
+		else:
+			_trap_preview.visible = false
+	else:
+		_trap_preview.visible = false
+
+	if _overwatch_selection_active:
+		var to_mouse := pos - player_pos
+		if to_mouse.length() > 0.2:
+			var cone_dir := to_mouse.normalized()
+			if cone_dir.distance_to(_overwatch_preview_last_dir) > 0.015:
+				_overwatch_preview_last_dir = cone_dir
+				_overwatch_preview_disc.set_meta("fill_mat", _make_mat(Color(1.0, 0.85, 0.1, 0.20)))
+				_overwatch_preview_disc.set_meta("bord_mat", _make_mat(Color(1.0, 1.0, 0.35, 0.55)))
+				_build_cone_disc(_overwatch_preview_disc, player_pos, cone_dir, _overwatch_selection_range, _overwatch_selection_angle)
+			_overwatch_preview_disc.visible = true
+		else:
+			_overwatch_preview_disc.visible = false
+	else:
+		_overwatch_preview_disc.visible = false
 
 func _show_single_cell(mi: MeshInstance3D, world_pos: Vector2) -> void:
 	var cx: float = floor(world_pos.x / 0.08) * 0.08 + 0.04
@@ -851,86 +945,10 @@ func _pos_in_ramp_exit(pos: Vector2, obs: Dictionary) -> bool:
 # ── Move ──────────────────────────────────────────────────────────────────────
 func start_move_selection(move_range: float) -> void:
 	selected_move_range = move_range
-	_show_reachable(_move_disc, _move_disc_inner, player_pos, move_range, player_elevation)
+	_show_disc_with_los(_move_disc,       player_pos, move_range,         player_elevation, true, false)
+	_show_disc_with_los(_move_disc_inner, player_pos, PLAYER_ZONE_RADIUS, player_elevation, true, false)
 	_show_smooth_circle(_player_circle, player_pos, PLAYER_ZONE_RADIUS)
 
-func _dijkstra_reachable(origin: Vector2, move_range: float, elevation: int = 0) -> Dictionary:
-	var start := _w2g(origin)
-	var dist  := {}
-	dist[start] = 0.0
-	var queue: Array = [[0.0, start]]
-	while not queue.is_empty():
-		queue.sort_custom(func(a, b): return a[0] < b[0])
-		var entry: Array    = queue.pop_front()
-		var cur_cost: float = entry[0]
-		var cur: Vector2i   = entry[1]
-		if cur_cost > dist.get(cur, INF): continue
-		for dy in [-1, 0, 1]:
-			for dx in [-1, 0, 1]:
-				if dx == 0 and dy == 0: continue
-				var nb := cur + Vector2i(dx, dy)
-				if not _g_in_bounds(nb): continue
-				if _g_blocked(nb, elevation): continue
-				var step: float = (1.414 if (dx != 0 and dy != 0) else 1.0) * PATH_CELL
-				var nc: float   = cur_cost + step
-				if nc <= move_range + 0.01 and nc < dist.get(nb, INF):
-					dist[nb] = nc
-					queue.append([nc, nb])
-	return dist
-
-func _show_reachable(outer: MeshInstance3D, inner: MeshInstance3D, origin: Vector2, move_range: float, elevation: int = 0) -> void:
-	const VCELL  := 0.08
-	const BORDER := 0.010
-	var half     := VCELL * 0.5
-
-	var out_fv := PackedVector3Array(); var out_fi := PackedInt32Array()
-	var out_bv := PackedVector3Array(); var out_bi := PackedInt32Array()
-	var in_fv  := PackedVector3Array(); var in_fi  := PackedInt32Array()
-	var in_bv  := PackedVector3Array(); var in_bi  := PackedInt32Array()
-
-	var vgx0 := int(floor((origin.x - move_range) / VCELL))
-	var vgx1 := int(ceil( (origin.x + move_range) / VCELL))
-	var vgy0 := int(floor((origin.y - move_range) / VCELL))
-	var vgy1 := int(ceil( (origin.y + move_range) / VCELL))
-
-	for gx in range(vgx0, vgx1 + 1):
-		for gy in range(vgy0, vgy1 + 1):
-			var cx: float = (gx + 0.5) * VCELL
-			var cy: float = (gy + 0.5) * VCELL
-			var cell_pos := Vector2(cx, cy)
-			var px := clampf(origin.x, cx - half, cx + half)
-			var py := clampf(origin.y, cy - half, cy + half)
-			if Vector2(px, py).distance_to(origin) > move_range: continue
-			if _tile_in_obstacle(cell_pos, elevation): continue
-			var is_inner := cell_pos.distance_to(origin) <= PLAYER_ZONE_RADIUS
-			var terrain_y: float = _terrain_height_at(cell_pos)
-			var y: float = terrain_y + (0.022 if is_inner else 0.02)
-			var fv := in_fv if is_inner else out_fv
-			var fi := in_fi if is_inner else out_fi
-			var bv := in_bv if is_inner else out_bv
-			var bi := in_bi if is_inner else out_bi
-			var f := fv.size()
-			fv.append(Vector3(cx-half+BORDER, y, cy-half+BORDER))
-			fv.append(Vector3(cx+half-BORDER, y, cy-half+BORDER))
-			fv.append(Vector3(cx+half-BORDER, y, cy+half-BORDER))
-			fv.append(Vector3(cx-half+BORDER, y, cy+half-BORDER))
-			fi.append_array([f, f+1, f+2, f, f+2, f+3])
-			var strips := [
-				[cx-half, cy-half,        cx+half,        cy-half+BORDER],
-				[cx-half, cy+half-BORDER, cx+half,        cy+half],
-				[cx-half, cy-half+BORDER, cx-half+BORDER, cy+half-BORDER],
-				[cx+half-BORDER, cy-half+BORDER, cx+half, cy+half-BORDER],
-			]
-			for s in strips:
-				var x0: float = s[0]; var z0: float = s[1]
-				var x1: float = s[2]; var z1: float = s[3]
-				var b := bv.size()
-				bv.append(Vector3(x0, y+0.001, z0)); bv.append(Vector3(x1, y+0.001, z0))
-				bv.append(Vector3(x1, y+0.001, z1)); bv.append(Vector3(x0, y+0.001, z1))
-				bi.append_array([b, b+1, b+2, b, b+2, b+3])
-
-	_apply_two_surface_mesh(outer, out_fv, out_fi, out_bv, out_bi)
-	_apply_two_surface_mesh(inner, in_fv,  in_fi,  in_bv,  in_bi)
 
 func _tile_in_obstacle(pos: Vector2, elevation: int = 0) -> bool:
 	for obs in solid_obstacles:
@@ -1103,40 +1121,29 @@ func get_path_cost(_pos: Vector2) -> float:
 	return _last_path_cost
 
 # ── A* Pathfinding ────────────────────────────────────────────────────────────
-func compute_path(from: Vector2, to: Vector2, elevation: int = 0) -> float:
-	if _has_movement_los(from, to, elevation):
-		_last_path      = [from, to]
-		_last_path_cost = from.distance_to(to)
-		return _last_path_cost
-
-	_last_path = []
-	_last_path_cost = INF
-
+func _run_astar(from: Vector2, to: Vector2, elevation: int = 0, margin: float = PATH_CELL * 0.5, use_los: bool = true) -> Array[Vector2]:
+	if use_los and _has_movement_los(from, to, elevation):
+		return [from, to]
 	var start := _w2g(from)
 	var goal  := _w2g(to)
-
 	var open   := {}
 	var came   := {}
 	var g      := {}
 	var f      := {}
-
 	g[start] = 0.0
 	f[start] = _heuristic(start, goal)
 	open[start] = true
-
 	while not open.is_empty():
 		var cur: Vector2i = _lowest_f(open, f)
 		if cur == goal:
-			_last_path      = _reconstruct(came, cur, from, to)
-			_last_path_cost = g[cur] * PATH_CELL
-			return _last_path_cost
+			return _reconstruct(came, cur, from, to)
 		open.erase(cur)
 		for dy in [-1, 0, 1]:
 			for dx in [-1, 0, 1]:
 				if dx == 0 and dy == 0: continue
 				var nb := cur + Vector2i(dx, dy)
 				if not _g_in_bounds(nb): continue
-				if _g_blocked(nb, elevation): continue
+				if _g_blocked(nb, elevation, margin): continue
 				var step: float = 1.414 if (dx != 0 and dy != 0) else 1.0
 				var tg: float   = g.get(cur, INF) + step
 				if tg < g.get(nb, INF):
@@ -1144,8 +1151,20 @@ func compute_path(from: Vector2, to: Vector2, elevation: int = 0) -> float:
 					g[nb]    = tg
 					f[nb]    = tg + _heuristic(nb, goal)
 					open[nb] = true
+	return []
 
-	return INF
+func compute_path(from: Vector2, to: Vector2, elevation: int = 0) -> float:
+	var path := _run_astar(from, to, elevation)
+	if path.is_empty():
+		_last_path      = []
+		_last_path_cost = INF
+		return INF
+	_last_path = path
+	var cost := 0.0
+	for i in range(path.size() - 1):
+		cost += path[i].distance_to(path[i + 1])
+	_last_path_cost = cost
+	return _last_path_cost
 
 func _w2g(pos: Vector2) -> Vector2i:
 	return Vector2i(int(round(pos.x / PATH_CELL)), int(round(pos.y / PATH_CELL)))
@@ -1157,7 +1176,7 @@ func _g_in_bounds(cell: Vector2i) -> bool:
 	return cell.x >= 0 and cell.x <= int(WORLD_W / PATH_CELL) \
 		and cell.y >= 0 and cell.y <= int(WORLD_H / PATH_CELL)
 
-func _g_blocked(cell: Vector2i, elevation: int = 0) -> bool:
+func _g_blocked(cell: Vector2i, elevation: int = 0, margin: float = PATH_CELL * 0.5) -> bool:
 	var wp := _g2w(cell)
 	# Elevado: solo puede moverse en el footprint de la plataforma, la rampa exterior o la tira de desmontaje
 	if elevation > 0:
@@ -1175,17 +1194,17 @@ func _g_blocked(cell: Vector2i, elevation: int = 0) -> bool:
 		if obs_type == "bridge": continue
 		if obs_type == "platform":
 			var p: Vector2 = obs["pos"]
-			var h: Vector2 = obs["box"] * 0.5 + Vector2(PATH_CELL, PATH_CELL) * 0.5
+			var h: Vector2 = obs["box"] * 0.5 + Vector2(margin, margin)
 			if abs(wp.x - p.x) < h.x and abs(wp.y - p.y) < h.y:
 				return true  # footprint bloqueado al nivel del suelo
 			continue  # fuera del footprint (incl. rampa exterior) → no bloqueado
 		if obs.has("box"):
-			var half: Vector2 = obs["box"] * 0.5 + Vector2(PATH_CELL, PATH_CELL) * 0.5
+			var half: Vector2 = obs["box"] * 0.5 + Vector2(margin, margin)
 			var p: Vector2    = obs["pos"]
 			if abs(wp.x - p.x) < half.x and abs(wp.y - p.y) < half.y:
 				return true
 		else:
-			if wp.distance_to(obs["pos"]) < obs["radius"] + PATH_CELL * 0.5:
+			if wp.distance_to(obs["pos"]) < obs["radius"] + margin:
 				return true
 	return false
 
@@ -1239,14 +1258,16 @@ func is_player_in_melee_range() -> bool:
 	return movement_distance(enemy_pos, player_pos) <= 1.5
 
 # ── LOS ───────────────────────────────────────────────────────────────────────
-func has_line_of_sight(from: Vector2, to: Vector2) -> bool:
-	var from_elev: int = _elevation_at(from)
-	var to_elev:   int = _elevation_at(to)
+# Núcleo compartido. block_rocks / block_bridges controlan qué tipos tapan el rayo.
+# from_elev / to_elev se usan para la plataforma: si cualquiera está elevado, no bloquea.
+func _los_clear(from: Vector2, to: Vector2,
+		block_rocks: bool, block_bridges: bool,
+		from_elev: int, to_elev: int) -> bool:
 	for obs in solid_obstacles:
 		var obs_type: String = obs.get("type", "solid")
-		if obs_type == "rock": continue
+		if obs_type == "rock"   and not block_rocks:   continue
+		if obs_type == "bridge" and not block_bridges: continue
 		if obs_type == "platform":
-			# La plataforma solo bloquea LOS si AMBOS están a nivel del suelo
 			if from_elev > 0 or to_elev > 0: continue
 			if _segment_hits_box(from, to, obs["pos"], obs["box"] * 0.5):
 				return false
@@ -1259,22 +1280,13 @@ func has_line_of_sight(from: Vector2, to: Vector2) -> bool:
 				return false
 	return true
 
+# LOS para ataques de rango: rocas transparentes, puentes opacos.
+func has_line_of_sight(from: Vector2, to: Vector2) -> bool:
+	return _los_clear(from, to, false, true, _elevation_at(from), _elevation_at(to))
+
+# LOS para movimiento: rocas bloquean, puentes son transitables por debajo.
 func _has_movement_los(from: Vector2, to: Vector2, elevation: int = 0) -> bool:
-	for obs in solid_obstacles:
-		var obs_type: String = obs.get("type", "solid")
-		if obs_type == "bridge": continue
-		if obs_type == "platform":
-			if elevation > 0: continue  # encima → libre de moverse sobre el techo
-			if _segment_hits_box(from, to, obs["pos"], obs["box"] * 0.5):
-				return false
-			continue
-		if obs.has("box"):
-			if _segment_hits_box(from, to, obs["pos"], obs["box"] * 0.5):
-				return false
-		else:
-			if _segment_hits_circle(from, to, obs["pos"], obs["radius"]):
-				return false
-	return true
+	return _los_clear(from, to, true, false, elevation, elevation)
 
 func _segment_hits_box(a: Vector2, b: Vector2, center: Vector2, half: Vector2) -> bool:
 	var d := b - a
@@ -1346,10 +1358,27 @@ func can_place_enemy(pos: Vector2) -> bool:
 	return _in_bounds(pos)
 
 func move_enemy_toward(target: Vector2, move_range: float) -> bool:
-	var dist := movement_distance(enemy_pos, target)
-	if dist < 0.01: return false
-	var dir      := (target - enemy_pos).normalized()
-	var new_pos  := enemy_pos + dir * minf(dist, move_range)
+	if enemy_pos.distance_to(target) < 0.01: return false
+	var path := _run_astar(enemy_pos, target, enemy_elevation, AGENT_RADIUS, false)
+	if path.is_empty(): return false
+	var remaining := move_range
+	var new_pos := enemy_pos
+	_enemy_waypoints.clear()
+	for i in range(1, path.size()):
+		var seg_len := new_pos.distance_to(path[i])
+		if seg_len <= remaining:
+			remaining -= seg_len
+			new_pos = path[i]
+			var ey := float(_elevation_at(new_pos)) * PLATFORM_HEIGHT
+			_enemy_waypoints.append(Vector3(new_pos.x, ey, new_pos.y))
+		else:
+			new_pos = new_pos + (path[i] - new_pos).normalized() * remaining
+			var ey := float(_elevation_at(new_pos)) * PLATFORM_HEIGHT
+			_enemy_waypoints.append(Vector3(new_pos.x, ey, new_pos.y))
+			break
+	if new_pos.distance_to(enemy_pos) < 0.01:
+		_enemy_waypoints.clear()
+		return false
 	new_pos.x = clampf(new_pos.x, 0.0, WORLD_W)
 	new_pos.y = clampf(new_pos.y, 0.0, WORLD_H)
 	var sep := new_pos - player_pos
@@ -1357,15 +1386,21 @@ func move_enemy_toward(target: Vector2, move_range: float) -> bool:
 		new_pos = player_pos + (sep.normalized() if sep.length() > 0.001 else Vector2(MIN_SEPARATION, 0.0)) * MIN_SEPARATION
 	enemy_pos       = new_pos
 	enemy_elevation = _elevation_at(new_pos)
+	if not _enemy_waypoints.is_empty():
+		var ey := float(enemy_elevation) * PLATFORM_HEIGHT
+		_enemy_waypoints[-1] = Vector3(enemy_pos.x, ey, enemy_pos.y)
 	_update_actor_positions()
 	return true
 
 # ── Traps ─────────────────────────────────────────────────────────────────────
-func start_trap_placement(trap_range: float) -> void:
-	selected_trap_range = trap_range
+func start_trap_placement(trap_range: float, trap_radius: float = 1.0) -> void:
+	selected_trap_range  = trap_range
+	_trap_preview_radius = trap_radius
+	_trap_preview_last_pos = Vector2(-999.0, -999.0)
+	_trap_preview.visible  = false
 	_show_disc_with_los(_trap_disc, player_pos, trap_range, player_elevation)
 
-func _show_disc_with_los(mi: MeshInstance3D, origin: Vector2, radius: float, elevation: int = 0) -> void:
+func _show_disc_with_los(mi: MeshInstance3D, origin: Vector2, radius: float, elevation: int = 0, block_rocks: bool = false, block_bridges: bool = true) -> void:
 	const VCELL  := 0.08
 	const BORDER := 0.010
 	var half     := VCELL * 0.5
@@ -1384,7 +1419,7 @@ func _show_disc_with_los(mi: MeshInstance3D, origin: Vector2, radius: float, ele
 			var py := clampf(origin.y, cy - half, cy + half)
 			if Vector2(px, py).distance_to(origin) > radius: continue
 			if _tile_in_obstacle(cell_pos, elevation):        continue
-			if not has_line_of_sight(origin, cell_pos):       continue
+			if not _los_clear(origin, cell_pos, block_rocks, block_bridges, elevation, elevation): continue
 			var y: float = _terrain_height_at(cell_pos) + 0.02
 			var f := fv.size()
 			fv.append(Vector3(cx-half+BORDER, y, cy-half+BORDER))
@@ -1408,8 +1443,10 @@ func _show_disc_with_los(mi: MeshInstance3D, origin: Vector2, radius: float, ele
 	_apply_two_surface_mesh(mi, fv, fi, bv, bi)
 
 func clear_trap_placement() -> void:
-	selected_trap_range = 0.0
-	_trap_disc.visible  = false
+	selected_trap_range    = 0.0
+	_trap_disc.visible     = false
+	_trap_preview.visible  = false
+	_trap_preview_last_pos = Vector2(-999.0, -999.0)
 
 func place_trap(pos: Vector2, radius: int, damage: int, card_name: String) -> void:
 	trap_zones.append({"pos": pos, "radius": float(radius), "damage": damage, "name": card_name})
@@ -1417,45 +1454,10 @@ func place_trap(pos: Vector2, radius: int, damage: int, card_name: String) -> vo
 
 func _add_trap_visual(pos: Vector2, radius: float) -> void:
 	var mi := MeshInstance3D.new()
-	# Outer glow ring
-	var outer_mat := _make_mat(Color(0.8, 0.2, 0.8, 0.25))
-	var inner_mat := _make_mat(Color(1.0, 0.5, 1.0, 0.70))
-	var segments  := 48
-	var verts     := PackedVector3Array()
-	var indices   := PackedInt32Array()
-	# Fill circle
-	verts.append(Vector3(pos.x, 0.015, pos.y))
-	for i in range(segments):
-		var a := float(i) / float(segments) * TAU
-		verts.append(Vector3(pos.x + cos(a) * radius, 0.015, pos.y + sin(a) * radius))
-	for i in range(segments):
-		indices.append_array([0, i + 1, (i + 1) % segments + 1])
-	var fa := []; fa.resize(Mesh.ARRAY_MAX)
-	fa[Mesh.ARRAY_VERTEX] = verts; fa[Mesh.ARRAY_INDEX] = indices
-	# Thin ring border
-	var ring_w  := minf(0.15, radius * 0.15)
-	var bverts  := PackedVector3Array()
-	var bindices := PackedInt32Array()
-	for i in range(segments):
-		var a0 := float(i)       / float(segments) * TAU
-		var a1 := float(i + 1)  / float(segments) * TAU
-		var r_in  := radius - ring_w
-		var r_out := radius
-		var vi := bverts.size()
-		bverts.append(Vector3(pos.x + cos(a0) * r_in,  0.016, pos.y + sin(a0) * r_in))
-		bverts.append(Vector3(pos.x + cos(a0) * r_out, 0.016, pos.y + sin(a0) * r_out))
-		bverts.append(Vector3(pos.x + cos(a1) * r_out, 0.016, pos.y + sin(a1) * r_out))
-		bverts.append(Vector3(pos.x + cos(a1) * r_in,  0.016, pos.y + sin(a1) * r_in))
-		bindices.append_array([vi, vi+1, vi+2, vi, vi+2, vi+3])
-	var ba := []; ba.resize(Mesh.ARRAY_MAX)
-	ba[Mesh.ARRAY_VERTEX] = bverts; ba[Mesh.ARRAY_INDEX] = bindices
-	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, fa)
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, ba)
-	mi.mesh = mesh
-	mi.set_surface_override_material(0, outer_mat)
-	mi.set_surface_override_material(1, inner_mat)
+	mi.set_meta("fill_mat", _make_mat(Color(0.8, 0.2, 0.8, 0.25)))
+	mi.set_meta("bord_mat", _make_mat(Color(1.0, 0.5, 1.0, 0.70)))
 	add_child(mi)
+	_build_tile_disc(mi, pos, radius, 0.0, 0.015)
 	_trap_visuals.append(mi)
 
 func check_and_trigger_traps(unit_pos: Vector2) -> int:
@@ -1483,7 +1485,7 @@ func calculate_grenade_landing(from: Vector2, target: Vector2, bounce: float) ->
 		landing = target
 	else:
 		var dir := (target - from).normalized()
-		landing  = target + dir.rotated(randf_range(-PI / 5.0, PI / 5.0)) * bounce * 20.0
+		landing  = target + dir.rotated(randf_range(-PI / 5.0, PI / 5.0)) * bounce * 10.0
 		landing  = Vector2(clampf(landing.x, 0.0, WORLD_W), clampf(landing.y, 0.0, WORLD_H))
 	return _clip_path_at_obstacle(from, landing)
 
@@ -1731,61 +1733,143 @@ func check_traps_along_segment(from: Vector2, to: Vector2) -> int:
 # Devuelve {"trap_damage": int, "wet": bool} para un segmento de movimiento forzado.
 # Agregar nuevas zonas acá para que cualquier movimiento forzado las active automáticamente.
 func trigger_zone_effects_along(from: Vector2, to: Vector2) -> Dictionary:
-	return {
-		"trap_damage": check_traps_along_segment(from, to),
-		"wet":         is_segment_in_puddle(from, to),
-	}
+	var fx := get_puddle_effects_along(from, to)
+	fx["trap_damage"] = check_traps_along_segment(from, to)
+	return fx
 
 # ── Puddles ───────────────────────────────────────────────────────────────────
-func start_puddle_placement(throw_range: float) -> void:
+func _puddle_base_color(effect: String) -> Color:
+	match effect:
+		"fire":   return Color(1.0, 0.35, 0.05)
+		"grease": return Color(0.55, 0.45, 0.05)
+		"vine":   return Color(0.1, 0.70, 0.15)
+		"blood":  return Color(0.70, 0.05, 0.05)
+		"poison": return Color(0.45, 0.0, 0.65)
+		"sand":       return Color(0.85, 0.75, 0.4)
+		"ice":        return Color(0.6,  0.9,  1.0)
+		"bloody_ice": return Color(0.55, 0.65, 0.9)
+		"dark_smoke": return Color(0.2,  0.15, 0.25)
+		_:            return Color(0.1, 0.4, 0.9)
+
+func start_puddle_placement(throw_range: float, effect: String = "wet", puddle_radius: float = 1.0) -> void:
+	_puddle_throw_range    = throw_range
+	_puddle_preview_effect = effect
+	_puddle_preview_radius = puddle_radius
+	_puddle_preview_last_pos = Vector2(-999.0, -999.0)
+	_puddle_preview.visible  = false
+	var c := _puddle_base_color(effect)
+	_puddle_disc.set_meta("fill_mat", _make_mat(Color(c.r, c.g, c.b, 0.22)))
+	_puddle_disc.set_meta("bord_mat", _make_mat(Color(
+		minf(c.r + 0.3, 1.0), minf(c.g + 0.3, 1.0), minf(c.b + 0.3, 1.0), 0.75)))
 	_show_disc_with_los(_puddle_disc, player_pos, throw_range, player_elevation)
 
 func clear_puddle_placement() -> void:
-	_puddle_disc.visible = false
+	_puddle_disc.visible    = false
+	_puddle_preview.visible = false
+	_puddle_preview_last_pos = Vector2(-999.0, -999.0)
 
-func place_puddle(pos: Vector2, radius: int) -> void:
-	puddle_zones.append({"pos": pos, "radius": float(radius)})
-	_add_puddle_visual(pos, float(radius))
+func _puddle_interaction(a: String, b: String) -> String:
+	const TABLE := {
+		"wet+ice":    "ice",
+		"blood+ice":  "bloody_ice",
+		"blood+fire": "dark_smoke",
+	}
+	var k := a + "+" + b
+	if TABLE.has(k): return TABLE[k]
+	k = b + "+" + a
+	if TABLE.has(k): return TABLE[k]
+	return ""
 
-func _add_puddle_visual(pos: Vector2, radius: float) -> void:
+func place_puddle(pos: Vector2, radius: int, effect: String = "wet") -> void:
+	var r2 := float(radius)
+	var new_exclusions: Array = []
+
+	for i in range(puddle_zones.size()):
+		var existing: Dictionary = puddle_zones[i]
+		var r1: float  = existing["radius"]
+		var c1: Vector2 = existing["pos"]
+		var dist: float = c1.distance_to(pos)
+		if dist >= r1 + r2:
+			continue
+		var combined := _puddle_interaction(existing.get("effect", "wet"), effect)
+		if combined == "":
+			continue
+
+		# Reconstruir el visual del charco existente sin los tiles de la lente
+		_puddle_visuals[i].queue_free()
+		var rebuilt := MeshInstance3D.new()
+		var base_e := _puddle_base_color(existing.get("effect", "wet"))
+		rebuilt.set_meta("fill_mat", _make_mat(Color(base_e.r, base_e.g, base_e.b, 0.35)))
+		rebuilt.set_meta("bord_mat", _make_mat(Color(
+			minf(base_e.r+0.2,1.0), minf(base_e.g+0.2,1.0), minf(base_e.b+0.2,1.0), 0.80)))
+		add_child(rebuilt)
+		_build_tile_disc(rebuilt, c1, r1, 0.0, 0.013, [{"pos": pos, "radius": r2}])
+		_puddle_visuals[i] = rebuilt
+
+		# Zona de interacción en forma de lente
+		var ipos: Vector2  = c1.lerp(pos, r1 / (r1 + r2))
+		var ir: float      = maxf(0.5, (r1 + r2 - dist) * 0.5)
+		puddle_zones.append({"pos": ipos, "radius": ir, "effect": combined})
+		_add_puddle_visual_lens(c1, r1, pos, r2, combined)
+
+		new_exclusions.append({"pos": c1, "radius": r1})
+
+	puddle_zones.append({"pos": pos, "radius": r2, "effect": effect})
+	_add_puddle_visual(pos, r2, effect, new_exclusions)
+
+func _add_puddle_visual(pos: Vector2, radius: float, effect: String = "wet", exclusions: Array = []) -> void:
 	var mi := MeshInstance3D.new()
-	var fill_mat := _make_mat(Color(0.1, 0.4, 0.9, 0.35))
-	var ring_mat := _make_mat(Color(0.3, 0.7, 1.0, 0.80))
-	var segments := 48
-	var verts    := PackedVector3Array()
-	var indices  := PackedInt32Array()
-	verts.append(Vector3(pos.x, 0.013, pos.y))
-	for i in range(segments):
-		var a := float(i) / float(segments) * TAU
-		verts.append(Vector3(pos.x + cos(a) * radius, 0.013, pos.y + sin(a) * radius))
-	for i in range(segments):
-		indices.append_array([0, i + 1, (i + 1) % segments + 1])
-	var fa := []; fa.resize(Mesh.ARRAY_MAX)
-	fa[Mesh.ARRAY_VERTEX] = verts; fa[Mesh.ARRAY_INDEX] = indices
-	var ring_w   := minf(0.12, radius * 0.12)
-	var bverts   := PackedVector3Array()
-	var bindices := PackedInt32Array()
-	for i in range(segments):
-		var a0   := float(i)      / float(segments) * TAU
-		var a1   := float(i + 1) / float(segments) * TAU
-		var r_in  := radius - ring_w
-		var r_out := radius
-		var vi := bverts.size()
-		bverts.append(Vector3(pos.x + cos(a0) * r_in,  0.014, pos.y + sin(a0) * r_in))
-		bverts.append(Vector3(pos.x + cos(a0) * r_out, 0.014, pos.y + sin(a0) * r_out))
-		bverts.append(Vector3(pos.x + cos(a1) * r_out, 0.014, pos.y + sin(a1) * r_out))
-		bverts.append(Vector3(pos.x + cos(a1) * r_in,  0.014, pos.y + sin(a1) * r_in))
-		bindices.append_array([vi, vi+1, vi+2, vi, vi+2, vi+3])
-	var ba := []; ba.resize(Mesh.ARRAY_MAX)
-	ba[Mesh.ARRAY_VERTEX] = bverts; ba[Mesh.ARRAY_INDEX] = bindices
-	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, fa)
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, ba)
-	mi.mesh = mesh
-	mi.set_surface_override_material(0, fill_mat)
-	mi.set_surface_override_material(1, ring_mat)
+	var base := _puddle_base_color(effect)
+	mi.set_meta("fill_mat", _make_mat(Color(base.r, base.g, base.b, 0.35)))
+	mi.set_meta("bord_mat", _make_mat(Color(
+		minf(base.r + 0.2, 1.0), minf(base.g + 0.2, 1.0), minf(base.b + 0.2, 1.0), 0.80)))
 	add_child(mi)
+	_build_tile_disc(mi, pos, radius, 0.0, 0.013, exclusions)
 	_puddle_visuals.append(mi)
+
+func _add_puddle_visual_lens(c1: Vector2, r1: float, c2: Vector2, r2: float, effect: String) -> void:
+	var mi := MeshInstance3D.new()
+	var base := _puddle_base_color(effect)
+	mi.set_meta("fill_mat", _make_mat(Color(base.r, base.g, base.b, 1.0)))
+	mi.set_meta("bord_mat", _make_mat(Color(
+		minf(base.r + 0.15, 1.0), minf(base.g + 0.15, 1.0), minf(base.b + 0.15, 1.0), 1.0)))
+	add_child(mi)
+	_build_lens_disc(mi, c1, r1, c2, r2, 0.016)
+	_puddle_visuals.append(mi)
+
+func _build_lens_disc(mi: MeshInstance3D, c1: Vector2, r1: float, c2: Vector2, r2: float, y: float) -> void:
+	const CELL   := 0.08
+	const BORDER := 0.010
+	var half     := CELL * 0.5
+	var fill_v   := PackedVector3Array(); var fill_i := PackedInt32Array()
+	var bord_v   := PackedVector3Array(); var bord_i := PackedInt32Array()
+	var min_x := maxf(c1.x - r1, c2.x - r2)
+	var max_x := minf(c1.x + r1, c2.x + r2)
+	var min_y := maxf(c1.y - r1, c2.y - r2)
+	var max_y := minf(c1.y + r1, c2.y + r2)
+	for gx in range(int(floor(min_x / CELL)), int(ceil(max_x / CELL)) + 1):
+		for gy in range(int(floor(min_y / CELL)), int(ceil(max_y / CELL)) + 1):
+			var cx := (gx + 0.5) * CELL
+			var cy := (gy + 0.5) * CELL
+			if Vector2(cx, cy).distance_to(c1) > r1: continue
+			if Vector2(cx, cy).distance_to(c2) > r2: continue
+			var fi := fill_v.size()
+			fill_v.append(Vector3(cx-half+BORDER, y,       cy-half+BORDER))
+			fill_v.append(Vector3(cx+half-BORDER, y,       cy-half+BORDER))
+			fill_v.append(Vector3(cx+half-BORDER, y,       cy+half-BORDER))
+			fill_v.append(Vector3(cx-half+BORDER, y,       cy+half-BORDER))
+			fill_i.append_array([fi, fi+1, fi+2, fi, fi+2, fi+3])
+			for s: Array in [
+				[cx-half, cy-half,        cx+half,        cy-half+BORDER],
+				[cx-half, cy+half-BORDER, cx+half,        cy+half],
+				[cx-half, cy-half+BORDER, cx-half+BORDER, cy+half-BORDER],
+				[cx+half-BORDER, cy-half+BORDER, cx+half, cy+half-BORDER],
+			]:
+				var bi := bord_v.size()
+				bord_v.append(Vector3(s[0], y+0.001, s[1])); bord_v.append(Vector3(s[2], y+0.001, s[1]))
+				bord_v.append(Vector3(s[2], y+0.001, s[3])); bord_v.append(Vector3(s[0], y+0.001, s[3]))
+				bord_i.append_array([bi, bi+1, bi+2, bi, bi+2, bi+3])
+	_apply_two_surface_mesh(mi, fill_v, fill_i, bord_v, bord_i)
 
 func is_segment_in_puddle(from: Vector2, to: Vector2) -> bool:
 	if puddle_zones.is_empty():
@@ -1795,6 +1879,51 @@ func is_segment_in_puddle(from: Vector2, to: Vector2) -> bool:
 		var t: float = float(i) / float(steps)
 		var pos: Vector2 = from.lerp(to, t)
 		for puddle in puddle_zones:
-			if pos.distance_to(puddle["pos"]) <= puddle["radius"]:
+			if puddle.get("effect", "wet") == "wet" and pos.distance_to(puddle["pos"]) <= puddle["radius"]:
 				return true
+	return false
+
+func get_puddle_effects_along(from: Vector2, to: Vector2) -> Dictionary:
+	var result := {}
+	if puddle_zones.is_empty():
+		return result
+	var steps := maxi(2, int(from.distance_to(to) / 0.3))
+	for i in range(steps + 1):
+		var t: float = float(i) / float(steps)
+		var pos: Vector2 = from.lerp(to, t)
+		for puddle in puddle_zones:
+			if pos.distance_to(puddle["pos"]) <= puddle["radius"]:
+				result[puddle.get("effect", "wet")] = true
+	return result
+
+# ── Overwatch ─────────────────────────────────────────────────────────────────
+func start_overwatch_selection(cone_range: float, half_angle: float) -> void:
+	_overwatch_selection_active = true
+	_overwatch_selection_range  = cone_range
+	_overwatch_selection_angle  = half_angle
+	_overwatch_preview_last_dir = Vector2.ZERO
+
+func clear_overwatch_selection() -> void:
+	_overwatch_selection_active      = false
+	_overwatch_preview_disc.visible  = false
+	_overwatch_preview_last_dir      = Vector2.ZERO
+
+func place_overwatch(origin: Vector2, dir: Vector2, cone_range: float, half_angle: float) -> void:
+	_overwatch_zone.set_meta("fill_mat", _make_mat(Color(1.0, 0.85, 0.1, 0.22)))
+	_overwatch_zone.set_meta("bord_mat", _make_mat(Color(1.0, 1.0, 0.35, 0.70)))
+	_build_cone_disc(_overwatch_zone, origin, dir, cone_range, half_angle)
+
+func clear_overwatch_zone() -> void:
+	_overwatch_zone.visible = false
+
+func is_segment_in_overwatch_cone(from: Vector2, to: Vector2, origin: Vector2, dir: Vector2, cone_range: float, half_angle_deg: float) -> bool:
+	var half_rad := deg_to_rad(half_angle_deg)
+	var steps    := maxi(2, int(from.distance_to(to) / 0.3))
+	for i in range(steps + 1):
+		var pos: Vector2 = from.lerp(to, float(i) / float(steps))
+		var to_pos := pos - origin
+		if to_pos.length() < 0.001 or to_pos.length() > cone_range:
+			continue
+		if absf(dir.angle_to(to_pos.normalized())) <= half_rad:
+			return true
 	return false

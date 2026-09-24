@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" format=3 uid="uid://charco_grasa1"]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_charco_grasa"]
+
+[resource]
+script = ExtResource("1_charco_grasa")
+id = "charco_grasa"
+name = "Charco de Grasa"
+description = "Lanzás grasa al suelo. Quien pise la zona queda engrasado por 3 turnos (movimiento -2)."
+cost = 1
+card_type = "puddle"
+puddle_effect = "grease"
+card_range = 1
+throw_range = 6
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"

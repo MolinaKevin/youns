@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" format=3 uid="uid://charco_hiel1"]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_charco_hielo"]
+
+[resource]
+script = ExtResource("1_charco_hielo")
+id = "charco_hielo"
+name = "Charco de Hielo"
+description = "Lanzás agua helada al suelo. Quien pise queda congelado por 2 turnos y no puede moverse."
+cost = 2
+card_type = "puddle"
+puddle_effect = "ice"
+card_range = 1
+throw_range = 6
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"

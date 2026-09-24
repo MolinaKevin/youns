@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" format=3 uid="uid://charco_ven01"]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_charco_veneno"]
+
+[resource]
+script = ExtResource("1_charco_veneno")
+id = "charco_veneno"
+name = "Charco de Veneno"
+description = "Lanzás veneno al suelo. Quien pise queda envenenado (3 de daño, 2, 1 por turno)."
+cost = 2
+card_type = "puddle"
+puddle_effect = "poison"
+card_range = 1
+throw_range = 6
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"

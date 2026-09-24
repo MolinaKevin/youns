@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" format=3 uid="uid://charco_aren1"]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_charco_arena"]
+
+[resource]
+script = ExtResource("1_charco_arena")
+id = "charco_arena"
+name = "Charco de Arena"
+description = "Lanzás arena al suelo. Quien pise queda cegado por 2 turnos (rango de ataque reducido a 1)."
+cost = 1
+card_type = "puddle"
+puddle_effect = "sand"
+card_range = 1
+throw_range = 7
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"

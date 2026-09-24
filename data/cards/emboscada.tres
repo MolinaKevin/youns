@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="CardData" format=3 uid="uid://emboscada01"]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_emboscada"]
+
+[resource]
+script = ExtResource("1_emboscada")
+id = "emboscada"
+name = "Emboscada"
+description = "Apuntás un cono. Si el enemigo entra ese turno, recibe un golpe poderoso. Si no, se cancela."
+cost = 1
+card_type = "overwatch"
+card_range = 4
+damage = 15
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"

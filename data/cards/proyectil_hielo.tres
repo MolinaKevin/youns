@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardData" format=3 uid="uid://proyhielo01"]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_proyectil_hielo"]
+
+[resource]
+script = ExtResource("1_proyectil_hielo")
+id = "proyectil_hielo"
+name = "Proyectil de Hielo"
+description = "Lanzás un bloque de hielo. Sobre agua: la congela. Sobre sangre: crea hielo sangriento. Sobre tierra: deja un charco de hielo."
+cost = 1
+card_type = "puddle"
+puddle_effect = "ice"
+card_range = 1
+throw_range = 8
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"

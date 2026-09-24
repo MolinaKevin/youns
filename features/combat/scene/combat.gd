@@ -185,14 +185,60 @@ func _on_end_turn_pressed() -> void:
 	await enemy_ai.take_turn()
 	if check_combat_end():
 		return
-	reset_turn()
+	await reset_turn()
 	end_turn_button.disabled = false
 
 func reset_turn() -> void:
+	if state.player_burning_turns > 0:
+		log_message("¡Estás en llamas! 3 de daño.")
+		await deal_damage_to_player(3, true)
+		if check_combat_end(): return
+		state.player_burning_turns -= 1
+		if state.player_burning_turns == 0:
+			log_message("Ya no estás en llamas.")
+
+	if state.player_bleeding_turns > 0:
+		log_message("¡Estás sangrando! 2 de daño.")
+		await deal_damage_to_player(2, true)
+		if check_combat_end(): return
+		state.player_bleeding_turns -= 1
+		if state.player_bleeding_turns == 0:
+			log_message("Ya no estás sangrando.")
+
+	if state.player_poison_stacks > 0:
+		var pdmg: int = state.player_poison_stacks
+		log_message("¡Estás envenenado! %d de daño." % pdmg)
+		await deal_damage_to_player(pdmg, true)
+		if check_combat_end(): return
+		state.player_poison_stacks -= 1
+		if state.player_poison_stacks == 0:
+			log_message("El veneno se disipó.")
+
 	if state.player_wet_turns > 0:
 		state.player_wet_turns -= 1
 		if state.player_wet_turns == 0:
 			log_message("Ya no estás mojado.")
+
+	if state.player_greasy_turns > 0:
+		state.player_greasy_turns -= 1
+		if state.player_greasy_turns == 0:
+			log_message("Ya no estás engrasado.")
+
+	if state.player_entangled_turns > 0:
+		state.player_entangled_turns -= 1
+		if state.player_entangled_turns == 0:
+			log_message("Ya no estás enredado.")
+
+	if state.player_blinded_turns > 0:
+		state.player_blinded_turns -= 1
+		if state.player_blinded_turns == 0:
+			log_message("Ya no estás cegado.")
+
+	if state.player_frozen_turns > 0:
+		state.player_frozen_turns -= 1
+		if state.player_frozen_turns == 0:
+			log_message("Ya no estás congelado.")
+
 	player_actions.reset()
 	deck_manager.reset_turn(HAND_SIZE)
 	refresh_hand()
@@ -200,20 +246,26 @@ func reset_turn() -> void:
 
 # ── Damage ────────────────────────────────────────────────────────────────────
 
-func deal_damage_to_enemy(amount: int) -> void:
+func deal_damage_to_enemy(amount: int, skip_attack_anim: bool = false) -> void:
 	var dmg: int = max(amount - state.enemy_block, 0)
 	state.enemy_block = max(state.enemy_block - amount, 0)
 	state.enemy_hp -= dmg
 	if map_area.has_method("set_enemy_hp"):
 		map_area.set_enemy_hp(state.enemy_hp)
-	await _play_player_anim_timed("attack")
+	if not skip_attack_anim:
+		await _play_player_anim_timed("attack")
 	await _play_enemy_anim_timed("damage")
 
-func deal_damage_to_player(amount: int) -> void:
+func deal_damage_to_player(amount: int, skip_attack_anim: bool = false) -> void:
 	var dmg: int = max(amount - state.player_block, 0)
 	state.player_block = max(state.player_block - amount, 0)
 	state.player_hp -= dmg
-	await _play_enemy_anim_timed("attack")
+	if dmg > 0 and state.player_overwatch_active:
+		state.player_overwatch_active = false
+		map_area.clear_overwatch_zone()
+		log_message("Vigilancia cancelada por recibir daño.")
+	if not skip_attack_anim:
+		await _play_enemy_anim_timed("attack")
 	await _play_player_anim_timed("damage")
 
 func _play_player_anim_timed(anim_key: String) -> void:

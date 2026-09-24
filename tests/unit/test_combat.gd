@@ -6,9 +6,19 @@ extends GutTest
 
 
 class MockMapArea extends Node:
+	const WORLD_W := 30.0
+	const WORLD_H := 30.0
+
 	var player_pos := Vector2.ZERO
 	var enemy_pos  := Vector2(10.0, 0.0)
 	var los_result := true
+	var puddle_effects_result: Dictionary = {}
+	var overwatch_cone_hit := false
+
+	var move_enemy_toward_calls := 0
+	var start_move_selection_calls := 0
+	var clear_overwatch_zone_calls := 0
+	var place_puddle_calls: Array = []
 
 	func movement_distance(a: Vector2, b: Vector2) -> float:
 		return (a - b).length()
@@ -25,6 +35,32 @@ class MockMapArea extends Node:
 	func clear_attack_selection() -> void: pass
 	func clear_path_preview() -> void: pass
 	func clear_move_selection() -> void: pass
+
+	func move_enemy_toward(_target: Vector2, _move_range: float) -> bool:
+		move_enemy_toward_calls += 1
+		return true
+
+	func get_puddle_effects_along(_from: Vector2, _to: Vector2) -> Dictionary:
+		return puddle_effects_result
+
+	func start_move_selection(_range: float) -> void:
+		start_move_selection_calls += 1
+
+	func start_puddle_placement(_throw_range: float, _effect: String = "wet", _radius: float = 1.0) -> void: pass
+	func clear_puddle_placement() -> void: pass
+
+	func place_puddle(pos: Vector2, radius: int, effect: String = "wet") -> void:
+		place_puddle_calls.append({"pos": pos, "radius": radius, "effect": effect})
+
+	func start_overwatch_selection(_cone_range: float, _half_angle: float) -> void: pass
+	func clear_overwatch_selection() -> void: pass
+	func place_overwatch(_origin: Vector2, _dir: Vector2, _cone_range: float, _half_angle: float) -> void: pass
+
+	func clear_overwatch_zone() -> void:
+		clear_overwatch_zone_calls += 1
+
+	func is_segment_in_overwatch_cone(_from: Vector2, _to: Vector2, _origin: Vector2, _dir: Vector2, _cone_range: float, _half_angle_deg: float) -> bool:
+		return overwatch_cone_hit
 
 
 var _map: MockMapArea
@@ -1037,3 +1073,281 @@ func test_bloqueo_acumulado_absorbe_daño_combinado() -> void:
 	_apply_damage_to_player(s, 6)  # 6 daño contra 8 de bloqueo → 0 daño
 	assert_eq(s.player_hp, hp_inicial)
 	assert_eq(s.player_block, 2)
+
+
+# ── Estados de combate — helpers ─────────────────────────────────────────────
+
+func _dmg_enemy_callable(s: CombatState) -> Callable:
+	return func(amount: int, _skip_anim: bool = false) -> void:
+		var dmg := maxi(amount - s.enemy_block, 0)
+		s.enemy_block = maxi(s.enemy_block - amount, 0)
+		s.enemy_hp -= dmg
+
+
+func _dmg_player_callable(s: CombatState) -> Callable:
+	return func(amount: int, _skip_anim: bool = false) -> void:
+		var dmg := maxi(amount - s.player_block, 0)
+		s.player_block = maxi(s.player_block - amount, 0)
+		s.player_hp -= dmg
+
+
+func _check_end_callable(s: CombatState) -> Callable:
+	return func() -> bool:
+		return s.enemy_hp <= 0 or s.player_hp <= 0
+
+
+func _make_ai_full(s: CombatState, strategy: AiStrategy = null) -> CombatEnemyAI:
+	var ai := CombatEnemyAI.new()
+	ai.setup(s, _map, strategy, _dmg_enemy_callable(s), _dmg_player_callable(s), _check_end_callable(s))
+	return ai
+
+
+# ── Estados — quemado / sangrado / veneno (DOT del enemigo) ─────────────────
+
+func test_enemy_quemado_aplica_3_de_danio_y_decrementa_turnos() -> void:
+	var s := CombatState.new()
+	s.enemy_hp = 20
+	s.enemy_burning_turns = 2
+	await _make_ai_full(s).take_turn()
+	assert_eq(s.enemy_hp, 17)
+	assert_eq(s.enemy_burning_turns, 1)
+
+
+func test_enemy_quemado_se_apaga_al_llegar_a_cero() -> void:
+	var s := CombatState.new()
+	s.enemy_hp = 20
+	s.enemy_burning_turns = 1
+	await _make_ai_full(s).take_turn()
+	assert_eq(s.enemy_burning_turns, 0)
+
+
+func test_enemy_sangrado_aplica_2_de_danio_y_decrementa_turnos() -> void:
+	var s := CombatState.new()
+	s.enemy_hp = 20
+	s.enemy_bleeding_turns = 2
+	await _make_ai_full(s).take_turn()
+	assert_eq(s.enemy_hp, 18)
+	assert_eq(s.enemy_bleeding_turns, 1)
+
+
+func test_enemy_veneno_aplica_danio_igual_a_stacks_y_los_decrementa() -> void:
+	var s := CombatState.new()
+	s.enemy_hp = 20
+	s.enemy_poison_stacks = 3
+	await _make_ai_full(s).take_turn()
+	assert_eq(s.enemy_hp, 17)
+	assert_eq(s.enemy_poison_stacks, 2)
+
+
+func test_enemy_dots_acumulados_se_aplican_todos_en_el_mismo_turno() -> void:
+	var s := CombatState.new()
+	s.enemy_hp = 30
+	s.enemy_burning_turns  = 1
+	s.enemy_bleeding_turns = 1
+	s.enemy_poison_stacks  = 2
+	await _make_ai_full(s).take_turn()
+	assert_eq(s.enemy_hp, 30 - 3 - 2 - 2)
+
+
+func test_enemy_muerte_por_dot_detiene_los_ticks_siguientes() -> void:
+	var s := CombatState.new()
+	s.enemy_hp = 1
+	s.enemy_burning_turns  = 1
+	s.enemy_bleeding_turns = 1
+	await _make_ai_full(s).take_turn()
+	assert_true(s.enemy_hp <= 0)
+	assert_eq(s.enemy_burning_turns, 1)   # murió antes de decrementarse
+	assert_eq(s.enemy_bleeding_turns, 1)  # el tick de sangrado nunca corrió
+
+
+# ── Estados — penalización de movimiento (mojado / engrasado) ───────────────
+
+func test_enemy_move_penalty_suma_mojado_y_engrasado() -> void:
+	var s := CombatState.new()
+	s.enemy_wet_turns = 1
+	s.enemy_greasy_turns = 1
+	assert_eq(_make_ai_full(s)._enemy_move_penalty(), 3)
+
+
+func test_enemy_move_penalty_cero_sin_estados() -> void:
+	var s := CombatState.new()
+	assert_eq(_make_ai_full(s)._enemy_move_penalty(), 0)
+
+
+# ── Estados — inmovilización (enredado / congelado) del enemigo ─────────────
+
+func test_enemy_enredado_no_puede_moverse() -> void:
+	var s := CombatState.new()
+	s.enemy_entangled_turns = 2
+	var action := _make_action("move_toward", 50.0, [_make_condition("always")])
+	await _make_ai_full(s)._execute_action(action)
+	assert_eq(_map.move_enemy_toward_calls, 0)
+
+
+func test_enemy_congelado_no_puede_moverse() -> void:
+	var s := CombatState.new()
+	s.enemy_frozen_turns = 2
+	var action := _make_action("move_away", 50.0, [_make_condition("always")])
+	await _make_ai_full(s)._execute_action(action)
+	assert_eq(_map.move_enemy_toward_calls, 0)
+
+
+func test_enemy_sin_inmovilizacion_puede_moverse() -> void:
+	var s := CombatState.new()
+	var action := _make_action("move_toward", 50.0, [_make_condition("always")])
+	await _make_ai_full(s)._execute_action(action)
+	assert_eq(_map.move_enemy_toward_calls, 1)
+
+
+# ── Estados — ceguera ─────────────────────────────────────────────────────────
+
+func test_enemy_cegado_bloquea_ataque_a_distancia_mayor_a_2() -> void:
+	var s := CombatState.new()
+	s.enemy_blinded_turns = 1
+	s.player_hp = 20
+	_map.player_pos = Vector2.ZERO
+	_map.enemy_pos  = Vector2(5.0, 0.0)
+	var action := _make_action("range_attack", 50.0, [_make_condition("always")])
+	action.damage = 10
+	await _make_ai_full(s)._execute_action(action)
+	assert_eq(s.player_hp, 20)
+
+
+func test_enemy_cegado_permite_ataque_a_distancia_menor_igual_a_2() -> void:
+	var s := CombatState.new()
+	s.enemy_blinded_turns = 1
+	s.player_hp = 20
+	_map.player_pos = Vector2.ZERO
+	_map.enemy_pos  = Vector2(2.0, 0.0)
+	var action := _make_action("range_attack", 50.0, [_make_condition("always")])
+	action.damage = 10
+	await _make_ai_full(s)._execute_action(action)
+	assert_eq(s.player_hp, 10)
+
+
+# ── Overwatch — emboscada al enemigo ─────────────────────────────────────────
+
+func test_overwatch_activo_dispara_al_enemigo_si_entra_en_el_cono() -> void:
+	var s := CombatState.new()
+	s.enemy_hp = 20
+	s.player_overwatch_active = true
+	s.player_overwatch_damage = 7
+	_map.overwatch_cone_hit = true
+	var action := _make_action("move_toward", 50.0, [_make_condition("always")])
+	await _make_ai_full(s)._execute_action(action)
+	assert_eq(s.enemy_hp, 13)
+	assert_false(s.player_overwatch_active)
+	assert_eq(_map.clear_overwatch_zone_calls, 1)
+
+
+func test_overwatch_no_se_dispara_si_el_enemigo_no_entra_en_el_cono() -> void:
+	var s := CombatState.new()
+	s.enemy_hp = 20
+	s.player_overwatch_active = true
+	s.player_overwatch_damage = 7
+	_map.overwatch_cone_hit = false
+	var action := _make_action("move_toward", 50.0, [_make_condition("always")])
+	await _make_ai_full(s)._execute_action(action)
+	assert_eq(s.enemy_hp, 20)
+	assert_true(s.player_overwatch_active)
+
+
+# ── CombatPlayerActions — estados bloquean/penalizan movimiento ─────────────
+
+func test_start_move_selection_bloqueada_por_enredado() -> void:
+	var s := CombatState.new()
+	s.player_energy = 5
+	s.player_entangled_turns = 2
+	var pa := _make_player_actions(s)
+	pa.start_move_selection("hand", 0, 3, 1, "Test")
+	assert_eq(pa.pending_move_index, -1)
+	assert_eq(_map.start_move_selection_calls, 0)
+
+
+func test_start_move_selection_bloqueada_por_congelado() -> void:
+	var s := CombatState.new()
+	s.player_energy = 5
+	s.player_frozen_turns = 2
+	var pa := _make_player_actions(s)
+	pa.start_move_selection("hand", 0, 3, 1, "Test")
+	assert_eq(pa.pending_move_index, -1)
+	assert_eq(_map.start_move_selection_calls, 0)
+
+
+func test_start_move_selection_penaliza_rango_por_mojado_y_engrasado() -> void:
+	var s := CombatState.new()
+	s.player_energy = 5
+	s.player_wet_turns = 1
+	s.player_greasy_turns = 1
+	var pa := _make_player_actions(s)
+	pa.start_move_selection("hand", 0, 3, 1, "Test")
+	assert_eq(pa.pending_move_range, 1)  # max(1, 3 - (1 mojado + 2 engrasado))
+
+
+# ── CombatPlayerActions — ceguera reduce rango de ataque ─────────────────────
+
+func test_start_range_attack_selection_reduce_rango_por_cegado() -> void:
+	var s := CombatState.new()
+	s.player_blinded_turns = 1
+	var card := _make_card("range_attack", 1, 0, 8)
+	card.card_range = 5
+	var pa := _make_player_actions(s)
+	pa.start_range_attack_selection(0, card)
+	assert_eq(pa.pending_attack_range, 1)
+
+
+func test_start_range_attack_selection_sin_cegado_usa_rango_completo() -> void:
+	var s := CombatState.new()
+	var card := _make_card("range_attack", 1, 0, 8)
+	card.card_range = 5
+	var pa := _make_player_actions(s)
+	pa.start_range_attack_selection(0, card)
+	assert_eq(pa.pending_attack_range, 5)
+
+
+# ── CombatPlayerActions — charcos usan el effect/rango de la carta ──────────
+
+func test_execute_puddle_usa_el_effect_y_rango_de_la_carta() -> void:
+	var s := CombatState.new()
+	s.player_energy = 3
+	var card := _make_card("puddle", 1)
+	card.puddle_effect = "fire"
+	card.card_range = 2
+	s.hand.append(card)
+	var pa := _make_player_actions(s)
+	pa.pending_puddle_index = 0
+	pa._execute_puddle(Vector2(4.0, 2.0))
+	assert_eq(_map.place_puddle_calls.size(), 1)
+	assert_eq(_map.place_puddle_calls[0]["effect"], "fire")
+	assert_eq(_map.place_puddle_calls[0]["radius"], 2)
+	assert_eq(_map.place_puddle_calls[0]["pos"], Vector2(4.0, 2.0))
+
+
+# ── CombatPlayerActions — overwatch ───────────────────────────────────────────
+
+func test_execute_overwatch_activa_estado_con_datos_de_la_carta() -> void:
+	var s := CombatState.new()
+	s.player_energy = 3
+	var card := _make_card("overwatch", 1, 0, 15)
+	card.card_range = 4
+	s.hand.append(card)
+	_map.player_pos = Vector2(1.0, 1.0)
+	var pa := _make_player_actions(s)
+	pa.pending_overwatch_index = 0
+	pa._execute_overwatch(Vector2(1.0, 0.0))
+	assert_true(s.player_overwatch_active)
+	assert_eq(s.player_overwatch_damage, 15)
+	assert_eq(s.player_overwatch_range, 4.0)
+	assert_eq(s.player_overwatch_origin, Vector2(1.0, 1.0))
+	assert_eq(s.player_overwatch_dir, Vector2(1.0, 0.0))
+
+
+func test_jugar_otra_carta_cancela_overwatch_activo() -> void:
+	var s := CombatState.new()
+	s.player_energy = 5
+	s.player_overwatch_active = true
+	s.hand.append(_make_card("block", 1, 5))
+	var pa := _make_player_actions(s)
+	pa.play_card(0)
+	assert_false(s.player_overwatch_active)
+	assert_eq(_map.clear_overwatch_zone_calls, 1)
