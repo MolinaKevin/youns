@@ -4,6 +4,15 @@ extends RefCounted
 var state
 var map_area: Node
 var _strategy: AiStrategy
+var initiative: int = 50
+
+## Con mazo, cada ronda roba una carta y ejecuta sus acciones en orden.
+## Sin mazo usa la estrategia (_strategy) como antes.
+var monster_deck: MonsterDeck
+var current_card: MonsterCard
+var _card_pile: Array[MonsterCard] = []
+## Pausa entre las acciones de una carta, para que se lean de a una.
+var action_delay := 0.35
 
 var _current_phase: String = ""
 var last_known_player_pos: Vector2 = Vector2.ZERO
@@ -15,6 +24,8 @@ var _check_combat_end: Callable
 
 signal log_requested(text: String)
 signal ui_update_requested()
+## Se emite al empezar cada acción de current_card (índice en card.actions).
+signal card_action_started(index: int)
 
 func setup(p_state, p_map_area: Node, strategy: AiStrategy, p_damage_enemy: Callable, p_damage_player: Callable, p_check_end: Callable) -> void:
 	state = p_state
@@ -26,27 +37,46 @@ func setup(p_state, p_map_area: Node, strategy: AiStrategy, p_damage_enemy: Call
 	if _strategy != null and _strategy.initial_phase != "":
 		_current_phase = _strategy.initial_phase
 
+# ── Mazo de cartas ────────────────────────────────────────────────────────────
+
+func set_monster_deck(deck: MonsterDeck) -> void:
+	monster_deck = deck
+	_card_pile.clear()
+
+## Roba la carta de la ronda y toma su iniciativa. Las cartas no se repiten
+## hasta que se usaron todas; ahí se vuelve a mezclar el mazo.
+func draw_card() -> MonsterCard:
+	if monster_deck == null or monster_deck.cards.is_empty():
+		current_card = null
+		return null
+	if _card_pile.is_empty():
+		_card_pile.assign(monster_deck.cards)
+		_card_pile.shuffle()
+	current_card = _card_pile.pop_back()
+	initiative = current_card.initiative
+	return current_card
+
 # ── Turn ──────────────────────────────────────────────────────────────────────
 
 func take_turn() -> void:
 	if state.enemy_burning_turns > 0:
-		log_requested.emit("El enemigo está en llamas — 3 de daño.")
-		await _deal_damage_to_enemy.call(3, true)
+		log_requested.emit("El enemigo está en llamas — %d de daño." % CombatState.BURN_DAMAGE)
+		await _deal_damage_to_enemy.call(CombatState.BURN_DAMAGE, true)
 		if _check_combat_end.call(): return
 		state.enemy_burning_turns -= 1
 		if state.enemy_burning_turns == 0:
 			log_requested.emit("El enemigo ya no está en llamas.")
 
 	if state.enemy_bleeding_turns > 0:
-		log_requested.emit("El enemigo está sangrando — 2 de daño.")
-		await _deal_damage_to_enemy.call(2, true)
+		log_requested.emit("El enemigo está sangrando — %d de daño." % CombatState.BLEED_DAMAGE)
+		await _deal_damage_to_enemy.call(CombatState.BLEED_DAMAGE, true)
 		if _check_combat_end.call(): return
 		state.enemy_bleeding_turns -= 1
 		if state.enemy_bleeding_turns == 0:
 			log_requested.emit("El enemigo dejó de sangrar.")
 
 	if state.enemy_poison_stacks > 0:
-		var pdmg: int = state.enemy_poison_stacks
+		var pdmg: int = state.enemy_poison_stacks * CombatState.POISON_DAMAGE_PER_STACK
 		log_requested.emit("El enemigo está envenenado — %d de daño." % pdmg)
 		await _deal_damage_to_enemy.call(pdmg, true)
 		if _check_combat_end.call(): return
@@ -88,6 +118,10 @@ func take_turn() -> void:
 			return
 
 	update_tracking()
+	if current_card != null:
+		await execute_card(current_card)
+		ui_update_requested.emit()
+		return
 	evaluate_transitions()
 	var action: AiAction = pick_action()
 	if action:
@@ -241,6 +275,7 @@ func _apply_enemy_zone_effects(from_pos: Vector2) -> void:
 		state.enemy_blinded_turns = 3
 		log_requested.emit("¡El enemigo quedó cegado por el humo oscuro!")
 
+## En unidades de mundo (1 unidad = 12,5 casillas), como el rango que recibe _move_enemy.
 func _enemy_move_penalty() -> int:
 	return (1 if state.enemy_wet_turns > 0 else 0) + (2 if state.enemy_greasy_turns > 0 else 0)
 
@@ -256,56 +291,103 @@ func _execute_action(action: AiAction) -> void:
 			log_requested.emit("Enemy shoots for %d!" % action.damage)
 			await _deal_damage_to_player.call(action.damage)
 		"move_toward":
-			if state.enemy_entangled_turns > 0 or state.enemy_frozen_turns > 0:
-				log_requested.emit("El enemigo no puede moverse.")
-				return
-			var from_pos: Vector2 = map_area.enemy_pos
-			var eff_range := maxi(1, action.move_range - _enemy_move_penalty())
-			map_area.move_enemy_toward(map_area.player_pos, eff_range)
-			_apply_enemy_zone_effects(from_pos)
-			var ow_dmg_a: int = state.player_overwatch_damage
-			if _check_overwatch_trigger(from_pos):
-				log_requested.emit("¡Emboscada! El enemigo entró en la zona de vigilancia.")
-				await _deal_damage_to_enemy.call(ow_dmg_a)
-				if _check_combat_end.call(): return
-			else:
-				log_requested.emit("Enemy moves closer.")
+			await _move_enemy(map_area.player_pos, action.move_range, "Enemy moves closer.")
 		"move_away":
-			if state.enemy_entangled_turns > 0 or state.enemy_frozen_turns > 0:
-				log_requested.emit("El enemigo no puede moverse.")
-				return
-			var from_pos: Vector2 = map_area.enemy_pos
-			var eff_range := maxi(1, action.move_range - _enemy_move_penalty())
-			var away_dir: Vector2 = (map_area.enemy_pos - map_area.player_pos).normalized()
-			var target: Vector2   = map_area.enemy_pos + away_dir * eff_range
-			target.x = clampf(target.x, 0.0, map_area.WORLD_W)
-			target.y = clampf(target.y, 0.0, map_area.WORLD_H)
-			map_area.move_enemy_toward(target, eff_range)
-			_apply_enemy_zone_effects(from_pos)
-			var ow_dmg_b: int = state.player_overwatch_damage
-			if _check_overwatch_trigger(from_pos):
-				log_requested.emit("¡Emboscada! El enemigo entró en la zona de vigilancia.")
-				await _deal_damage_to_enemy.call(ow_dmg_b)
-				if _check_combat_end.call(): return
-			else:
-				log_requested.emit("Enemy retreats!")
+			await _move_enemy(_retreat_target(action.move_range), action.move_range, "Enemy retreats!")
 		"move_to_last_known":
-			if state.enemy_entangled_turns > 0 or state.enemy_frozen_turns > 0:
-				log_requested.emit("El enemigo no puede moverse.")
-				return
-			var from_pos: Vector2 = map_area.enemy_pos
-			var eff_range := maxi(1, action.move_range - _enemy_move_penalty())
-			map_area.move_enemy_toward(last_known_player_pos, eff_range)
-			_apply_enemy_zone_effects(from_pos)
-			var ow_dmg_c: int = state.player_overwatch_damage
-			if _check_overwatch_trigger(from_pos):
-				log_requested.emit("¡Emboscada! El enemigo entró en la zona de vigilancia.")
-				await _deal_damage_to_enemy.call(ow_dmg_c)
-				if _check_combat_end.call(): return
-			else:
-				log_requested.emit("Enemy searches last known position.")
+			await _move_enemy(last_known_player_pos, action.move_range, "Enemy searches last known position.")
 		"block":
 			state.enemy_block += action.block_amount
 			log_requested.emit("Enemy braces! (%d block)" % action.block_amount)
 		_:
 			push_warning("CombatEnemyAI: tipo de acción desconocido '%s'" % action.action_type)
+
+## Mueve al enemigo hacia target aplicando estados (enredado, congelado,
+## mojado, engrasado), efectos de zona y la vigilancia del jugador.
+func _move_enemy(target: Vector2, move_range: float, log_text: String) -> void:
+	if state.enemy_entangled_turns > 0 or state.enemy_frozen_turns > 0:
+		log_requested.emit("El enemigo no puede moverse.")
+		return
+	var from_pos: Vector2 = map_area.enemy_pos
+	var eff_range := maxf(CombatGrid.CELL, move_range - float(_enemy_move_penalty()))
+	map_area.move_enemy_toward(target, eff_range)
+	_apply_enemy_zone_effects(from_pos)
+	var ow_dmg: int = state.player_overwatch_damage
+	if _check_overwatch_trigger(from_pos):
+		log_requested.emit("¡Emboscada! El enemigo entró en la zona de vigilancia.")
+		await _deal_damage_to_enemy.call(ow_dmg)
+	else:
+		log_requested.emit(log_text)
+
+func _retreat_target(move_range: float) -> Vector2:
+	var away_dir: Vector2 = (map_area.enemy_pos - map_area.player_pos).normalized()
+	var target: Vector2 = map_area.enemy_pos + away_dir * move_range
+	target.x = clampf(target.x, 0.0, map_area.WORLD_W)
+	target.y = clampf(target.y, 0.0, map_area.WORLD_H)
+	return target
+
+# ── Cartas de monstruo ────────────────────────────────────────────────────────
+
+func execute_card(card: MonsterCard) -> void:
+	log_requested.emit("%s juega «%s»." % [LocalizationState.t("combat.enemy"), card.card_name])
+	for i in card.actions.size():
+		card_action_started.emit(i)
+		await _execute_card_action(card, i)
+		if _check_combat_end.call():
+			return
+		ui_update_requested.emit()
+		if action_delay > 0.0:
+			await (Engine.get_main_loop() as SceneTree).create_timer(action_delay).timeout
+	card_action_started.emit(-1)
+
+func _execute_card_action(card: MonsterCard, index: int) -> void:
+	var action: MonsterCardAction = card.actions[index]
+	match action.type:
+		"move":
+			# Si ya está al alcance del próximo ataque de la carta, no se mueve.
+			var next_attack := _next_attack(card, index)
+			if next_attack != null and _player_in_reach(monster_deck.reach_for(next_attack)):
+				log_requested.emit("El enemigo se queda en posición.")
+				return
+			var amount := monster_deck.move_for(action)
+			if amount > 0:
+				await _move_enemy(map_area.player_pos, _w(amount), "El enemigo avanza %d." % amount)
+		"retreat":
+			var amount := monster_deck.move_for(action)
+			if amount > 0:
+				await _move_enemy(_retreat_target(_w(amount)), _w(amount), "El enemigo retrocede %d." % amount)
+		"attack":
+			var reach := monster_deck.reach_for(action)
+			if state.enemy_blinded_turns > 0:
+				reach = mini(reach, MonsterDeck.MELEE_REACH_CELLS)
+			if not _player_in_reach(reach):
+				log_requested.emit("El ataque del enemigo no alcanza.")
+				return
+			var dmg := monster_deck.attack_for(action)
+			log_requested.emit("¡El enemigo ataca por %d!" % dmg)
+			await _deal_damage_to_player.call(dmg)
+		"block":
+			state.enemy_block += action.value
+			log_requested.emit("El enemigo se cubre (%d de bloqueo)." % action.value)
+		"heal":
+			var before: int = state.enemy_hp
+			state.enemy_hp = mini(state.enemy_max_hp, state.enemy_hp + action.value)
+			if map_area.has_method("set_enemy_hp"):
+				map_area.set_enemy_hp(state.enemy_hp)
+			log_requested.emit("El enemigo se cura %d." % (state.enemy_hp - before))
+		_:
+			push_warning("CombatEnemyAI: acción de carta desconocida '%s'" % action.type)
+
+func _next_attack(card: MonsterCard, from_index: int) -> MonsterCardAction:
+	for i in range(from_index + 1, card.actions.size()):
+		if card.actions[i].type == "attack":
+			return card.actions[i]
+	return null
+
+## reach en casillas, medido entre los bordes de las huellas (como el jugador).
+func _player_in_reach(reach: int) -> bool:
+	return map_area.actors_gap() <= _w(reach) + CombatGrid.CELL * 0.5 \
+		and map_area.has_line_of_sight(map_area.enemy_pos, map_area.player_pos)
+
+static func _w(cells: int) -> float:
+	return float(cells) * CombatGrid.CELL

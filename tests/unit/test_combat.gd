@@ -49,7 +49,7 @@ class MockMapArea extends Node:
 	func start_puddle_placement(_throw_range: float, _effect: String = "wet", _radius: float = 1.0) -> void: pass
 	func clear_puddle_placement() -> void: pass
 
-	func place_puddle(pos: Vector2, radius: int, effect: String = "wet") -> void:
+	func place_puddle(pos: Vector2, radius: float, effect: String = "wet") -> void:
 		place_puddle_calls.append({"pos": pos, "radius": radius, "effect": effect})
 
 	func start_overwatch_selection(_cone_range: float, _half_angle: float) -> void: pass
@@ -58,6 +58,12 @@ class MockMapArea extends Node:
 
 	func clear_overwatch_zone() -> void:
 		clear_overwatch_zone_calls += 1
+
+	func is_enemy_in_attack_range(_range: float) -> bool:
+		return true
+
+	func actors_gap() -> float:
+		return (player_pos - enemy_pos).length() - 1.3  # huellas de ejemplo (radio 0,65 cada una)
 
 	func is_segment_in_overwatch_cone(_from: Vector2, _to: Vector2, _origin: Vector2, _dir: Vector2, _cone_range: float, _half_angle_deg: float) -> bool:
 		return overwatch_cone_hit
@@ -77,11 +83,6 @@ func after_each() -> void:
 
 
 # ── CombatState — valores iniciales ──────────────────────────────────────────
-
-func test_estado_inicial_player_energy_igual_a_max() -> void:
-	var s := CombatState.new()
-	assert_eq(s.player_energy, s.max_energy)
-
 
 func test_estado_inicial_pilas_vacias() -> void:
 	var s := CombatState.new()
@@ -942,10 +943,9 @@ func test_player_hidden_activa_transicion_a_fase_searching() -> void:
 
 # ── CombatPlayerActions — helpers ─────────────────────────────────────────────
 
-func _make_card(type: String, cost: int, block: int = 0, damage: int = 0) -> CardData:
-	var c := CardData.new()
+func _make_card(type: String, block: int = 0, damage: int = 0) -> CardActionLine:
+	var c := CardActionLine.new()
 	c.card_type = type
-	c.cost = cost
 	c.block_amount = block
 	c.damage = damage
 	c.name = "TestCard"
@@ -962,8 +962,7 @@ func _make_player_actions(p_state: CombatState) -> CombatPlayerActions:
 
 func test_block_card_suma_block_amount_al_player_block() -> void:
 	var s := CombatState.new()
-	s.player_energy = 3
-	s.hand.append(_make_card("block", 2, 5))
+	s.turn_actions.append(_make_card("block", 5))
 
 	var pa := _make_player_actions(s)
 	pa.pending_self_index = 0
@@ -972,31 +971,15 @@ func test_block_card_suma_block_amount_al_player_block() -> void:
 	assert_eq(s.player_block, 5)
 
 
-func test_block_card_descuenta_costo_de_energia() -> void:
+func test_block_card_consume_la_accion_del_turno() -> void:
 	var s := CombatState.new()
-	s.player_energy = 3
-	s.hand.append(_make_card("block", 2, 5))
+	s.turn_actions.append(_make_card("block", 5))
 
 	var pa := _make_player_actions(s)
 	pa.pending_self_index = 0
 	pa._confirm_self_action()
 
-	assert_eq(s.player_energy, 1)
-
-
-func test_block_card_mueve_carta_de_mano_a_descarte() -> void:
-	var s := CombatState.new()
-	s.player_energy = 3
-	var card := _make_card("block", 2, 5)
-	s.hand.append(card)
-
-	var pa := _make_player_actions(s)
-	pa.pending_self_index = 0
-	pa._confirm_self_action()
-
-	assert_eq(s.hand.size(), 0)
-	assert_eq(s.discard_pile.size(), 1)
-	assert_eq(s.discard_pile[0], card)
+	assert_eq(s.turn_actions.size(), 0)
 
 
 func test_confirm_self_action_con_indice_invalido_no_muta_estado() -> void:
@@ -1005,19 +988,6 @@ func test_confirm_self_action_con_indice_invalido_no_muta_estado() -> void:
 	pa.pending_self_index = -1
 	pa._confirm_self_action()
 	assert_eq(s.player_block, 0)
-
-
-# ── play_card — energy gate ───────────────────────────────────────────────────
-
-func test_play_card_sin_energia_no_inicia_seleccion_block() -> void:
-	var s := CombatState.new()
-	s.player_energy = 1
-	s.hand.append(_make_card("block", 3, 5))  # cost 3 > energy 1
-
-	var pa := _make_player_actions(s)
-	pa.play_card(0)
-
-	assert_eq(pa.pending_self_index, -1)
 
 
 # ── cancel_selection ──────────────────────────────────────────────────────────
@@ -1042,14 +1012,13 @@ func test_cancel_selection_limpia_pending_self_index() -> void:
 
 func test_dos_cartas_de_bloqueo_acumulan_block_amount() -> void:
 	var s := CombatState.new()
-	s.player_energy = 6
-	s.hand.append(_make_card("block", 2, 5))
-	s.hand.append(_make_card("block", 2, 3))
+	s.turn_actions.append(_make_card("block", 5))
+	s.turn_actions.append(_make_card("block", 3))
 
 	var pa := _make_player_actions(s)
 
 	pa.pending_self_index = 0
-	pa._confirm_self_action()  # hand shrinks: carta 1 descartada, carta 2 queda en índice 0
+	pa._confirm_self_action()  # acción 1 consumida, acción 2 queda en índice 0
 
 	pa.pending_self_index = 0
 	pa._confirm_self_action()  # carta 2
@@ -1059,9 +1028,8 @@ func test_dos_cartas_de_bloqueo_acumulan_block_amount() -> void:
 
 func test_bloqueo_acumulado_absorbe_daño_combinado() -> void:
 	var s := CombatState.new()
-	s.player_energy = 6
-	s.hand.append(_make_card("block", 2, 4))
-	s.hand.append(_make_card("block", 2, 4))
+	s.turn_actions.append(_make_card("block", 4))
+	s.turn_actions.append(_make_card("block", 4))
 
 	var pa := _make_player_actions(s)
 	pa.pending_self_index = 0
@@ -1104,49 +1072,49 @@ func _make_ai_full(s: CombatState, strategy: AiStrategy = null) -> CombatEnemyAI
 
 # ── Estados — quemado / sangrado / veneno (DOT del enemigo) ─────────────────
 
-func test_enemy_quemado_aplica_3_de_danio_y_decrementa_turnos() -> void:
+func test_enemy_quemado_aplica_su_danio_y_decrementa_turnos() -> void:
 	var s := CombatState.new()
-	s.enemy_hp = 20
+	s.enemy_hp = 200
 	s.enemy_burning_turns = 2
 	await _make_ai_full(s).take_turn()
-	assert_eq(s.enemy_hp, 17)
+	assert_eq(s.enemy_hp, 200 - CombatState.BURN_DAMAGE)
 	assert_eq(s.enemy_burning_turns, 1)
 
 
 func test_enemy_quemado_se_apaga_al_llegar_a_cero() -> void:
 	var s := CombatState.new()
-	s.enemy_hp = 20
+	s.enemy_hp = 200
 	s.enemy_burning_turns = 1
 	await _make_ai_full(s).take_turn()
 	assert_eq(s.enemy_burning_turns, 0)
 
 
-func test_enemy_sangrado_aplica_2_de_danio_y_decrementa_turnos() -> void:
+func test_enemy_sangrado_aplica_su_danio_y_decrementa_turnos() -> void:
 	var s := CombatState.new()
-	s.enemy_hp = 20
+	s.enemy_hp = 200
 	s.enemy_bleeding_turns = 2
 	await _make_ai_full(s).take_turn()
-	assert_eq(s.enemy_hp, 18)
+	assert_eq(s.enemy_hp, 200 - CombatState.BLEED_DAMAGE)
 	assert_eq(s.enemy_bleeding_turns, 1)
 
 
-func test_enemy_veneno_aplica_danio_igual_a_stacks_y_los_decrementa() -> void:
+func test_enemy_veneno_aplica_danio_por_stack_y_los_decrementa() -> void:
 	var s := CombatState.new()
-	s.enemy_hp = 20
+	s.enemy_hp = 200
 	s.enemy_poison_stacks = 3
 	await _make_ai_full(s).take_turn()
-	assert_eq(s.enemy_hp, 17)
+	assert_eq(s.enemy_hp, 200 - 3 * CombatState.POISON_DAMAGE_PER_STACK)
 	assert_eq(s.enemy_poison_stacks, 2)
 
 
 func test_enemy_dots_acumulados_se_aplican_todos_en_el_mismo_turno() -> void:
 	var s := CombatState.new()
-	s.enemy_hp = 30
+	s.enemy_hp = 300
 	s.enemy_burning_turns  = 1
 	s.enemy_bleeding_turns = 1
 	s.enemy_poison_stacks  = 2
 	await _make_ai_full(s).take_turn()
-	assert_eq(s.enemy_hp, 30 - 3 - 2 - 2)
+	assert_eq(s.enemy_hp, 300 - CombatState.BURN_DAMAGE - CombatState.BLEED_DAMAGE - 2 * CombatState.POISON_DAMAGE_PER_STACK)
 
 
 func test_enemy_muerte_por_dot_detiene_los_ticks_siguientes() -> void:
@@ -1256,32 +1224,29 @@ func test_overwatch_no_se_dispara_si_el_enemigo_no_entra_en_el_cono() -> void:
 
 func test_start_move_selection_bloqueada_por_enredado() -> void:
 	var s := CombatState.new()
-	s.player_energy = 5
 	s.player_entangled_turns = 2
 	var pa := _make_player_actions(s)
-	pa.start_move_selection("hand", 0, 3, 1, "Test")
+	pa.start_move_selection("hand", 0, 3, "Test")
 	assert_eq(pa.pending_move_index, -1)
 	assert_eq(_map.start_move_selection_calls, 0)
 
 
 func test_start_move_selection_bloqueada_por_congelado() -> void:
 	var s := CombatState.new()
-	s.player_energy = 5
 	s.player_frozen_turns = 2
 	var pa := _make_player_actions(s)
-	pa.start_move_selection("hand", 0, 3, 1, "Test")
+	pa.start_move_selection("hand", 0, 3, "Test")
 	assert_eq(pa.pending_move_index, -1)
 	assert_eq(_map.start_move_selection_calls, 0)
 
 
 func test_start_move_selection_penaliza_rango_por_mojado_y_engrasado() -> void:
 	var s := CombatState.new()
-	s.player_energy = 5
 	s.player_wet_turns = 1
 	s.player_greasy_turns = 1
 	var pa := _make_player_actions(s)
-	pa.start_move_selection("hand", 0, 3, 1, "Test")
-	assert_eq(pa.pending_move_range, 1)  # max(1, 3 - (1 mojado + 2 engrasado))
+	pa.start_move_selection("hand", 0, 50, "Test")
+	assert_eq(pa.pending_move_range, 12)  # 50 - (13 mojado + 25 engrasado), en casillas
 
 
 # ── CombatPlayerActions — ceguera reduce rango de ataque ─────────────────────
@@ -1289,16 +1254,16 @@ func test_start_move_selection_penaliza_rango_por_mojado_y_engrasado() -> void:
 func test_start_range_attack_selection_reduce_rango_por_cegado() -> void:
 	var s := CombatState.new()
 	s.player_blinded_turns = 1
-	var card := _make_card("range_attack", 1, 0, 8)
-	card.card_range = 5
+	var card := _make_card("range_attack", 0, 8)
+	card.card_range = 50
 	var pa := _make_player_actions(s)
 	pa.start_range_attack_selection(0, card)
-	assert_eq(pa.pending_attack_range, 1)
+	assert_eq(pa.pending_attack_range, CombatPlayerActions.BLINDED_RANGE)
 
 
 func test_start_range_attack_selection_sin_cegado_usa_rango_completo() -> void:
 	var s := CombatState.new()
-	var card := _make_card("range_attack", 1, 0, 8)
+	var card := _make_card("range_attack", 0, 8)
 	card.card_range = 5
 	var pa := _make_player_actions(s)
 	pa.start_range_attack_selection(0, card)
@@ -1309,17 +1274,16 @@ func test_start_range_attack_selection_sin_cegado_usa_rango_completo() -> void:
 
 func test_execute_puddle_usa_el_effect_y_rango_de_la_carta() -> void:
 	var s := CombatState.new()
-	s.player_energy = 3
-	var card := _make_card("puddle", 1)
+	var card := _make_card("puddle")
 	card.puddle_effect = "fire"
 	card.card_range = 2
-	s.hand.append(card)
+	s.turn_actions.append(card)
 	var pa := _make_player_actions(s)
 	pa.pending_puddle_index = 0
 	pa._execute_puddle(Vector2(4.0, 2.0))
 	assert_eq(_map.place_puddle_calls.size(), 1)
 	assert_eq(_map.place_puddle_calls[0]["effect"], "fire")
-	assert_eq(_map.place_puddle_calls[0]["radius"], 2)
+	assert_almost_eq(_map.place_puddle_calls[0]["radius"], 2 * CombatGrid.CELL, 0.0001)  # 2 casillas
 	assert_eq(_map.place_puddle_calls[0]["pos"], Vector2(4.0, 2.0))
 
 
@@ -1327,27 +1291,173 @@ func test_execute_puddle_usa_el_effect_y_rango_de_la_carta() -> void:
 
 func test_execute_overwatch_activa_estado_con_datos_de_la_carta() -> void:
 	var s := CombatState.new()
-	s.player_energy = 3
-	var card := _make_card("overwatch", 1, 0, 15)
+	var card := _make_card("overwatch", 0, 15)
 	card.card_range = 4
-	s.hand.append(card)
+	s.turn_actions.append(card)
 	_map.player_pos = Vector2(1.0, 1.0)
 	var pa := _make_player_actions(s)
 	pa.pending_overwatch_index = 0
 	pa._execute_overwatch(Vector2(1.0, 0.0))
 	assert_true(s.player_overwatch_active)
 	assert_eq(s.player_overwatch_damage, 15)
-	assert_eq(s.player_overwatch_range, 4.0)
+	assert_almost_eq(s.player_overwatch_range, 4 * CombatGrid.CELL, 0.0001)  # 4 casillas
 	assert_eq(s.player_overwatch_origin, Vector2(1.0, 1.0))
 	assert_eq(s.player_overwatch_dir, Vector2(1.0, 0.0))
 
 
 func test_jugar_otra_carta_cancela_overwatch_activo() -> void:
 	var s := CombatState.new()
-	s.player_energy = 5
 	s.player_overwatch_active = true
-	s.hand.append(_make_card("block", 1, 5))
+	s.turn_actions.append(_make_card("block", 5))
 	var pa := _make_player_actions(s)
 	pa.play_card(0)
 	assert_false(s.player_overwatch_active)
 	assert_eq(_map.clear_overwatch_zone_calls, 1)
+
+
+# ── CombatPlayerActions — la acción se gasta antes de la animación ──────────
+
+func test_confirm_range_attack_gasta_la_accion_antes_del_danio() -> void:
+	# Durante la animación de daño el jugador puede elegir otra mitad o terminar
+	# el turno; la acción ya tiene que estar fuera de state.turn_actions.
+	var s := CombatState.new()
+	s.turn_actions.append(_make_card("melee_attack", 0, 6))
+	var size_during_damage := [-1]
+	var pa := CombatPlayerActions.new()
+	pa.setup(s, _map, func(amount: int, _skip := false) -> void:
+		size_during_damage[0] = s.turn_actions.size()
+		s.turn_actions.clear()  # simula "fin de turno" durante la animación
+		s.enemy_hp -= amount, Callable(), func() -> bool: return false)
+	pa.pending_attack_index = 0
+	pa.pending_attack_range = 1
+
+	await pa._confirm_range_attack()
+
+	assert_eq(size_during_damage[0], 0)
+	assert_eq(s.enemy_hp, s.enemy_max_hp - 6)
+
+
+# ── Cartas de monstruo ────────────────────────────────────────────────────────
+
+func _make_monster_action(type: String, value: int = 0, range_mod: int = 0) -> MonsterCardAction:
+	var a := MonsterCardAction.new()
+	a.type = type
+	a.value = value
+	a.range_modifier = range_mod
+	return a
+
+
+func _make_monster_card(initiative: int, actions: Array) -> MonsterCard:
+	var c := MonsterCard.new()
+	c.card_name = "Test"
+	c.initiative = initiative
+	c.actions.assign(actions)
+	return c
+
+
+func _make_monster_deck(cards: Array, base_move := 63, base_attack := 6, base_range := 0) -> MonsterDeck:
+	var d := MonsterDeck.new()
+	d.base_move = base_move
+	d.base_attack = base_attack
+	d.base_range = base_range
+	d.cards.assign(cards)
+	return d
+
+
+func _make_card_ai(s: CombatState, deck: MonsterDeck) -> CombatEnemyAI:
+	var ai := _make_ai_full(s)
+	ai.set_monster_deck(deck)
+	ai.action_delay = 0.0
+	return ai
+
+
+func test_draw_card_toma_la_iniciativa_de_la_carta() -> void:
+	var s := CombatState.new()
+	var ai := _make_card_ai(s, _make_monster_deck([_make_monster_card(19, [])]))
+	ai.draw_card()
+	assert_eq(ai.initiative, 19)
+
+
+func test_draw_card_no_repite_hasta_usar_todo_el_mazo() -> void:
+	var s := CombatState.new()
+	var cards := [_make_monster_card(10, []), _make_monster_card(20, []), _make_monster_card(30, [])]
+	var ai := _make_card_ai(s, _make_monster_deck(cards))
+	var seen := []
+	for i in 3:
+		seen.append(ai.draw_card())
+	for c in cards:
+		assert_true(seen.has(c))
+
+
+func test_draw_card_sin_mazo_devuelve_null_y_mantiene_iniciativa() -> void:
+	var s := CombatState.new()
+	var ai := _make_ai_full(s)
+	ai.initiative = 50
+	assert_null(ai.draw_card())
+	assert_eq(ai.initiative, 50)
+
+
+func test_carta_ataque_en_alcance_hace_base_mas_modificador() -> void:
+	var s := CombatState.new()
+	_map.enemy_pos = Vector2(1.0, 0.0)  # a 1 del jugador: dentro del cuerpo a cuerpo
+	var card := _make_monster_card(20, [_make_monster_action("attack", 2)])
+	var ai := _make_card_ai(s, _make_monster_deck([card]))
+	var hp := s.player_hp
+	await ai.execute_card(card)
+	assert_eq(s.player_hp, hp - 8)  # base 6 + 2
+
+
+func test_carta_ataque_fuera_de_alcance_no_hace_danio() -> void:
+	var s := CombatState.new()
+	_map.enemy_pos = Vector2(10.0, 0.0)
+	var card := _make_monster_card(20, [_make_monster_action("attack", 0)])
+	var ai := _make_card_ai(s, _make_monster_deck([card]))
+	var hp := s.player_hp
+	await ai.execute_card(card)
+	assert_eq(s.player_hp, hp)
+
+
+func test_carta_ataque_a_distancia_usa_rango_base_mas_modificador() -> void:
+	var s := CombatState.new()
+	_map.enemy_pos = Vector2(7.0, 0.0)  # 5,7 entre bordes
+	var card := _make_monster_card(20, [_make_monster_action("attack", 0, -13)])
+	var ai := _make_card_ai(s, _make_monster_deck([card], 50, 4, 100))  # 100 - 13 = 87 casillas = 6,96
+	var hp := s.player_hp
+	await ai.execute_card(card)
+	assert_eq(s.player_hp, hp - 4)
+
+
+func test_carta_mover_se_saltea_si_ya_esta_al_alcance_del_ataque() -> void:
+	var s := CombatState.new()
+	_map.enemy_pos = Vector2(1.0, 0.0)
+	var card := _make_monster_card(20, [_make_monster_action("move"), _make_monster_action("attack")])
+	var ai := _make_card_ai(s, _make_monster_deck([card]))
+	await ai.execute_card(card)
+	assert_eq(_map.move_enemy_toward_calls, 0)
+
+
+func test_carta_mover_se_acerca_si_esta_lejos() -> void:
+	var s := CombatState.new()
+	_map.enemy_pos = Vector2(10.0, 0.0)
+	var card := _make_monster_card(20, [_make_monster_action("move"), _make_monster_action("attack")])
+	var ai := _make_card_ai(s, _make_monster_deck([card]))
+	await ai.execute_card(card)
+	assert_eq(_map.move_enemy_toward_calls, 1)
+
+
+func test_carta_bloqueo_y_curacion() -> void:
+	var s := CombatState.new()
+	s.enemy_hp = s.enemy_max_hp - 2
+	var card := _make_monster_card(20, [_make_monster_action("block", 3), _make_monster_action("heal", 5)])
+	var ai := _make_card_ai(s, _make_monster_deck([card]))
+	await ai.execute_card(card)
+	assert_eq(s.enemy_block, 3)
+	assert_eq(s.enemy_hp, s.enemy_max_hp)  # la curación no pasa el máximo
+
+
+func test_mazos_de_monstruo_tienen_cartas_con_acciones() -> void:
+	for path in ["res://data/enemies/monster_decks/bruto.tres", "res://data/enemies/monster_decks/arquero.tres"]:
+		var deck: MonsterDeck = load(path)
+		assert_false(deck.cards.is_empty(), path)
+		for card in deck.cards:
+			assert_false(card.actions.is_empty(), "%s: %s sin acciones" % [path, card.card_name])

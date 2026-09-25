@@ -94,6 +94,7 @@ func load_player_save() -> void:
 	else:
 		player_save = PlayerSaveData.new()
 		save_player_save()
+	YounStatRules.ensure_initialized(player_save)
 
 func save_player_save() -> void:
 	ResourceSaver.save(player_save, SAVE_PATH)

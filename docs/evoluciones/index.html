@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evoluciones de Youns</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --panel: #ffffff; --ink: #1d2330; --muted: #667085; --line: #d6dae2;
+    --node: #ffffff; --node-border: #c9ced8; --accent: #2f7de1; --gold: #d4a017; --purple: #9b59d0;
+    --dim: 0.25; --shadow: 0 1px 3px rgba(20, 30, 50, .12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10141c; --panel: #171c26; --ink: #e6e9ef; --muted: #98a2b3; --line: #2c3444;
+      --node: #1c2230; --node-border: #34405a; --accent: #5aa2ff; --gold: #e8c04a; --purple: #b98ae8;
+      --shadow: 0 1px 3px rgba(0, 0, 0, .5);
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 20px 16px 8px; max-width: 1400px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; font-size: 24px; }
+  .sub { color: var(--muted); margin: 0 0 12px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .chip { border: 1px solid var(--node-border); background: var(--panel); color: var(--ink); border-radius: 999px;
+          padding: 4px 10px; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .chip[aria-pressed="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+  details.rules { margin: 12px 0 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; }
+  details.rules summary { cursor: pointer; font-weight: 600; }
+  details.rules ul { margin: 8px 0 4px; padding-left: 20px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 12px 0 0; color: var(--muted); font-size: 13px; }
+  .legend svg { vertical-align: middle; margin-right: 4px; }
+
+  main { max-width: 1400px; margin: 0 auto; padding: 12px 16px 32px; display: grid; grid-template-columns: 1fr 340px; gap: 16px; align-items: start; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .tree-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+  .tree { position: relative; display: grid; grid-template-columns: repeat(5, minmax(150px, 1fr)); gap: 28px; padding: 16px; min-width: 860px; }
+  .tree svg.edges { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  .col h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; }
+  .col .nodes { display: flex; flex-direction: column; gap: 10px; }
+  .node { position: relative; z-index: 1; text-align: left; width: 100%; border: 1px solid var(--node-border); background: var(--node);
+          color: var(--ink); border-radius: 10px; padding: 8px 10px; cursor: pointer; box-shadow: var(--shadow);
+          transition: opacity .15s, border-color .15s, transform .15s; font: inherit; }
+  .node:hover { border-color: var(--accent); }
+  .node .name { font-weight: 600; display: block; }
+  .node .meta { display: flex; gap: 4px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
+  .tag { font-size: 11px; border-radius: 4px; padding: 0 5px; border: 1px solid var(--node-border); color: var(--muted); }
+  .tag.joker { border-color: var(--purple); color: var(--purple); }
+  .tag.bonus { border-color: var(--gold); color: var(--gold); }
+  .node.provisorio .name { font-style: italic; color: var(--muted); }
+  .node.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  .node.related { border-color: var(--accent); }
+  .node.candidate { border-style: dashed; border-color: var(--gold); }
+  .node.dimmed { opacity: var(--dim); }
+
+  aside { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; position: sticky; top: 12px; }
+  aside h3 { margin: 0 0 2px; font-size: 18px; }
+  aside .stage { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+  aside h4 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  aside .empty { color: var(--muted); }
+  table.cond { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.cond td { border-top: 1px solid var(--line); padding: 5px 4px; vertical-align: top; }
+  table.cond td:first-child { color: var(--muted); width: 38%; }
+  .bars { display: grid; grid-template-columns: 92px 1fr 34px; gap: 4px 8px; align-items: center; font-size: 13px; }
+  .bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--accent); }
+  .links a { color: var(--accent); cursor: pointer; text-decoration: none; }
+  .links a:hover { text-decoration: underline; }
+  .note { font-size: 14px; color: var(--muted); background: var(--bg); border-radius: 8px; padding: 8px; }
+  footer { max-width: 1400px; margin: 0 auto; padding: 0 16px 24px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Árbol de evoluciones</h1>
+  <p class="sub">Tocá un Youn para ver sus condiciones y su camino. Los nombres en <em>cursiva</em> son provisorios.</p>
+  <div class="toolbar" id="filters" aria-label="Filtrar por inteligencia"></div>
+  <div class="legend" id="legend"></div>
+  <details class="rules"><summary>Reglas de evolución</summary><ul id="rules"></ul></details>
+</header>
+
+<main>
+  <div class="tree-wrap"><div class="tree" id="tree"><svg class="edges" id="edges" aria-hidden="true"></svg></div></div>
+  <aside id="detail"><p class="empty">Elegí un Youn del árbol.</p></aside>
+</main>
+<footer>Los datos salen de <code>docs/evoluciones/datos.js</code>.</footer>
+
+<script src="datos.js"></script>
+<script>
+(() => {
+  const D = window.EVOLUCIONES;
+  const byId = Object.fromEntries(D.youns.map(y => [y.id, y]));
+  const intel = Object.fromEntries(D.inteligencias.map(i => [i.id, i]));
+  const stageName = Object.fromEntries(D.etapas.map(e => [e.id, e.nombre]));
+  const STAT_LABELS = { vitalidad: "Vitalidad", energia: "Energía", fuerza: "Fuerza", resistencia: "Resistencia",
+    agilidad: "Agilidad", tecnica: "Técnica", inteligencia: "Inteligencia", espiritu: "Espíritu" };
+  const COND_LABELS = { inteligencia: "Inteligencia", stats: "Stats", crianza: "Crianza", cartas: "Cartas (uso)", bonus: "Bonus" };
+  const EDGE = {
+    fijo:        { color: "var(--muted)",  dash: "" },
+    normal:      { color: "var(--muted)",  dash: "" },
+    bonus:       { color: "var(--gold)",   dash: "6 4" },
+    especial:    { color: "var(--purple)", dash: "6 4" },
+    condiciones: { color: "var(--accent)", dash: "2 4" },
+  };
+  const EDGE_NAMES = { fijo: "Fija", bonus: "Evento bonus", especial: "Especial", condiciones: "Por condiciones (3 de 5)" };
+
+  // Aristas explícitas (el comodín "desde cualquier rookie" no se dibuja).
+  const edges = [];
+  for (const y of D.youns) for (const d of (y.desde || [])) {
+    if (byId[d.id]) edges.push({ from: d.id, to: y.id, tipo: d.tipo });
+  }
+  const children = id => edges.filter(e => e.from === id).map(e => e.to);
+  const parents = id => edges.filter(e => e.to === id).map(e => e.from);
+  const sharesIntel = (a, b) => (a.inteligencias || []).some(i => (b.inteligencias || []).includes(i));
+
+  let selected = null, filter = null;
+  const tree = document.getElementById("tree"), svg = document.getElementById("edges");
+  const nodeEls = {};
+
+  // ── Filtros, leyenda y reglas ───────────────────────────────────────────
+  const filters = document.getElementById("filters");
+  const all = chip("Todas", null); all.setAttribute("aria-pressed", "true"); filters.append(all);
+  for (const i of D.inteligencias) filters.append(chip(i.nombre, i.id, i.color));
+  function chip(label, id, color) {
+    const b = document.createElement("button");
+    b.className = "chip"; b.type = "button"; b.setAttribute("aria-pressed", "false");
+    b.innerHTML = (color ? `<span class="dot" style="background:${color}"></span>` : "") + label;
+    b.onclick = () => {
+      filter = id;
+      for (const c of filters.children) c.setAttribute("aria-pressed", String(c === b));
+      paint();
+    };
+    return b;
+  }
+  document.getElementById("legend").innerHTML = Object.entries(EDGE_NAMES).map(([k, n]) =>
+    `<span><svg width="28" height="8"><line x1="0" y1="4" x2="28" y2="4" stroke="${EDGE[k].color}" stroke-width="2" stroke-dasharray="${EDGE[k].dash}"/></svg>${n}</span>`
+  ).join("") + `<span><span class="tag candidate" style="border-style:dashed;border-color:var(--gold);color:var(--gold)">candidato</span> campeón que comparte inteligencia</span>`;
+  document.getElementById("rules").innerHTML = D.reglas.map(r => `<li>${r}</li>`).join("");
+
+  // ── Columnas y nodos ─────────────────────────────────────────────────────
+  for (const etapa of D.etapas) {
+    const col = document.createElement("section"); col.className = "col";
+    const youns = D.youns.filter(y => y.etapa === etapa.id);
+    col.innerHTML = `<h2>${etapa.nombre} · ${youns.length}</h2><div class="nodes"></div>`;
+    for (const y of youns) {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "node" + (y.provisorio ? " provisorio" : "");
+      const dots = (y.inteligencias || []).map(i => `<span class="dot" title="${intel[i]?.nombre}" style="background:${intel[i]?.color}"></span>`).join("");
+      const tags = [y.comodin && `<span class="tag joker">comodín</span>`,
+                    (y.desde || []).some(d => d.tipo === "bonus") && `<span class="tag bonus">bonus</span>`,
+                    (y.desde || []).some(d => d.tipo === "especial") && `<span class="tag joker">especial</span>`].filter(Boolean).join("");
+      b.innerHTML = `<span class="name">${y.nombre}</span><span class="meta">${dots}${tags}</span>`;
+      b.onclick = () => { selected = selected === y.id ? null : y.id; paint(); showDetail(); };
+      col.querySelector(".nodes").append(b);
+      nodeEls[y.id] = b;
+    }
+    tree.append(col);
+  }
+
+  // ── Dibujo de aristas ────────────────────────────────────────────────────
+  function drawEdges(highlight) {
+    const box = tree.getBoundingClientRect();
+    svg.setAttribute("viewBox", `0 0 ${tree.scrollWidth} ${tree.scrollHeight}`);
+    svg.innerHTML = "";
+    for (const e of edges) {
+      const a = nodeEls[e.from].getBoundingClientRect(), b = nodeEls[e.to].getBoundingClientRect();
+      const x1 = a.right - box.left, y1 = a.top + a.height / 2 - box.top;
+      const x2 = b.left - box.left, y2 = b.top + b.height / 2 - box.top;
+      const mx = (x1 + x2) / 2;
+      const on = !highlight || (highlight.has(e.from) && highlight.has(e.to));
+      const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      p.setAttribute("d", `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`);
+      p.setAttribute("fill", "none");
+      p.setAttribute("stroke", EDGE[e.tipo]?.color || "var(--muted)");
+      p.setAttribute("stroke-width", on && highlight ? "2.5" : "1.5");
+      p.setAttribute("stroke-dasharray", EDGE[e.tipo]?.dash || "");
+      p.setAttribute("opacity", on ? "0.9" : "0.12");
+      svg.append(p);
+    }
+  }
+
+  // ── Resaltado: camino del seleccionado, candidatos y filtro ─────────────
+  function lineage(id) {
+    const set = new Set([id]);
+    const up = [id], down = [id];
+    while (up.length) for (const p of parents(up.pop())) if (!set.has(p)) { set.add(p); up.push(p); }
+    while (down.length) for (const c of children(down.pop())) if (!set.has(c)) { set.add(c); down.push(c); }
+    return set;
+  }
+  function paint() {
+    const sel = selected && byId[selected];
+    const related = sel ? lineage(selected) : null;
+    const candidates = new Set();
+    if (sel && sel.etapa === "rookie") {
+      for (const y of D.youns) if (y.etapa === "campeon" && (y.comodin || sharesIntel(sel, y))) candidates.add(y.id);
+    } else if (sel && sel.etapa === "campeon" && !sel.comodin) {
+      for (const y of D.youns) if (y.etapa === "rookie" && sharesIntel(sel, y)) candidates.add(y.id);
+    }
+    for (const y of D.youns) {
+      const el = nodeEls[y.id];
+      el.classList.toggle("selected", y.id === selected);
+      el.classList.toggle("related", !!related && related.has(y.id) && y.id !== selected);
+      el.classList.toggle("candidate", candidates.has(y.id));
+      const outBySel = sel && !related.has(y.id) && !candidates.has(y.id);
+      const outByFilter = filter && y.inteligencias && !y.inteligencias.includes(filter);
+      el.classList.toggle("dimmed", !!(outBySel || outByFilter));
+    }
+    drawEdges(related);
+  }
+
+  // ── Panel de detalle ─────────────────────────────────────────────────────
+  function link(id) { return `<a data-go="${id}">${byId[id].nombre}</a>`; }
+  function showDetail() {
+    const el = document.getElementById("detail");
+    const y = selected && byId[selected];
+    if (!y) { el.innerHTML = `<p class="empty">Elegí un Youn del árbol.</p>`; return; }
+    let h = `<h3>${y.nombre}</h3><div class="stage">${stageName[y.etapa]}${y.comodin ? " · comodín" : ""}${y.provisorio ? " · provisorio" : ""}</div>`;
+    if (y.inteligencias?.length) h += `<div>${y.inteligencias.map(i => `<span class="chip" style="cursor:default"><span class="dot" style="background:${intel[i].color}"></span>${intel[i].nombre}</span>`).join(" ")}</div>`;
+    if (y.notas) h += `<h4>Notas</h4><div class="note">${y.notas}</div>`;
+    if (y.condiciones) {
+      h += `<h4>Condiciones (3 de 5)</h4><table class="cond">` +
+        Object.keys(COND_LABELS).map(k => `<tr><td>${COND_LABELS[k]}</td><td>${y.condiciones[k] || "—"}</td></tr>`).join("") + `</table>`;
+    }
+    const from = (y.desde || []).filter(d => byId[d.id]);
+    if (from.length) h += `<h4>Evoluciona desde</h4><div class="links">${from.map(d => `${link(d.id)} <span class="tag">${EDGE_NAMES[d.tipo] || d.tipo}</span>`).join("<br>")}</div>`;
+    if ((y.desde || []).some(d => d.id === "*rookies")) h += `<h4>Evoluciona desde</h4><div class="note">Cualquier rookie que no cumpla 3 condiciones de ningún campeón.</div>`;
+    const to = children(y.id);
+    if (to.length) h += `<h4>Evoluciona a</h4><div class="links">${to.map(link).join("<br>")}</div>`;
+    if (y.etapa === "rookie") h += `<h4>Campeones candidatos</h4><div class="note">Resaltados en dorado: los que comparten su inteligencia. Puede llegar a cualquier campeón cumpliendo 3 de sus 5 condiciones.</div>`;
+    if (y.stats) {
+      const max = Math.max(100, ...Object.values(y.stats));
+      h += `<h4>Estadísticas base</h4><div class="bars">` + Object.keys(STAT_LABELS).map(k =>
+        `<span>${STAT_LABELS[k]}</span><span class="bar"><span style="width:${(y.stats[k] || 0) / max * 100}%"></span></span><span>${y.stats[k] ?? "—"}</span>`).join("") + `</div>`;
+    }
+    el.innerHTML = h;
+    el.querySelectorAll("[data-go]").forEach(a => a.onclick = () => { selected = a.dataset.go; paint(); showDetail(); });
+  }
+
+  window.addEventListener("resize", () => paint());
+  requestAnimationFrame(() => paint());
+})();
+</script>
+</body>
+</html>

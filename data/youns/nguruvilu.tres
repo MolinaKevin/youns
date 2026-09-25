@@ -8,6 +8,19 @@
 [ext_resource type="PackedScene" uid="uid://6k7va8am6ouy" path="res://assets/youns/nguruvilu/run.fbx" id="5_run"]
 [ext_resource type="PackedScene" uid="uid://b2p3y0m2gtm5c" path="res://assets/youns/nguruvilu/walk.fbx" id="6_walk"]
 [ext_resource type="Resource" path="res://data/enemies/strategies/aggressive.tres" id="strategy"]
+[ext_resource type="Resource" path="res://data/enemies/monster_decks/bruto.tres" id="monster_deck"]
+[ext_resource type="Script" path="res://data/youns/youn_stats.gd" id="youn_stats_script"]
+
+[sub_resource type="Resource" id="BaseStats"]
+script = ExtResource("youn_stats_script")
+vitalidad = 55
+energia = 45
+fuerza = 50
+resistencia = 50
+agilidad = 45
+tecnica = 45
+inteligencia = 45
+espiritu = 60
 
 [resource]
 script = ExtResource("1_script")
@@ -25,8 +38,10 @@ scene_attack = ExtResource("1_x0k2r")
 scene_damage = ExtResource("2_damage")
 chase_speed = 5.0
 body_height = 4.0
-max_hp = 20
+base_stats = SubResource("BaseStats")
+max_hp = 200
 strategy = ExtResource("strategy")
+monster_deck = ExtResource("monster_deck")
 loot_item_name = "Nguruvilu Claw"
 loot_gold = 5
 sleep_hour = 21

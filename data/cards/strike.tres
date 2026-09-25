@@ -1,14 +1,64 @@
 [gd_resource type="Resource" script_class="CardData" format=3 uid="uid://f2utw8a7pbhh"]
 
 [ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_j7hgg"]
+[ext_resource type="Script" path="res://data/card_action.gd" id="2_action"]
+[ext_resource type="Script" path="res://data/card_action_line.gd" id="3_line"]
+[ext_resource type="Script" path="res://data/stat_scaling.gd" id="4_scaling"]
+
+[sub_resource type="Resource" id="Scale_Line_top"]
+script = ExtResource("4_scaling")
+base = 30
+stat = "fuerza"
+factor = 0.6
+
+[sub_resource type="Resource" id="Scale_Line_bottom"]
+script = ExtResource("4_scaling")
+base = 18
+stat = "agilidad"
+factor = 0.4
+
+[sub_resource type="Resource" id="Scale_Line_bottom_2"]
+script = ExtResource("4_scaling")
+base = 5
+stat = "fuerza"
+factor = 0.1
+
+[sub_resource type="Resource" id="Line_top"]
+script = ExtResource("3_line")
+card_type = "melee_attack"
+description = "Strike a nearby enemy for 6 damage."
+damage = 60
+damage_scaling = SubResource("Scale_Line_top")
+
+[sub_resource type="Resource" id="Line_bottom"]
+script = ExtResource("3_line")
+card_type = "move"
+description = "Mover 3."
+card_range = 38
+range_scaling = SubResource("Scale_Line_bottom")
+
+[sub_resource type="Resource" id="Line_bottom_2"]
+script = ExtResource("3_line")
+card_type = "melee_attack"
+description = "Atacar 1."
+damage = 10
+damage_scaling = SubResource("Scale_Line_bottom_2")
+
+[sub_resource type="Resource" id="Resource_top"]
+script = ExtResource("2_action")
+lines = Array[ExtResource("3_line")]([SubResource("Line_top")])
+color = Color(0.36, 0.1, 0.1, 1)
+
+[sub_resource type="Resource" id="Resource_bottom"]
+script = ExtResource("2_action")
+lines = Array[ExtResource("3_line")]([SubResource("Line_bottom"), SubResource("Line_bottom_2")])
+color = Color(0.08, 0.26, 0.14, 1)
 
 [resource]
 script = ExtResource("1_j7hgg")
 id = "strike"
 name = "Strike"
-description = "Strike a nearby enemy for 6 damage."
-cost = 1
-card_type = "melee_attack"
-card_range = 1
-damage = 6
+initiative = 41
+top = SubResource("Resource_top")
+bottom = SubResource("Resource_bottom")
 metadata/_custom_type_script = "uid://cb2fptd8ugdit"

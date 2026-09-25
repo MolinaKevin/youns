@@ -31,7 +31,10 @@ extends Resource
 @export_range(0.0, 100.0, 0.1) var leash_range: float = 14.0
 
 @export_range(0.0, 10.0, 0.1) var body_height: float = 1.0
-@export_range(0.1, 5.0, 0.05) var combat_shadow_radius: float = 0.65
+## Radio de la huella en combate, en casillas de la grilla (CombatGrid.CELL):
+## es la sombra que se ve bajo el personaje y las casillas que ocupa. Más grande
+## = ocupa más lugar (no puede pasar por huecos chicos, está "más cerca" al atacar).
+@export_range(1, 60, 1) var combat_footprint_cells: int = 5
 @export_range(0.1, 5.0, 0.05) var collision_radius: float = 0.35
 @export_range(0.1, 5.0, 0.05) var collision_height: float = 1.6
 
@@ -41,8 +44,13 @@ extends Resource
 @export_range(0.0, 10.0, 0.1) var notice_delay_max: float = 1.3
 
 @export_group("Wild (combat)")
+## Estadísticas base: al evolucionar a este Youn reemplazan a las actuales
+## (más lo ganado en la vida). Ver YounStatRules.
+@export var base_stats: YounStats
 @export var max_hp: int = 30
 @export var strategy: AiStrategy
+## Mazo de cartas de habilidad cuando pelea como enemigo. Sin mazo usa `strategy`.
+@export var monster_deck: MonsterDeck
 @export var loot_item_name: String = "Data"
 @export var loot_gold: int = 0
 
@@ -77,3 +85,7 @@ static func get_active_stage(save: PlayerSaveData) -> String:
 	if data == null:
 		return "bebe"
 	return data.stage
+
+## Radio de la huella en unidades de mundo.
+func combat_footprint_radius() -> float:
+	return float(combat_footprint_cells) * CombatGrid.CELL

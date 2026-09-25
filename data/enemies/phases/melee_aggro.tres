@@ -14,7 +14,7 @@ script = ExtResource("2_Act")
 action_type = "melee_attack"
 base_score = 90.0
 conditions = Array[ExtResource("1_Cond")]([SubResource("Cond_Adjacent")])
-damage = 8
+damage = 80
 score_multiplier_low_hp = 1.6
 
 [sub_resource type="Resource" id="Cond_Always"]

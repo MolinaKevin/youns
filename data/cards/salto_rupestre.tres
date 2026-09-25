@@ -1,15 +1,53 @@
 [gd_resource type="Resource" script_class="CardData" format=3 uid="uid://dkr8pn4m2xjq7"]
 
 [ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_saltrup"]
+[ext_resource type="Script" path="res://data/card_action.gd" id="2_action"]
+[ext_resource type="Script" path="res://data/card_action_line.gd" id="3_line"]
+[ext_resource type="Script" path="res://data/stat_scaling.gd" id="4_scaling"]
+
+[sub_resource type="Resource" id="Scale_Line_top"]
+script = ExtResource("4_scaling")
+base = 40
+stat = "fuerza"
+factor = 0.8
+
+[sub_resource type="Resource" id="Scale_Line_bottom"]
+script = ExtResource("4_scaling")
+base = 18
+stat = "agilidad"
+factor = 0.4
+
+[sub_resource type="Resource" id="Line_top"]
+script = ExtResource("3_line")
+card_type = "rock_jump"
+description = "Saltá sobre una piedra cercana y lanzate desde allí. Si aterrizás sobre el enemigo, causás 8 de daño."
+card_range = 75
+damage = 80
+throw_range = 100
+damage_scaling = SubResource("Scale_Line_top")
+
+[sub_resource type="Resource" id="Line_bottom"]
+script = ExtResource("3_line")
+card_type = "move"
+description = "Mover 3."
+card_range = 38
+range_scaling = SubResource("Scale_Line_bottom")
+
+[sub_resource type="Resource" id="Resource_top"]
+script = ExtResource("2_action")
+lines = Array[ExtResource("3_line")]([SubResource("Line_top")])
+color = Color(0.1, 0.26, 0.3, 1)
+
+[sub_resource type="Resource" id="Resource_bottom"]
+script = ExtResource("2_action")
+lines = Array[ExtResource("3_line")]([SubResource("Line_bottom")])
+color = Color(0.08, 0.26, 0.14, 1)
 
 [resource]
 script = ExtResource("1_saltrup")
 id = "salto_rupestre"
 name = "Salto Rupestre"
-description = "Saltá sobre una piedra cercana y lanzate desde allí. Si aterrizás sobre el enemigo, causás 8 de daño."
-cost = 2
-card_type = "rock_jump"
-card_range = 6
-throw_range = 8
-damage = 8
+initiative = 72
+top = SubResource("Resource_top")
+bottom = SubResource("Resource_bottom")
 metadata/_custom_type_script = "uid://cb2fptd8ugdit"

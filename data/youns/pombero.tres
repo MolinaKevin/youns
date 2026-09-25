@@ -9,6 +9,19 @@
 [ext_resource type="PackedScene" uid="uid://d2ip2vgeao42i" path="res://assets/youns/pombero/run.fbx" id="5_3312o"]
 [ext_resource type="PackedScene" uid="uid://cxamcaaq168ko" path="res://assets/youns/pombero/walk.fbx" id="6_ytd22"]
 [ext_resource type="Resource" path="res://data/enemies/strategies/aggressive.tres" id="strategy"]
+[ext_resource type="Resource" path="res://data/enemies/monster_decks/bruto.tres" id="monster_deck"]
+[ext_resource type="Script" path="res://data/youns/youn_stats.gd" id="youn_stats_script"]
+
+[sub_resource type="Resource" id="BaseStats"]
+script = ExtResource("youn_stats_script")
+vitalidad = 50
+energia = 40
+fuerza = 45
+resistencia = 40
+agilidad = 65
+tecnica = 55
+inteligencia = 50
+espiritu = 45
 
 [resource]
 script = ExtResource("1_script")
@@ -26,8 +39,10 @@ scene_range = ExtResource("4_jx040")
 scene_damage = ExtResource("2_aoj80")
 chase_speed = 4.0
 body_height = 4.6
-max_hp = 18
+base_stats = SubResource("BaseStats")
+max_hp = 180
 strategy = ExtResource("strategy")
+monster_deck = ExtResource("monster_deck")
 loot_item_name = "Pombero Claw"
 loot_gold = 4
 sleep_hour = 20

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="CardAction" format=3]
+
+[ext_resource type="Script" path="res://data/card_action.gd" id="1_action"]
+[ext_resource type="Script" path="res://data/card_action_line.gd" id="2_line"]
+
+[sub_resource type="Resource" id="Line_0"]
+script = ExtResource("2_line")
+card_type = "move"
+description = "Comodín: reemplaza una mitad inferior."
+card_range = 25
+
+[resource]
+script = ExtResource("1_action")
+lines = Array[ExtResource("2_line")]([SubResource("Line_0")])
+color = Color(0.08, 0.26, 0.14, 1)

@@ -14,7 +14,7 @@ func show_card(card_data: CardData) -> void:
 	card_image.texture = card_data.image if card_data.image != null else FALLBACK_IMAGE
 	info_label.text = LocalizationState.t("deck.preview", [
 		LocalizationState.card_name(card_data.id, card_data.name),
-		card_data.cost,
-		LocalizationState.card_type_name(card_data.card_type),
-		LocalizationState.card_description(card_data.id, card_data.description)
+		card_data.initiative,
+		CardText.half_summary(card_data.top, "\n"),
+		CardText.half_summary(card_data.bottom, "\n"),
 	])

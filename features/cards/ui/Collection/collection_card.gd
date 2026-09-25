@@ -18,4 +18,4 @@ func set_card(data: CardData) -> void:
 
 	art.texture = card_data.image if card_data.image != null else FALLBACK_IMAGE
 	name_label.text = LocalizationState.card_name(card_data.id, card_data.name)
-	desc_label.text = LocalizationState.card_description(card_data.id, card_data.description)
+	desc_label.text = "▲ %s\n▼ %s" % [CardText.half_summary(card_data.top, " / "), CardText.half_summary(card_data.bottom, " / ")]

@@ -10,6 +10,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_25jqy")
+mouse_filter = 2
 
 [node name="VBox" type="VBoxContainer" parent="." unique_id=543559789]
 layout_mode = 0
@@ -18,6 +19,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 
 [node name="SectionLabel" type="Label" parent="VBox" unique_id=849671017]
 layout_mode = 2

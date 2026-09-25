@@ -1,8 +1,15 @@
 class_name CombatPlayerActions
 extends RefCounted
 
-const MOVE_MODE_RANGE := 3
-const MELEE_RANGE     := 2
+# Todas las distancias de las cartas y de este archivo están en casillas de la
+# grilla (CombatGrid.CELL). Se pasan a unidades de mundo con _w() solo al hablar
+# con el mapa.
+const MOVE_MODE_RANGE     := 38   # "Mover" con cualquier mitad
+const MELEE_RANGE         := 13   # alcance cuerpo a cuerpo (las cartas melee no traen rango)
+const NEARBY_TRAP_RANGE   := 100  # trampa colocada "cerca"
+const WET_MOVE_PENALTY    := 13
+const GREASY_MOVE_PENALTY := 25
+const BLINDED_RANGE       := 13   # rango máximo estando cegado
 
 var state
 var map_area: Node
@@ -29,15 +36,15 @@ var pending_self_index    := -1
 var pending_jump_index:    int     = -1
 var pending_jump_phase:    int     = 0
 var pending_jump_rock_pos: Vector2 = Vector2(-1.0, -1.0)
-var pending_jump_card:     CardData = null
+var pending_jump_card:     CardActionLine = null
 
 var pending_push_index: int      = -1
 var pending_push_phase: int      = 0
-var pending_push_card:  CardData = null
+var pending_push_card:  CardActionLine = null
 
 var pending_puddle_index:    int      = -1
 var pending_overwatch_index: int      = -1
-var pending_overwatch_card:  CardData = null
+var pending_overwatch_card:  CardActionLine = null
 var pending_overwatch_dir:   Vector2  = Vector2.ZERO
 
 var pending_cell := Vector2(-1.0, -1.0)
@@ -45,7 +52,7 @@ var pending_cell := Vector2(-1.0, -1.0)
 signal log_requested(text: String)
 signal hand_refresh_requested()
 signal ui_update_requested()
-signal card_preview_show_requested(card: CardData)
+signal card_preview_show_requested(card: CardActionLine)
 signal card_preview_hide_requested()
 signal confirm_popup_show_requested(show_fin_button: bool)
 signal confirm_popup_hide_requested()
@@ -59,12 +66,20 @@ func setup(p_state, p_map_area: Node, p_damage_enemy: Callable, p_damage_player:
 	_deal_damage_to_player = p_damage_player
 	_check_combat_end = p_check_end
 
+## Casillas de la grilla → unidades de mundo del mapa.
+static func _w(cells: int) -> float:
+	return float(cells) * CombatGrid.CELL
+
+func _move_penalty() -> int:
+	return (WET_MOVE_PENALTY if state.player_wet_turns > 0 else 0) \
+		+ (GREASY_MOVE_PENALTY if state.player_greasy_turns > 0 else 0)
+
 # ── Card selection ────────────────────────────────────────────────────────────
 
-func _on_card_selected(card: CardData) -> void:
+func _on_card_selected(card: CardActionLine) -> void:
 	if _has_pending_selection():
 		cancel_selection()
-	var index: int = state.hand.find(card)
+	var index: int = state.turn_actions.find(card)
 	if index == -1:
 		return
 	if move_mode:
@@ -92,10 +107,7 @@ func _on_move_mode_toggled(pressed: bool) -> void:
 		clear_pending_move()
 
 func play_as_move(index: int) -> void:
-	var card = state.hand[index]
-	if card.cost > state.player_energy:
-		log_requested.emit("Not enough energy.")
-		return
+	var card = state.turn_actions[index]
 	if state.player_overwatch_active:
 		state.player_overwatch_active = false
 		map_area.clear_overwatch_zone()
@@ -109,21 +121,18 @@ func play_as_move(index: int) -> void:
 		card_preview_hide_requested.emit()
 		return
 	card_preview_show_requested.emit(card)
-	var penalty := (1 if state.player_wet_turns > 0 else 0) + (2 if state.player_greasy_turns > 0 else 0)
+	var penalty := _move_penalty()
 	var effective_range := maxi(1, MOVE_MODE_RANGE - penalty)
 	if penalty > 0:
 		log_requested.emit("Movimiento reducido a %d (penalización %d)." % [effective_range, penalty])
 	pending_move_section = "hand"
 	pending_move_index = index
 	pending_move_range = effective_range
-	map_area.start_move_selection(effective_range)
+	map_area.start_move_selection(_w(effective_range))
 	log_requested.emit("Move mode: choose a tile up to %d spaces away." % effective_range)
 
 func play_card(index: int) -> void:
-	var card = state.hand[index]
-	if card.cost > state.player_energy:
-		log_requested.emit("Not enough energy for %s." % card.name)
-		return
+	var card = state.turn_actions[index]
 
 	if state.player_overwatch_active and card.card_type != "overwatch":
 		state.player_overwatch_active = false
@@ -132,7 +141,7 @@ func play_card(index: int) -> void:
 	card_preview_show_requested.emit(card)
 	match card.card_type:
 		"move":
-			start_move_selection("hand", index, card.card_range, card.cost, card.name)
+			start_move_selection("hand", index, card.card_range, card.name)
 		"melee_attack":
 			var r: int = card.card_range if card.card_range > 0 else MELEE_RANGE
 			start_range_attack_selection(index, card, r)
@@ -160,10 +169,7 @@ func play_card(index: int) -> void:
 
 # ── Selection starters ────────────────────────────────────────────────────────
 
-func start_move_selection(section_name: String, index: int, move_range: int, energy_cost: int, card_name: String) -> void:
-	if energy_cost > state.player_energy:
-		log_requested.emit("Not enough energy for %s." % card_name)
-		return
+func start_move_selection(section_name: String, index: int, move_range: int, card_name: String) -> void:
 	if state.player_entangled_turns > 0:
 		log_requested.emit("¡Estás enredado! No podés moverte (%d turnos)." % state.player_entangled_turns)
 		card_preview_hide_requested.emit()
@@ -172,85 +178,64 @@ func start_move_selection(section_name: String, index: int, move_range: int, ene
 		log_requested.emit("¡Estás congelado! No podés moverte (%d turnos)." % state.player_frozen_turns)
 		card_preview_hide_requested.emit()
 		return
-	var penalty := (1 if state.player_wet_turns > 0 else 0) + (2 if state.player_greasy_turns > 0 else 0)
+	var penalty := _move_penalty()
 	var effective_range := maxi(1, move_range - penalty)
 	if penalty > 0:
 		log_requested.emit("Movimiento reducido a %d (penalización %d)." % [effective_range, penalty])
 	pending_move_section = section_name
 	pending_move_index = index
 	pending_move_range = effective_range
-	map_area.start_move_selection(effective_range)
+	map_area.start_move_selection(_w(effective_range))
 	log_requested.emit("Selected %s. Choose a tile up to %d spaces away." % [card_name, effective_range])
 
-func start_range_attack_selection(index: int, card: CardData, range_override: int = 0) -> void:
+func start_range_attack_selection(index: int, card: CardActionLine, range_override: int = 0) -> void:
 	pending_attack_section = "hand"
 	pending_attack_index   = index
 	var base_range := range_override if range_override > 0 else card.card_range
 	if state.player_blinded_turns > 0:
-		base_range = mini(base_range, 1)
+		base_range = mini(base_range, BLINDED_RANGE)
 		log_requested.emit("¡Estás cegado! Rango reducido a 1.")
 	pending_attack_range = base_range
-	map_area.start_attack_selection(pending_attack_range)
+	map_area.start_attack_selection(_w(pending_attack_range))
 
-func start_grenade_selection(index: int, card: CardData) -> void:
-	if card.cost > state.player_energy:
-		log_requested.emit("Not enough energy for %s." % card.name)
-		return
+func start_grenade_selection(index: int, card: CardActionLine) -> void:
 	pending_grenade_index = index
-	map_area.start_trap_placement(card.throw_range)
+	map_area.start_trap_placement(_w(card.throw_range))
 	log_requested.emit("Selected %s. Choose a tile up to %d spaces away (bounce: %.1f)." % [card.name, card.throw_range, card.bounce])
 
-func start_trap_selection(index: int, card: CardData, nearby: bool) -> void:
-	if card.cost > state.player_energy:
-		log_requested.emit("Not enough energy for %s." % card.name)
-		return
+func start_trap_selection(index: int, card: CardActionLine, nearby: bool) -> void:
 	pending_trap_index = index
 	if nearby:
-		map_area.start_trap_placement(8, float(card.card_range))
-		log_requested.emit("Place %s nearby (range 8)." % card.name)
+		map_area.start_trap_placement(_w(NEARBY_TRAP_RANGE), _w(card.card_range))
+		log_requested.emit("Place %s nearby (range %d)." % [card.name, NEARBY_TRAP_RANGE])
 	else:
-		map_area.start_trap_placement(card.throw_range, float(card.card_range))
+		map_area.start_trap_placement(_w(card.throw_range), _w(card.card_range))
 		log_requested.emit("Throw %s — choose a tile up to %d spaces away." % [card.name, card.throw_range])
 
-func start_self_selection(index: int, card: CardData) -> void:
-	if card.cost > state.player_energy:
-		log_requested.emit("Not enough energy for %s." % card.name)
-		return
+func start_self_selection(index: int, card: CardActionLine) -> void:
 	pending_self_index = index
 	map_area.start_self_highlight()
 
-func start_push_selection(index: int, card: CardData) -> void:
-	if card.cost > state.player_energy:
-		log_requested.emit("No tenés energía para %s." % card.name)
-		return
+func start_push_selection(index: int, card: CardActionLine) -> void:
 	pending_push_index = index
 	pending_push_phase = 0
 	pending_push_card  = card
-	map_area.start_push_enemy_selection(float(card.card_range))
+	map_area.start_push_enemy_selection(_w(card.card_range))
 	log_requested.emit("Seleccioná al enemigo para agarrarlo.")
 
-func start_overwatch_selection(index: int, card: CardData) -> void:
-	if card.cost > state.player_energy:
-		log_requested.emit("No tenés energía para %s." % card.name)
-		return
+func start_overwatch_selection(index: int, card: CardActionLine) -> void:
 	pending_overwatch_index = index
 	pending_overwatch_card  = card
-	map_area.start_overwatch_selection(float(card.card_range), 10.0)
+	map_area.start_overwatch_selection(_w(card.card_range), 10.0)
 	log_requested.emit("Apuntá el cono hacia donde querés vigilar.")
 
-func start_puddle_selection(index: int, card: CardData) -> void:
-	if card.cost > state.player_energy:
-		log_requested.emit("No tenés energía para %s." % card.name)
-		return
+func start_puddle_selection(index: int, card: CardActionLine) -> void:
 	pending_puddle_index = index
-	map_area.start_puddle_placement(float(card.throw_range), card.puddle_effect, float(card.card_range))
+	map_area.start_puddle_placement(_w(card.throw_range), card.puddle_effect, _w(card.card_range))
 	log_requested.emit("Elegí dónde lanzar el charco (rango %d)." % card.throw_range)
 
-func start_rock_jump_selection(index: int, card: CardData) -> void:
-	if card.cost > state.player_energy:
-		log_requested.emit("No tenés energía para %s." % card.name)
-		return
-	var rocks: Array[Dictionary] = map_area.get_rocks_in_range(map_area.player_pos, float(card.card_range))
+func start_rock_jump_selection(index: int, card: CardActionLine) -> void:
+	var rocks: Array[Dictionary] = map_area.get_rocks_in_range(map_area.player_pos, _w(card.card_range))
 	if rocks.is_empty():
 		log_requested.emit("%s: no hay piedras al alcance." % card.name)
 		card_preview_hide_requested.emit()
@@ -258,7 +243,7 @@ func start_rock_jump_selection(index: int, card: CardData) -> void:
 	pending_jump_index = index
 	pending_jump_phase = 0
 	pending_jump_card  = card
-	map_area.start_rock_jump_selection(float(card.card_range))
+	map_area.start_rock_jump_selection(_w(card.card_range))
 	log_requested.emit("Seleccioná una piedra dentro de %d espacios." % card.card_range)
 
 # ── Map tile selected & confirm popup ─────────────────────────────────────────
@@ -299,17 +284,17 @@ func _on_position_selected(pos: Vector2) -> void:
 
 	if pending_push_index >= 0:
 		if pending_push_phase == 0:
-			if not map_area.is_enemy_in_attack_range(float(pending_push_card.card_range)):
+			if not map_area.is_enemy_in_attack_range(_w(pending_push_card.card_range)):
 				log_requested.emit("El enemigo está demasiado lejos para agarrarlo.")
 				return
 			if not map_area.is_click_on_enemy(pos):
 				return
 			pending_push_phase = 1
-			map_area.start_push_cone(float(pending_push_card.throw_range))
+			map_area.start_push_cone(_w(pending_push_card.throw_range))
 			log_requested.emit("Elegí hacia dónde empujar al enemigo.")
 			return
 		else:
-			if not map_area.is_pos_in_push_cone(pos, float(pending_push_card.throw_range)):
+			if not map_area.is_pos_in_push_cone(pos, _w(pending_push_card.throw_range)):
 				return
 			pending_cell = pos
 			confirm_popup_show_requested.emit(false)
@@ -322,11 +307,11 @@ func _on_position_selected(pos: Vector2) -> void:
 				return
 			pending_jump_rock_pos = rock["pos"]
 			pending_jump_phase = 1
-			map_area.start_jump_landing_selection(pending_jump_rock_pos, float(pending_jump_card.throw_range))
+			map_area.start_jump_landing_selection(pending_jump_rock_pos, _w(pending_jump_card.throw_range))
 			log_requested.emit("Piedra en (%.1f, %.1f). Elegí dónde aterrizar." % [pending_jump_rock_pos.x, pending_jump_rock_pos.y])
 			return
 		else:
-			if pending_jump_rock_pos.distance_to(pos) > float(pending_jump_card.throw_range):
+			if pending_jump_rock_pos.distance_to(pos) > _w(pending_jump_card.throw_range):
 				return
 			if map_area._tile_in_obstacle(pos, 0):
 				return
@@ -337,16 +322,18 @@ func _on_position_selected(pos: Vector2) -> void:
 	pending_cell = pos
 	var is_move_pending := pending_move_index >= 0 or pending_move_started
 	if is_move_pending:
+		# Cada rechazo avisa en el log: antes el clic "no hacía nada" sin explicación.
 		var player: Vector2 = map_area.get("player_pos")
-		if player.distance_to(pos) > pending_move_range:
-			return
-		if map_area._tile_in_obstacle(pos, map_area.player_elevation):
-			return
-		if map_area.player_elevation == 0 and not map_area.has_line_of_sight(player, pos):
-			return
-		var cost: float = map_area.compute_path(player, pos, map_area.player_elevation)
-		if cost > pending_move_range + 1.5:
-			return
+		match map_area.plan_player_move(pos):
+			"range":
+				log_requested.emit("Ese lugar está fuera de tu alcance de movimiento (%d)." % pending_move_range)
+				return
+			"blocked":
+				log_requested.emit("No entrás en ese lugar: hay un obstáculo o el enemigo.")
+				return
+			"no_path":
+				log_requested.emit("No hay camino hasta ahí dentro de tu alcance.")
+				return
 		map_area.show_path_preview(player, pos)
 	confirm_popup_show_requested.emit(pending_move_started)
 
@@ -467,19 +454,17 @@ func _execute_tile_action(cell: Vector2) -> void:
 			return
 
 	if not pending_move_started:
-		var card = state.hand[pending_move_index]
-		state.player_energy -= card.cost
+		var card = state.turn_actions[pending_move_index]
 		log_requested.emit("Played %s." % card.name)
-		state.discard_pile.append(state.hand[pending_move_index])
-		state.hand.remove_at(pending_move_index)
+		state.turn_actions.remove_at(pending_move_index)
 		pending_move_index = -1
 		pending_move_started = true
 
-	var remaining := maxi(0, pending_move_range - roundi(dist_moved))
+	var remaining := maxi(0, pending_move_range - roundi(dist_moved / CombatGrid.CELL))
 	if remaining > 0:
 		log_requested.emit("Rango restante: %d" % remaining)
 		pending_move_range = remaining
-		map_area.start_move_selection(remaining)
+		map_area.start_move_selection(_w(remaining))
 		end_move_button_visible_changed.emit(true)
 		hand_refresh_requested.emit()
 		ui_update_requested.emit()
@@ -492,14 +477,20 @@ func _execute_tile_action(cell: Vector2) -> void:
 		ui_update_requested.emit()
 
 func _execute_push(direction_target: Vector2) -> void:
-	var card: CardData = state.hand[pending_push_index]
+	var card: CardActionLine = state.turn_actions[pending_push_index]
 	var idx := pending_push_index
 	var push_from: Vector2 = map_area.enemy_pos
 
-	state.player_energy -= card.cost
-
-	var landing: Vector2 = map_area.calculate_push_landing(direction_target, float(card.throw_range))
+	var landing: Vector2 = map_area.calculate_push_landing(direction_target, _w(card.throw_range))
 	map_area.clear_push_selection()
+
+	# Se gasta antes de las animaciones (ver _confirm_range_attack).
+	state.turn_actions.remove_at(idx)
+	pending_push_index = -1
+	pending_push_phase = 0
+	pending_push_card  = null
+	card_preview_hide_requested.emit()
+	hand_refresh_requested.emit()
 
 	# 1. Animación de ataque del jugador
 	map_area.play_player_anim("attack")
@@ -515,13 +506,6 @@ func _execute_push(direction_target: Vector2) -> void:
 	await map_area.enemy_anim_finished
 	if state.enemy_hp > 0:
 		map_area.play_enemy_anim("idle")
-
-	state.discard_pile.append(state.hand[idx])
-	state.hand.remove_at(idx)
-	pending_push_index = -1
-	pending_push_phase = 0
-	pending_push_card  = null
-	card_preview_hide_requested.emit()
 
 	var fx: Dictionary = map_area.trigger_zone_effects_along(push_from, landing)
 	var any_zone := false
@@ -565,19 +549,17 @@ func _execute_push(direction_target: Vector2) -> void:
 	_check_combat_end.call()
 
 func _execute_overwatch(dir: Vector2) -> void:
-	var card: CardData = state.hand[pending_overwatch_index]
+	var card: CardActionLine = state.turn_actions[pending_overwatch_index]
 	var idx := pending_overwatch_index
-	state.player_energy -= card.cost
 	map_area.clear_overwatch_selection()
-	map_area.place_overwatch(map_area.player_pos, dir, float(card.card_range), 10.0)
+	map_area.place_overwatch(map_area.player_pos, dir, _w(card.card_range), 10.0)
 	state.player_overwatch_active     = true
 	state.player_overwatch_origin     = map_area.player_pos
 	state.player_overwatch_dir        = dir
-	state.player_overwatch_range      = float(card.card_range)
+	state.player_overwatch_range      = _w(card.card_range)
 	state.player_overwatch_half_angle = 10.0
 	state.player_overwatch_damage     = card.damage
-	state.discard_pile.append(state.hand[idx])
-	state.hand.remove_at(idx)
+	state.turn_actions.remove_at(idx)
 	pending_overwatch_index = -1
 	pending_overwatch_card  = null
 	card_preview_hide_requested.emit()
@@ -586,13 +568,11 @@ func _execute_overwatch(dir: Vector2) -> void:
 	ui_update_requested.emit()
 
 func _execute_puddle(cell: Vector2) -> void:
-	var card: CardData = state.hand[pending_puddle_index]
+	var card: CardActionLine = state.turn_actions[pending_puddle_index]
 	var idx := pending_puddle_index
-	state.player_energy -= card.cost
 	map_area.clear_puddle_placement()
-	map_area.place_puddle(cell, card.card_range, card.puddle_effect)
-	state.discard_pile.append(state.hand[idx])
-	state.hand.remove_at(idx)
+	map_area.place_puddle(cell, _w(card.card_range), card.puddle_effect)
+	state.turn_actions.remove_at(idx)
 	pending_puddle_index = -1
 	card_preview_hide_requested.emit()
 	log_requested.emit("%s: colocado." % card.name)
@@ -600,10 +580,8 @@ func _execute_puddle(cell: Vector2) -> void:
 	ui_update_requested.emit()
 
 func _execute_jump_attack(landing_pos: Vector2) -> void:
-	var card: CardData = state.hand[pending_jump_index]
+	var card: CardActionLine = state.turn_actions[pending_jump_index]
 	var idx := pending_jump_index
-
-	state.player_energy -= card.cost
 
 	var sep: Vector2 = landing_pos - map_area.enemy_pos
 	if sep.length() < map_area.MIN_SEPARATION:
@@ -616,8 +594,7 @@ func _execute_jump_attack(landing_pos: Vector2) -> void:
 	var hit_enemy: bool = map_area.is_enemy_near_pos(landing_pos, 1.5)
 
 	map_area.clear_rock_jump_selection()
-	state.discard_pile.append(state.hand[idx])
-	state.hand.remove_at(idx)
+	state.turn_actions.remove_at(idx)
 	_clear_pending_jump()
 	card_preview_hide_requested.emit()
 
@@ -638,26 +615,23 @@ func _clear_pending_jump() -> void:
 	pending_jump_card     = null
 
 func _place_trap(cell: Vector2) -> void:
-	var card: CardData = state.hand[pending_trap_index]
+	var card: CardActionLine = state.turn_actions[pending_trap_index]
 	var is_nearby := card.card_type == "trap_place"
 
-	if is_nearby and map_area.movement_distance(map_area.player_pos, cell) > 8.0:
+	if is_nearby and map_area.movement_distance(map_area.player_pos, cell) > _w(NEARBY_TRAP_RANGE):
 		log_requested.emit("Too far to place %s." % card.name)
 		return
 
-	if not is_nearby and card.throw_range > 0 and map_area.movement_distance(map_area.player_pos, cell) > float(card.throw_range):
+	if not is_nearby and card.throw_range > 0 and map_area.movement_distance(map_area.player_pos, cell) > _w(card.throw_range):
 		log_requested.emit("Too far to throw %s." % card.name)
 		return
 
 	if not map_area.has_line_of_sight(map_area.player_pos, cell):
 		log_requested.emit("Obstacle in the way — can't place %s there." % card.name)
 		return
-
-	state.player_energy -= card.cost
-	map_area.place_trap(cell, card.card_range, card.damage, card.name)
+	map_area.place_trap(cell, _w(card.card_range), card.damage, card.name)
 	log_requested.emit("Placed %s at (%.1f,%.1f)." % [card.name, cell.x, cell.y])
-	state.discard_pile.append(state.hand[pending_trap_index])
-	state.hand.remove_at(pending_trap_index)
+	state.turn_actions.remove_at(pending_trap_index)
 	pending_trap_index = -1
 	card_preview_hide_requested.emit()
 	map_area.clear_trap_placement()
@@ -665,9 +639,9 @@ func _place_trap(cell: Vector2) -> void:
 	ui_update_requested.emit()
 
 func _throw_grenade(target: Vector2) -> void:
-	var card: CardData = state.hand[pending_grenade_index]
+	var card: CardActionLine = state.turn_actions[pending_grenade_index]
 
-	if card.throw_range > 0 and map_area.movement_distance(map_area.player_pos, target) > float(card.throw_range):
+	if card.throw_range > 0 and map_area.movement_distance(map_area.player_pos, target) > _w(card.throw_range):
 		log_requested.emit("Too far to throw %s." % card.name)
 		return
 
@@ -677,18 +651,16 @@ func _throw_grenade(target: Vector2) -> void:
 
 	map_area.clear_trap_placement()
 	var landing: Vector2 = map_area.calculate_grenade_landing(map_area.player_pos, target, card.bounce)
-	map_area.show_grenade_preview(landing, card.card_range)
-
-	state.player_energy -= card.cost
-	if map_area.is_enemy_in_explosion(landing, card.card_range):
+	map_area.show_grenade_preview(landing, _w(card.card_range))
+	# Se gasta antes de las animaciones (ver _confirm_range_attack).
+	state.turn_actions.remove_at(pending_grenade_index)
+	pending_grenade_index = -1
+	hand_refresh_requested.emit()
+	if map_area.is_enemy_in_explosion(landing, _w(card.card_range)):
 		log_requested.emit("%s lands at (%.1f,%.1f) — %d damage!" % [card.name, landing.x, landing.y, card.damage])
 		await _deal_damage_to_enemy.call(card.damage)
 	else:
 		log_requested.emit("%s lands at (%.1f,%.1f) — miss!" % [card.name, landing.x, landing.y])
-
-	state.discard_pile.append(state.hand[pending_grenade_index])
-	state.hand.remove_at(pending_grenade_index)
-	pending_grenade_index = -1
 
 	await (Engine.get_main_loop() as SceneTree).create_timer(0.6).timeout
 	card_preview_hide_requested.emit()
@@ -698,39 +670,35 @@ func _throw_grenade(target: Vector2) -> void:
 	_check_combat_end.call()
 
 func _confirm_range_attack() -> void:
-	if pending_attack_index < 0 or pending_attack_index >= state.hand.size():
+	if pending_attack_index < 0 or pending_attack_index >= state.turn_actions.size():
 		clear_pending_attack()
 		return
 
-	var card = state.hand[pending_attack_index]
-	if not map_area.is_enemy_in_attack_range(pending_attack_range):
+	var card = state.turn_actions[pending_attack_index]
+	if not map_area.is_enemy_in_attack_range(_w(pending_attack_range)):
 		log_requested.emit("%s: el enemigo está fuera de rango." % card.name)
 		clear_pending_attack()
 		return
-
-	state.player_energy -= card.cost
 	log_requested.emit("Played %s for %d damage." % [card.name, card.damage])
-	var idx := pending_attack_index
+	# La acción se gasta antes de la animación: durante el await el jugador puede
+	# elegir otra mitad o terminar el turno y state.turn_actions cambia.
+	state.turn_actions.remove_at(pending_attack_index)
 	clear_pending_attack()
 	card_preview_hide_requested.emit()
-	await _deal_damage_to_enemy.call(card.damage)
-	state.discard_pile.append(state.hand[idx])
-	state.hand.remove_at(idx)
 	hand_refresh_requested.emit()
+	await _deal_damage_to_enemy.call(card.damage)
 	ui_update_requested.emit()
 	_check_combat_end.call()
 
 func _confirm_self_action() -> void:
-	if pending_self_index < 0 or pending_self_index >= state.hand.size():
+	if pending_self_index < 0 or pending_self_index >= state.turn_actions.size():
 		pending_self_index = -1
 		map_area.clear_self_highlight()
 		return
-	var card: CardData = state.hand[pending_self_index]
+	var card: CardActionLine = state.turn_actions[pending_self_index]
 	state.player_block += card.block_amount
-	state.player_energy -= card.cost
 	log_requested.emit("Played %s. Block: %d" % [card.name, state.player_block])
-	state.discard_pile.append(state.hand[pending_self_index])
-	state.hand.remove_at(pending_self_index)
+	state.turn_actions.remove_at(pending_self_index)
 	pending_self_index = -1
 	card_preview_hide_requested.emit()
 	map_area.clear_self_highlight()

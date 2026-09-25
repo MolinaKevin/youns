@@ -12,12 +12,16 @@ func set_cards(cards: Array[CardData]) -> void:
 	print("set_cards: ", cards.size())
 
 	for card_data in cards:
+		# La carta tiene un diseño fijo de 195x293: se escala en vez de achicarla.
+		var holder := Control.new()
+		holder.custom_minimum_size = Vector2(130, 195)
+		holder.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		holder.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		grid.add_child(holder)
 		var card = card_scene.instantiate()
-		card.custom_minimum_size = Vector2(130, 195)
-		card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		card.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		card.scale = Vector2(130.0 / 195.0, 130.0 / 195.0)
 		card.hover_enabled = false
-		grid.add_child(card)
+		holder.add_child(card)
 		card.set_card(card_data)
 		card.card_pressed.connect(_on_card_pressed)
 

@@ -1,13 +1,17 @@
 class_name CombatState
 extends RefCounted
 
-var player_hp := 40
-var player_block := 0
-var player_energy := 3
-var max_energy := 3
+## Vida, daño, bloqueo y curación usan números grandes (x10 respecto de la
+## primera versión) para que después puedan escalar con estadísticas.
+const BURN_DAMAGE := 30              # por turno en llamas
+const BLEED_DAMAGE := 20             # por turno sangrando
+const POISON_DAMAGE_PER_STACK := 10  # el veneno pega acumulaciones x esto
 
-var enemy_hp := 35
-var enemy_max_hp := 35
+var player_hp := 400
+var player_block := 0
+
+var enemy_hp := 350
+var enemy_max_hp := 350
 var enemy_block := 0
 
 var player_wet_turns: int = 0
@@ -35,5 +39,7 @@ var player_overwatch_half_angle: float   = 45.0
 var player_overwatch_damage:     int     = 0
 
 var hand: Array = []
+## Las dos mitades elegidas este turno (superior de una carta, inferior de la otra).
+var turn_actions: Array = []
 var draw_pile: Array = []
 var discard_pile: Array = []

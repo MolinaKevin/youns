@@ -294,6 +294,8 @@ func complete_evolution() -> void:
 	if ps == null or ps.pending_evolution_path.is_empty():
 		return
 	ps.current_youn_path = ps.pending_evolution_path
+	if ResourceLoader.exists(ps.current_youn_path):
+		YounStatRules.apply_evolution(ps, load(ps.current_youn_path) as YounData)
 	ps.stage_entered_total_hour = GameState.get_total_hours()
 	ps.pending_evolution_path = ""
 	active_states.erase("evolving")

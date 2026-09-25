@@ -1,0 +1,106 @@
+[gd_resource type="Resource" script_class="MonsterDeck" format=3]
+
+[ext_resource type="Script" path="res://data/enemies/monster_deck.gd" id="1_deck"]
+[ext_resource type="Script" path="res://data/enemies/monster_card.gd" id="2_card"]
+[ext_resource type="Script" path="res://data/enemies/monster_card_action.gd" id="3_action"]
+
+[sub_resource type="Resource" id="Action_0_0"]
+script = ExtResource("3_action")
+type = "move"
+value = 0
+
+[sub_resource type="Resource" id="Action_0_1"]
+script = ExtResource("3_action")
+type = "attack"
+value = 10
+range_modifier = -13
+
+[sub_resource type="Resource" id="Card_0"]
+script = ExtResource("2_card")
+card_name = "Disparo"
+initiative = 32
+actions = Array[ExtResource("3_action")]([SubResource("Action_0_0"), SubResource("Action_0_1")])
+
+[sub_resource type="Resource" id="Action_1_0"]
+script = ExtResource("3_action")
+type = "retreat"
+value = 13
+
+[sub_resource type="Resource" id="Action_1_1"]
+script = ExtResource("3_action")
+type = "attack"
+value = 0
+
+[sub_resource type="Resource" id="Card_1"]
+script = ExtResource("2_card")
+card_name = "Retirada"
+initiative = 20
+actions = Array[ExtResource("3_action")]([SubResource("Action_1_0"), SubResource("Action_1_1")])
+
+[sub_resource type="Resource" id="Action_2_0"]
+script = ExtResource("3_action")
+type = "attack"
+value = 20
+range_modifier = 25
+
+[sub_resource type="Resource" id="Card_2"]
+script = ExtResource("2_card")
+card_name = "Tiro certero"
+initiative = 56
+actions = Array[ExtResource("3_action")]([SubResource("Action_2_0")])
+
+[sub_resource type="Resource" id="Action_3_0"]
+script = ExtResource("3_action")
+type = "block"
+value = 20
+
+[sub_resource type="Resource" id="Action_3_1"]
+script = ExtResource("3_action")
+type = "attack"
+value = -10
+
+[sub_resource type="Resource" id="Card_3"]
+script = ExtResource("2_card")
+card_name = "Cubrirse"
+initiative = 14
+actions = Array[ExtResource("3_action")]([SubResource("Action_3_0"), SubResource("Action_3_1")])
+
+[sub_resource type="Resource" id="Action_4_0"]
+script = ExtResource("3_action")
+type = "move"
+value = -13
+
+[sub_resource type="Resource" id="Action_4_1"]
+script = ExtResource("3_action")
+type = "attack"
+value = 10
+
+[sub_resource type="Resource" id="Card_4"]
+script = ExtResource("2_card")
+card_name = "Ráfaga"
+initiative = 71
+actions = Array[ExtResource("3_action")]([SubResource("Action_4_0"), SubResource("Action_4_1")])
+
+[sub_resource type="Resource" id="Action_5_0"]
+script = ExtResource("3_action")
+type = "retreat"
+value = 0
+
+[sub_resource type="Resource" id="Action_5_1"]
+script = ExtResource("3_action")
+type = "attack"
+value = 0
+range_modifier = -25
+
+[sub_resource type="Resource" id="Card_5"]
+script = ExtResource("2_card")
+card_name = "Reposicionar"
+initiative = 40
+actions = Array[ExtResource("3_action")]([SubResource("Action_5_0"), SubResource("Action_5_1")])
+
+[resource]
+script = ExtResource("1_deck")
+base_move = 50
+base_attack = 40
+base_range = 100
+cards = Array[ExtResource("2_card")]([SubResource("Card_0"), SubResource("Card_1"), SubResource("Card_2"), SubResource("Card_3"), SubResource("Card_4"), SubResource("Card_5")])

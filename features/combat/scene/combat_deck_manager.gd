@@ -19,12 +19,21 @@ func draw_cards(n: int) -> void:
 			reshuffled.emit()
 		_state.hand.append(_state.draw_pile.pop_back())
 
-func discard_hand() -> void:
-	_state.discard_pile.append_array(_state.hand)
-	_state.hand.clear()
+## keep_indices: índices de state.hand que se quedan en la mano (comodín "mantener carta").
+func discard_hand(keep_indices: Array = []) -> void:
+	var kept := []
+	for i in _state.hand.size():
+		if keep_indices.has(i):
+			kept.append(_state.hand[i])
+		else:
+			_state.discard_pile.append(_state.hand[i])
+	_state.hand.assign(kept)
 
-func reset_turn(hand_size: int) -> void:
-	_state.player_energy = _state.max_energy
+## Descarta la mano (salvo las cartas mantenidas) y roba hasta tener hand_size.
+func reset_turn(hand_size: int, keep_indices: Array = []) -> void:
+	_state.turn_actions.clear()
 	_state.player_block = 0
-	discard_hand()
-	draw_cards(hand_size)
+	# El bloqueo dura una ronda, también el que gana el enemigo con sus cartas.
+	_state.enemy_block = 0
+	discard_hand(keep_indices)
+	draw_cards(hand_size - _state.hand.size())

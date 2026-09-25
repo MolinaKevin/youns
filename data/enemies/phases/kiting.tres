@@ -19,7 +19,7 @@ script = ExtResource("2_Act")
 action_type = "range_attack"
 base_score = 85.0
 conditions = Array[ExtResource("1_Cond")]([SubResource("Cond_InRange")])
-damage = 5
+damage = 50
 
 [sub_resource type="Resource" id="Action_Reposition"]
 script = ExtResource("2_Act")

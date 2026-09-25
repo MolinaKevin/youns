@@ -34,9 +34,24 @@ var enemy_elevation:  int = 0
 
 # ── Pathfinding ───────────────────────────────────────────────────────────────
 const PATH_CELL    := 0.5
-const AGENT_RADIUS := 0.75
 var _last_path: Array[Vector2] = []
 var _last_path_cost: float = 0.0
+## Casillas alcanzables del movimiento en curso (ver CombatGrid.reachable).
+var _move_reach: Dictionary = {}
+var _player_waypoints: Array[Vector3] = []
+var _move_origin := Vector2.ZERO
+## Los caminos en 8 direcciones son hasta un 8,24 % más largos que la línea recta
+## (peor caso a 22,5°). Con este margen, en terreno abierto el alcance es un
+## círculo exacto; rodear obstáculos igual cuesta de verdad.
+const PATH_SLACK := 1.0824
+## Caché de _pos_blocked por casilla: los obstáculos no cambian durante el combate.
+## Clave: Vector3i(cell.x, cell.y, elevation) dentro de un diccionario por margen.
+var _blocked_cache: Dictionary = {}
+## Altura del terreno por casilla (NAN = sin calcular). El terreno es estático.
+var _height_cache := PackedFloat32Array()
+## Precarga de los cachés de la grilla, repartida en varios cuadros (-1 = terminada).
+var _warm_next := 0
+const WARM_CELLS_PER_FRAME := 1500
 
 # ── Obstacles ─────────────────────────────────────────────────────────────────
 # type "solid"  → bloquea movimiento Y línea de visión
@@ -59,10 +74,13 @@ const PLATFORM_HEIGHT := 1.5
 const RAMP_DEPTH      := 1.5
 
 # ── Visual ────────────────────────────────────────────────────────────────────
-const PLAYER_ZONE_RADIUS := 0.6
+## Alturas de los resaltados sobre el suelo: la sombra está en 0.02.
+const HIGHLIGHT_Y := 0.03
+const HOVER_Y := 0.04
+## Cuánto más allá de la huella un clic sigue contando como "sobre el personaje".
+const CLICK_MARGIN := 0.6
 
 var _move_disc:       MeshInstance3D
-var _move_disc_inner: MeshInstance3D
 var _player_circle:   MeshInstance3D
 var _attack_disc:     MeshInstance3D
 var _grenade_disc:    MeshInstance3D
@@ -72,8 +90,8 @@ var _path_highlight:  MeshInstance3D
 var _hover_cell:      MeshInstance3D
 var _player_shadow:        MeshInstance3D
 var _enemy_shadow:         MeshInstance3D
-var _player_shadow_radius: float = 0.65
-var _enemy_shadow_radius:  float = 0.65
+var _player_shadow_radius: float = 0.4
+var _enemy_shadow_radius:  float = 0.4
 var _player_body:         Node3D
 var _player_bodies:       Dictionary = {}
 var _player_current_anim: String = ""
@@ -95,13 +113,9 @@ var _player_target: Vector3
 var _enemy_target:  Vector3
 
 var _enemy_highlight:     MeshInstance3D
-var _enemy_highlight_mat: StandardMaterial3D
 var _self_highlight:      MeshInstance3D
-var _self_highlight_mat:  StandardMaterial3D
 var _enemy_hover:         MeshInstance3D
-var _enemy_hover_mat:     StandardMaterial3D
 var _self_hover:          MeshInstance3D
-var _self_hover_mat:      StandardMaterial3D
 
 var _jump_disc:               MeshInstance3D
 var _jump_landing_disc:       MeshInstance3D
@@ -125,14 +139,12 @@ var _overwatch_selection_angle:   float   = 10.0
 var _overwatch_preview_last_dir:  Vector2 = Vector2.ZERO
 var _jump_rock_markers:       Array[MeshInstance3D] = []
 var _jump_selected_marker:    MeshInstance3D
-var _jump_selected_marker_mat: StandardMaterial3D
 var _jump_rocks_in_range:     Array[Dictionary] = []
 
 # ── Init ──────────────────────────────────────────────────────────────────────
 func _ready() -> void:
 	_setup_ground()
 	_move_disc       = _make_disc(Color(0.2,  0.45, 0.85, 0.35))
-	_move_disc_inner = _make_disc(Color(0.55, 0.80, 1.0,  0.55))
 	_player_circle   = _make_disc(Color(0.6,  0.85, 1.0,  0.50))
 	_attack_disc     = _make_disc(Color(0.9,  0.35, 0.1,  0.40))
 	_grenade_disc    = _make_disc(Color(0.9,  0.8,  0.1,  0.45))
@@ -162,30 +174,13 @@ func _ready() -> void:
 	_overwatch_preview_disc.visible = false
 	add_child(_overwatch_preview_disc)
 
-	_jump_selected_marker_mat = _make_mat(Color(0.9, 1.0, 0.2, 0.9))
-	_jump_selected_marker = MeshInstance3D.new()
-	_jump_selected_marker.visible = false
-	add_child(_jump_selected_marker)
-
-	_enemy_highlight_mat = _make_mat(Color(1.0, 0.25, 0.1, 0.65))
-	_enemy_highlight = MeshInstance3D.new()
-	_enemy_highlight.visible = false
-	add_child(_enemy_highlight)
-
-	_self_highlight_mat = _make_mat(Color(0.2, 0.75, 1.0, 0.55))
-	_self_highlight = MeshInstance3D.new()
-	_self_highlight.visible = false
-	add_child(_self_highlight)
-
-	_enemy_hover_mat = _make_mat(Color(1.0, 0.75, 0.1, 0.9))
-	_enemy_hover = MeshInstance3D.new()
-	_enemy_hover.visible = false
-	add_child(_enemy_hover)
-
-	_self_hover_mat = _make_mat(Color(0.5, 1.0, 1.0, 0.9))
-	_self_hover = MeshInstance3D.new()
-	_self_hover.visible = false
-	add_child(_self_hover)
+	# Resaltados en casillas. Los de personajes pintan las casillas de su huella
+	# (la "sombra"), un poco por encima de ella; el hover va más arriba y más brillante.
+	_jump_selected_marker = _make_highlight_disc(Color(0.9, 1.0, 0.2))
+	_enemy_highlight      = _make_highlight_disc(Color(1.0, 0.25, 0.1))
+	_self_highlight       = _make_highlight_disc(Color(0.2, 0.75, 1.0))
+	_enemy_hover          = _make_highlight_disc(Color(1.0, 0.85, 0.2))
+	_self_hover           = _make_highlight_disc(Color(0.6, 1.0, 1.0))
 
 	_setup_obstacles()
 	_setup_actors()
@@ -328,6 +323,14 @@ func _make_disc(color: Color) -> MeshInstance3D:
 	add_child(mi)
 	return mi
 
+## Como _make_disc pero casi opaco: para resaltar personajes u objetos puntuales,
+## que tienen que verse aunque el modelo tape parte de las casillas.
+func _make_highlight_disc(color: Color) -> MeshInstance3D:
+	var mi := _make_disc(color)
+	mi.set_meta("fill_mat", _make_mat(Color(color, 0.85)))
+	mi.set_meta("bord_mat", _make_mat(Color(color.lightened(0.45), 1.0)))
+	return mi
+
 func _show_disc(mi: MeshInstance3D, center: Vector2, radius: float, _unused: int = 0) -> void:
 	_build_tile_disc(mi, center, radius, 0.0, 0.02)
 
@@ -406,23 +409,9 @@ func _build_tile_disc(mi: MeshInstance3D, center: Vector2, radius: float, inner_
 	mi.set_surface_override_material(1, mi.get_meta("bord_mat") if mi.has_meta("bord_mat") else null)
 	mi.visible = fill_v.size() > 0
 
-func _show_smooth_circle(mi: MeshInstance3D, center: Vector2, radius: float, segments: int = 64) -> void:
-	var verts   := PackedVector3Array()
-	var indices := PackedInt32Array()
-	verts.append(Vector3(center.x, 0.01, center.y))
-	for i in range(segments):
-		var a := float(i) / float(segments) * TAU
-		verts.append(Vector3(center.x + cos(a) * radius, 0.01, center.y + sin(a) * radius))
-	for i in range(segments):
-		indices.append_array([0, i + 1, (i + 1) % segments + 1])
-	var arrays := []
-	arrays.resize(Mesh.ARRAY_MAX)
-	arrays[Mesh.ARRAY_VERTEX] = verts
-	arrays[Mesh.ARRAY_INDEX]  = indices
-	var mesh := ArrayMesh.new()
-	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-	mi.mesh    = mesh
-	mi.visible = true
+## Pinta las casillas de la huella de un personaje (las mismas de su sombra).
+func _show_footprint(mi: MeshInstance3D, center: Vector2, radius: float, y := HIGHLIGHT_Y) -> void:
+	_build_tile_disc(mi, center, radius, 0.0, y)
 
 func _setup_actors() -> void:
 	_player_body = Node3D.new()
@@ -446,7 +435,7 @@ func _setup_actors() -> void:
 func setup_player(data: YounData) -> void:
 	if not data:
 		return
-	_player_shadow_radius = data.combat_shadow_radius
+	_player_shadow_radius = data.combat_footprint_radius()
 	for child in _player_body.get_children():
 		child.queue_free()
 	_player_bodies.clear()
@@ -551,7 +540,7 @@ func setup_enemy(mesh: Mesh, mesh_scale: float, shadow_radius: float = 0.65) -> 
 func setup_enemy_youn(data: YounData) -> void:
 	if not data:
 		return
-	_enemy_shadow_radius = data.combat_shadow_radius
+	_enemy_shadow_radius = data.combat_footprint_radius()
 	_enemy_rotate_speed  = data.rotate_speed
 	if _enemy_fallback_mesh:
 		_enemy_fallback_mesh.visible = false
@@ -666,19 +655,25 @@ func _unhandled_input(event: InputEvent) -> void:
 		position_selected.emit(pos)
 
 func _process(delta: float) -> void:
+	_warm_grid_caches()
 	var camera := get_viewport().get_camera_3d()
 	if camera:
 		_update_hover(get_viewport().get_mouse_position(), camera)
 	var step := ACTOR_MOVE_SPEED * delta
 
 	var prev_pos := _player_body.position
-	_player_body.position = _player_body.position.move_toward(_player_target, step)
+	var player_goal := _player_target
+	if not _player_waypoints.is_empty():
+		player_goal = _player_waypoints[0]
+	_player_body.position = _player_body.position.move_toward(player_goal, step)
+	if not _player_waypoints.is_empty() and _player_body.position.distance_to(player_goal) < 0.05:
+		_player_waypoints.pop_front()
 	var dist_moved := prev_pos.distance_to(_player_body.position)
 
 	if _player_current_anim not in _PRIORITY_ANIMS:
 		var face_dir: Vector3
 		if dist_moved > 0.001:
-			face_dir = _player_target - prev_pos
+			face_dir = player_goal - prev_pos
 			play_player_anim("run" if "run" in _player_bodies else "walk")
 		else:
 			face_dir = _enemy_body.position - _player_body.position
@@ -945,9 +940,15 @@ func _pos_in_ramp_exit(pos: Vector2, obs: Dictionary) -> bool:
 # ── Move ──────────────────────────────────────────────────────────────────────
 func start_move_selection(move_range: float) -> void:
 	selected_move_range = move_range
-	_show_disc_with_los(_move_disc,       player_pos, move_range,         player_elevation, true, false)
-	_show_disc_with_los(_move_disc_inner, player_pos, PLAYER_ZONE_RADIUS, player_elevation, true, false)
-	_show_smooth_circle(_player_circle, player_pos, PLAYER_ZONE_RADIUS)
+	_move_reach = _grid_reach(player_pos, move_range, player_elevation,
+		_player_shadow_radius, enemy_pos, _enemy_shadow_radius)
+	_move_origin = player_pos
+	var visible_cells := []
+	for cell: Vector2i in _move_reach:
+		if _in_move_circle(cell, _move_origin, move_range):
+			visible_cells.append(cell)
+	_build_cells_on_terrain(_move_disc, visible_cells)
+	_show_footprint(_player_circle, player_pos, _player_shadow_radius)
 
 
 func _tile_in_obstacle(pos: Vector2, elevation: int = 0) -> bool:
@@ -974,6 +975,10 @@ func _tile_in_obstacle(pos: Vector2, elevation: int = 0) -> bool:
 func _apply_two_surface_mesh(mi: MeshInstance3D,
 		fv: PackedVector3Array, fi: PackedInt32Array,
 		bv: PackedVector3Array, bi: PackedInt32Array) -> void:
+	if fv.is_empty():
+		# Una malla sin vértices hace fallar add_surface_from_arrays.
+		mi.visible = false
+		return
 	var mesh := ArrayMesh.new()
 	var fa := []; fa.resize(Mesh.ARRAY_MAX)
 	fa[Mesh.ARRAY_VERTEX] = fv; fa[Mesh.ARRAY_INDEX] = fi
@@ -1031,7 +1036,6 @@ func _build_cells_mesh(mi: MeshInstance3D, cells: Array[Vector2i], y: float) -> 
 func clear_move_selection() -> void:
 	selected_move_range   = 0.0
 	_move_disc.visible       = false
-	_move_disc_inner.visible = false
 	_player_circle.visible   = false
 
 func show_move_preview(pos: Vector2) -> void:
@@ -1041,7 +1045,10 @@ func clear_move_preview() -> void:
 	_dest_marker.visible = false
 
 func show_path_preview(_from: Vector2, _to: Vector2) -> void:
-	# Uses _last_path computed by compute_path()
+	# Usa _last_path, que arma plan_player_move()
+	if _last_path.size() < 2:
+		_path_highlight.visible = false
+		return
 	const CELL   := 0.08
 	const BORDER := 0.010
 	var half     := CELL * 0.5
@@ -1104,80 +1111,184 @@ func clear_path_preview() -> void:
 	_path_highlight.visible = false
 
 func try_move_player_to(pos: Vector2, _range: float) -> bool:
-	if not _in_bounds(pos): return false
-	if _last_path_cost > selected_move_range + 0.1: return false
-	var sep := pos - enemy_pos
-	if sep.length() < MIN_SEPARATION:
-		pos = enemy_pos + (sep.normalized() if sep.length() > 0.001 else Vector2(MIN_SEPARATION, 0.0)) * MIN_SEPARATION
-	player_pos       = pos
-	player_elevation = _elevation_at(pos)
+	var goal := CombatGrid.to_cell(pos)
+	if not _in_move_circle(goal, _move_origin, selected_move_range):
+		return false
+	var path := CombatGrid.path_to(_move_reach, goal)
+	if path.size() < 2:
+		return false
+	var from_elevation := player_elevation
+	player_pos       = CombatGrid.to_world(goal)
+	player_elevation = _elevation_at(player_pos)
+	# El personaje recorre el camino esquina por esquina.
+	_player_waypoints.clear()
+	for cell in CombatGrid.corners(path).slice(1):
+		var w := CombatGrid.to_world(cell)
+		_player_waypoints.append(Vector3(w.x, _player_y_at(w, maxi(from_elevation, _elevation_at(w))), w.y))
 	_last_path       = []
 	_last_path_cost  = 0.0
 	clear_move_selection()
 	_update_actor_positions()
+	if not _player_waypoints.is_empty():
+		_player_waypoints[-1] = _player_target
 	return true
 
 func get_path_cost(_pos: Vector2) -> float:
 	return _last_path_cost
 
-# ── A* Pathfinding ────────────────────────────────────────────────────────────
-func _run_astar(from: Vector2, to: Vector2, elevation: int = 0, margin: float = PATH_CELL * 0.5, use_los: bool = true) -> Array[Vector2]:
-	if use_los and _has_movement_los(from, to, elevation):
-		return [from, to]
-	var start := _w2g(from)
-	var goal  := _w2g(to)
-	var open   := {}
-	var came   := {}
-	var g      := {}
-	var f      := {}
-	g[start] = 0.0
-	f[start] = _heuristic(start, goal)
-	open[start] = true
-	while not open.is_empty():
-		var cur: Vector2i = _lowest_f(open, f)
-		if cur == goal:
-			return _reconstruct(came, cur, from, to)
-		open.erase(cur)
-		for dy in [-1, 0, 1]:
-			for dx in [-1, 0, 1]:
-				if dx == 0 and dy == 0: continue
-				var nb := cur + Vector2i(dx, dy)
-				if not _g_in_bounds(nb): continue
-				if _g_blocked(nb, elevation, margin): continue
-				var step: float = 1.414 if (dx != 0 and dy != 0) else 1.0
-				var tg: float   = g.get(cur, INF) + step
-				if tg < g.get(nb, INF):
-					came[nb] = cur
-					g[nb]    = tg
-					f[nb]    = tg + _heuristic(nb, goal)
-					open[nb] = true
-	return []
-
-func compute_path(from: Vector2, to: Vector2, elevation: int = 0) -> float:
-	var path := _run_astar(from, to, elevation)
-	if path.is_empty():
-		_last_path      = []
+## Prepara el movimiento del jugador hacia pos dentro de la selección actual.
+## Devuelve "" si se puede (y deja el camino listo para show_path_preview),
+## o el motivo: "range", "blocked" o "no_path".
+func plan_player_move(pos: Vector2) -> String:
+	var goal := CombatGrid.to_cell(pos)
+	if not _move_reach.has(goal) or not _in_move_circle(goal, _move_origin, selected_move_range):
+		_last_path = []
 		_last_path_cost = INF
-		return INF
-	_last_path = path
-	var cost := 0.0
-	for i in range(path.size() - 1):
-		cost += path[i].distance_to(path[i + 1])
-	_last_path_cost = cost
-	return _last_path_cost
+		if not _in_move_circle(goal, _move_origin, selected_move_range):
+			return "range"
+		if not _grid_passable(goal, player_elevation, _player_shadow_radius, enemy_pos, _enemy_shadow_radius):
+			return "blocked"
+		return "no_path"
+	var path := CombatGrid.path_to(_move_reach, goal)
+	_last_path.clear()
+	for cell in CombatGrid.corners(path):
+		_last_path.append(CombatGrid.to_world(cell))
+	# El camino en 8 direcciones sobreestima la línea recta hasta un 8 %: se
+	# escala para que un movimiento directo cueste su distancia real y un
+	# rodeo cueste proporcionalmente más.
+	var start := CombatGrid.to_cell(_move_origin)
+	var direct := CombatGrid.octile(goal - start)
+	var scale := 1.0
+	if direct > 0.0:
+		scale = (CombatGrid.to_world(goal).distance_to(CombatGrid.to_world(start)) / CombatGrid.CELL) / direct
+	_last_path_cost = float(_move_reach[goal]["cost"]) * scale * CombatGrid.CELL
+	return ""
 
-func _w2g(pos: Vector2) -> Vector2i:
-	return Vector2i(int(round(pos.x / PATH_CELL)), int(round(pos.y / PATH_CELL)))
+# ── Grilla de movimiento ──────────────────────────────────────────────────────
 
-func _g2w(cell: Vector2i) -> Vector2:
-	return Vector2(cell.x * PATH_CELL, cell.y * PATH_CELL)
+## Casillas alcanzables (8 direcciones) desde from_pos para un personaje de huella
+## `radius`, sin pisar obstáculos ni la huella del otro personaje.
+func _grid_reach(from_pos: Vector2, move_range: float, elevation: int, radius: float,
+		other_pos: Vector2, other_radius: float) -> Dictionary:
+	var start := CombatGrid.to_cell(from_pos)
+	# Si ya arranca encimado (tras un salto o un empuje), se le permite salir:
+	# basta con que el centro esté libre y no se acerque más al otro personaje.
+	var escape_sep := -1.0
+	if not _grid_passable(start, elevation, radius, other_pos, other_radius):
+		escape_sep = minf(radius + other_radius, CombatGrid.to_world(start).distance_to(other_pos))
+	return CombatGrid.reachable(start, CombatGrid.steps_for(move_range * PATH_SLACK),
+		func(c: Vector2i) -> bool: return _grid_passable(c, elevation, radius, other_pos, other_radius, escape_sep))
 
-func _g_in_bounds(cell: Vector2i) -> bool:
-	return cell.x >= 0 and cell.x <= int(WORLD_W / PATH_CELL) \
-		and cell.y >= 0 and cell.y <= int(WORLD_H / PATH_CELL)
+## El alcance de movimiento se mide en línea recta: un círculo alrededor de origin.
+func _in_move_circle(cell: Vector2i, origin: Vector2, move_range: float) -> bool:
+	return CombatGrid.to_world(cell).distance_to(origin) <= move_range + CombatGrid.CELL * 0.5
 
-func _g_blocked(cell: Vector2i, elevation: int = 0, margin: float = PATH_CELL * 0.5) -> bool:
-	var wp := _g2w(cell)
+## Una casilla es válida si la huella (círculo de `radius`) centrada ahí no toca
+## obstáculos ni la huella del otro. escape_sep >= 0 activa el modo escape.
+func _grid_passable(cell: Vector2i, elevation: int, radius: float, other_pos: Vector2,
+		other_radius: float, escape_sep := -1.0) -> bool:
+	var w := CombatGrid.to_world(cell)
+	if not _in_bounds(w):
+		return false
+	var escape := escape_sep >= 0.0
+	if _cell_blocked(cell, w, elevation, 0.0 if escape else radius):
+		return false
+	var min_sep := escape_sep if escape else radius + other_radius
+	return w.distance_to(other_pos) >= min_sep - 0.0001
+
+## Llena de a poco los cachés de altura y de obstáculos (con las huellas de
+## ambos personajes) para que el primer movimiento no tenga un tirón.
+func _warm_grid_caches() -> void:
+	if _warm_next < 0:
+		return
+	var cols := CombatGrid.steps_for(WORLD_W) + 1
+	var total := cols * (CombatGrid.steps_for(WORLD_H) + 1)
+	var end := mini(_warm_next + WARM_CELLS_PER_FRAME, total)
+	for i in range(_warm_next, end):
+		var cell := Vector2i(i % cols, i / cols)
+		var w := CombatGrid.to_world(cell)
+		_cell_height(cell, w)
+		_cell_blocked(cell, w, 0, _player_shadow_radius)
+		_cell_blocked(cell, w, 0, _enemy_shadow_radius)
+	_warm_next = end if end < total else -1
+
+func _cell_height(cell: Vector2i, w: Vector2) -> float:
+	var cols := CombatGrid.steps_for(WORLD_W) + 1
+	var rows := CombatGrid.steps_for(WORLD_H) + 1
+	if _height_cache.is_empty():
+		_height_cache.resize(cols * rows)
+		_height_cache.fill(NAN)
+	if cell.x < 0 or cell.y < 0 or cell.x >= cols or cell.y >= rows:
+		return _terrain_height_at(w)
+	var i := cell.y * cols + cell.x
+	if is_nan(_height_cache[i]):
+		_height_cache[i] = _terrain_height_at(w)
+	return _height_cache[i]
+
+func _cell_blocked(cell: Vector2i, w: Vector2, elevation: int, margin: float) -> bool:
+	var by_margin: Dictionary = _blocked_cache.get_or_add(margin, {})
+	var key := Vector3i(cell.x, cell.y, elevation)
+	if not by_margin.has(key):
+		by_margin[key] = _pos_blocked(w, elevation, margin)
+	return by_margin[key]
+
+func _player_y_at(pos: Vector2, elevation: int) -> float:
+	if elevation > 0:
+		for obs in solid_obstacles:
+			if obs.get("type", "solid") != "platform": continue
+			var p: Vector2 = obs["pos"]
+			var hh: Vector2 = obs["box"] * 0.5
+			if abs(pos.x - p.x) <= hh.x and abs(pos.y - p.y) <= hh.y:
+				return PLATFORM_HEIGHT
+	return 0.0
+
+## Dibuja las casillas dadas apoyadas sobre el terreno (cada una a su altura).
+## Arreglos pre-dimensionados: con alcances grandes son decenas de miles de casillas.
+func _build_cells_on_terrain(mi: MeshInstance3D, cells: Array) -> void:
+	const BORDER := 0.010
+	var half := CombatGrid.CELL * 0.5
+	var n := cells.size()
+	var fv := PackedVector3Array(); fv.resize(n * 4)
+	var fi := PackedInt32Array(); fi.resize(n * 6)
+	var bv := PackedVector3Array(); bv.resize(n * 16)
+	var bi := PackedInt32Array(); bi.resize(n * 24)
+	var k := 0
+	for cell: Vector2i in cells:
+		var c := CombatGrid.to_world(cell)
+		var x0 := c.x - half
+		var x1 := c.x + half
+		var z0 := c.y - half
+		var z1 := c.y + half
+		var y: float = _cell_height(cell, c) + 0.02
+		var yb := y + 0.001
+		var v := k * 4
+		fv[v]     = Vector3(x0 + BORDER, y, z0 + BORDER)
+		fv[v + 1] = Vector3(x1 - BORDER, y, z0 + BORDER)
+		fv[v + 2] = Vector3(x1 - BORDER, y, z1 - BORDER)
+		fv[v + 3] = Vector3(x0 + BORDER, y, z1 - BORDER)
+		var t := k * 6
+		fi[t] = v; fi[t + 1] = v + 1; fi[t + 2] = v + 2
+		fi[t + 3] = v; fi[t + 4] = v + 2; fi[t + 5] = v + 3
+		# Cuatro tiras de borde: arriba, abajo, izquierda, derecha.
+		var b := k * 16
+		_quad(bv, bi, b,      k * 24,      x0, z0, x1, z0 + BORDER, yb)
+		_quad(bv, bi, b + 4,  k * 24 + 6,  x0, z1 - BORDER, x1, z1, yb)
+		_quad(bv, bi, b + 8,  k * 24 + 12, x0, z0 + BORDER, x0 + BORDER, z1 - BORDER, yb)
+		_quad(bv, bi, b + 12, k * 24 + 18, x1 - BORDER, z0 + BORDER, x1, z1 - BORDER, yb)
+		k += 1
+	_apply_two_surface_mesh(mi, fv, fi, bv, bi)
+
+static func _quad(v: PackedVector3Array, idx: PackedInt32Array, vi: int, ii: int,
+		x0: float, z0: float, x1: float, z1: float, y: float) -> void:
+	v[vi]     = Vector3(x0, y, z0)
+	v[vi + 1] = Vector3(x1, y, z0)
+	v[vi + 2] = Vector3(x1, y, z1)
+	v[vi + 3] = Vector3(x0, y, z1)
+	idx[ii] = vi; idx[ii + 1] = vi + 1; idx[ii + 2] = vi + 2
+	idx[ii + 3] = vi; idx[ii + 4] = vi + 2; idx[ii + 5] = vi + 3
+
+## true si un círculo de radio `margin` en wp choca con obstáculos al nivel `elevation`.
+func _pos_blocked(wp: Vector2, elevation: int = 0, margin: float = PATH_CELL * 0.5) -> bool:
 	# Elevado: solo puede moverse en el footprint de la plataforma, la rampa exterior o la tira de desmontaje
 	if elevation > 0:
 		for obs in solid_obstacles:
@@ -1208,38 +1319,12 @@ func _g_blocked(cell: Vector2i, elevation: int = 0, margin: float = PATH_CELL * 
 				return true
 	return false
 
-func _heuristic(a: Vector2i, b: Vector2i) -> float:
-	var dx: int = abs(a.x - b.x)
-	var dy: int = abs(a.y - b.y)
-	return float(maxi(dx, dy)) + float(minf(dx, dy)) * 0.414
-
-func _lowest_f(open: Dictionary, f: Dictionary) -> Vector2i:
-	var best: Vector2i
-	var best_f := INF
-	for node in open:
-		var fv: float = f.get(node, INF)
-		if fv < best_f:
-			best_f = fv
-			best   = node
-	return best
-
-func _reconstruct(came: Dictionary, cur: Vector2i, from: Vector2, to: Vector2) -> Array[Vector2]:
-	var path: Array[Vector2] = []
-	var c := cur
-	while came.has(c):
-		path.push_front(_g2w(c))
-		c = came[c]
-	path.push_front(from)
-	if not path.is_empty():
-		path[-1] = to
-	return path
-
 # ── Attack ────────────────────────────────────────────────────────────────────
 func start_attack_selection(attack_range: float) -> void:
 	selected_attack_range = attack_range
-	_show_disc(_attack_disc, player_pos, attack_range)
-	_show_smooth_circle(_enemy_hover, enemy_pos, 1.1)
-	_enemy_hover.set_surface_override_material(0, _enemy_hover_mat)
+	# El alcance se cuenta desde el borde de la huella del jugador.
+	_show_disc(_attack_disc, player_pos, attack_range + _player_shadow_radius)
+	_show_footprint(_enemy_hover, enemy_pos, _enemy_shadow_radius, HOVER_Y)
 	_enemy_hover.visible = false
 
 func clear_attack_selection() -> void:
@@ -1247,8 +1332,15 @@ func clear_attack_selection() -> void:
 	_attack_disc.visible  = false
 	_enemy_hover.visible  = false
 
+## Distancia entre los bordes de las huellas del jugador y del enemigo.
+func actors_gap() -> float:
+	return movement_distance(player_pos, enemy_pos) - _player_shadow_radius - _enemy_shadow_radius
+
+## El alcance se mide entre los bordes de las huellas: con huellas circulares
+## los centros nunca quedan a menos de la suma de los radios. Media casilla de
+## tolerancia porque las posiciones caen en centros de casilla.
 func is_enemy_in_attack_range(attack_range: float) -> bool:
-	return movement_distance(player_pos, enemy_pos) <= attack_range \
+	return actors_gap() <= attack_range + CombatGrid.CELL * 0.5 \
 		and has_line_of_sight(player_pos, enemy_pos)
 
 func is_enemy_in_melee_range() -> bool:
@@ -1285,9 +1377,6 @@ func has_line_of_sight(from: Vector2, to: Vector2) -> bool:
 	return _los_clear(from, to, false, true, _elevation_at(from), _elevation_at(to))
 
 # LOS para movimiento: rocas bloquean, puentes son transitables por debajo.
-func _has_movement_los(from: Vector2, to: Vector2, elevation: int = 0) -> bool:
-	return _los_clear(from, to, true, false, elevation, elevation)
-
 func _segment_hits_box(a: Vector2, b: Vector2, center: Vector2, half: Vector2) -> bool:
 	var d := b - a
 	var tmin := 0.0
@@ -1323,10 +1412,8 @@ func _segment_hits_circle(a: Vector2, b: Vector2, c: Vector2, r: float) -> bool:
 
 # ── Target highlights ─────────────────────────────────────────────────────────
 func start_enemy_highlight() -> void:
-	_show_smooth_circle(_enemy_highlight, enemy_pos, 2.0)
-	_enemy_highlight.set_surface_override_material(0, _enemy_highlight_mat)
-	_show_smooth_circle(_enemy_hover, enemy_pos, 1.1)
-	_enemy_hover.set_surface_override_material(0, _enemy_hover_mat)
+	_show_footprint(_enemy_highlight, enemy_pos, _enemy_shadow_radius)
+	_show_footprint(_enemy_hover, enemy_pos, _enemy_shadow_radius, HOVER_Y)
 	_enemy_hover.visible = false
 
 func clear_enemy_highlight() -> void:
@@ -1334,21 +1421,20 @@ func clear_enemy_highlight() -> void:
 	_enemy_hover.visible     = false
 
 func start_self_highlight() -> void:
-	_show_smooth_circle(_self_highlight, player_pos, 1.5)
-	_self_highlight.set_surface_override_material(0, _self_highlight_mat)
-	_show_smooth_circle(_self_hover, player_pos, 0.9)
-	_self_hover.set_surface_override_material(0, _self_hover_mat)
+	_show_footprint(_self_highlight, player_pos, _player_shadow_radius)
+	_show_footprint(_self_hover, player_pos, _player_shadow_radius, HOVER_Y)
 	_self_hover.visible = false
 
 func clear_self_highlight() -> void:
 	_self_highlight.visible = false
 	_self_hover.visible     = false
 
+## Un clic "toca" a un personaje si cae sobre su huella o cerca (CLICK_MARGIN).
 func is_click_on_enemy(pos: Vector2) -> bool:
-	return pos.distance_to(enemy_pos) <= 2.5
+	return pos.distance_to(enemy_pos) <= _enemy_shadow_radius + CLICK_MARGIN
 
 func is_click_on_player(pos: Vector2) -> bool:
-	return pos.distance_to(player_pos) <= 2.0
+	return pos.distance_to(player_pos) <= _player_shadow_radius + CLICK_MARGIN
 
 # ── Enemy ─────────────────────────────────────────────────────────────────────
 func set_enemy_hp(hp: int) -> void:
@@ -1357,38 +1443,33 @@ func set_enemy_hp(hp: int) -> void:
 func can_place_enemy(pos: Vector2) -> bool:
 	return _in_bounds(pos)
 
+## Mueve al enemigo hasta la casilla alcanzable más cercana a target.
 func move_enemy_toward(target: Vector2, move_range: float) -> bool:
 	if enemy_pos.distance_to(target) < 0.01: return false
-	var path := _run_astar(enemy_pos, target, enemy_elevation, AGENT_RADIUS, false)
-	if path.is_empty(): return false
-	var remaining := move_range
-	var new_pos := enemy_pos
-	_enemy_waypoints.clear()
-	for i in range(1, path.size()):
-		var seg_len := new_pos.distance_to(path[i])
-		if seg_len <= remaining:
-			remaining -= seg_len
-			new_pos = path[i]
-			var ey := float(_elevation_at(new_pos)) * PLATFORM_HEIGHT
-			_enemy_waypoints.append(Vector3(new_pos.x, ey, new_pos.y))
-		else:
-			new_pos = new_pos + (path[i] - new_pos).normalized() * remaining
-			var ey := float(_elevation_at(new_pos)) * PLATFORM_HEIGHT
-			_enemy_waypoints.append(Vector3(new_pos.x, ey, new_pos.y))
-			break
-	if new_pos.distance_to(enemy_pos) < 0.01:
-		_enemy_waypoints.clear()
+	var reach := _grid_reach(enemy_pos, move_range, enemy_elevation,
+		_enemy_shadow_radius, player_pos, _player_shadow_radius)
+	var start := CombatGrid.to_cell(enemy_pos)
+	var best := start
+	var best_d := enemy_pos.distance_to(target)
+	var best_cost := 0.0
+	for cell: Vector2i in reach:
+		if not _in_move_circle(cell, enemy_pos, move_range):
+			continue
+		var d := CombatGrid.to_world(cell).distance_to(target)
+		var cost: float = reach[cell]["cost"]
+		if d < best_d - 0.0001 or (absf(d - best_d) <= 0.0001 and cost < best_cost):
+			best = cell
+			best_d = d
+			best_cost = cost
+	if best == start:
 		return false
-	new_pos.x = clampf(new_pos.x, 0.0, WORLD_W)
-	new_pos.y = clampf(new_pos.y, 0.0, WORLD_H)
-	var sep := new_pos - player_pos
-	if sep.length() < MIN_SEPARATION:
-		new_pos = player_pos + (sep.normalized() if sep.length() > 0.001 else Vector2(MIN_SEPARATION, 0.0)) * MIN_SEPARATION
-	enemy_pos       = new_pos
-	enemy_elevation = _elevation_at(new_pos)
-	if not _enemy_waypoints.is_empty():
-		var ey := float(enemy_elevation) * PLATFORM_HEIGHT
-		_enemy_waypoints[-1] = Vector3(enemy_pos.x, ey, enemy_pos.y)
+	var path := CombatGrid.path_to(reach, best)
+	_enemy_waypoints.clear()
+	for cell in CombatGrid.corners(path).slice(1):
+		var w := CombatGrid.to_world(cell)
+		_enemy_waypoints.append(Vector3(w.x, float(_elevation_at(w)) * PLATFORM_HEIGHT, w.y))
+	enemy_pos       = CombatGrid.to_world(best)
+	enemy_elevation = _elevation_at(enemy_pos)
 	_update_actor_positions()
 	return true
 
@@ -1448,7 +1529,7 @@ func clear_trap_placement() -> void:
 	_trap_preview.visible  = false
 	_trap_preview_last_pos = Vector2(-999.0, -999.0)
 
-func place_trap(pos: Vector2, radius: int, damage: int, card_name: String) -> void:
+func place_trap(pos: Vector2, radius: float, damage: int, card_name: String) -> void:
 	trap_zones.append({"pos": pos, "radius": float(radius), "damage": damage, "name": card_name})
 	_add_trap_visual(pos, float(radius))
 
@@ -1540,7 +1621,7 @@ func _segment_hit_t_box(a: Vector2, b: Vector2, center: Vector2, half: Vector2) 
 			if tmin > tmax: return -1.0
 	return tmin
 
-func show_grenade_preview(landing: Vector2, aoe_radius: int) -> void:
+func show_grenade_preview(landing: Vector2, aoe_radius: float) -> void:
 	grenade_landing    = landing
 	grenade_aoe_radius = float(aoe_radius)
 	_show_disc(_grenade_disc, landing, grenade_aoe_radius)
@@ -1550,7 +1631,7 @@ func clear_grenade_preview() -> void:
 	grenade_aoe_radius    = 0.0
 	_grenade_disc.visible = false
 
-func is_enemy_in_explosion(center: Vector2, radius: int) -> bool:
+func is_enemy_in_explosion(center: Vector2, radius: float) -> bool:
 	return movement_distance(center, enemy_pos) <= float(radius)
 
 # ── Rock Jump ─────────────────────────────────────────────────────────────────
@@ -1567,11 +1648,8 @@ func start_rock_jump_selection(jump_range: float) -> void:
 	_show_disc(_jump_disc, player_pos, jump_range)
 	_jump_rocks_in_range = get_rocks_in_range(player_pos, jump_range)
 	for obs in _jump_rocks_in_range:
-		var mi := MeshInstance3D.new()
-		var mat := _make_mat(Color(0.2, 1.0, 0.5, 0.75))
-		mi.material_override = mat
-		add_child(mi)
-		_show_smooth_circle(mi, obs["pos"], obs.get("radius", 0.5) * 1.8)
+		var mi := _make_disc(Color(0.2, 1.0, 0.5, 0.75))
+		_build_tile_disc(mi, obs["pos"], obs.get("radius", 0.5) * 1.8, 0.0, HIGHLIGHT_Y)
 		_jump_rock_markers.append(mi)
 
 func get_rock_near(pos: Vector2) -> Dictionary:
@@ -1587,8 +1665,7 @@ func start_jump_landing_selection(rock_pos: Vector2, landing_range: float) -> vo
 		marker.queue_free()
 	_jump_rock_markers.clear()
 	_show_disc(_jump_landing_disc, rock_pos, landing_range)
-	_show_smooth_circle(_jump_selected_marker, rock_pos, 0.7)
-	_jump_selected_marker.set_surface_override_material(0, _jump_selected_marker_mat)
+	_build_tile_disc(_jump_selected_marker, rock_pos, 0.7, 0.0, HOVER_Y)
 
 func clear_rock_jump_selection() -> void:
 	_jump_disc.visible            = false
@@ -1604,7 +1681,8 @@ func is_enemy_near_pos(pos: Vector2, radius: float) -> bool:
 
 # ── Push ──────────────────────────────────────────────────────────────────────
 func start_push_enemy_selection(grab_range: float) -> void:
-	_show_disc(_attack_disc, player_pos, grab_range)
+	# Como en el ataque: el alcance se cuenta desde el borde de la huella.
+	_show_disc(_attack_disc, player_pos, grab_range + _player_shadow_radius)
 	start_enemy_highlight()
 
 func start_push_cone(push_range: float) -> void:
@@ -1780,7 +1858,7 @@ func _puddle_interaction(a: String, b: String) -> String:
 	if TABLE.has(k): return TABLE[k]
 	return ""
 
-func place_puddle(pos: Vector2, radius: int, effect: String = "wet") -> void:
+func place_puddle(pos: Vector2, radius: float, effect: String = "wet") -> void:
 	var r2 := float(radius)
 	var new_exclusions: Array = []
 

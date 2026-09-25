@@ -1,13 +1,51 @@
 [gd_resource type="Resource" script_class="CardData" format=3 uid="uid://xcfi1xf80dtk"]
 
 [ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_3tsyl"]
+[ext_resource type="Script" path="res://data/card_action.gd" id="2_action"]
+[ext_resource type="Script" path="res://data/card_action_line.gd" id="3_line"]
+[ext_resource type="Script" path="res://data/stat_scaling.gd" id="4_scaling"]
+
+[sub_resource type="Resource" id="Scale_Line_top"]
+script = ExtResource("4_scaling")
+base = 50
+stat = "agilidad"
+factor = 1.0
+
+[sub_resource type="Resource" id="Scale_Line_bottom"]
+script = ExtResource("4_scaling")
+base = 15
+stat = "resistencia"
+factor = 0.3
+
+[sub_resource type="Resource" id="Line_top"]
+script = ExtResource("3_line")
+card_type = "move"
+description = "Move a short distance."
+card_range = 100
+range_scaling = SubResource("Scale_Line_top")
+
+[sub_resource type="Resource" id="Line_bottom"]
+script = ExtResource("3_line")
+card_type = "block"
+description = "Bloqueo 3."
+block_amount = 30
+block_scaling = SubResource("Scale_Line_bottom")
+
+[sub_resource type="Resource" id="Resource_top"]
+script = ExtResource("2_action")
+lines = Array[ExtResource("3_line")]([SubResource("Line_top")])
+color = Color(0.08, 0.26, 0.14, 1)
+
+[sub_resource type="Resource" id="Resource_bottom"]
+script = ExtResource("2_action")
+lines = Array[ExtResource("3_line")]([SubResource("Line_bottom")])
+color = Color(0.1, 0.18, 0.36, 1)
 
 [resource]
 script = ExtResource("1_3tsyl")
 id = "step"
 name = "Step"
-description = "Move a short distance."
-cost = 1
-card_type = "move"
-card_range = 8
+initiative = 38
+top = SubResource("Resource_top")
+bottom = SubResource("Resource_bottom")
 metadata/_custom_type_script = "uid://cb2fptd8ugdit"

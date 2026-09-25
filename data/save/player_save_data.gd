@@ -39,6 +39,13 @@ class_name PlayerSaveData
 @export var unlocked_recipe_ids: Array[String] = []
 @export var completed_recipe_ids: Array[String] = []
 
+# Estadísticas de combate del Youn actual (ver YounStatRules). Distintas de las
+# métricas de cuidado de arriba (p. ej. `energia` de cuidado ≠ "energia" de acá).
+## Valor actual de cada una de las 8 estadísticas (YounStats.KEYS).
+@export var youn_stats: Dictionary = {}
+## Lo ganado en esta vida; al evolucionar se suma a la base del nuevo Youn.
+@export var youn_stat_gains: Dictionary = {}
+
 @export var current_youn_path: String = ""
 @export var pending_evolution_path: String = ""
 @export var stage_entered_total_hour: float = 0.0

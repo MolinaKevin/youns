@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://data/youns/youn_data.gd" id="1"]
 [ext_resource type="ArrayMesh" path="res://assets/youns/Agumon PS1.obj" id="2"]
 [ext_resource type="Resource" path="res://data/enemies/strategies/aggressive.tres" id="3"]
+[ext_resource type="Resource" path="res://data/enemies/monster_decks/bruto.tres" id="monster_deck"]
 
 [resource]
 script = ExtResource("1")
@@ -24,7 +25,8 @@ idle_time_min = 0.7
 idle_time_max = 2.2
 notice_delay_min = 0.2
 notice_delay_max = 0.9
-max_hp = 22
+max_hp = 220
 strategy = ExtResource("3")
+monster_deck = ExtResource("monster_deck")
 loot_item_name = "Agumon Fang"
 loot_gold = 6
