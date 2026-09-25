@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="YounData" format=3]
+
+[ext_resource type="Script" uid="uid://dkniy614ehfbc" path="res://data/youns/youn_data.gd" id="1_script"]
+[ext_resource type="Script" path="res://data/youns/youn_stats.gd" id="youn_stats_script"]
+
+[sub_resource type="Resource" id="BaseStats"]
+script = ExtResource("youn_stats_script")
+vitalidad = 15
+energia = 10
+fuerza = 10
+resistencia = 10
+agilidad = 15
+tecnica = 10
+inteligencia = 10
+espiritu = 15
+
+[resource]
+script = ExtResource("1_script")
+id = "bebe_1"
+youn_name = "Bebé 1"
+stage = "bebe"
+base_stats = SubResource("BaseStats")
+max_hp = 40

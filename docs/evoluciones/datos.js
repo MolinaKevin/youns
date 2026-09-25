@@ -71,8 +71,8 @@ window.EVOLUCIONES = {
     // ── Rookies (en el código: etapa "adolescente") ──────────────────────────
     { id: "pombero", nombre: "Pombero", etapa: "rookie", inteligencias: ["corporal"], desde: [{ id: "nino_1", tipo: "normal" }],
       notas: "Inteligencia provisoria." },
-    { id: "rookie_1b", nombre: "Rookie 1B", etapa: "rookie", provisorio: true, inteligencias: ["logica"], desde: [{ id: "nino_1", tipo: "normal" }] },
-    { id: "nguruvilu", nombre: "Nguruvilu", etapa: "rookie", inteligencias: ["naturalista"], desde: [{ id: "nino_2", tipo: "normal" }],
+    { id: "rookie_1b", nombre: "Rookie 1B", etapa: "rookie", provisorio: true, inteligencias: ["logica"], desde: [{ id: "nino_2", tipo: "normal" }] },
+    { id: "nguruvilu", nombre: "Nguruvilu", etapa: "rookie", inteligencias: ["naturalista"], desde: [{ id: "nino_1", tipo: "normal" }],
       notas: "Inteligencia provisoria." },
     { id: "rookie_2b", nombre: "Rookie 2B", etapa: "rookie", provisorio: true, inteligencias: ["musical"], desde: [{ id: "nino_2", tipo: "normal" }] },
     { id: "rookie_3a", nombre: "Rookie 3A", etapa: "rookie", provisorio: true, inteligencias: ["espacial"], desde: [{ id: "nino_3", tipo: "normal" }] },
