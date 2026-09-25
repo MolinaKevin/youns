@@ -19,3 +19,6 @@ CLAUDE.md
 .DS_Store
 Thumbs.db
 *.tmp
+
+# Generado por tools/export_evoluciones.gd (en CI lo genera .github/workflows/pages.yml)
+docs/evoluciones/datos_juego.js

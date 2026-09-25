@@ -49,6 +49,7 @@
   .tag { font-size: 11px; border-radius: 4px; padding: 0 5px; border: 1px solid var(--node-border); color: var(--muted); }
   .tag.joker { border-color: var(--purple); color: var(--purple); }
   .tag.bonus { border-color: var(--gold); color: var(--gold); }
+  .tag.game { border-color: var(--accent); color: var(--accent); }
   .node.provisorio .name { font-style: italic; color: var(--muted); }
   .node.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
   .node.related { border-color: var(--accent); }
@@ -85,12 +86,19 @@
   <div class="tree-wrap"><div class="tree" id="tree"><svg class="edges" id="edges" aria-hidden="true"></svg></div></div>
   <aside id="detail"><p class="empty">Elegí un Youn del árbol.</p></aside>
 </main>
-<footer>Los datos salen de <code>docs/evoluciones/datos.js</code>.</footer>
+<footer>Los datos salen de <code>docs/evoluciones/datos.js</code> y, para los Youns que ya existen, del juego (<code>data/youns/*.tres</code>, exportados con <code>tools/export_evoluciones.gd</code>).</footer>
 
 <script src="datos.js"></script>
+<script src="datos_juego.js"></script>
 <script>
 (() => {
   const D = window.EVOLUCIONES;
+  // Los Youns del juego pisan nombre, etapa, comodín y stats de datos.js.
+  for (const g of window.EVOLUCIONES_JUEGO?.youns || []) {
+    const y = D.youns.find(y => y.id === g.id);
+    if (y) { Object.assign(y, g, { enJuego: true }); delete y.provisorio; }
+    else D.youns.push({ ...g, enJuego: true });
+  }
   const byId = Object.fromEntries(D.youns.map(y => [y.id, y]));
   const intel = Object.fromEntries(D.inteligencias.map(i => [i.id, i]));
   const stageName = Object.fromEntries(D.etapas.map(e => [e.id, e.nombre]));
@@ -148,7 +156,8 @@
       const b = document.createElement("button");
       b.type = "button"; b.className = "node" + (y.provisorio ? " provisorio" : "");
       const dots = (y.inteligencias || []).map(i => `<span class="dot" title="${intel[i]?.nombre}" style="background:${intel[i]?.color}"></span>`).join("");
-      const tags = [y.comodin && `<span class="tag joker">comodín</span>`,
+      const tags = [y.enJuego && `<span class="tag game">en el juego</span>`,
+                    y.comodin && `<span class="tag joker">comodín</span>`,
                     (y.desde || []).some(d => d.tipo === "bonus") && `<span class="tag bonus">bonus</span>`,
                     (y.desde || []).some(d => d.tipo === "especial") && `<span class="tag joker">especial</span>`].filter(Boolean).join("");
       b.innerHTML = `<span class="name">${y.nombre}</span><span class="meta">${dots}${tags}</span>`;
@@ -218,6 +227,7 @@
     if (!y) { el.innerHTML = `<p class="empty">Elegí un Youn del árbol.</p>`; return; }
     let h = `<h3>${y.nombre}</h3><div class="stage">${stageName[y.etapa]}${y.comodin ? " · comodín" : ""}${y.provisorio ? " · provisorio" : ""}</div>`;
     if (y.inteligencias?.length) h += `<div>${y.inteligencias.map(i => `<span class="chip" style="cursor:default"><span class="dot" style="background:${intel[i].color}"></span>${intel[i].nombre}</span>`).join(" ")}</div>`;
+    if (y.enJuego) h += `<div class="note">Existe en el juego: <code>${y.archivo}</code></div>`;
     if (y.notas) h += `<h4>Notas</h4><div class="note">${y.notas}</div>`;
     if (y.condiciones) {
       h += `<h4>Condiciones (3 de 5)</h4><table class="cond">` +

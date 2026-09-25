@@ -13,6 +13,10 @@
 //   provisorio    true mientras el nombre/datos sean de relleno
 //   condiciones   (campeones y ultimates) las 5: inteligencia, stats, crianza, cartas, bonus
 //   stats         estadísticas base (opcional)
+//
+// Los Youns que ya existen en el juego se completan desde data/youns/*.tres
+// (nombre, etapa, comodín y stats): acá solo va lo que el juego no tiene.
+// Para actualizarlos: godot --headless --path . --script res://tools/export_evoluciones.gd
 //   notas         texto libre (opcional)
 
 window.EVOLUCIONES = {
@@ -66,12 +70,10 @@ window.EVOLUCIONES = {
 
     // ── Rookies (en el código: etapa "adolescente") ──────────────────────────
     { id: "pombero", nombre: "Pombero", etapa: "rookie", inteligencias: ["corporal"], desde: [{ id: "nino_1", tipo: "normal" }],
-      stats: { vitalidad: 50, energia: 40, fuerza: 45, resistencia: 40, agilidad: 65, tecnica: 55, inteligencia: 50, espiritu: 45 },
-      notas: "Existe en el juego (data/youns/pombero.tres). Inteligencia provisoria." },
+      notas: "Inteligencia provisoria." },
     { id: "rookie_1b", nombre: "Rookie 1B", etapa: "rookie", provisorio: true, inteligencias: ["logica"], desde: [{ id: "nino_1", tipo: "normal" }] },
     { id: "nguruvilu", nombre: "Nguruvilu", etapa: "rookie", inteligencias: ["naturalista"], desde: [{ id: "nino_2", tipo: "normal" }],
-      stats: { vitalidad: 55, energia: 45, fuerza: 50, resistencia: 50, agilidad: 45, tecnica: 45, inteligencia: 45, espiritu: 60 },
-      notas: "Existe en el juego (data/youns/nguruvilu.tres). Inteligencia provisoria." },
+      notas: "Inteligencia provisoria." },
     { id: "rookie_2b", nombre: "Rookie 2B", etapa: "rookie", provisorio: true, inteligencias: ["musical"], desde: [{ id: "nino_2", tipo: "normal" }] },
     { id: "rookie_3a", nombre: "Rookie 3A", etapa: "rookie", provisorio: true, inteligencias: ["espacial"], desde: [{ id: "nino_3", tipo: "normal" }] },
     { id: "rookie_3b", nombre: "Rookie 3B", etapa: "rookie", provisorio: true, inteligencias: ["interpersonal"], desde: [{ id: "nino_3", tipo: "normal" }] },
@@ -95,8 +97,7 @@ window.EVOLUCIONES = {
       condiciones: { inteligencia: "Lingüística o Intrapersonal", stats: "Resistencia > 160", crianza: "Peso entre 15 y 25", cartas: "Usar el comodín mantener 10 veces", bonus: "—" } },
     { id: "nguruvilu_campeon", nombre: "Nguruvilu (comodín)", etapa: "campeon", comodin: true,
       desde: [{ id: "*rookies", tipo: "comodin" }],
-      stats: { vitalidad: 90, energia: 70, fuerza: 85, resistencia: 80, agilidad: 75, tecnica: 70, inteligencia: 65, espiritu: 95 },
-      notas: "Campeón comodín: al que se cae si no se cumplen 3 condiciones de ningún campeón. Más débil, pero es el único que llega al Ultimate secreto. Existe en el juego (data/youns/nguruvilu_campeon.tres)." },
+      notas: "Campeón comodín: al que se cae si no se cumplen 3 condiciones de ningún campeón. Más débil, pero es el único que llega al Ultimate secreto." },
 
     // ── Ultimates (con 3 de 5 condiciones; sin comodín) ─────────────────────
     { id: "ultimate_1", nombre: "Ultimate 1", etapa: "ultimate", provisorio: true, inteligencias: ["corporal"],
