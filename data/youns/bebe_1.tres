@@ -5,8 +5,8 @@
 
 [sub_resource type="Resource" id="BaseStats"]
 script = ExtResource("youn_stats_script")
-vitalidad = 15
-energia = 10
+constitucion = 15
+mente = 10
 fuerza = 10
 resistencia = 10
 agilidad = 15
@@ -20,4 +20,3 @@ id = "bebe_1"
 youn_name = "Bebé 1"
 stage = "bebe"
 base_stats = SubResource("BaseStats")
-max_hp = 40

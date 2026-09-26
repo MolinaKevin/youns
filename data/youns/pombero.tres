@@ -14,8 +14,8 @@
 
 [sub_resource type="Resource" id="BaseStats"]
 script = ExtResource("youn_stats_script")
-vitalidad = 50
-energia = 40
+constitucion = 50
+mente = 40
 fuerza = 45
 resistencia = 40
 agilidad = 65
@@ -40,7 +40,6 @@ scene_damage = ExtResource("2_aoj80")
 chase_speed = 4.0
 body_height = 4.6
 base_stats = SubResource("BaseStats")
-max_hp = 180
 strategy = ExtResource("strategy")
 monster_deck = ExtResource("monster_deck")
 loot_item_name = "Pombero Claw"

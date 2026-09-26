@@ -20,7 +20,7 @@ factor = 0.4
 [sub_resource type="Resource" id="Line_top"]
 script = ExtResource("3_line")
 card_type = "trap_place"
-description = "Place a trap nearby. Enemy takes damage when standing on it."
+description = "Ponés una trampa cerca tuyo. Quien la pise recibe daño."
 card_range = 13
 damage = 120
 damage_scaling = SubResource("Scale_Line_top")
@@ -28,7 +28,7 @@ damage_scaling = SubResource("Scale_Line_top")
 [sub_resource type="Resource" id="Line_bottom"]
 script = ExtResource("3_line")
 card_type = "move"
-description = "Mover 3."
+description = "Te movés."
 card_range = 38
 range_scaling = SubResource("Scale_Line_bottom")
 

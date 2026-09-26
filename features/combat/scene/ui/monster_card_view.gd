@@ -146,6 +146,8 @@ static func _action_parts(action: MonsterCardAction, deck: MonsterDeck) -> Array
 			return parts
 		"block":
 			return [["shield", str(action.value)]]
+		"ward":
+			return [["shield", "%d (%s)" % [action.value, LocalizationState.card_type_name("ward")]]]
 		"heal":
 			return [["heal", str(action.value)]]
 	return []

@@ -13,8 +13,8 @@
 
 [sub_resource type="Resource" id="BaseStats"]
 script = ExtResource("youn_stats_script")
-vitalidad = 55
-energia = 45
+constitucion = 55
+mente = 45
 fuerza = 50
 resistencia = 50
 agilidad = 45
@@ -39,7 +39,6 @@ scene_damage = ExtResource("2_damage")
 chase_speed = 5.0
 body_height = 4.0
 base_stats = SubResource("BaseStats")
-max_hp = 200
 strategy = ExtResource("strategy")
 monster_deck = ExtResource("monster_deck")
 loot_item_name = "Nguruvilu Claw"

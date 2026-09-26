@@ -20,7 +20,7 @@ factor = 0.4
 [sub_resource type="Resource" id="Line_top"]
 script = ExtResource("3_line")
 card_type = "overwatch"
-description = "Apuntás un cono. Si el enemigo entra ese turno, recibe un golpe poderoso. Si no, se cancela."
+description = "Apuntás un cono. Si el enemigo entra este turno, recibe un golpe poderoso; si no, se cancela."
 card_range = 50
 damage = 150
 damage_scaling = SubResource("Scale_Line_top")
@@ -28,7 +28,7 @@ damage_scaling = SubResource("Scale_Line_top")
 [sub_resource type="Resource" id="Line_bottom"]
 script = ExtResource("3_line")
 card_type = "move"
-description = "Mover 3."
+description = "Te movés."
 card_range = 38
 range_scaling = SubResource("Scale_Line_bottom")
 

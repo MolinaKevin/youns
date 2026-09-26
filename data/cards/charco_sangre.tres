@@ -11,18 +11,42 @@ base = 18
 stat = "agilidad"
 factor = 0.4
 
+[sub_resource type="Resource" id="Scale_Line_top_radius"]
+script = ExtResource("4_scaling")
+base = 3
+stat = "inteligencia"
+factor = 0.2
+
+[sub_resource type="Resource" id="Scale_Line_top_duration"]
+script = ExtResource("4_scaling")
+base = 1
+stat = "inteligencia"
+factor = 0.04
+
+[sub_resource type="Resource" id="Scale_Line_top_damage"]
+script = ExtResource("4_scaling")
+base = 10
+stat = "espiritu"
+factor = 0.2
+
 [sub_resource type="Resource" id="Line_top"]
 script = ExtResource("3_line")
 card_type = "puddle"
-description = "Creás un charco de sangre. Quien pise queda sangrando por 4 turnos (2 de daño/turno)."
+mp_cost = 15
+description = "Creás un charco de sangre. Quien lo pise queda sangrando y pierde vida cada turno."
 card_range = 13
 throw_range = 75
 puddle_effect = "blood"
+damage = 20
+damage_scaling = SubResource("Scale_Line_top_damage")
+duration = 3
+range_scaling = SubResource("Scale_Line_top_radius")
+duration_scaling = SubResource("Scale_Line_top_duration")
 
 [sub_resource type="Resource" id="Line_bottom"]
 script = ExtResource("3_line")
 card_type = "move"
-description = "Mover 3."
+description = "Te movés."
 card_range = 38
 range_scaling = SubResource("Scale_Line_bottom")
 

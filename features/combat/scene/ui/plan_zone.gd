@@ -8,12 +8,17 @@ extends VBoxContainer
 signal slot_clicked(slot: int)
 signal slot_dropped(slot: int, data: Dictionary)
 signal confirm_pressed
+## El jugador pide adelantar (-1) o atrasar (+1) su iniciativa.
+signal initiative_shift_requested(delta: int)
 
 const CARD_SCENE := preload("res://features/cards/presentation/card_view.tscn")
 const CARD_SIZE := Vector2(195, 293)
 const CARD_SCALE := 0.6
 
 var _initiative_label: Label
+var _shift_label: Label
+var _shift_minus: Button
+var _shift_plus: Button
 var _slot_titles: Array[Label] = []
 var _slot_holders: Array[Panel] = []
 var _confirm_button: Button
@@ -26,6 +31,25 @@ func _ready() -> void:
 	_initiative_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_initiative_label.add_theme_font_size_override("font_size", 18)
 	add_child(_initiative_label)
+
+	# Ajuste de iniciativa: el margen sale de la agilidad (YounStatRules.initiative_shift).
+	var shift_row := HBoxContainer.new()
+	shift_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	shift_row.add_theme_constant_override("separation", 8)
+	add_child(shift_row)
+	_shift_minus = Button.new()
+	_shift_minus.text = "−"
+	_shift_minus.custom_minimum_size = Vector2(32, 0)
+	_shift_minus.pressed.connect(func(): initiative_shift_requested.emit(-1))
+	shift_row.add_child(_shift_minus)
+	_shift_label = Label.new()
+	_shift_label.add_theme_font_size_override("font_size", 13)
+	shift_row.add_child(_shift_label)
+	_shift_plus = Button.new()
+	_shift_plus.text = "+"
+	_shift_plus.custom_minimum_size = Vector2(32, 0)
+	_shift_plus.pressed.connect(func(): initiative_shift_requested.emit(1))
+	shift_row.add_child(_shift_plus)
 
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
@@ -48,9 +72,14 @@ func _ready() -> void:
 	_confirm_button.pressed.connect(func(): confirm_pressed.emit())
 	add_child(_confirm_button)
 
-## cards: [CardData o null, CardData o null]; initiative: la de la izquierda o -1.
-## enemy_initiative: texto, porque con mazo de monstruo no se conoce hasta confirmar.
-func set_state(cards: Array, initiative: int, enemy_initiative: String) -> void:
+## cards: [CardData o null, CardData o null]; initiative: la de la izquierda
+## (ya con el ajuste) o -1. enemy_initiative: texto, porque con mazo de monstruo
+## no se conoce hasta confirmar. shift: ajuste elegido; max_shift: margen (±).
+func set_state(cards: Array, initiative: int, enemy_initiative: String, shift: int = 0, max_shift: int = 0) -> void:
+	_shift_label.get_parent().visible = max_shift > 0
+	_shift_label.text = LocalizationState.t("combat.initiative_shift", ["%+d" % shift, max_shift])
+	_shift_minus.disabled = shift <= -max_shift
+	_shift_plus.disabled = shift >= max_shift
 	_slot_titles[0].text = LocalizationState.t("combat.slot_lead")
 	_slot_titles[1].text = LocalizationState.t("combat.slot_second")
 	_confirm_button.text = LocalizationState.t("combat.confirm_plan")

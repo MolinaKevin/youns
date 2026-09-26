@@ -4,6 +4,8 @@ signal position_selected(pos: Vector2)
 signal player_anim_finished
 signal enemy_anim_finished
 signal enemy_reached_target
+## Se prendió fuego el árbol al que está trepado el jugador (ya bajó al pie).
+signal player_knocked_off_tree(burning: bool)
 
 # ── World bounds ──────────────────────────────────────────────────────────────
 const WORLD_W := 30.0
@@ -25,6 +27,7 @@ var _enemy_move_pending  := false
 var _enemy_waypoints: Array[Vector3] = []
 var puddle_zones: Array[Dictionary] = []
 var _puddle_visuals: Array[MeshInstance3D] = []
+var _next_puddle_id := 0
 var enemy_hp := 35
 
 # ── Elevation ─────────────────────────────────────────────────────────────────
@@ -57,20 +60,27 @@ const WARM_CELLS_PER_FRAME := 1500
 # type "solid"  → bloquea movimiento Y línea de visión
 # type "rock"   → bloquea movimiento, LOS pasa a través (piedra pequeña)
 # type "bridge" → movimiento permitido por debajo, LOS bloqueada (puente)
+# "module": true → es un módulo: se puede romper, golpear y saltar desde él
+#                  (las piedras chicas; las cartas crean más, ver build_modules)
 var solid_obstacles := [
 	{"pos": Vector2(14.0, 19.0), "radius": 1.5,                            "type": "solid"},
 	{"pos": Vector2(21.0,  9.0), "box": Vector2(3.0, 2.5),                 "type": "solid"},
-	{"pos": Vector2(7.0,  14.0), "radius": 0.55,                           "type": "rock"},
-	{"pos": Vector2(15.0, 15.0), "radius": 0.5,                            "type": "rock"},
-	{"pos": Vector2(23.0, 17.0), "radius": 0.55,                           "type": "rock"},
+	{"pos": Vector2(7.0,  14.0), "radius": 0.55,                           "type": "rock", "module": true},
+	{"pos": Vector2(15.0, 15.0), "radius": 0.5,                            "type": "rock", "module": true},
+	{"pos": Vector2(23.0, 17.0), "radius": 0.55,                           "type": "rock", "module": true},
 	{"pos": Vector2(13.0, 24.0), "box": Vector2(5.0, 2.0),                 "type": "bridge"},
 	{"pos": Vector2(17.0,  6.0), "box": Vector2(2.0, 5.0),                 "type": "bridge"},
+	# tree: bloquea movimiento y línea de visión; se puede trepar (línea "tree_climb")
+	{"pos": Vector2(5.0, 24.0),  "radius": 0.6,                            "type": "tree"},
+	{"pos": Vector2(22.0, 5.0),  "radius": 0.6,                            "type": "tree"},
+	{"pos": Vector2(20.0, 22.0), "radius": 0.6,                            "type": "tree"},
 	# platform: caja elevada con rampas. se sube por las rampas, bloquea LOS desde el suelo
 	{"pos": Vector2(8.0,  10.0), "box": Vector2(5.0, 5.0),                "type": "platform",
 	 "ramps": [{"side": "south", "width": 2.5}, {"side": "east", "width": 2.5}]},
 ]
 
 const PLATFORM_HEIGHT := 1.5
+const TREE_HEIGHT     := 2.4
 const RAMP_DEPTH      := 1.5
 
 # ── Visual ────────────────────────────────────────────────────────────────────
@@ -264,6 +274,28 @@ func _setup_obstacles() -> void:
 				mi.mesh           = box
 				mi.position       = Vector3(pos.x, 0.9, pos.y)
 				mi.material_override = bridge_mat
+			"tree":
+				var r: float = obs["radius"]
+				var trunk := CylinderMesh.new()
+				trunk.top_radius = r * 0.45
+				trunk.bottom_radius = r * 0.6
+				trunk.height = TREE_HEIGHT
+				mi.mesh = trunk
+				mi.position = Vector3(pos.x, TREE_HEIGHT * 0.5, pos.y)
+				var trunk_mat := StandardMaterial3D.new()
+				trunk_mat.albedo_color = Color(0.36, 0.24, 0.14)
+				mi.material_override = trunk_mat
+				var canopy := MeshInstance3D.new()
+				var sphere := SphereMesh.new()
+				sphere.radius = r * 2.2
+				sphere.height = r * 3.2
+				canopy.mesh = sphere
+				canopy.position = Vector3(0.0, TREE_HEIGHT * 0.5, 0.0)
+				var leaf_mat := StandardMaterial3D.new()
+				leaf_mat.albedo_color = Color(0.18, 0.45, 0.2)
+				canopy.material_override = leaf_mat
+				mi.add_child(canopy)
+				obs["canopy"] = canopy
 			"rock":
 				var r: float      = obs["radius"]
 				var cyl          := CylinderMesh.new()
@@ -290,6 +322,7 @@ func _setup_obstacles() -> void:
 					mi.position       = Vector3(pos.x, cyl.height * 0.5, pos.y)
 				mi.material_override = solid_mat
 		add_child(mi)
+		obs["node"] = mi
 
 func _setup_ground() -> void:
 	var mi    := MeshInstance3D.new()
@@ -436,6 +469,7 @@ func setup_player(data: YounData) -> void:
 	if not data:
 		return
 	_player_shadow_radius = data.combat_footprint_radius()
+	_player_head_height = _head_height(data)
 	for child in _player_body.get_children():
 		child.queue_free()
 	_player_bodies.clear()
@@ -541,6 +575,7 @@ func setup_enemy_youn(data: YounData) -> void:
 	if not data:
 		return
 	_enemy_shadow_radius = data.combat_footprint_radius()
+	_enemy_head_height = _head_height(data)
 	_enemy_rotate_speed  = data.rotate_speed
 	if _enemy_fallback_mesh:
 		_enemy_fallback_mesh.visible = false
@@ -638,6 +673,10 @@ func _update_actor_positions() -> void:
 				player_y = PLATFORM_HEIGHT
 				break
 	_player_target = Vector3(player_pos.x, player_y, player_pos.y)
+	if not _climbed_tree.is_empty():
+		# Arriba del árbol: solo cambia lo que se ve; la posición lógica queda al pie.
+		var t: Vector2 = _climbed_tree["pos"]
+		_player_target = Vector3(t.x, TREE_HEIGHT, t.y)
 	var enemy_y: float = float(enemy_elevation) * PLATFORM_HEIGHT
 	_enemy_target  = Vector3(enemy_pos.x, enemy_y, enemy_pos.y)
 
@@ -652,6 +691,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		var dir  := camera.project_ray_normal(event.position)
 		if abs(dir.y) < 0.001: return
 		var pos := _ray_to_terrain(from, dir)
+		_last_click_pos = pos  # si se está confirmando, cambia el lugar elegido
 		position_selected.emit(pos)
 
 func _process(delta: float) -> void:
@@ -710,8 +750,63 @@ func _process(delta: float) -> void:
 		_enemy_move_pending = false
 		enemy_reached_target.emit()
 
+	_place_status_labels()
 	_show_disc(_player_shadow, Vector2(_player_body.position.x, _player_body.position.z), _player_shadow_radius)
 	_show_disc(_enemy_shadow,  Vector2(_enemy_body.position.x,  _enemy_body.position.z),  _enemy_shadow_radius)
+
+## Mientras se confirma una acción la vista previa (charco, cono, área...) queda
+## fija en el lugar elegido en vez de seguir al mouse.
+var _hover_locked := false
+var _last_click_pos := Vector2.ZERO
+
+func lock_hover_at_last_click() -> void:
+	_hover_locked = true
+
+func unlock_hover() -> void:
+	_hover_locked = false
+
+# ── Estados sobre los personajes ──────────────────────────────────────────────
+## Texto con los estados de cada uno (fuego, mojado, escudos...) flotando sobre
+## su cabeza. Lo arma combat.gd (set_status_texts) cada vez que cambia la UI.
+const DEFAULT_HEAD_HEIGHT := 1.6
+const STATUS_LABEL_GAP := 0.35
+var _player_head_height := DEFAULT_HEAD_HEIGHT
+var _enemy_head_height := DEFAULT_HEAD_HEIGHT
+var _player_status_label: Label3D
+var _enemy_status_label: Label3D
+
+## Misma altura que usa la burbuja de emociones en el mundo.
+static func _head_height(data: YounData) -> float:
+	var h := data.body_height * data.mesh_scale + data.mesh_y_offset
+	return h if h > 0.3 else DEFAULT_HEAD_HEIGHT
+
+func set_status_texts(player_text: String, enemy_text: String) -> void:
+	if _player_status_label == null:
+		_player_status_label = _make_status_label(Color(0.75, 0.95, 1.0))
+		_enemy_status_label = _make_status_label(Color(1.0, 0.85, 0.75))
+	_player_status_label.text = player_text
+	_enemy_status_label.text = enemy_text
+	_place_status_labels()
+
+func _make_status_label(color: Color) -> Label3D:
+	var label := Label3D.new()
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.font_size = 40
+	label.outline_size = 10
+	label.modulate = color
+	label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.width = 520.0
+	label.pixel_size = 0.004
+	add_child(label)
+	return label
+
+func _place_status_labels() -> void:
+	if _player_status_label == null or _player_body == null or _enemy_body == null:
+		return
+	_player_status_label.position = _player_body.position + Vector3(0.0, _player_head_height + STATUS_LABEL_GAP, 0.0)
+	_enemy_status_label.position = _enemy_body.position + Vector3(0.0, _enemy_head_height + STATUS_LABEL_GAP, 0.0)
 
 func _update_hover(screen_pos: Vector2, camera: Camera3D) -> void:
 	var any_disc   := _move_disc.visible or _attack_disc.visible \
@@ -728,13 +823,13 @@ func _update_hover(screen_pos: Vector2, camera: Camera3D) -> void:
 		return
 	var from := camera.project_ray_origin(screen_pos)
 	var dir  := camera.project_ray_normal(screen_pos)
-	if abs(dir.y) < 0.001:
+	if abs(dir.y) < 0.001 and not _hover_locked:
 		_hover_cell.visible             = false
 		_enemy_hover.visible            = false
 		_self_hover.visible             = false
 		_overwatch_preview_disc.visible = false
 		return
-	var pos := _ray_to_terrain(from, dir)
+	var pos := _last_click_pos if _hover_locked else _ray_to_terrain(from, dir)
 	if any_disc:
 		_show_single_cell(_hover_cell, pos)
 	else:
@@ -1638,7 +1733,7 @@ func is_enemy_in_explosion(center: Vector2, radius: float) -> bool:
 func get_rocks_in_range(origin: Vector2, range: float) -> Array[Dictionary]:
 	var rocks: Array[Dictionary] = []
 	for obs in solid_obstacles:
-		if obs.get("type", "solid") != "rock":
+		if obs.get("type", "solid") != "rock" and not is_module(obs):
 			continue
 		if origin.distance_to(obs["pos"]) <= range:
 			rocks.append(obs)
@@ -1778,6 +1873,672 @@ func calculate_push_landing(direction_target: Vector2, push_range: float) -> Vec
 	target = Vector2(clampf(target.x, 0.0, WORLD_W), clampf(target.y, 0.0, WORLD_H))
 	return _clip_path_at_obstacle(enemy_pos, target)
 
+## Tirón y ancla: el enemigo se arrastra hacia `toward` hasta `distance`
+## (sin pasarse) y se frena en los obstáculos. push_enemy_to además lo deja a
+## distancia mínima del jugador.
+func calculate_drag_landing(toward: Vector2, distance: float) -> Vector2:
+	var to_target: Vector2 = toward - enemy_pos
+	var length := to_target.length()
+	if length < 0.001:
+		return enemy_pos
+	var target: Vector2 = enemy_pos + to_target / length * minf(distance, length)
+	return _clip_path_at_obstacle(enemy_pos, target)
+
+# ── Módulos ───────────────────────────────────────────────────────────────────
+## Los obstáculos que se pueden romper, golpear o crear son módulos: bloques de
+## MODULE_SIZE × MODULE_SIZE (las piedras chicas del mapa también cuentan como
+## uno). No tienen vida: una línea "break" los rompe de una. Las paredes
+## grandes, los puentes y la plataforma son escenario.
+const MODULE_SIZE := 1.0
+## Dos módulos están "pegados" (para romperlos juntos) si sus centros están a
+## esta distancia o menos (incluye los de al lado en diagonal).
+const MODULE_TOUCH_DISTANCE := MODULE_SIZE * 1.6
+## Holgura para considerar que un módulo lanzado cae "encima" de alguien.
+const MODULE_ADJACENT_MARGIN := 0.35
+## Derrumbe: un módulo está pegado al enemigo si su borde queda a menos de un
+## módulo de su huella. Así cuentan los vecinos del hueco que deja un muro que
+## pasa por encima del enemigo (build_modules saltea los lugares ocupados).
+const MODULE_COLLAPSE_MARGIN := MODULE_SIZE + 0.1
+
+var _module_mat: StandardMaterial3D
+
+static func is_module(obs: Dictionary) -> bool:
+	return obs.get("module", false)
+
+## Muestra el alcance (romper, golpear o crear) alrededor del jugador.
+func start_module_selection(reach: float) -> void:
+	_show_disc(_attack_disc, player_pos, reach + _player_shadow_radius)
+
+func clear_module_selection() -> void:
+	_attack_disc.visible = false
+	_push_disc.visible = false
+	clear_enemy_highlight()
+
+## Derrumbe: resalta al enemigo y el alcance.
+func start_collapse_selection(reach: float) -> void:
+	start_push_enemy_selection(reach)
+
+## Lanzar módulo: muestra hasta dónde se puede tirar.
+func start_module_throw_target(throw_range: float) -> void:
+	_show_disc(_attack_disc, player_pos, throw_range)
+
+## Módulos pegados al enemigo (los que le caen encima con un derrumbe).
+func modules_adjacent_to_enemy() -> Array:
+	var result: Array = []
+	for obs in solid_obstacles:
+		if is_module(obs) and _obstacle_edge_distance(obs, enemy_pos) <= _enemy_shadow_radius + MODULE_COLLAPSE_MARGIN:
+			result.append(obs)
+	return result
+
+## Derrumbe: los módulos pegados al enemigo se le caen encima y se rompen.
+## Devuelve cuántos fueron.
+func collapse_modules_on_enemy() -> int:
+	var fallen := modules_adjacent_to_enemy()
+	for obs in fallen:
+		_remove_module(obs)
+	if not fallen.is_empty():
+		_obstacles_changed()
+	return fallen.size()
+
+## Lanza el módulo a `target` (vuela por encima de todo): al caer se rompe y le
+## pega a quien esté ahí. Devuelve {"enemy": bool, "player": bool}.
+func throw_module(obs: Dictionary, target: Vector2) -> Dictionary:
+	var reach := MODULE_SIZE * 0.5 + MODULE_ADJACENT_MARGIN
+	var hits := {
+		"enemy": target.distance_to(enemy_pos) <= reach + _enemy_shadow_radius,
+		"player": target.distance_to(player_pos) <= reach + _player_shadow_radius,
+	}
+	solid_obstacles.erase(obs)
+	_obstacles_changed()
+	var node = obs.get("node")
+	if is_instance_valid(node):
+		if node.is_inside_tree():
+			var tween: Tween = node.create_tween()
+			var mid := Vector3((node.position.x + target.x) * 0.5, 3.0, (node.position.z + target.y) * 0.5)
+			tween.tween_property(node, "position", mid, 0.18)
+			tween.tween_property(node, "position", Vector3(target.x, MODULE_SIZE * 0.5, target.y), 0.18)
+			tween.tween_callback(node.queue_free)
+		else:
+			node.free()
+	return hits
+
+func _remove_module(obs: Dictionary) -> void:
+	var node = obs.get("node")
+	if is_instance_valid(node):
+		node.queue_free()
+	solid_obstacles.erase(obs)
+
+## El módulo bajo `pos` (o {} si no hay).
+func get_module_at(pos: Vector2) -> Dictionary:
+	for obs in solid_obstacles:
+		if is_module(obs) and _obstacle_edge_distance(obs, pos) <= CLICK_MARGIN:
+			return obs
+	return {}
+
+## Distancia del jugador al borde del obstáculo, contando desde su huella.
+func obstacle_gap(obs: Dictionary) -> float:
+	return maxf(0.0, _obstacle_edge_distance(obs, player_pos) - _player_shadow_radius)
+
+func _obstacle_edge_distance(obs: Dictionary, pos: Vector2) -> float:
+	var c: Vector2 = obs["pos"]
+	if obs.has("box"):
+		var h: Vector2 = obs["box"] * 0.5
+		var d := Vector2(maxf(absf(pos.x - c.x) - h.x, 0.0), maxf(absf(pos.y - c.y) - h.y, 0.0))
+		return d.length()
+	return maxf(0.0, pos.distance_to(c) - float(obs["radius"]))
+
+## Levanta hasta `count` módulos en fila, centrada en `center` y perpendicular
+## a la línea jugador → center (un muro de frente). Los lugares ocupados (por
+## un actor, otro obstáculo o fuera del mapa) se saltean. Devuelve cuántos creó.
+func build_modules(center: Vector2, count: int) -> int:
+	var dir: Vector2 = center - player_pos
+	dir = dir.normalized() if dir.length() > 0.001 else Vector2.RIGHT
+	var perp := Vector2(-dir.y, dir.x)
+	var built := 0
+	for i in count:
+		var p: Vector2 = center + perp * (float(i) - float(count - 1) * 0.5) * MODULE_SIZE
+		if _module_fits(p):
+			_add_module(p)
+			built += 1
+	if built > 0:
+		_obstacles_changed()
+	return built
+
+func _module_fits(p: Vector2) -> bool:
+	var half := MODULE_SIZE * 0.5
+	if p.x < half or p.y < half or p.x > WORLD_W - half or p.y > WORLD_H - half:
+		return false
+	if p.distance_to(player_pos) < _player_shadow_radius + half:
+		return false
+	if p.distance_to(enemy_pos) < _enemy_shadow_radius + half:
+		return false
+	for obs in solid_obstacles:
+		if _obstacle_edge_distance(obs, p) < half * 0.9:
+			return false
+	return true
+
+func _add_module(p: Vector2) -> Dictionary:
+	if _module_mat == null:
+		_module_mat = StandardMaterial3D.new()
+		_module_mat.albedo_color = Color(0.46, 0.42, 0.36)
+		_module_mat.roughness = 0.95
+	var mi := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(MODULE_SIZE, MODULE_SIZE, MODULE_SIZE)
+	mi.mesh = box
+	mi.position = Vector3(p.x, MODULE_SIZE * 0.5, p.y)
+	mi.material_override = _module_mat
+	add_child(mi)
+	var obs := {"pos": p, "box": Vector2(MODULE_SIZE, MODULE_SIZE), "type": "solid", "module": true, "node": mi}
+	solid_obstacles.append(obs)
+	return obs
+
+## Rompe `first` y los módulos pegados a él (los más cercanos primero), hasta
+## `count` en total. Devuelve cuántos rompió.
+func break_modules(first: Dictionary, count: int) -> int:
+	var group: Array = [first]
+	if first.has("log_id"):
+		# Un tronco tirado se rompe entero, con una sola carta.
+		group = solid_obstacles.filter(func(o): return o.get("log_id", -1) == first["log_id"])
+		count = 0
+	while group.size() < count:
+		var best: Dictionary = {}
+		var best_dist := INF
+		for obs in solid_obstacles:
+			if not is_module(obs) or group.any(func(g): return is_same(g, obs)):
+				continue
+			var touching: bool = group.any(func(g): return (g["pos"] as Vector2).distance_to(obs["pos"]) <= MODULE_TOUCH_DISTANCE)
+			var dist: float = (first["pos"] as Vector2).distance_to(obs["pos"])
+			if touching and dist < best_dist:
+				best = obs
+				best_dist = dist
+		if best.is_empty():
+			break
+		group.append(best)
+	for obs in group:
+		_remove_module(obs)
+	_obstacles_changed()
+	return group.size()
+
+## Golpe de módulo: lo desliza en `dir` hasta `distance` o hasta chocar con un
+## actor u otro obstáculo. Un tramo de tronco arrastra al tronco entero (ariete).
+## Si choca un árbol con el jugador arriba, lo tira.
+## Devuelve {"hit": "enemy" | "player" | "", "pos": Vector2, "tree": Dictionary}.
+func slide_module(obs: Dictionary, dir: Vector2, distance: float) -> Dictionary:
+	var group: Array = [obs]
+	if obs.has("log_id"):
+		group = solid_obstacles.filter(func(o): return o.get("log_id", -1) == obs["log_id"])
+	var step: Vector2 = dir.normalized() * distance
+	var best_t := 1.0
+	var hit := ""
+	var hit_tree: Dictionary = {}
+	for member in group:
+		var from: Vector2 = member["pos"]
+		var to: Vector2 = from + step
+		var half := _module_half(member)
+		best_t = minf(best_t, _bounds_t(from, to, half))
+		for actor in [["enemy", enemy_pos, _enemy_shadow_radius], ["player", player_pos, _player_shadow_radius]]:
+			var t := _first_contact_circle(from, to, actor[1], actor[2] + half)
+			if t >= 0.0 and t < best_t:
+				best_t = t
+				hit = actor[0]
+				hit_tree = {}
+		for other in solid_obstacles:
+			if group.any(func(g): return is_same(g, other)) or other.get("type", "solid") == "bridge":
+				continue
+			var t: float
+			if other.has("box"):
+				t = _segment_hit_t_box(from, to, other["pos"], other["box"] * 0.5 + Vector2(half, half))
+			else:
+				t = _first_contact_circle(from, to, other["pos"], float(other["radius"]) + half)
+			if t >= 0.0 and t < best_t:
+				best_t = t
+				hit = ""
+				hit_tree = other if other.get("type", "solid") == "tree" else {}
+	var length := step.length()
+	var travel := maxf(0.0, best_t * length - 0.02) if best_t < 1.0 else length
+	var offset: Vector2 = step.normalized() * travel if length > 0.001 else Vector2.ZERO
+	for member in group:
+		var final: Vector2 = member["pos"] + offset
+		member["pos"] = final
+		var node = member.get("node")
+		if is_instance_valid(node):
+			var target := Vector3(final.x, node.position.y, final.y)
+			if node.is_inside_tree():
+				node.create_tween().tween_property(node, "position", target, 0.25)
+			else:
+				node.position = target
+	_obstacles_changed()
+	if not hit_tree.is_empty():
+		_knock_player_off(hit_tree, false)  # el golpe sacude el árbol
+	return {"hit": hit, "pos": obs["pos"], "tree": hit_tree}
+
+## Hasta qué fracción del segmento se puede mover algo de radio `half` sin salir del mapa.
+func _bounds_t(from: Vector2, to: Vector2, half: float) -> float:
+	var t := 1.0
+	var d := to - from
+	for axis in 2:
+		if absf(d[axis]) < 0.0001:
+			continue
+		var limit: float = (WORLD_W if axis == 0 else WORLD_H) - half if d[axis] > 0.0 else half
+		t = minf(t, maxf(0.0, (limit - from[axis]) / d[axis]))
+	return t
+
+## Cono de dirección para golpear un módulo: se aleja del jugador.
+func start_module_push_cone(module_pos: Vector2, push_range: float) -> void:
+	_attack_disc.visible = false
+	var dir: Vector2 = (module_pos - player_pos).normalized()
+	_build_cone_disc(_push_disc, module_pos, dir, push_range, 55.0)
+
+func is_pos_in_module_cone(module_pos: Vector2, pos: Vector2, push_range: float) -> bool:
+	var to_pos: Vector2 = pos - module_pos
+	if to_pos.length() < 0.001 or to_pos.length() > push_range:
+		return false
+	var dir: Vector2 = (module_pos - player_pos).normalized()
+	return absf(dir.angle_to(to_pos.normalized())) <= deg_to_rad(55.0)
+
+func _module_half(obs: Dictionary) -> float:
+	if obs.has("box"):
+		var b: Vector2 = obs["box"]
+		return maxf(b.x, b.y) * 0.5
+	return float(obs["radius"])
+
+## Primer contacto del segmento con el círculo; si ya empieza tocándolo solo
+## cuenta si se mueve hacia él (alejarse no es chocar).
+static func _first_contact_circle(a: Vector2, b: Vector2, c: Vector2, r: float) -> float:
+	var d := b - a
+	if a.distance_to(c) < r:
+		return 0.0 if d.dot(c - a) > 0.0 else -1.0
+	var f := a - c
+	var qa := d.dot(d)
+	if qa < 0.000001:
+		return -1.0
+	var qb := 2.0 * f.dot(d)
+	var qc := f.dot(f) - r * r
+	var disc := qb * qb - 4.0 * qa * qc
+	if disc < 0.0:
+		return -1.0
+	var t := (-qb - sqrt(disc)) / (2.0 * qa)
+	return t if t >= 0.0 and t <= 1.0 else -1.0
+
+## Los obstáculos cambiaron: se recalculan los bloqueos (caminos y selección).
+func _obstacles_changed() -> void:
+	_blocked_cache.clear()
+	_warm_next = 0
+
+# ── Hechizos ──────────────────────────────────────────────────────────────────
+## Zonas marcadas que caen al terminar la ronda en la que llegan a 0 rondas
+## (Meteoro, Granizada...): [{"pos", "radius", "damage", "name", "rounds",
+## "effect", "puddle_turns", "node", "label"}]. effect "" = no deja charco.
+var delayed_zones: Array[Dictionary] = []
+## Qué parte del daño del hechizo es el daño por turno del charco que deja.
+const DELAYED_PUDDLE_TICK_FRACTION := 0.25
+
+## Hechizos a un punto: muestra el alcance alrededor del jugador.
+func start_spell_selection(spell_range: float) -> void:
+	_show_disc(_attack_disc, player_pos, spell_range)
+
+func clear_spell_selection() -> void:
+	_attack_disc.visible = false
+	clear_overwatch_selection()
+	clear_enemy_highlight()
+
+## Cambia el efecto de los charcos que toca el círculo (Chispa: grasa → fuego;
+## Escarcha: agua → hielo). Devuelve cuántos cambió.
+func convert_puddles(center: Vector2, radius: float, from_effects: Array, to_effect: String) -> int:
+	var converted: Array = []
+	for i in puddle_zones.size():
+		var zone: Dictionary = puddle_zones[i]
+		if not zone.get("effect", "wet") in from_effects:
+			continue
+		if center.distance_to(zone["pos"]) > radius + float(zone["radius"]):
+			continue
+		zone["effect"] = to_effect
+		if not zone.get("lens", false):
+			_rebuild_puddle_visual(i)
+		converted.append(zone)
+	# El charco nuevo de fuego prende los árboles que toca (y así se propaga).
+	for zone in converted:
+		if to_effect == "fire":
+			ignite_trees_in_circle(zone["pos"], zone["radius"])
+		elif to_effect in ["ice", "wet"]:
+			extinguish_trees_in_circle(zone["pos"], zone["radius"])
+	return converted.size()
+
+## Charcos de esos efectos que toca el segmento (Descarga se propaga por el agua).
+func puddles_on_segment(from: Vector2, to: Vector2, effects: Array) -> Array:
+	var result: Array = []
+	for zone in puddle_zones:
+		if zone.get("effect", "wet") in effects and _segment_point_distance(from, to, zone["pos"]) <= float(zone["radius"]):
+			result.append(zone)
+	return result
+
+static func is_pos_in_zones(pos: Vector2, zones: Array) -> bool:
+	for zone in zones:
+		if pos.distance_to(zone["pos"]) <= float(zone["radius"]):
+			return true
+	return false
+
+## El segmento pasa por la huella del enemigo (rayos en línea).
+func segment_hits_enemy(from: Vector2, to: Vector2) -> bool:
+	return _segment_point_distance(from, to, enemy_pos) <= _enemy_shadow_radius
+
+## El enemigo está dentro del cono (se cuenta su huella).
+func is_enemy_in_cone(origin: Vector2, dir: Vector2, cone_range: float, half_angle_deg: float) -> bool:
+	var to_enemy: Vector2 = enemy_pos - origin
+	var dist := to_enemy.length()
+	if dist > cone_range + _enemy_shadow_radius:
+		return false
+	if dist <= _enemy_shadow_radius:
+		return true
+	var slack := asin(clampf(_enemy_shadow_radius / dist, 0.0, 1.0))
+	return absf(dir.normalized().angle_to(to_enemy)) <= deg_to_rad(half_angle_deg) + slack
+
+## El enemigo queda dentro del círculo (se cuenta su huella).
+func is_enemy_in_circle(center: Vector2, radius: float) -> bool:
+	return center.distance_to(enemy_pos) <= radius + _enemy_shadow_radius
+
+func is_player_in_circle(center: Vector2, radius: float) -> bool:
+	return center.distance_to(player_pos) <= radius + _player_shadow_radius
+
+static func _segment_point_distance(a: Vector2, b: Vector2, p: Vector2) -> float:
+	var ab := b - a
+	var len2 := ab.length_squared()
+	if len2 < 0.000001:
+		return p.distance_to(a)
+	var t := clampf((p - a).dot(ab) / len2, 0.0, 1.0)
+	return p.distance_to(a + ab * t)
+
+## Meteoro y compañía: marca la zona. Cae en resolve_delayed_zones cuando
+## pasan `rounds` rondas; si effect no es "", deja ese charco.
+func place_delayed_zone(pos: Vector2, radius: float, damage: int, zone_name: String,
+		rounds: int = 1, effect: String = "", puddle_turns: int = 0) -> void:
+	var mi := _make_disc(Color(1.0, 0.25, 0.1, 0.45))
+	_build_tile_disc(mi, pos, radius, 0.0, HIGHLIGHT_Y)
+	var label := Label3D.new()
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.font_size = 64
+	label.outline_size = 12
+	label.position = Vector3(pos.x, 0.6, pos.y)
+	add_child(label)
+	var zone := {
+		"pos": pos, "radius": radius, "damage": damage, "name": zone_name,
+		"rounds": maxi(1, rounds), "effect": effect, "puddle_turns": puddle_turns,
+		"node": mi, "label": label,
+	}
+	_update_delayed_label(zone)
+	delayed_zones.append(zone)
+
+## Pasa una ronda: caen las zonas que llegan a 0. Devuelve las que cayeron:
+## [{"name", "damage", "effect", "tick_damage", "enemy": bool, "player": bool}].
+## Las que cayeron dejan su charco.
+func resolve_delayed_zones() -> Array:
+	var results: Array = []
+	for i in range(delayed_zones.size() - 1, -1, -1):
+		var zone: Dictionary = delayed_zones[i]
+		zone["rounds"] -= 1
+		if zone["rounds"] > 0:
+			_update_delayed_label(zone)
+			continue
+		var tick := roundi(float(zone["damage"]) * DELAYED_PUDDLE_TICK_FRACTION)
+		results.push_front({
+			"name": zone["name"], "damage": zone["damage"], "effect": zone["effect"], "tick_damage": tick,
+			"enemy": is_enemy_in_circle(zone["pos"], zone["radius"]),
+			"player": is_player_in_circle(zone["pos"], zone["radius"]),
+		})
+		if zone["effect"] != "":
+			var puddle_damage := tick if zone["effect"] in ["fire", "poison", "blood"] else 0
+			place_puddle(zone["pos"], zone["radius"], zone["effect"], zone["puddle_turns"], puddle_damage)
+		for key in ["node", "label"]:
+			var node = zone.get(key)
+			if is_instance_valid(node):
+				node.queue_free()
+		delayed_zones.remove_at(i)
+	return results
+
+func _update_delayed_label(zone: Dictionary) -> void:
+	var label = zone.get("label")
+	if is_instance_valid(label):
+		label.text = str(zone["rounds"])
+
+## Parpadeo: se puede aparecer ahí (dentro del mapa, sin obstáculo y sin pisar
+## al enemigo). Ignora lo que haya en el camino.
+func can_blink_to(pos: Vector2) -> bool:
+	if pos.x < 0.0 or pos.y < 0.0 or pos.x > WORLD_W or pos.y > WORLD_H:
+		return false
+	if pos.distance_to(enemy_pos) < MIN_SEPARATION:
+		return false
+	return not _pos_blocked(pos, _elevation_at(pos), _player_shadow_radius)
+
+func blink_player_to(pos: Vector2) -> void:
+	player_pos = pos
+	player_elevation = _elevation_at(pos)
+	_update_actor_positions()
+
+# ── Árboles ───────────────────────────────────────────────────────────────────
+## Un árbol se puede trepar (tree_climb), talar con una línea "break" (cae y
+## queda un tronco tirado) o prender fuego (arde TREE_BURN_ROUNDS y desaparece).
+## Si el jugador está arriba cuando pasa algo de eso, cae al pie del árbol.
+const TREE_BURN_ROUNDS := 2
+## El tronco tirado: tramos en fila, bajos (bloquean el paso, no la vista).
+const LOG_SEGMENTS := 3
+const LOG_SEGMENT_RADIUS := 0.45
+## Hasta dónde llega el fuego de un árbol a los charcos de alrededor.
+const TREE_FIRE_SPREAD_MARGIN := 0.5
+## Charco de planta pegado a un árbol: sale así de más grande.
+const TREE_VINE_RADIUS_MULT := 1.5
+const TREE_VINE_REACH := 1.0
+
+var _climbed_tree: Dictionary = {}
+var _tree_landing_marker: MeshInstance3D
+var _next_log_id := 0
+
+## El árbol bajo `pos` (o {} si no hay).
+func get_tree_at(pos: Vector2) -> Dictionary:
+	for obs in solid_obstacles:
+		if obs.get("type", "solid") == "tree" and _obstacle_edge_distance(obs, pos) <= CLICK_MARGIN:
+			return obs
+	return {}
+
+static func is_tree_burning(tree: Dictionary) -> bool:
+	return tree.get("burning", 0) > 0
+
+## Dónde se puede caer desde el árbol: un lugar libre, o encima del enemigo.
+func can_drop_at(pos: Vector2) -> bool:
+	return can_blink_to(pos) or is_enemy_in_circle(pos, 0.0)
+
+## Sube al árbol y marca dónde va a caer.
+func climb_tree(tree: Dictionary, landing: Vector2) -> void:
+	_climbed_tree = tree
+	if _tree_landing_marker == null:
+		_tree_landing_marker = _make_disc(Color(0.3, 0.9, 0.4, 0.5))
+	_build_tile_disc(_tree_landing_marker, landing, 0.6, 0.0, HIGHLIGHT_Y)
+	_tree_landing_marker.visible = true
+	_update_actor_positions()
+
+## Cae del árbol a `landing` (si cae sobre el enemigo, queda pegado a él).
+## Devuelve si le cayó encima.
+func drop_from_tree(landing: Vector2) -> bool:
+	var hit := is_enemy_in_circle(landing, 0.0)
+	var target := landing
+	if hit:
+		var away: Vector2 = landing - enemy_pos
+		if away.length() < 0.001:
+			away = player_pos - enemy_pos
+		target = enemy_pos + (away.normalized() if away.length() > 0.001 else Vector2.RIGHT) * MIN_SEPARATION
+		if not can_blink_to(target):
+			target = player_pos  # sin lugar al lado del enemigo: cae al pie del árbol
+	elif not can_blink_to(target):
+		target = player_pos
+	_leave_tree()
+	blink_player_to(target)
+	return hit
+
+func is_player_in_tree() -> bool:
+	return not _climbed_tree.is_empty()
+
+func _leave_tree() -> void:
+	_climbed_tree = {}
+	if _tree_landing_marker != null:
+		_tree_landing_marker.visible = false
+	_update_actor_positions()
+
+## Si el jugador está en ese árbol, lo baja al pie y avisa (player_knocked_off_tree).
+func _knock_player_off(tree: Dictionary, burning: bool) -> void:
+	if not is_same(_climbed_tree, tree):
+		return
+	_leave_tree()
+	player_knocked_off_tree.emit(burning)
+
+## Tala el árbol: cae hacia `dir` y queda un tronco tirado. Los tramos que
+## caerían encima de alguien no se crean; si es el enemigo, le pega.
+## Devuelve {"enemy_hit": bool}. Si el jugador estaba arriba, se cae.
+func fell_tree(tree: Dictionary, dir: Vector2) -> Dictionary:
+	_knock_player_off(tree, false)
+	var base: Vector2 = tree["pos"]
+	var node = tree.get("node")
+	if is_instance_valid(node):
+		node.queue_free()
+	solid_obstacles.erase(tree)
+	dir = dir.normalized() if dir.length() > 0.001 else Vector2.RIGHT
+	var log_id := _next_log_id
+	_next_log_id += 1
+	var enemy_hit := false
+	var step := LOG_SEGMENT_RADIUS * 2.0
+	for i in LOG_SEGMENTS:
+		var p: Vector2 = base + dir * (step * float(i))
+		if is_enemy_in_circle(p, LOG_SEGMENT_RADIUS):
+			enemy_hit = true
+			continue
+		if is_player_in_circle(p, LOG_SEGMENT_RADIUS):
+			continue
+		if p.x < 0.0 or p.y < 0.0 or p.x > WORLD_W or p.y > WORLD_H:
+			continue
+		_add_log_segment(p, dir, log_id)
+	_obstacles_changed()
+	return {"enemy_hit": enemy_hit}
+
+func _add_log_segment(p: Vector2, dir: Vector2, log_id: int) -> void:
+	var mi := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = LOG_SEGMENT_RADIUS * 0.8
+	cyl.bottom_radius = LOG_SEGMENT_RADIUS * 0.8
+	cyl.height = LOG_SEGMENT_RADIUS * 2.1
+	mi.mesh = cyl
+	mi.position = Vector3(p.x, LOG_SEGMENT_RADIUS * 0.8, p.y)
+	mi.rotation = Vector3(0.0, -atan2(dir.y, dir.x), PI * 0.5)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.36, 0.24, 0.14)
+	mi.material_override = mat
+	add_child(mi)
+	solid_obstacles.append({
+		"pos": p, "radius": LOG_SEGMENT_RADIUS, "type": "rock", "module": true,
+		"log_id": log_id, "node": mi,
+	})
+
+## Prende fuego los árboles que toca el círculo. Devuelve cuántos.
+func ignite_trees_in_circle(center: Vector2, radius: float) -> int:
+	var count := 0
+	for obs in solid_obstacles.duplicate():
+		if obs.get("type", "solid") == "tree" and _obstacle_edge_distance(obs, center) <= radius:
+			count += int(_ignite_tree(obs))
+	return count
+
+## Prende fuego los árboles dentro del cono (Aliento). Devuelve cuántos.
+func ignite_trees_in_cone(origin: Vector2, dir: Vector2, cone_range: float, half_angle_deg: float) -> int:
+	var count := 0
+	for obs in solid_obstacles.duplicate():
+		if obs.get("type", "solid") != "tree":
+			continue
+		var to_tree: Vector2 = obs["pos"] - origin
+		var dist := to_tree.length()
+		if dist > cone_range + float(obs["radius"]) or dist < 0.001:
+			continue
+		var slack := asin(clampf(float(obs["radius"]) / dist, 0.0, 1.0))
+		if absf(dir.normalized().angle_to(to_tree)) <= deg_to_rad(half_angle_deg) + slack:
+			count += int(_ignite_tree(obs))
+	return count
+
+func _ignite_tree(tree: Dictionary) -> bool:
+	if is_tree_burning(tree):
+		return false
+	tree["burning"] = TREE_BURN_ROUNDS
+	_paint_canopy(tree, true)
+	_knock_player_off(tree, true)
+	_spread_fire_from_tree(tree)
+	return true
+
+## Un árbol en llamas prende los charcos de grasa y planta que lo tocan (y
+## esos charcos, a su vez, los árboles que toquen: el fuego se propaga).
+func _spread_fire_from_tree(tree: Dictionary) -> void:
+	convert_puddles(tree["pos"], float(tree["radius"]) + TREE_FIRE_SPREAD_MARGIN, ["grease", "vine"], "fire")
+
+## Apaga los árboles en llamas que toca el círculo (hielo, agua). Devuelve cuántos.
+func extinguish_trees_in_circle(center: Vector2, radius: float) -> int:
+	var count := 0
+	for obs in solid_obstacles:
+		if obs.get("type", "solid") == "tree" and is_tree_burning(obs) and _obstacle_edge_distance(obs, center) <= radius:
+			obs["burning"] = 0
+			_paint_canopy(obs, false)
+			count += 1
+	return count
+
+func _paint_canopy(tree: Dictionary, burning: bool) -> void:
+	var canopy = tree.get("canopy")
+	if not is_instance_valid(canopy):
+		return
+	var mat := StandardMaterial3D.new()
+	if burning:
+		mat.albedo_color = Color(1.0, 0.4, 0.05)
+		mat.emission_enabled = true
+		mat.emission = Color(1.0, 0.35, 0.0)
+	else:
+		mat.albedo_color = Color(0.18, 0.45, 0.2)
+	canopy.material_override = mat
+
+## Hay un árbol (que no arde) a `reach` o menos de `pos` (Raíces, charcos de planta).
+func is_tree_near(pos: Vector2, reach: float) -> bool:
+	for obs in solid_obstacles:
+		if obs.get("type", "solid") == "tree" and not is_tree_burning(obs) and _obstacle_edge_distance(obs, pos) <= reach:
+			return true
+	return false
+
+## Pararrayos: el primer árbol que cruza el segmento, con la fracción donde lo
+## toca: {"tree": Dictionary, "t": float} o {} si no cruza ninguno.
+func first_tree_on_segment(from: Vector2, to: Vector2) -> Dictionary:
+	var best := {}
+	for obs in solid_obstacles:
+		if obs.get("type", "solid") != "tree":
+			continue
+		var t := _first_contact_circle(from, to, obs["pos"], float(obs["radius"]))
+		if t >= 0.0 and (best.is_empty() or t < best["t"]):
+			best = {"tree": obs, "t": t}
+	return best
+
+func is_player_in_this_tree(tree: Dictionary) -> bool:
+	return is_same(_climbed_tree, tree)
+
+## Pasa una ronda: los árboles que arden se consumen y desaparecen.
+func tick_trees() -> void:
+	var changed := false
+	for obs in solid_obstacles.duplicate():
+		if not is_tree_burning(obs):
+			continue
+		_spread_fire_from_tree(obs)
+		obs["burning"] -= 1
+		if obs["burning"] <= 0:
+			var node = obs.get("node")
+			if is_instance_valid(node):
+				node.queue_free()
+			solid_obstacles.erase(obs)
+			changed = true
+	if changed:
+		_obstacles_changed()
+
+## Ancla: muestra el alcance del disparo alrededor del jugador.
+func start_anchor_selection(shot_range: float) -> void:
+	_show_disc(_attack_disc, player_pos, shot_range)
+
 func push_enemy_to(landing: Vector2) -> void:
 	var sep: Vector2 = landing - player_pos
 	if sep.length() < MIN_SEPARATION:
@@ -1858,9 +2619,22 @@ func _puddle_interaction(a: String, b: String) -> String:
 	if TABLE.has(k): return TABLE[k]
 	return ""
 
-func place_puddle(pos: Vector2, radius: float, effect: String = "wet") -> void:
+## Deja un charco. turns: rondas que dura (0 = no se va nunca; ver
+## tick_puddles). damage: daño por turno del estado que causa (0 = el de
+## CombatState). Si pisa otro charco con el que reacciona (_puddle_interaction),
+## en la intersección queda un charco "lente" con el efecto combinado, que dura
+## lo que el más corto de los dos.
+##
+## Cada zona: {"id", "pos", "radius", "effect", "turns", "damage", "lens",
+## "excl"}; excl son los ids de los charcos cuyo disco se recorta del dibujo.
+func place_puddle(pos: Vector2, radius: float, effect: String = "wet", turns: int = 0, damage: int = 0) -> void:
 	var r2 := float(radius)
-	var new_exclusions: Array = []
+	if effect == "vine" and is_tree_near(pos, r2 + TREE_VINE_REACH):
+		r2 *= TREE_VINE_RADIUS_MULT  # las plantas crecen más al lado de un árbol
+	var new_id := _next_puddle_id
+	_next_puddle_id += 1
+	var new_excl: Array = []
+	var to_rebuild: Array[int] = []
 
 	for i in range(puddle_zones.size()):
 		var existing: Dictionary = puddle_zones[i]
@@ -1873,29 +2647,137 @@ func place_puddle(pos: Vector2, radius: float, effect: String = "wet") -> void:
 		if combined == "":
 			continue
 
-		# Reconstruir el visual del charco existente sin los tiles de la lente
-		_puddle_visuals[i].queue_free()
-		var rebuilt := MeshInstance3D.new()
-		var base_e := _puddle_base_color(existing.get("effect", "wet"))
-		rebuilt.set_meta("fill_mat", _make_mat(Color(base_e.r, base_e.g, base_e.b, 0.35)))
-		rebuilt.set_meta("bord_mat", _make_mat(Color(
-			minf(base_e.r+0.2,1.0), minf(base_e.g+0.2,1.0), minf(base_e.b+0.2,1.0), 0.80)))
-		add_child(rebuilt)
-		_build_tile_disc(rebuilt, c1, r1, 0.0, 0.013, [{"pos": pos, "radius": r2}])
-		_puddle_visuals[i] = rebuilt
+		# El charco existente se redibuja sin la parte que ocupa el nuevo.
+		existing["excl"].append(new_id)
+		to_rebuild.append(i)
 
 		# Zona de interacción en forma de lente
 		var ipos: Vector2  = c1.lerp(pos, r1 / (r1 + r2))
 		var ir: float      = maxf(0.5, (r1 + r2 - dist) * 0.5)
-		puddle_zones.append({"pos": ipos, "radius": ir, "effect": combined})
+		puddle_zones.append({
+			"id": _next_puddle_id, "pos": ipos, "radius": ir, "effect": combined,
+			"turns": _shorter_turns(existing["turns"], turns),
+			"damage": maxi(existing["damage"], damage), "lens": true, "excl": [],
+			"parents": [existing["id"], new_id],
+		})
+		_next_puddle_id += 1
 		_add_puddle_visual_lens(c1, r1, pos, r2, combined)
 
-		new_exclusions.append({"pos": c1, "radius": r1})
+		new_excl.append(existing["id"])
 
-	puddle_zones.append({"pos": pos, "radius": r2, "effect": effect})
-	_add_puddle_visual(pos, r2, effect, new_exclusions)
+	puddle_zones.append({
+		"id": new_id, "pos": pos, "radius": r2, "effect": effect,
+		"turns": turns, "damage": damage, "lens": false, "excl": new_excl,
+	})
+	_puddle_visuals.append(_make_puddle_visual(pos, r2, effect, _puddle_exclusions(puddle_zones.back())))
+	for i in to_rebuild:
+		_rebuild_puddle_visual(i)
+	if effect == "fire":
+		ignite_trees_in_circle(pos, r2)
+	elif effect in ["ice", "wet"]:
+		extinguish_trees_in_circle(pos, r2)
 
-func _add_puddle_visual(pos: Vector2, radius: float, effect: String = "wet", exclusions: Array = []) -> void:
+## Pasa una ronda: los charcos con duración pierden una y los que llegan a 0
+## desaparecen (con sus lentes). Los que los recortaban se redibujan enteros.
+func tick_puddles() -> void:
+	var removed: Array = []
+	for zone in puddle_zones:
+		if zone["turns"] > 0:
+			zone["turns"] -= 1
+			if zone["turns"] == 0:
+				removed.append(zone["id"])
+	if removed.is_empty():
+		return
+	for i in range(puddle_zones.size() - 1, -1, -1):
+		if puddle_zones[i]["id"] in removed:
+			_puddle_visuals[i].queue_free()
+			_puddle_visuals.remove_at(i)
+			puddle_zones.remove_at(i)
+	for i in puddle_zones.size():
+		var excl: Array = puddle_zones[i]["excl"]
+		var kept := excl.filter(func(id): return not id in removed)
+		if kept.size() != excl.size():
+			puddle_zones[i]["excl"] = kept
+			_rebuild_puddle_visual(i)
+
+## El charco (no combinado) que hay en `pos`, o {} si no hay.
+func get_puddle_at(pos: Vector2) -> Dictionary:
+	for zone in puddle_zones:
+		if not zone.get("lens", false) and pos.distance_to(zone["pos"]) <= float(zone["radius"]) + CLICK_MARGIN * 0.5:
+			return zone
+	return {}
+
+## Saca un charco del mapa, con sus zonas combinadas; los que lo recortaban se
+## redibujan enteros.
+func remove_puddle(zone: Dictionary) -> void:
+	var id: int = zone["id"]
+	var removed: Array = [id]
+	for other in puddle_zones:
+		if other.get("lens", false) and id in other.get("parents", []):
+			removed.append(other["id"])
+	for i in range(puddle_zones.size() - 1, -1, -1):
+		if puddle_zones[i]["id"] in removed:
+			_puddle_visuals[i].queue_free()
+			_puddle_visuals.remove_at(i)
+			puddle_zones.remove_at(i)
+	for i in puddle_zones.size():
+		var excl: Array = puddle_zones[i]["excl"]
+		var kept := excl.filter(func(e): return not e in removed)
+		if kept.size() != excl.size():
+			puddle_zones[i]["excl"] = kept
+			_rebuild_puddle_visual(i)
+
+## Traslado de charco: lo saca de donde está y lo deja en `to`, con el mismo
+## efecto, radio, rondas que le quedan y daño. Devuelve el charco nuevo.
+func move_puddle(zone: Dictionary, to: Vector2) -> Dictionary:
+	remove_puddle(zone)
+	place_puddle(to, zone["radius"], zone["effect"], zone["turns"], zone["damage"])
+	for i in range(puddle_zones.size() - 1, -1, -1):
+		if not puddle_zones[i].get("lens", false):
+			return puddle_zones[i]
+	return {}
+
+## Traslado de charco, paso 2: dónde puede caer (alrededor del charco elegido).
+func start_puddle_hop_landing(puddle_pos: Vector2, hop_range: float) -> void:
+	_show_disc(_attack_disc, puddle_pos, hop_range)
+
+## Daño por turno de los estados de los charcos que cruza el segmento:
+## {efecto: daño} (el mayor si hay varios); solo charcos con daño propio.
+func get_puddle_damage_along(from: Vector2, to: Vector2) -> Dictionary:
+	var result := {}
+	if puddle_zones.is_empty():
+		return result
+	var steps := maxi(2, int(from.distance_to(to) / 0.3))
+	for i in range(steps + 1):
+		var pos: Vector2 = from.lerp(to, float(i) / float(steps))
+		for puddle in puddle_zones:
+			var dmg: int = puddle.get("damage", 0)
+			if dmg > 0 and pos.distance_to(puddle["pos"]) <= puddle["radius"]:
+				var effect: String = puddle.get("effect", "wet")
+				result[effect] = maxi(int(result.get(effect, 0)), dmg)
+	return result
+
+## 0 es "para siempre": gana el otro.
+static func _shorter_turns(a: int, b: int) -> int:
+	if a == 0:
+		return b
+	if b == 0:
+		return a
+	return mini(a, b)
+
+func _puddle_exclusions(zone: Dictionary) -> Array:
+	var result: Array = []
+	for other in puddle_zones:
+		if other["id"] in zone["excl"]:
+			result.append({"pos": other["pos"], "radius": other["radius"]})
+	return result
+
+func _rebuild_puddle_visual(i: int) -> void:
+	var zone: Dictionary = puddle_zones[i]
+	_puddle_visuals[i].queue_free()
+	_puddle_visuals[i] = _make_puddle_visual(zone["pos"], zone["radius"], zone["effect"], _puddle_exclusions(zone))
+
+func _make_puddle_visual(pos: Vector2, radius: float, effect: String = "wet", exclusions: Array = []) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var base := _puddle_base_color(effect)
 	mi.set_meta("fill_mat", _make_mat(Color(base.r, base.g, base.b, 0.35)))
@@ -1903,7 +2785,7 @@ func _add_puddle_visual(pos: Vector2, radius: float, effect: String = "wet", exc
 		minf(base.r + 0.2, 1.0), minf(base.g + 0.2, 1.0), minf(base.b + 0.2, 1.0), 0.80)))
 	add_child(mi)
 	_build_tile_disc(mi, pos, radius, 0.0, 0.013, exclusions)
-	_puddle_visuals.append(mi)
+	return mi
 
 func _add_puddle_visual_lens(c1: Vector2, r1: float, c2: Vector2, r2: float, effect: String) -> void:
 	var mi := MeshInstance3D.new()

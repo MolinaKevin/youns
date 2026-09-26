@@ -16,6 +16,14 @@ func test_evaluate_es_base_mas_factor_por_stat() -> void:
 	assert_eq(_scaling(30, "fuerza", 0.6).evaluate({"fuerza": 100}), 90)
 
 
+func test_evaluate_suma_la_segunda_stat_y_el_peso() -> void:
+	var sc := _scaling(30, "constitucion", 0.5)
+	sc.stat_2 = "peso"
+	sc.factor_2 = 2.5
+	assert_eq(sc.evaluate({"constitucion": 50, "peso": 10.0}), 80)
+	assert_eq(sc.evaluate({"constitucion": 50, "peso": 14.0}), 90)
+
+
 func test_evaluate_sin_stat_es_solo_la_base() -> void:
 	assert_eq(_scaling(25, "ninguna", 2.0).evaluate({"fuerza": 999}), 25)
 
@@ -59,6 +67,7 @@ func test_cartas_con_stat_50_dan_su_valor_original() -> void:
 	var stats := {}
 	for key in YounStats.KEYS:
 		stats[key] = 50
+	stats["peso"] = 10.0  # peso base típico (YounData.base_weight)
 	for card: CardData in CardDatabase.cards_by_id.values():
 		for half in [card.top, card.bottom]:
 			for line: CardActionLine in half.lines:
@@ -67,3 +76,6 @@ func test_cartas_con_stat_50_dan_su_valor_original() -> void:
 				assert_eq(r.block_amount, line.block_amount, "%s bloqueo" % card.id)
 				assert_eq(r.card_range, line.card_range, "%s rango" % card.id)
 				assert_eq(r.throw_range, line.throw_range, "%s lanzamiento" % card.id)
+				assert_eq(r.restore_amount, line.restore_amount, "%s recuperación" % card.id)
+				assert_eq(r.duration, line.duration, "%s duración" % card.id)
+				assert_eq(r.module_count, line.module_count, "%s módulos" % card.id)

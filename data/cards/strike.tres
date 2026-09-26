@@ -26,21 +26,21 @@ factor = 0.1
 [sub_resource type="Resource" id="Line_top"]
 script = ExtResource("3_line")
 card_type = "melee_attack"
-description = "Strike a nearby enemy for 6 damage."
+description = "Golpeás a un enemigo cercano."
 damage = 60
 damage_scaling = SubResource("Scale_Line_top")
 
 [sub_resource type="Resource" id="Line_bottom"]
 script = ExtResource("3_line")
 card_type = "move"
-description = "Mover 3."
+description = "Te movés."
 card_range = 38
 range_scaling = SubResource("Scale_Line_bottom")
 
 [sub_resource type="Resource" id="Line_bottom_2"]
 script = ExtResource("3_line")
 card_type = "melee_attack"
-description = "Atacar 1."
+description = "Golpe cuerpo a cuerpo."
 damage = 10
 damage_scaling = SubResource("Scale_Line_bottom_2")
 

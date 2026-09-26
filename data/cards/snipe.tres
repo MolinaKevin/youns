@@ -26,7 +26,7 @@ factor = 0.1
 [sub_resource type="Resource" id="Line_top"]
 script = ExtResource("3_line")
 card_type = "range_attack"
-description = "Long-range precise shot for 9 damage."
+description = "Un disparo preciso de largo alcance."
 card_range = 288
 damage = 90
 damage_scaling = SubResource("Scale_Line_top")
@@ -34,14 +34,14 @@ damage_scaling = SubResource("Scale_Line_top")
 [sub_resource type="Resource" id="Line_bottom"]
 script = ExtResource("3_line")
 card_type = "move"
-description = "Mover 3."
+description = "Te movés."
 card_range = 38
 range_scaling = SubResource("Scale_Line_bottom")
 
 [sub_resource type="Resource" id="Line_bottom_2"]
 script = ExtResource("3_line")
 card_type = "melee_attack"
-description = "Atacar 1."
+description = "Golpe cuerpo a cuerpo."
 damage = 10
 damage_scaling = SubResource("Scale_Line_bottom_2")
 

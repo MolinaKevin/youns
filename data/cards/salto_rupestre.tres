@@ -7,9 +7,11 @@
 
 [sub_resource type="Resource" id="Scale_Line_top"]
 script = ExtResource("4_scaling")
-base = 40
-stat = "fuerza"
-factor = 0.8
+base = 30
+stat = "constitucion"
+factor = 0.5
+stat_2 = "peso"
+factor_2 = 2.5
 
 [sub_resource type="Resource" id="Scale_Line_bottom"]
 script = ExtResource("4_scaling")
@@ -20,7 +22,7 @@ factor = 0.4
 [sub_resource type="Resource" id="Line_top"]
 script = ExtResource("3_line")
 card_type = "rock_jump"
-description = "Saltá sobre una piedra cercana y lanzate desde allí. Si aterrizás sobre el enemigo, causás 8 de daño."
+description = "Saltás sobre una piedra o módulo cercano y te lanzás desde ahí. Si caés sobre el enemigo, le pegás."
 card_range = 75
 damage = 80
 throw_range = 100
@@ -29,7 +31,7 @@ damage_scaling = SubResource("Scale_Line_top")
 [sub_resource type="Resource" id="Line_bottom"]
 script = ExtResource("3_line")
 card_type = "move"
-description = "Mover 3."
+description = "Te movés."
 card_range = 38
 range_scaling = SubResource("Scale_Line_bottom")
 

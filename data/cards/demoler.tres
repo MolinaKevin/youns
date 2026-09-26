@@ -1,0 +1,52 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://data/card_action.gd" id="2_action"]
+[ext_resource type="Script" path="res://data/card_action_line.gd" id="3_line"]
+[ext_resource type="Script" path="res://data/stat_scaling.gd" id="4_scaling"]
+
+[sub_resource type="Resource" id="Scale_Line_bottom"]
+script = ExtResource("4_scaling")
+base = 18
+stat = "agilidad"
+factor = 0.4
+
+[sub_resource type="Resource" id="Scale_Line_top"]
+script = ExtResource("4_scaling")
+base = 1
+stat = "fuerza"
+factor = 0.02
+
+[sub_resource type="Resource" id="Line_top"]
+script = ExtResource("3_line")
+card_type = "break"
+module_count = 2
+module_scaling = SubResource("Scale_Line_top")
+description = "Rompés de un golpe un módulo pegado a vos y los que estén pegados a él. También tala árboles."
+card_range = 13
+
+[sub_resource type="Resource" id="Line_bottom"]
+script = ExtResource("3_line")
+card_type = "move"
+description = "Te movés."
+card_range = 38
+range_scaling = SubResource("Scale_Line_bottom")
+
+[sub_resource type="Resource" id="Resource_top"]
+script = ExtResource("2_action")
+lines = Array[ExtResource("3_line")]([SubResource("Line_top")])
+color = Color(0.3, 0.22, 0.12, 1)
+
+[sub_resource type="Resource" id="Resource_bottom"]
+script = ExtResource("2_action")
+lines = Array[ExtResource("3_line")]([SubResource("Line_bottom")])
+color = Color(0.08, 0.26, 0.14, 1)
+
+[resource]
+script = ExtResource("1_card")
+id = "demoler"
+name = "Demoler"
+initiative = 55
+top = SubResource("Resource_top")
+bottom = SubResource("Resource_bottom")
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"

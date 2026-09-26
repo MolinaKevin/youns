@@ -38,9 +38,52 @@ var pending_jump_phase:    int     = 0
 var pending_jump_rock_pos: Vector2 = Vector2(-1.0, -1.0)
 var pending_jump_card:     CardActionLine = null
 
+## Empuje, tirón y ancla comparten la selección: el tipo de pending_push_card
+## decide adónde va el enemigo.
 var pending_push_index: int      = -1
 var pending_push_phase: int      = 0
 var pending_push_card:  CardActionLine = null
+
+## Módulos: romper ("break"), golpear ("module_push"), crear ("build"),
+## lanzar ("module_throw") y derrumbar sobre el enemigo ("collapse").
+## Golpear y lanzar tienen dos pasos: elegir el módulo (fase 0) y después la
+## dirección o el punto de caída (fase 1).
+var pending_module_index: int = -1
+var pending_module_phase: int = 0
+var pending_module_card:  CardActionLine = null
+var pending_module_target: Dictionary = {}
+
+## Hechizos a un punto, una dirección o el enemigo (ver _on_spell_click).
+## Nova, curar y encantar arma van sobre uno mismo (start_self_selection).
+var pending_spell_index: int = -1
+var pending_spell_card:  CardActionLine = null
+var pending_spell_dir:   Vector2 = Vector2.ZERO
+## Traslado de charco: el charco elegido en el primer paso.
+var pending_spell_puddle: Dictionary = {}
+## Trepar árbol: el árbol elegido en el primer paso (usa el mismo flujo).
+var pending_spell_tree: Dictionary = {}
+
+## Árboles: daño al caerse de uno (talado o en llamas) y al tronco que le cae
+## encima al enemigo.
+const TREE_FALL_DAMAGE := 40
+const TREE_CRUSH_DAMAGE := 60
+## Turnos base de llamas al caerse de un árbol que se prendió fuego.
+const TREE_FIRE_BURN_TURNS := 3
+## Raíces cerca de un árbol: el enemigo queda enredado un turno más.
+const TREE_ROOT_REACH := 1.5
+const TREE_ROOT_BONUS_TURNS := 1
+
+## Líneas que no se pueden usar arriba de un árbol (mueven al jugador).
+const TREE_BLOCKED_LINES := ["move", "blink", "rock_jump", "tree_climb"]
+
+
+## Qué charcos cambia cada hechizo elemental (element_bolt, según puddle_effect).
+const ELEMENT_CONVERSIONS := {"fire": ["grease", "vine"], "ice": ["wet"]}
+## Ancho (medio ángulo) de los hechizos en línea y en cono.
+const BOLT_HALF_ANGLE := 4.0
+const CONE_HALF_ANGLE := 30.0
+## Turnos base que congela Escarcha a un enemigo mojado.
+const FREEZE_TURNS := 2
 
 var pending_puddle_index:    int      = -1
 var pending_overwatch_index: int      = -1
@@ -97,6 +140,8 @@ func _has_pending_selection() -> bool:
 		pending_self_index >= 0 or
 		pending_jump_index >= 0 or
 		pending_push_index >= 0 or
+		pending_module_index >= 0 or
+		pending_spell_index >= 0 or
 		pending_puddle_index >= 0 or
 		pending_overwatch_index >= 0
 	)
@@ -139,13 +184,14 @@ func play_card(index: int) -> void:
 		map_area.clear_overwatch_zone()
 		log_requested.emit("Vigilancia cancelada.")
 	card_preview_show_requested.emit(card)
+	if state.player_in_tree and card.card_type in TREE_BLOCKED_LINES:
+		log_requested.emit("Estás arriba del árbol: no te podés mover hasta caer.")
+		card_preview_hide_requested.emit()
+		return
 	match card.card_type:
 		"move":
 			start_move_selection("hand", index, card.card_range, card.name)
 		"melee_attack":
-			var r: int = card.card_range if card.card_range > 0 else MELEE_RANGE
-			start_range_attack_selection(index, card, r)
-		"targeted_attack":
 			var r: int = card.card_range if card.card_range > 0 else MELEE_RANGE
 			start_range_attack_selection(index, card, r)
 		"range_attack":
@@ -156,12 +202,28 @@ func play_card(index: int) -> void:
 			start_trap_selection(index, card, true)
 		"trap_throw":
 			start_trap_selection(index, card, false)
-		"block":
+		"block", "ward", "mp_restore", "counter", "nova", "heal", "enchant":
 			start_self_selection(index, card)
+		"element_bolt", "chain_bolt", "delayed_area", "cone_blast", "curse", "blink", "puddle_hop", "tree_climb":
+			_start_spell_selection(index, card)
 		"rock_jump":
 			start_rock_jump_selection(index, card)
-		"push":
+		"push", "pull", "anchor":
 			start_push_selection(index, card)
+		"break", "module_push", "build", "module_throw", "collapse":
+			pending_module_index = index
+			pending_module_phase = 0
+			pending_module_card = card
+			if card.card_type == "collapse":
+				map_area.start_collapse_selection(_w(card.card_range))
+			else:
+				map_area.start_module_selection(_w(card.card_range))
+			match card.card_type:
+				"break": log_requested.emit("Elegí el módulo que querés romper.")
+				"module_push": log_requested.emit("Elegí el módulo que querés golpear.")
+				"build": log_requested.emit("Elegí dónde levantar el muro.")
+				"module_throw": log_requested.emit("Elegí el módulo que querés levantar.")
+				"collapse": log_requested.emit("Elegí al enemigo: los módulos pegados a él se le caen encima.")
 		"puddle":
 			start_puddle_selection(index, card)
 		"overwatch":
@@ -220,6 +282,10 @@ func start_push_selection(index: int, card: CardActionLine) -> void:
 	pending_push_index = index
 	pending_push_phase = 0
 	pending_push_card  = card
+	if card.card_type == "anchor":
+		map_area.start_anchor_selection(_w(card.card_range))
+		log_requested.emit("Elegí dónde clavar el ancla: el enemigo va a ser arrastrado hacia ahí.")
+		return
 	map_area.start_push_enemy_selection(_w(card.card_range))
 	log_requested.emit("Seleccioná al enemigo para agarrarlo.")
 
@@ -259,6 +325,8 @@ func _on_position_selected(pos: Vector2) -> void:
 		pending_self_index >= 0 or
 		pending_jump_index >= 0 or
 		pending_push_index >= 0 or
+		pending_module_index >= 0 or
+		pending_spell_index >= 0 or
 		pending_puddle_index >= 0 or
 		pending_overwatch_index >= 0
 	)
@@ -282,12 +350,35 @@ func _on_position_selected(pos: Vector2) -> void:
 			_confirm_self_action()
 		return
 
+	if pending_module_index >= 0:
+		_on_module_click(pos)
+		return
+
+	if pending_spell_index >= 0:
+		_on_spell_click(pos)
+		return
+
+	if pending_push_index >= 0 and pending_push_card.card_type == "anchor":
+		if map_area.movement_distance(map_area.player_pos, pos) > _w(pending_push_card.card_range):
+			log_requested.emit("Demasiado lejos para clavar el ancla.")
+			return
+		if not map_area.has_line_of_sight(map_area.player_pos, pos):
+			log_requested.emit("Hay algo en el medio: no llegás a clavar el ancla ahí.")
+			return
+		pending_cell = pos
+		confirm_popup_show_requested.emit(false)
+		return
+
 	if pending_push_index >= 0:
 		if pending_push_phase == 0:
 			if not map_area.is_enemy_in_attack_range(_w(pending_push_card.card_range)):
 				log_requested.emit("El enemigo está demasiado lejos para agarrarlo.")
 				return
 			if not map_area.is_click_on_enemy(pos):
+				return
+			if pending_push_card.card_type == "pull":
+				pending_cell = map_area.player_pos
+				confirm_popup_show_requested.emit(false)
 				return
 			pending_push_phase = 1
 			map_area.start_push_cone(_w(pending_push_card.throw_range))
@@ -394,6 +485,14 @@ func _execute_tile_action(cell: Vector2) -> void:
 		_execute_push(cell)
 		return
 
+	if pending_module_index >= 0:
+		_execute_module_action(cell)
+		return
+
+	if pending_spell_index >= 0:
+		_execute_spell(cell)
+		return
+
 	if pending_jump_index >= 0:
 		_execute_jump_attack(cell)
 		return
@@ -411,40 +510,7 @@ func _execute_tile_action(cell: Vector2) -> void:
 		log_requested.emit("Invalid move.")
 		return
 
-	var zone_fx: Dictionary = map_area.get_puddle_effects_along(move_from, map_area.player_pos)
-	if zone_fx.get("wet", false):
-		state.player_wet_turns = 3
-		log_requested.emit("¡Pisaste el charco! Estás mojado por 3 turnos.")
-	if zone_fx.get("fire", false) and state.player_burning_turns == 0:
-		state.player_burning_turns = 3
-		log_requested.emit("¡Pisaste fuego! Estás en llamas por 3 turnos.")
-	if zone_fx.get("grease", false) and state.player_greasy_turns == 0:
-		state.player_greasy_turns = 3
-		log_requested.emit("¡Pisaste grasa! Movimiento reducido por 3 turnos.")
-	if zone_fx.get("vine", false) and state.player_entangled_turns == 0:
-		state.player_entangled_turns = 2
-		log_requested.emit("¡Las enredaderas te atraparon! No podés moverte por 2 turnos.")
-	if zone_fx.get("blood", false) and state.player_bleeding_turns == 0:
-		state.player_bleeding_turns = 4
-		log_requested.emit("¡Pisaste sangre! Estás sangrando por 4 turnos.")
-	if zone_fx.get("poison", false) and state.player_poison_stacks == 0:
-		state.player_poison_stacks = 3
-		log_requested.emit("¡Pisaste veneno! Estás envenenado (3→2→1).")
-	if zone_fx.get("sand", false) and state.player_blinded_turns == 0:
-		state.player_blinded_turns = 2
-		log_requested.emit("¡Arena en los ojos! Rango de ataque reducido a 1 por 2 turnos.")
-	if zone_fx.get("ice", false) and state.player_frozen_turns == 0:
-		state.player_frozen_turns = 2
-		log_requested.emit("¡Pisaste hielo! Estás congelado por 2 turnos.")
-	if zone_fx.get("bloody_ice", false):
-		if state.player_frozen_turns == 0:
-			state.player_frozen_turns = 2
-		if state.player_bleeding_turns == 0:
-			state.player_bleeding_turns = 3
-		log_requested.emit("¡Pisaste hielo sangriento! Congelado y sangrando.")
-	if zone_fx.get("dark_smoke", false) and state.player_blinded_turns == 0:
-		state.player_blinded_turns = 3
-		log_requested.emit("¡Humo oscuro! No podés ver bien por 3 turnos.")
+	apply_player_zone_effects(move_from, map_area.player_pos)
 
 	var trap_dmg: int = map_area.check_and_trigger_traps_along_path(map_area.player_pos, cell)
 	if trap_dmg > 0:
@@ -481,7 +547,14 @@ func _execute_push(direction_target: Vector2) -> void:
 	var idx := pending_push_index
 	var push_from: Vector2 = map_area.enemy_pos
 
-	var landing: Vector2 = map_area.calculate_push_landing(direction_target, _w(card.throw_range))
+	var landing: Vector2
+	match card.card_type:
+		"pull":
+			landing = map_area.calculate_drag_landing(map_area.player_pos, _w(card.throw_range))
+		"anchor":
+			landing = map_area.calculate_drag_landing(direction_target, _w(card.throw_range))
+		_:
+			landing = map_area.calculate_push_landing(direction_target, _w(card.throw_range))
 	map_area.clear_push_selection()
 
 	# Se gasta antes de las animaciones (ver _confirm_range_attack).
@@ -507,46 +580,520 @@ func _execute_push(direction_target: Vector2) -> void:
 	if state.enemy_hp > 0:
 		map_area.play_enemy_anim("idle")
 
-	var fx: Dictionary = map_area.trigger_zone_effects_along(push_from, landing)
-	var any_zone := false
-	if fx.get("wet", false):
-		state.enemy_wet_turns = 3
-		log_requested.emit("El enemigo pasó por agua. ¡Está mojado!")
-		any_zone = true
-	if fx.get("fire", false) and state.enemy_burning_turns == 0:
-		state.enemy_burning_turns = 3
-		log_requested.emit("El enemigo pasó por el fuego. ¡Está en llamas!")
-		any_zone = true
-	if fx.get("grease", false) and state.enemy_greasy_turns == 0:
-		state.enemy_greasy_turns = 3
-		log_requested.emit("El enemigo pasó por grasa. ¡Movimiento reducido!")
-		any_zone = true
-	if fx.get("vine", false) and state.enemy_entangled_turns == 0:
-		state.enemy_entangled_turns = 2
-		log_requested.emit("¡El enemigo quedó enredado por 2 turnos!")
-		any_zone = true
-	if fx.get("blood", false) and state.enemy_bleeding_turns == 0:
-		state.enemy_bleeding_turns = 4
-		log_requested.emit("El enemigo pasó por sangre. ¡Está sangrando!")
-		any_zone = true
-	if fx.get("poison", false) and state.enemy_poison_stacks == 0:
-		state.enemy_poison_stacks = 3
-		log_requested.emit("El enemigo pasó por veneno. ¡Está envenenado!")
-		any_zone = true
-	if fx.get("sand", false) and state.enemy_blinded_turns == 0:
-		state.enemy_blinded_turns = 2
-		log_requested.emit("¡El enemigo fue cegado por 2 turnos!")
-		any_zone = true
-	if fx.get("trap_damage", 0) > 0:
-		log_requested.emit("¡%s! El enemigo pasó por una trampa — %d de daño!" % [card.name, fx["trap_damage"]])
-		await _deal_damage_to_enemy.call(fx["trap_damage"])
-		any_zone = true
+	var any_zone: bool = await _apply_enemy_forced_move(card.name, push_from, landing)
 	if not any_zone:
-		log_requested.emit("%s: empujaste al enemigo." % card.name)
+		match card.card_type:
+			"pull": log_requested.emit("%s: acercaste al enemigo." % card.name)
+			"anchor": log_requested.emit("%s: el ancla arrastró al enemigo." % card.name)
+			_: log_requested.emit("%s: empujaste al enemigo." % card.name)
 
 	hand_refresh_requested.emit()
 	ui_update_requested.emit()
 	_check_combat_end.call()
+
+func _on_module_click(pos: Vector2) -> void:
+	var card := pending_module_card
+	if card.card_type == "build":
+		if map_area.movement_distance(map_area.player_pos, pos) > _w(card.card_range):
+			log_requested.emit("Demasiado lejos para levantar el muro ahí.")
+			return
+		pending_cell = pos
+		confirm_popup_show_requested.emit(false)
+		return
+	if card.card_type == "collapse":
+		if not map_area.is_click_on_enemy(pos):
+			return
+		if not map_area.is_enemy_in_attack_range(_w(card.card_range)):
+			log_requested.emit("El enemigo está demasiado lejos.")
+			return
+		pending_cell = pos
+		confirm_popup_show_requested.emit(false)
+		return
+	if pending_module_phase == 1 and card.card_type == "module_throw":
+		# Lanzar: elegir dónde cae.
+		if map_area.movement_distance(map_area.player_pos, pos) > _w(card.throw_range):
+			log_requested.emit("No llegás a tirarlo tan lejos.")
+			return
+		pending_cell = pos
+		confirm_popup_show_requested.emit(false)
+		return
+	if pending_module_phase == 1:
+		# Golpe: elegir la dirección dentro del cono.
+		if not map_area.is_pos_in_module_cone(pending_module_target["pos"], pos, _w(card.throw_range)):
+			return
+		pending_cell = pos
+		confirm_popup_show_requested.emit(false)
+		return
+	var obs: Dictionary = map_area.get_module_at(pos)
+	if obs.is_empty() and card.card_type == "break":
+		obs = map_area.get_tree_at(pos)  # romper también tala árboles
+	if obs.is_empty():
+		return
+	if map_area.obstacle_gap(obs) > _w(card.card_range):
+		log_requested.emit("Demasiado lejos para alcanzar eso.")
+		return
+	pending_module_target = obs
+	if card.card_type == "module_throw":
+		pending_module_phase = 1
+		map_area.start_module_throw_target(_w(card.throw_range))
+		log_requested.emit("Elegí dónde tirarlo.")
+		return
+	if card.card_type == "module_push":
+		pending_module_phase = 1
+		map_area.start_module_push_cone(obs["pos"], _w(card.throw_range))
+		log_requested.emit("Elegí hacia dónde mandar el módulo.")
+		return
+	pending_cell = pos
+	confirm_popup_show_requested.emit(false)
+
+func _execute_module_action(cell: Vector2) -> void:
+	var card: CardActionLine = state.turn_actions[pending_module_index]
+	var obs := pending_module_target
+	state.turn_actions.remove_at(pending_module_index)
+	_clear_pending_module()
+	card_preview_hide_requested.emit()
+	hand_refresh_requested.emit()
+	map_area.play_player_anim("attack")
+	await map_area.player_anim_finished
+	map_area.play_player_anim("idle")
+	var count := maxi(1, card.module_count)
+	match card.card_type:
+		"break":
+			if obs.get("type", "") == "tree":
+				await _fell_tree(card, obs)
+			else:
+				var broken: int = map_area.break_modules(obs, count)
+				log_requested.emit("%s: rompiste %d módulo(s)." % [card.name, broken])
+		"build":
+			var built: int = map_area.build_modules(cell, count)
+			log_requested.emit("%s: levantaste %d módulo(s)." % [card.name, built])
+		"module_push":
+			var result: Dictionary = map_area.slide_module(obs, cell - obs["pos"], _w(card.throw_range))
+			match result["hit"]:
+				"enemy":
+					log_requested.emit("¡%s! El módulo le pegó al enemigo — %d de daño." % [card.name, card.damage])
+					await _deal_damage_to_enemy.call(card.damage, true, card.damage_type)
+				"player":
+					log_requested.emit("¡%s! El módulo te pegó a vos — %d de daño." % [card.name, card.damage])
+					await _deal_damage_to_player.call(card.damage, true, card.damage_type)
+				_:
+					if not result.get("tree", {}).is_empty():
+						log_requested.emit("%s: el módulo se estrella contra un árbol." % card.name)
+					else:
+						log_requested.emit("%s: mandaste el módulo a volar." % card.name)
+		"module_throw":
+			var hits: Dictionary = map_area.throw_module(obs, cell)
+			if hits["enemy"]:
+				log_requested.emit("¡%s! El módulo cayó sobre el enemigo — %d de daño." % [card.name, card.damage])
+				await _deal_damage_to_enemy.call(card.damage, true, card.damage_type)
+			if hits["player"]:
+				log_requested.emit("¡%s! El módulo te cayó encima — %d de daño." % [card.name, card.damage])
+				await _deal_damage_to_player.call(card.damage, true, card.damage_type)
+			if not hits["enemy"] and not hits["player"]:
+				log_requested.emit("%s: el módulo se hizo pedazos contra el suelo." % card.name)
+		"collapse":
+			var fallen: int = map_area.collapse_modules_on_enemy()
+			if fallen == 0:
+				log_requested.emit("%s: no hay módulos pegados al enemigo." % card.name)
+			else:
+				var total := card.damage * fallen
+				log_requested.emit("¡%s! Se le cayeron %d módulo(s) encima — %d de daño." % [card.name, fallen, total])
+				await _deal_damage_to_enemy.call(total, true, card.damage_type)
+	hand_refresh_requested.emit()
+	ui_update_requested.emit()
+	_check_combat_end.call()
+
+## Los charcos que pisó el jugador entre `from` y `to` le aplican sus estados
+## (al moverse, o al caer de un árbol: from == to).
+func apply_player_zone_effects(from: Vector2, to: Vector2) -> void:
+	var zone_fx: Dictionary = map_area.get_puddle_effects_along(from, to)
+	var zone_dmg: Dictionary = map_area.get_puddle_damage_along(from, to)
+	if zone_fx.get("wet", false):
+		state.player_wet_turns = state.status_turns(3, true)
+		log_requested.emit("¡Pisaste el charco! Estás mojado por %d turnos." % state.player_wet_turns)
+	if zone_fx.get("fire", false) and state.player_burning_turns == 0:
+		state.player_burning_turns = state.status_turns(3, true)
+		state.player_burn_damage = zone_dmg.get("fire", CombatState.BURN_DAMAGE)
+		log_requested.emit("¡Pisaste fuego! Estás en llamas por %d turnos." % state.player_burning_turns)
+	if zone_fx.get("grease", false) and state.player_greasy_turns == 0:
+		state.player_greasy_turns = state.status_turns(3, true)
+		log_requested.emit("¡Pisaste grasa! Movimiento reducido por %d turnos." % state.player_greasy_turns)
+	if zone_fx.get("vine", false) and state.player_entangled_turns == 0:
+		state.player_entangled_turns = state.status_turns(2, true)
+		log_requested.emit("¡Las enredaderas te atraparon! No podés moverte por %d turnos." % state.player_entangled_turns)
+	if zone_fx.get("blood", false) and state.player_bleeding_turns == 0:
+		state.player_bleeding_turns = state.status_turns(4, true)
+		state.player_bleed_damage = zone_dmg.get("blood", CombatState.BLEED_DAMAGE)
+		log_requested.emit("¡Pisaste sangre! Estás sangrando por %d turnos." % state.player_bleeding_turns)
+	if zone_fx.get("poison", false) and state.player_poison_stacks == 0:
+		state.player_poison_stacks = state.status_turns(3, true)
+		state.player_poison_damage = zone_dmg.get("poison", CombatState.POISON_DAMAGE_PER_STACK)
+		log_requested.emit("¡Pisaste veneno! Estás envenenado (%d acumulaciones)." % state.player_poison_stacks)
+	if zone_fx.get("sand", false) and state.player_blinded_turns == 0:
+		state.player_blinded_turns = state.status_turns(2, true)
+		log_requested.emit("¡Arena en los ojos! Rango de ataque reducido a 1 por %d turnos." % state.player_blinded_turns)
+	if zone_fx.get("ice", false) and state.player_frozen_turns == 0:
+		state.player_frozen_turns = state.status_turns(2, true)
+		log_requested.emit("¡Pisaste hielo! Estás congelado por %d turnos." % state.player_frozen_turns)
+	if zone_fx.get("bloody_ice", false):
+		if state.player_frozen_turns == 0:
+			state.player_frozen_turns = state.status_turns(2, true)
+		if state.player_bleeding_turns == 0:
+			state.player_bleeding_turns = state.status_turns(3, true)
+			state.player_bleed_damage = zone_dmg.get("bloody_ice", CombatState.BLEED_DAMAGE)
+		log_requested.emit("¡Pisaste hielo sangriento! Congelado y sangrando.")
+	if zone_fx.get("dark_smoke", false) and state.player_blinded_turns == 0:
+		state.player_blinded_turns = state.status_turns(3, true)
+		log_requested.emit("¡Humo oscuro! No podés ver bien por %d turnos." % state.player_blinded_turns)
+
+## Talar: el árbol cae alejándose del jugador y queda un tronco tirado.
+func _fell_tree(card: CardActionLine, tree: Dictionary) -> void:
+	var result: Dictionary = map_area.fell_tree(tree, tree["pos"] - map_area.player_pos)
+	log_requested.emit("%s: el árbol cae y queda un tronco tirado." % card.name)
+	if result["enemy_hit"]:
+		log_requested.emit("¡El árbol le cae encima al enemigo — %d de daño!" % TREE_CRUSH_DAMAGE)
+		await _deal_damage_to_enemy.call(TREE_CRUSH_DAMAGE, true, CombatState.FISICO)
+
+## El jugador se cae del árbol (lo talaron o se prendió fuego): daño de caída
+## y, si ardía, queda en llamas. map_area ya lo bajó al pie del árbol.
+func player_falls_from_tree(burning: bool) -> void:
+	if not state.player_in_tree:
+		return
+	state.player_in_tree = false
+	log_requested.emit("¡Te caés del árbol — %d de daño!" % TREE_FALL_DAMAGE)
+	await _deal_damage_to_player.call(TREE_FALL_DAMAGE, true, CombatState.FISICO)
+	if burning and state.player_hp > 0:
+		var turns: int = state.set_player_status("burn", TREE_FIRE_BURN_TURNS)
+		log_requested.emit("¡El árbol ardía: quedás en llamas por %d turnos!" % turns)
+	if state.player_hp > 0:
+		apply_player_zone_effects(map_area.player_pos, map_area.player_pos)
+	ui_update_requested.emit()
+	_check_combat_end.call()
+
+func _clear_pending_module() -> void:
+	if pending_module_index >= 0:
+		map_area.clear_module_selection()
+	pending_module_index = -1
+	pending_module_phase = 0
+	pending_module_card = null
+	pending_module_target = {}
+
+## El enemigo fue movido a la fuerza (empuje, tirón, ancla, nova): se le
+## aplican los charcos y trampas que cruzó. Devuelve si pasó por alguno.
+func _apply_enemy_forced_move(card_name: String, from: Vector2, landing: Vector2) -> bool:
+	var fx: Dictionary = map_area.trigger_zone_effects_along(from, landing)
+	var zone_dmg: Dictionary = map_area.get_puddle_damage_along(from, landing)
+	var any_zone := false
+	if fx.get("wet", false):
+		state.enemy_wet_turns = state.status_turns(3, false)
+		log_requested.emit("El enemigo pasó por agua. ¡Está mojado!")
+		any_zone = true
+	if fx.get("fire", false) and state.enemy_burning_turns == 0:
+		state.enemy_burning_turns = state.status_turns(3, false)
+		state.enemy_burn_damage = zone_dmg.get("fire", CombatState.BURN_DAMAGE)
+		log_requested.emit("El enemigo pasó por el fuego. ¡Está en llamas!")
+		any_zone = true
+	if fx.get("grease", false) and state.enemy_greasy_turns == 0:
+		state.enemy_greasy_turns = state.status_turns(3, false)
+		log_requested.emit("El enemigo pasó por grasa. ¡Movimiento reducido!")
+		any_zone = true
+	if fx.get("vine", false) and state.enemy_entangled_turns == 0:
+		state.enemy_entangled_turns = state.status_turns(2, false)
+		log_requested.emit("¡El enemigo quedó enredado por %d turnos!" % state.enemy_entangled_turns)
+		any_zone = true
+	if fx.get("blood", false) and state.enemy_bleeding_turns == 0:
+		state.enemy_bleeding_turns = state.status_turns(4, false)
+		state.enemy_bleed_damage = zone_dmg.get("blood", CombatState.BLEED_DAMAGE)
+		log_requested.emit("El enemigo pasó por sangre. ¡Está sangrando!")
+		any_zone = true
+	if fx.get("poison", false) and state.enemy_poison_stacks == 0:
+		state.enemy_poison_stacks = state.status_turns(3, false)
+		state.enemy_poison_damage = zone_dmg.get("poison", CombatState.POISON_DAMAGE_PER_STACK)
+		log_requested.emit("El enemigo pasó por veneno. ¡Está envenenado!")
+		any_zone = true
+	if fx.get("sand", false) and state.enemy_blinded_turns == 0:
+		state.enemy_blinded_turns = state.status_turns(2, false)
+		log_requested.emit("¡El enemigo fue cegado por %d turnos!" % state.enemy_blinded_turns)
+		any_zone = true
+	if fx.get("trap_damage", 0) > 0:
+		log_requested.emit("¡%s! El enemigo pasó por una trampa — %d de daño!" % [card_name, fx["trap_damage"]])
+		await _deal_damage_to_enemy.call(fx["trap_damage"])
+		any_zone = true
+	return any_zone
+
+# ── Hechizos ──────────────────────────────────────────────────────────────────
+
+func _start_spell_selection(index: int, card: CardActionLine) -> void:
+	pending_spell_index = index
+	pending_spell_card = card
+	pending_spell_dir = Vector2.ZERO
+	match card.card_type:
+		"chain_bolt":
+			map_area.start_overwatch_selection(_w(card.throw_range), BOLT_HALF_ANGLE)
+			log_requested.emit("Elegí hacia dónde tirar el rayo.")
+		"cone_blast":
+			map_area.start_overwatch_selection(_w(card.throw_range), CONE_HALF_ANGLE)
+			log_requested.emit("Elegí hacia dónde soplar.")
+		"curse":
+			map_area.start_push_enemy_selection(_w(card.throw_range))
+			log_requested.emit("Elegí al enemigo.")
+		"puddle_hop":
+			map_area.start_spell_selection(_w(card.throw_range))
+			log_requested.emit("Elegí el charco que querés trasladar.")
+		"tree_climb":
+			map_area.start_module_selection(_w(card.card_range))
+			log_requested.emit("Elegí el árbol al que querés trepar.")
+		_:
+			map_area.start_spell_selection(_w(card.throw_range))
+			log_requested.emit("Elegí el punto.")
+
+func _on_spell_click(pos: Vector2) -> void:
+	var card := pending_spell_card
+	if card.card_type == "tree_climb":
+		_on_tree_climb_click(card, pos)
+		return
+	if card.card_type == "puddle_hop" and pending_spell_puddle.is_empty():
+		var zone: Dictionary = map_area.get_puddle_at(pos)
+		if zone.is_empty():
+			return
+		var gap: float = map_area.movement_distance(map_area.player_pos, zone["pos"]) - float(zone["radius"])
+		if gap > _w(card.throw_range):
+			log_requested.emit("Ese charco está demasiado lejos.")
+			return
+		pending_spell_puddle = zone
+		map_area.start_puddle_hop_landing(zone["pos"], _w(card.card_range))
+		log_requested.emit("Elegí dónde cae el charco.")
+		return
+	match card.card_type:
+		"puddle_hop":
+			if map_area.movement_distance(pending_spell_puddle["pos"], pos) > _w(card.card_range):
+				log_requested.emit("No llega tan lejos desde ese charco.")
+				return
+			if pos.x < 0.0 or pos.y < 0.0 or pos.x > map_area.WORLD_W or pos.y > map_area.WORLD_H:
+				return
+		"chain_bolt", "cone_blast":
+			var dir: Vector2 = pos - map_area.player_pos
+			if dir.length() < 0.2:
+				return
+			pending_spell_dir = dir.normalized()
+		"curse":
+			if not map_area.is_click_on_enemy(pos):
+				return
+			if not map_area.is_enemy_in_attack_range(_w(card.throw_range)):
+				log_requested.emit("El enemigo está demasiado lejos.")
+				return
+			if not map_area.has_line_of_sight(map_area.player_pos, map_area.enemy_pos):
+				log_requested.emit("No ves al enemigo desde acá.")
+				return
+		_:
+			if map_area.movement_distance(map_area.player_pos, pos) > _w(card.throw_range):
+				log_requested.emit("Demasiado lejos.")
+				return
+			# El meteoro cae del cielo; el resto necesita ver el punto.
+			if card.card_type == "element_bolt" and not map_area.has_line_of_sight(map_area.player_pos, pos):
+				log_requested.emit("Hay algo en el medio.")
+				return
+			if card.card_type == "blink" and not map_area.can_blink_to(pos):
+				log_requested.emit("No podés aparecer ahí.")
+				return
+	pending_cell = pos
+	confirm_popup_show_requested.emit(false)
+
+func _execute_spell(cell: Vector2) -> void:
+	var card: CardActionLine = state.turn_actions[pending_spell_index]
+	var dir := pending_spell_dir
+	var puddle := pending_spell_puddle
+	var tree := pending_spell_tree
+	state.turn_actions.remove_at(pending_spell_index)
+	_clear_pending_spell()
+	card_preview_hide_requested.emit()
+	hand_refresh_requested.emit()
+	if not card.card_type in ["blink", "delayed_area", "tree_climb"]:
+		map_area.play_player_anim("range")
+		await map_area.player_anim_finished
+		map_area.play_player_anim("idle")
+	match card.card_type:
+		"element_bolt":
+			await _cast_element_bolt(card, cell)
+		"chain_bolt":
+			await _cast_chain_bolt(card, dir)
+		"delayed_area":
+			# Deja charco solo si tiene duración (un charco permanente de un hechizo no).
+			var effect := card.puddle_effect if card.duration > 0 else ""
+			map_area.place_delayed_zone(cell, _w(card.card_range), card.damage, card.name,
+				card.delay, effect, card.duration)
+			log_requested.emit("%s: la zona está marcada. Cae en %d ronda(s)." % [card.name, maxi(1, card.delay)])
+		"cone_blast":
+			if card.status_effect == "burn" and map_area.ignite_trees_in_cone(map_area.player_pos, dir, _w(card.throw_range), CONE_HALF_ANGLE) > 0:
+				log_requested.emit("%s: ¡un árbol se prende fuego!" % card.name)
+			if map_area.is_enemy_in_cone(map_area.player_pos, dir, _w(card.throw_range), CONE_HALF_ANGLE):
+				log_requested.emit("¡%s alcanza al enemigo — %d de daño!" % [card.name, card.damage])
+				await _deal_damage_to_enemy.call(card.damage, true, CombatState.MAGICO)
+				if card.status_effect != "ninguno" and state.enemy_hp > 0:
+					_apply_spell_status(card.status_effect, maxi(1, card.duration))
+			else:
+				log_requested.emit("%s: no alcanzó a nadie." % card.name)
+		"curse":
+			if card.damage > 0:
+				await _deal_damage_to_enemy.call(card.damage, true, CombatState.MAGICO)
+			var turns: int = maxi(1, card.duration)
+			if card.status_effect == "entangle" and map_area.is_tree_near(map_area.enemy_pos, TREE_ROOT_REACH):
+				turns += TREE_ROOT_BONUS_TURNS
+				log_requested.emit("Las raíces del árbol cercano ayudan a atraparlo.")
+			_apply_spell_status(card.status_effect, turns)
+		"blink":
+			map_area.blink_player_to(cell)
+			log_requested.emit("%s: aparecés en otro lugar." % card.name)
+		"puddle_hop":
+			await _cast_puddle_hop(card, puddle, cell)
+		"tree_climb":
+			state.player_in_tree = true
+			state.player_tree_landing = cell
+			state.player_tree_drop_damage = card.damage
+			map_area.climb_tree(tree, cell)
+			log_requested.emit("%s: estás arriba del árbol. Caés al terminar la ronda." % card.name)
+	hand_refresh_requested.emit()
+	ui_update_requested.emit()
+	_check_combat_end.call()
+
+## Chispa / Escarcha: daño mágico en un círculo y cambia los charcos que toca.
+func _cast_element_bolt(card: CardActionLine, cell: Vector2) -> void:
+	var radius := _w(card.card_range)
+	var from_effects: Array = ELEMENT_CONVERSIONS.get(card.puddle_effect, [])
+	var converted: int = map_area.convert_puddles(cell, radius, from_effects, card.puddle_effect)
+	if converted > 0:
+		log_requested.emit("%s: %d charco(s) cambiaron." % [card.name, converted])
+	if card.puddle_effect == "fire" and map_area.ignite_trees_in_circle(cell, radius) > 0:
+		log_requested.emit("%s: ¡un árbol se prende fuego!" % card.name)
+	elif card.puddle_effect == "ice" and map_area.extinguish_trees_in_circle(cell, radius) > 0:
+		log_requested.emit("%s: apagaste un árbol en llamas." % card.name)
+	if not map_area.is_enemy_in_circle(cell, radius):
+		log_requested.emit("%s: no le diste al enemigo." % card.name)
+		return
+	var was_wet: bool = state.enemy_wet_turns > 0
+	log_requested.emit("¡%s le da al enemigo — %d de daño!" % [card.name, card.damage])
+	await _deal_damage_to_enemy.call(card.damage, true, CombatState.MAGICO)
+	if state.enemy_hp <= 0:
+		return
+	if card.puddle_effect == "ice" and was_wet:
+		_apply_spell_status("freeze", FREEZE_TURNS)
+	elif card.status_effect != "ninguno":
+		_apply_spell_status(card.status_effect, maxi(1, card.duration))
+
+## Descarga: rayo en línea. Pega doble a los mojados y se propaga por el agua
+## que toca (a quien esté parado en ella, también a vos).
+func _cast_chain_bolt(card: CardActionLine, dir: Vector2) -> void:
+	var from: Vector2 = map_area.player_pos
+	var to: Vector2 = from + dir * _w(card.throw_range)
+	# Pararrayos: el rayo se frena en el primer árbol y le pega a quien esté arriba.
+	var rod: Dictionary = map_area.first_tree_on_segment(from, to)
+	if not rod.is_empty():
+		to = from + (to - from) * float(rod["t"])
+		log_requested.emit("%s: el rayo cae sobre un árbol." % card.name)
+		if map_area.is_player_in_this_tree(rod["tree"]):
+			log_requested.emit("¡Estabas arriba del árbol — %d de daño!" % card.damage)
+			await _deal_damage_to_player.call(card.damage, true, CombatState.MAGICO)
+	var water: Array = map_area.puddles_on_segment(from, to, ["wet"])
+	var enemy_in_water: bool = map_area.is_pos_in_zones(map_area.enemy_pos, water)
+	var hit_enemy: bool = map_area.segment_hits_enemy(from, to) or enemy_in_water
+	var hit_player: bool = map_area.is_pos_in_zones(map_area.player_pos, water)
+	if not hit_enemy and not hit_player:
+		log_requested.emit("%s: no alcanzó a nadie." % card.name)
+		return
+	if hit_enemy:
+		var dmg: int = card.damage * (2 if state.enemy_wet_turns > 0 or enemy_in_water else 1)
+		log_requested.emit("¡%s electrocuta al enemigo — %d de daño!" % [card.name, dmg])
+		await _deal_damage_to_enemy.call(dmg, true, CombatState.MAGICO)
+	if hit_player and state.player_hp > 0:
+		var own: int = card.damage * 2
+		log_requested.emit("¡%s! La descarga volvió por el agua — %d de daño a vos." % [card.name, own])
+		await _deal_damage_to_player.call(own, true, CombatState.MAGICO)
+
+## Trepar árbol: primero el árbol (pegado a vos), después dónde caer (dentro
+## del rango alrededor del árbol: un lugar libre o encima del enemigo).
+func _on_tree_climb_click(card: CardActionLine, pos: Vector2) -> void:
+	if pending_spell_tree.is_empty():
+		var tree: Dictionary = map_area.get_tree_at(pos)
+		if tree.is_empty():
+			return
+		if map_area.obstacle_gap(tree) > _w(card.card_range):
+			log_requested.emit("Tenés que estar pegado al árbol para trepar.")
+			return
+		if map_area.is_tree_burning(tree):
+			log_requested.emit("Ese árbol está en llamas: no podés trepar.")
+			return
+		pending_spell_tree = tree
+		map_area.start_puddle_hop_landing(tree["pos"], _w(card.throw_range))
+		log_requested.emit("Elegí dónde vas a caer al final de la ronda.")
+		return
+	if map_area.movement_distance(pending_spell_tree["pos"], pos) > _w(card.throw_range):
+		log_requested.emit("No llegás a caer tan lejos.")
+		return
+	if not map_area.can_drop_at(pos):
+		log_requested.emit("No podés caer ahí.")
+		return
+	pending_cell = pos
+	confirm_popup_show_requested.emit(false)
+
+## Traslado de charco: el charco salta a `cell`. Si le cae encima al enemigo,
+## le aplica el estado de ese charco (PUDDLE_IMPACTS); el hielo cae como granizo.
+func _cast_puddle_hop(card: CardActionLine, puddle: Dictionary, cell: Vector2) -> void:
+	var effect: String = puddle.get("effect", "wet")
+	var zone_damage: int = puddle.get("damage", 0)
+	var landed: Dictionary = map_area.move_puddle(puddle, cell)
+	if not map_area.is_enemy_in_circle(cell, landed.get("radius", 0.0)):
+		log_requested.emit("%s: el charco cayó en otro lugar." % card.name)
+		return
+	if effect == "ice":
+		log_requested.emit("¡%s! Cae granizo sobre el enemigo — %d de daño." % [card.name, card.damage])
+		await _deal_damage_to_enemy.call(card.damage, true, CombatState.MAGICO)
+		return
+	log_requested.emit("¡%s! El charco le cae encima al enemigo." % card.name)
+	var fx: Array = state.puddle_impact_on_enemy(effect, zone_damage)
+	if not fx.is_empty() and fx[1] > 0:
+		log_requested.emit("El enemigo queda %s por %d turnos." % [STATUS_NAMES.get(fx[0], fx[0]), fx[1]])
+
+## Nova: daño mágico alrededor tuyo y empuja al enemigo hacia afuera.
+func _execute_nova(card: CardActionLine) -> void:
+	var radius := _w(card.card_range)
+	if not map_area.is_enemy_in_circle(map_area.player_pos, radius):
+		log_requested.emit("%s: no había nadie cerca." % card.name)
+		return
+	log_requested.emit("¡%s! El enemigo sale despedido — %d de daño." % [card.name, card.damage])
+	await _deal_damage_to_enemy.call(card.damage, true, CombatState.MAGICO)
+	if state.enemy_hp <= 0:
+		_check_combat_end.call()
+		return
+	var from: Vector2 = map_area.enemy_pos
+	var away: Vector2 = from + (from - map_area.player_pos)
+	var landing: Vector2 = map_area.calculate_push_landing(away, _w(card.throw_range))
+	map_area.push_enemy_to(landing)
+	await map_area.enemy_reached_target
+	await _apply_enemy_forced_move(card.name, from, landing)
+	hand_refresh_requested.emit()
+	ui_update_requested.emit()
+	_check_combat_end.call()
+
+func _apply_spell_status(effect: String, base_turns: int) -> void:
+	var turns: int = state.set_enemy_status(effect, base_turns)
+	if turns > 0:
+		log_requested.emit("El enemigo queda %s por %d turnos." % [STATUS_NAMES.get(effect, effect), turns])
+
+const STATUS_NAMES := {
+	"bleed": "sangrando",
+	"blind": "cegado", "slow": "ralentizado", "entangle": "enredado", "burn": "en llamas",
+	"poison": "envenenado", "freeze": "congelado", "wet": "mojado",
+}
+
+func _clear_pending_spell() -> void:
+	if pending_spell_index >= 0:
+		map_area.clear_spell_selection()
+		map_area.clear_push_selection()
+	pending_spell_index = -1
+	pending_spell_card = null
+	pending_spell_dir = Vector2.ZERO
+	pending_spell_puddle = {}
+	pending_spell_tree = {}
 
 func _execute_overwatch(dir: Vector2) -> void:
 	var card: CardActionLine = state.turn_actions[pending_overwatch_index]
@@ -559,6 +1106,7 @@ func _execute_overwatch(dir: Vector2) -> void:
 	state.player_overwatch_range      = _w(card.card_range)
 	state.player_overwatch_half_angle = 10.0
 	state.player_overwatch_damage     = card.damage
+	state.player_overwatch_damage_type = card.damage_type
 	state.turn_actions.remove_at(idx)
 	pending_overwatch_index = -1
 	pending_overwatch_card  = null
@@ -571,7 +1119,7 @@ func _execute_puddle(cell: Vector2) -> void:
 	var card: CardActionLine = state.turn_actions[pending_puddle_index]
 	var idx := pending_puddle_index
 	map_area.clear_puddle_placement()
-	map_area.place_puddle(cell, _w(card.card_range), card.puddle_effect)
+	map_area.place_puddle(cell, _w(card.card_range), card.puddle_effect, card.duration, card.damage)
 	state.turn_actions.remove_at(idx)
 	pending_puddle_index = -1
 	card_preview_hide_requested.emit()
@@ -600,7 +1148,7 @@ func _execute_jump_attack(landing_pos: Vector2) -> void:
 
 	if hit_enemy:
 		log_requested.emit("¡%s! Caíste sobre el enemigo — %d de daño!" % [card.name, card.damage])
-		await _deal_damage_to_enemy.call(card.damage)
+		await _deal_damage_to_enemy.call(card.damage, false, card.damage_type)
 	else:
 		log_requested.emit("%s: aterrizaste en (%.1f, %.1f)." % [card.name, landing_pos.x, landing_pos.y])
 
@@ -658,7 +1206,7 @@ func _throw_grenade(target: Vector2) -> void:
 	hand_refresh_requested.emit()
 	if map_area.is_enemy_in_explosion(landing, _w(card.card_range)):
 		log_requested.emit("%s lands at (%.1f,%.1f) — %d damage!" % [card.name, landing.x, landing.y, card.damage])
-		await _deal_damage_to_enemy.call(card.damage)
+		await _deal_damage_to_enemy.call(card.damage, false, card.damage_type)
 	else:
 		log_requested.emit("%s lands at (%.1f,%.1f) — miss!" % [card.name, landing.x, landing.y])
 
@@ -679,14 +1227,27 @@ func _confirm_range_attack() -> void:
 		log_requested.emit("%s: el enemigo está fuera de rango." % card.name)
 		clear_pending_attack()
 		return
-	log_requested.emit("Played %s for %d damage." % [card.name, card.damage])
+	var damage: int = card.damage
+	var damage_type: String = card.damage_type
+	var enchant_status := ""
+	if state.player_enchant_damage > 0 and damage_type == CombatState.FISICO:
+		# Encantar arma: este golpe es mágico, pega más y aplica su estado.
+		damage += state.player_enchant_damage
+		damage_type = CombatState.MAGICO
+		enchant_status = state.player_enchant_status
+		state.player_enchant_damage = 0
+		state.player_enchant_status = ""
+		log_requested.emit("¡El arma encantada brilla!")
+	log_requested.emit("Played %s for %d damage." % [card.name, damage])
 	# La acción se gasta antes de la animación: durante el await el jugador puede
 	# elegir otra mitad o terminar el turno y state.turn_actions cambia.
 	state.turn_actions.remove_at(pending_attack_index)
 	clear_pending_attack()
 	card_preview_hide_requested.emit()
 	hand_refresh_requested.emit()
-	await _deal_damage_to_enemy.call(card.damage)
+	await _deal_damage_to_enemy.call(damage, false, damage_type)
+	if enchant_status != "" and state.enemy_hp > 0:
+		_apply_spell_status(enchant_status, 3)
 	ui_update_requested.emit()
 	_check_combat_end.call()
 
@@ -696,8 +1257,27 @@ func _confirm_self_action() -> void:
 		map_area.clear_self_highlight()
 		return
 	var card: CardActionLine = state.turn_actions[pending_self_index]
-	state.player_block += card.block_amount
-	log_requested.emit("Played %s. Block: %d" % [card.name, state.player_block])
+	if card.card_type == "heal":
+		var healed: int = state.heal_player(card.restore_amount)
+		log_requested.emit("Played %s. Te curás %d (%d/%d)." % [card.name, healed, state.player_hp, state.player_max_hp])
+	elif card.card_type == "enchant":
+		state.player_enchant_damage = card.damage
+		state.player_enchant_status = "" if card.status_effect == "ninguno" else card.status_effect
+		log_requested.emit("Played %s. Tu próximo ataque físico es mágico y suma %d de daño." % [card.name, card.damage])
+	elif card.card_type == "nova":
+		_execute_nova.call_deferred(card)
+	elif card.card_type == "counter":
+		state.player_counter_damage += card.damage
+		log_requested.emit("Played %s. Contraataque listo: %d de daño a quien te pegue cuerpo a cuerpo." % [card.name, state.player_counter_damage])
+	elif card.card_type == "mp_restore":
+		var gained: int = state.restore_mp(card.restore_amount)
+		log_requested.emit("Played %s. Recuperás %d MP (%d/%d)." % [card.name, gained, state.player_mp, state.player_max_mp])
+	elif card.card_type == "ward":
+		state.player_ward += card.block_amount
+		log_requested.emit("Played %s. Escudo mágico: %d" % [card.name, state.player_ward])
+	else:
+		state.player_block += card.block_amount
+		log_requested.emit("Played %s. Block: %d" % [card.name, state.player_block])
 	state.turn_actions.remove_at(pending_self_index)
 	pending_self_index = -1
 	card_preview_hide_requested.emit()
@@ -724,6 +1304,8 @@ func clear_pending_move() -> void:
 		map_area.clear_move_selection()
 
 func cancel_selection() -> void:
+	confirm_popup_hide_requested.emit()
+	pending_cell = Vector2(-1.0, -1.0)
 	if pending_move_started:
 		_finish_movement()
 		return
@@ -746,6 +1328,8 @@ func cancel_selection() -> void:
 	if pending_puddle_index >= 0:
 		map_area.clear_puddle_placement()
 		pending_puddle_index = -1
+	_clear_pending_module()
+	_clear_pending_spell()
 	if pending_overwatch_index >= 0:
 		map_area.clear_overwatch_selection()
 		pending_overwatch_index = -1
@@ -761,6 +1345,8 @@ func cancel_selection() -> void:
 	ui_update_requested.emit()
 
 func reset() -> void:
+	confirm_popup_hide_requested.emit()
+	pending_cell = Vector2(-1.0, -1.0)
 	card_preview_hide_requested.emit()
 	clear_pending_move()
 	clear_pending_attack()
@@ -775,6 +1361,8 @@ func reset() -> void:
 	pending_push_index = -1
 	pending_push_phase = 0
 	pending_push_card  = null
+	_clear_pending_module()
+	_clear_pending_spell()
 	if pending_puddle_index >= 0:
 		map_area.clear_puddle_placement()
 	pending_puddle_index = -1

@@ -18,9 +18,9 @@ func _youn(base: Dictionary) -> YounData:
 func test_start_life_copia_la_base_y_no_hay_nada_ganado() -> void:
 	var save := PlayerSaveData.new()
 	save.youn_stat_gains = {"fuerza": 99}
-	YounStatRules.start_life(save, _youn({"fuerza": 40, "vitalidad": 50}))
+	YounStatRules.start_life(save, _youn({"fuerza": 40, "constitucion": 50}))
 	assert_eq(YounStatRules.current(save, "fuerza"), 40)
-	assert_eq(YounStatRules.current(save, "vitalidad"), 50)
+	assert_eq(YounStatRules.current(save, "constitucion"), 50)
 	assert_eq(YounStatRules.current(save, "espiritu"), 0)
 	assert_true(save.youn_stat_gains.is_empty())
 
@@ -59,11 +59,11 @@ func test_gain_no_cambia_la_base_del_youn() -> void:
 
 func test_apply_evolution_es_base_del_nuevo_mas_lo_ganado() -> void:
 	var save := PlayerSaveData.new()
-	YounStatRules.start_life(save, _youn({"fuerza": 40, "vitalidad": 50}))
+	YounStatRules.start_life(save, _youn({"fuerza": 40, "constitucion": 50}))
 	YounStatRules.gain(save, "fuerza", 20)
-	YounStatRules.apply_evolution(save, _youn({"fuerza": 90, "vitalidad": 100}))
+	YounStatRules.apply_evolution(save, _youn({"fuerza": 90, "constitucion": 100}))
 	assert_eq(YounStatRules.current(save, "fuerza"), 110)     # 90 + 20
-	assert_eq(YounStatRules.current(save, "vitalidad"), 100)  # 100 + 0
+	assert_eq(YounStatRules.current(save, "constitucion"), 100)  # 100 + 0
 
 
 func test_lo_ganado_se_acumula_entre_evoluciones() -> void:
@@ -104,6 +104,55 @@ func test_youns_con_etapa_tienen_estadisticas_base() -> void:
 	for path in [POMBERO, "res://data/youns/nguruvilu.tres", CAMPEON]:
 		var youn := load(path) as YounData
 		assert_not_null(youn.base_stats, path)
+
+
+func test_migrate_keys_pasa_vitalidad_a_constitucion() -> void:
+	var save := PlayerSaveData.new()
+	save.youn_stats = {"vitalidad": 50, "fuerza": 40}
+	save.youn_stat_gains = {"vitalidad": 7}
+	YounStatRules.migrate_keys(save)
+	assert_eq(YounStatRules.current(save, "constitucion"), 50)
+	assert_eq(YounStatRules.current(save, "fuerza"), 40)
+	assert_false(save.youn_stats.has("vitalidad"))
+	assert_eq(int(save.youn_stat_gains["constitucion"]), 7)
+
+
+func test_migrate_keys_pasa_energia_a_mente() -> void:
+	var save := PlayerSaveData.new()
+	save.youn_stats = {"energia": 40}
+	YounStatRules.migrate_keys(save)
+	assert_eq(YounStatRules.current(save, "mente"), 40)
+	assert_false(save.youn_stats.has("energia"))
+
+
+func test_margen_de_iniciativa_por_agilidad() -> void:
+	assert_eq(YounStatRules.initiative_shift({"agilidad": 0}), 0)
+	assert_eq(YounStatRules.initiative_shift({"agilidad": 50}), 3)
+	assert_eq(YounStatRules.initiative_shift({"agilidad": 75}), 6)
+	assert_eq(YounStatRules.initiative_shift({"agilidad": 100}), 10)
+	assert_eq(YounStatRules.initiative_shift({"agilidad": 60}), 4)
+	assert_gt(YounStatRules.initiative_shift({"agilidad": 150}), 10)
+	assert_eq(YounStatRules.initiative_shift({}), 0)
+
+
+func test_reduccion_de_estados_por_resistencia() -> void:
+	assert_eq(YounStatRules.status_reduction({"resistencia": 50}), 0)
+	assert_eq(YounStatRules.status_reduction({"resistencia": 74}), 0)
+	assert_eq(YounStatRules.status_reduction({"resistencia": 75}), 1)
+	assert_eq(YounStatRules.status_reduction({"resistencia": 100}), 2)
+	assert_eq(YounStatRules.status_reduction({"resistencia": 25}), -1)
+	assert_eq(YounStatRules.status_reduction({}), 0)
+
+
+func test_max_mp_sale_de_la_mente() -> void:
+	assert_eq(YounStatRules.max_mp({"mente": 40}), 40 * YounStatRules.MP_PER_MENTE)
+	assert_eq(YounStatRules.max_mp({}), 0)
+
+
+func test_max_hp_sale_de_la_constitucion() -> void:
+	assert_eq(YounStatRules.max_hp({"constitucion": 50}), 50 * YounStatRules.HP_PER_CONSTITUCION)
+	assert_eq(YounStatRules.max_hp({"constitucion": 0}), 1)
+	assert_eq(YounStatRules.max_hp({}), YounStatRules.DEFAULT_MAX_HP)
 
 
 # ── Integración con la evolución de StatsManager ──────────────────────────────

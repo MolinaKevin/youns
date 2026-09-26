@@ -12,7 +12,8 @@ extends Resource
 ##   move_toward       — se acerca al jugador
 ##   move_away         — retrocede alejándose del jugador
 ##   move_to_last_known — se mueve a la última posición conocida del jugador
-##   block             — gana block_amount de bloqueo
+##   block             — gana block_amount de bloqueo (frena daño físico)
+##   ward              — gana block_amount de escudo mágico (frena daño mágico)
 
 @export var base_score: float = 50.0
 @export var conditions: Array[AiCondition] = []
@@ -20,6 +21,8 @@ extends Resource
 # ── Parámetros de la acción ───────────────────────────────────────────────────
 
 @export var damage: int = 0
+## Físico lo frena el bloqueo; mágico, el escudo mágico.
+@export_enum("fisico", "magico") var damage_type: String = "fisico"
 @export var move_range: float = 5.0
 @export var block_amount: int = 0
 

@@ -65,6 +65,9 @@ var _phase := Phase.PLANNING
 ## [0] = izquierda: marca la iniciativa. Se guardan índices porque el mazo
 ## puede repetir el mismo recurso.
 var _plan_slots: Array[int] = [-1, -1]
+## Cuánto adelantó (-) o atrasó (+) el jugador la iniciativa de su carta este
+## turno; el margen sale de la agilidad (YounStatRules.initiative_shift).
+var _initiative_shift := 0
 ## Índice en state.hand de cada carta que se muestra en la mano durante la planificación.
 var _hand_view_indices: Array[int] = []
 ## Las 2 cartas confirmadas para este turno ([0] marcó la iniciativa).
@@ -137,12 +140,15 @@ func _ready() -> void:
 	player_actions = _CombatPlayerActions.new()
 	player_actions.setup(state, map_area, deal_damage_to_enemy, deal_damage_to_player, check_combat_end)
 	player_actions.log_requested.connect(log_message)
+	map_area.player_knocked_off_tree.connect(player_actions.player_falls_from_tree)
 	player_actions.hand_refresh_requested.connect(refresh_hand)
 	player_actions.ui_update_requested.connect(update_ui)
 	player_actions.card_preview_show_requested.connect(show_card_preview)
 	player_actions.card_preview_hide_requested.connect(hide_card_preview)
 	player_actions.confirm_popup_show_requested.connect(_on_confirm_popup_show)
-	player_actions.confirm_popup_hide_requested.connect(func(): confirm_popup.visible = false)
+	player_actions.confirm_popup_hide_requested.connect(func():
+		confirm_popup.visible = false
+		map_area.unlock_hover())
 	player_actions.end_move_button_visible_changed.connect(func(v): end_move_button.visible = v)
 	player_actions.move_mode_button_reset_requested.connect(func(): move_mode_button.button_pressed = false)
 
@@ -150,8 +156,10 @@ func _ready() -> void:
 	var wild_youn: YounData = GameState.pending_wild_youn_data
 	if wild_youn:
 		GameState.pending_wild_youn_data = null
-		state.enemy_hp     = wild_youn.max_hp
-		state.enemy_max_hp = wild_youn.max_hp
+		state.enemy_hp     = wild_youn.combat_max_hp()
+		state.enemy_max_hp = state.enemy_hp
+		if wild_youn.base_stats != null:
+			state.enemy_status_reduction = YounStatRules.status_reduction(wild_youn.base_stats.to_dict())
 		map_area.set_enemy_hp(state.enemy_hp)
 		map_area.setup_enemy_youn(wild_youn)
 		enemy_ai = _CombatEnemyAI.new()
@@ -182,6 +190,12 @@ func _ready() -> void:
 	if is_instance_valid(_youn) and _youn.youn_data:
 		map_area.setup_player(_youn.youn_data)
 		_player_name = _youn.youn_data.youn_name
+	var player_stats := CardScaling.player_stats()
+	state.player_hp = YounStatRules.max_hp(player_stats)
+	state.player_max_hp = state.player_hp
+	state.player_max_mp = YounStatRules.max_mp(player_stats)
+	state.player_mp = state.player_max_mp
+	state.player_status_reduction = YounStatRules.status_reduction(player_stats)
 	if _player_name == "":
 		_player_name = LocalizationState.t("combat.you")
 	_enemy_name = enemy_name_str
@@ -212,6 +226,7 @@ func _ready() -> void:
 	plan_zone.slot_clicked.connect(_on_plan_slot_clicked)
 	plan_zone.slot_dropped.connect(_on_plan_slot_dropped)
 	plan_zone.confirm_pressed.connect(func(): _commit_plan(_plan_slots[0], _plan_slots[1]))
+	plan_zone.initiative_shift_requested.connect(_on_initiative_shift_requested)
 
 	setup_draw_pile()
 	deck_manager.draw_cards(HAND_SIZE)
@@ -291,6 +306,7 @@ func _on_pile_popup_close() -> void:
 func _start_planning() -> void:
 	_phase = Phase.PLANNING
 	_plan_slots = [-1, -1]
+	_initiative_shift = 0
 	_turn_cards.clear()
 	_playing = {}
 	_disarm_wild()
@@ -371,7 +387,10 @@ func _is_half_available(card_index: int, is_top: bool) -> bool:
 			return is_top
 		Wild.MOVE:
 			return not is_top
-	return true
+		Wild.KEEP:
+			return true
+	# Sin MP suficiente no se puede jugar (los comodines no cuestan MP).
+	return _turn_cards[card_index].get_action(is_top).mp_cost() <= state.player_mp
 
 # ── Comodines ─────────────────────────────────────────────────────────────────
 
@@ -508,6 +527,10 @@ func _mark_playing_started() -> void:
 	if _playing["started"]:
 		return
 	_playing["started"] = true
+	# El MP de toda la mitad se cobra al empezarla (_is_half_available ya
+	# verificó que alcanza).
+	for line: CardActionLine in _playing["lines"]:
+		state.player_mp -= line.mp_cost
 	if _playing["is_top"]:
 		_used_top = _playing["card"]
 	else:
@@ -575,10 +598,24 @@ func _update_plan_zone() -> void:
 	if not plan_zone.visible:
 		return
 	var cards := _plan_slots.map(func(i): return state.hand[i] if i >= 0 else null)
-	var initiative: int = cards[0].initiative if cards[0] != null else -1
+	var initiative: int = _player_initiative(cards[0]) if cards[0] != null else -1
 	# Con mazo, la carta del enemigo (y su iniciativa) se revela al confirmar.
 	var enemy_initiative := "?" if enemy_ai.monster_deck != null else str(enemy_ai.initiative)
-	plan_zone.set_state(cards, initiative, enemy_initiative)
+	plan_zone.set_state(cards, initiative, enemy_initiative, _initiative_shift, _max_initiative_shift())
+
+func _max_initiative_shift() -> int:
+	return YounStatRules.initiative_shift(CardScaling.player_stats())
+
+## Iniciativa de la carta líder con el ajuste del jugador (nunca menor a 1).
+func _player_initiative(lead: CardData) -> int:
+	return maxi(1, lead.initiative + _initiative_shift)
+
+func _on_initiative_shift_requested(delta: int) -> void:
+	if _phase != Phase.PLANNING:
+		return
+	var max_shift := _max_initiative_shift()
+	_initiative_shift = clampi(_initiative_shift + delta, -max_shift, max_shift)
+	_update_plan_zone()
 
 func _commit_plan(lead_index: int, second_index: int) -> void:
 	_turn_cards.assign([state.hand[lead_index], state.hand[second_index]])
@@ -588,7 +625,7 @@ func _commit_plan(lead_index: int, second_index: int) -> void:
 	_playing = {}
 	state.turn_actions.clear()
 
-	var player_initiative := _turn_cards[0].initiative
+	var player_initiative := _player_initiative(_turn_cards[0])
 	var monster_card: MonsterCard = enemy_ai.draw_card()
 	log_message(LocalizationState.t("combat.initiative", [player_initiative, enemy_ai.initiative]))
 	hand_section.set_title(LocalizationState.t("combat.actions"))
@@ -676,26 +713,57 @@ func _on_end_turn_pressed() -> void:
 	_start_planning()
 
 func reset_turn() -> void:
+	# Trepar árbol: al terminar la ronda se cae (y si es sobre el enemigo, pega).
+	if state.player_in_tree:
+		state.player_in_tree = false
+		var hit: bool = map_area.drop_from_tree(state.player_tree_landing)
+		if hit:
+			log_message("¡Caés desde el árbol sobre el enemigo — %d de daño!" % state.player_tree_drop_damage)
+			await deal_damage_to_enemy(state.player_tree_drop_damage, false, CombatState.FISICO)
+			if check_combat_end(): return
+		else:
+			log_message("Bajás del árbol.")
+		player_actions.apply_player_zone_effects(map_area.player_pos, map_area.player_pos)
+	# Las zonas marcadas (Meteoro) caen al terminar la ronda.
+	for hit in map_area.resolve_delayed_zones():
+		if hit["enemy"]:
+			log_message("¡%s cae sobre el enemigo — %d de daño!" % [hit["name"], hit["damage"]])
+			await deal_damage_to_enemy(hit["damage"], true, CombatState.MAGICO)
+			if check_combat_end(): return
+			var fx: Array = state.puddle_impact_on_enemy(hit["effect"], hit["tick_damage"])
+			if not fx.is_empty() and fx[1] > 0:
+				log_message("El enemigo queda %s por %d turnos." % [CombatPlayerActions.STATUS_NAMES.get(fx[0], fx[0]), fx[1]])
+		if hit["player"]:
+			log_message("¡%s te cae encima — %d de daño!" % [hit["name"], hit["damage"]])
+			await deal_damage_to_player(hit["damage"], true, CombatState.MAGICO)
+			if check_combat_end(): return
+			var fx: Array = state.puddle_impact_on_player(hit["effect"], hit["tick_damage"])
+			if not fx.is_empty() and fx[1] > 0:
+				log_message("Quedás %s por %d turnos." % [CombatPlayerActions.STATUS_NAMES.get(fx[0], fx[0]), fx[1]])
+		if not hit["enemy"] and not hit["player"]:
+			log_message("%s cae sin alcanzar a nadie." % hit["name"])
+	map_area.tick_puddles()
+	map_area.tick_trees()
 	if state.player_burning_turns > 0:
-		log_message("¡Estás en llamas! %d de daño." % CombatState.BURN_DAMAGE)
-		await deal_damage_to_player(CombatState.BURN_DAMAGE, true)
+		log_message("¡Estás en llamas! %d de daño." % state.player_burn_damage)
+		await deal_damage_to_player(state.player_burn_damage, true, CombatState.BURN_DAMAGE_TYPE)
 		if check_combat_end(): return
 		state.player_burning_turns -= 1
 		if state.player_burning_turns == 0:
 			log_message("Ya no estás en llamas.")
 
 	if state.player_bleeding_turns > 0:
-		log_message("¡Estás sangrando! %d de daño." % CombatState.BLEED_DAMAGE)
-		await deal_damage_to_player(CombatState.BLEED_DAMAGE, true)
+		log_message("¡Estás sangrando! %d de daño." % state.player_bleed_damage)
+		await deal_damage_to_player(state.player_bleed_damage, true, CombatState.BLEED_DAMAGE_TYPE)
 		if check_combat_end(): return
 		state.player_bleeding_turns -= 1
 		if state.player_bleeding_turns == 0:
 			log_message("Ya no estás sangrando.")
 
 	if state.player_poison_stacks > 0:
-		var pdmg: int = state.player_poison_stacks * CombatState.POISON_DAMAGE_PER_STACK
+		var pdmg: int = state.player_poison_stacks * state.player_poison_damage
 		log_message("¡Estás envenenado! %d de daño." % pdmg)
-		await deal_damage_to_player(pdmg, true)
+		await deal_damage_to_player(pdmg, true, CombatState.POISON_DAMAGE_TYPE)
 		if check_combat_end(): return
 		state.player_poison_stacks -= 1
 		if state.player_poison_stacks == 0:
@@ -735,20 +803,16 @@ func reset_turn() -> void:
 
 # ── Damage ────────────────────────────────────────────────────────────────────
 
-func deal_damage_to_enemy(amount: int, skip_attack_anim: bool = false) -> void:
-	var dmg: int = max(amount - state.enemy_block, 0)
-	state.enemy_block = max(state.enemy_block - amount, 0)
-	state.enemy_hp -= dmg
+func deal_damage_to_enemy(amount: int, skip_attack_anim: bool = false, damage_type: String = CombatState.FISICO) -> void:
+	state.damage_enemy(amount, damage_type)
 	if map_area.has_method("set_enemy_hp"):
 		map_area.set_enemy_hp(state.enemy_hp)
 	if not skip_attack_anim:
 		await _play_player_anim_timed("attack")
 	await _play_enemy_anim_timed("damage")
 
-func deal_damage_to_player(amount: int, skip_attack_anim: bool = false) -> void:
-	var dmg: int = max(amount - state.player_block, 0)
-	state.player_block = max(state.player_block - amount, 0)
-	state.player_hp -= dmg
+func deal_damage_to_player(amount: int, skip_attack_anim: bool = false, damage_type: String = CombatState.FISICO) -> void:
+	var dmg: int = state.damage_player(amount, damage_type)
 	if dmg > 0 and state.player_overwatch_active:
 		state.player_overwatch_active = false
 		map_area.clear_overwatch_zone()
@@ -773,8 +837,9 @@ func _play_enemy_anim_timed(anim_key: String) -> void:
 
 func update_ui() -> void:
 	player_stats.text = LocalizationState.t("combat.player_stats", [
-		state.player_hp, state.player_block, state.enemy_hp
+		state.player_hp, state.player_mp, state.player_max_mp, state.player_block, state.player_ward, state.enemy_hp
 	])
+	map_area.set_status_texts(state.status_summary(true), state.status_summary(false))
 func check_combat_end() -> bool:
 	if state.enemy_hp <= 0:
 		hand_section.disable_cards()
@@ -823,6 +888,8 @@ func hide_card_preview() -> void:
 func _on_confirm_popup_show(show_fin: bool) -> void:
 	confirm_fin_button.visible = show_fin
 	confirm_popup.visible = true
+	# La vista previa queda fija donde se hizo clic mientras se confirma.
+	map_area.lock_hover_at_last_click()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel") and card_preview.visible:

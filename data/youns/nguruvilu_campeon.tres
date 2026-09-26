@@ -13,8 +13,8 @@
 
 [sub_resource type="Resource" id="BaseStats"]
 script = ExtResource("youn_stats_script")
-vitalidad = 90
-energia = 70
+constitucion = 90
+mente = 70
 fuerza = 85
 resistencia = 80
 agilidad = 75
@@ -40,7 +40,6 @@ scene_damage = ExtResource("2_damage")
 chase_speed = 7.0
 body_height = 5.0
 base_stats = SubResource("BaseStats")
-max_hp = 400
 strategy = ExtResource("strategy")
 monster_deck = ExtResource("monster_deck")
 loot_item_name = "Nguruvilu Fang"

@@ -20,14 +20,14 @@ factor = 0.3
 [sub_resource type="Resource" id="Line_top"]
 script = ExtResource("3_line")
 card_type = "move"
-description = "Move a short distance."
+description = "Te movés un poco."
 card_range = 100
 range_scaling = SubResource("Scale_Line_top")
 
 [sub_resource type="Resource" id="Line_bottom"]
 script = ExtResource("3_line")
 card_type = "block"
-description = "Bloqueo 3."
+description = "Te cubrís: el bloqueo frena el daño físico hasta el final de la ronda."
 block_amount = 30
 block_scaling = SubResource("Scale_Line_bottom")
 

@@ -33,7 +33,12 @@ func discard_hand(keep_indices: Array = []) -> void:
 func reset_turn(hand_size: int, keep_indices: Array = []) -> void:
 	_state.turn_actions.clear()
 	_state.player_block = 0
-	# El bloqueo dura una ronda, también el que gana el enemigo con sus cartas.
+	_state.player_ward = 0
+	_state.player_counter_damage = 0
+	_state.player_enchant_damage = 0
+	_state.player_enchant_status = ""
+	# El bloqueo y el escudo mágico duran una ronda, también los del enemigo.
 	_state.enemy_block = 0
+	_state.enemy_ward = 0
 	discard_hand(keep_indices)
 	draw_cards(hand_size - _state.hand.size())

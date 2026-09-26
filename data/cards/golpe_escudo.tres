@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://data/card_action.gd" id="2_action"]
+[ext_resource type="Script" path="res://data/card_action_line.gd" id="3_line"]
+[ext_resource type="Script" path="res://data/stat_scaling.gd" id="4_scaling"]
+
+[sub_resource type="Resource" id="Scale_block"]
+script = ExtResource("4_scaling")
+base = 15
+stat = "resistencia"
+factor = 0.3
+
+[sub_resource type="Resource" id="Scale_hit"]
+script = ExtResource("4_scaling")
+base = 20
+stat = "resistencia"
+factor = 0.4
+
+[sub_resource type="Resource" id="Line_block"]
+script = ExtResource("3_line")
+card_type = "block"
+description = "Te cubrís con el escudo."
+block_amount = 30
+block_scaling = SubResource("Scale_block")
+
+[sub_resource type="Resource" id="Line_hit"]
+script = ExtResource("3_line")
+card_type = "melee_attack"
+description = "Golpeás con el escudo: el daño sale de tu resistencia."
+damage = 40
+damage_scaling = SubResource("Scale_hit")
+
+[sub_resource type="Resource" id="Scale_Line_bottom"]
+script = ExtResource("4_scaling")
+base = 18
+stat = "agilidad"
+factor = 0.4
+
+[sub_resource type="Resource" id="Line_bottom"]
+script = ExtResource("3_line")
+card_type = "move"
+description = "Te movés."
+card_range = 38
+range_scaling = SubResource("Scale_Line_bottom")
+
+[sub_resource type="Resource" id="Resource_top"]
+script = ExtResource("2_action")
+lines = Array[ExtResource("3_line")]([SubResource("Line_block"), SubResource("Line_hit")])
+color = Color(0.12, 0.2, 0.3, 1)
+
+[sub_resource type="Resource" id="Resource_bottom"]
+script = ExtResource("2_action")
+lines = Array[ExtResource("3_line")]([SubResource("Line_bottom")])
+color = Color(0.08, 0.26, 0.14, 1)
+
+[resource]
+script = ExtResource("1_card")
+id = "golpe_escudo"
+name = "Golpe de Escudo"
+initiative = 46
+top = SubResource("Resource_top")
+bottom = SubResource("Resource_bottom")
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"

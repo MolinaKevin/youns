@@ -11,18 +11,34 @@ base = 18
 stat = "agilidad"
 factor = 0.4
 
+[sub_resource type="Resource" id="Scale_Line_top_radius"]
+script = ExtResource("4_scaling")
+base = 3
+stat = "inteligencia"
+factor = 0.2
+
+[sub_resource type="Resource" id="Scale_Line_top_duration"]
+script = ExtResource("4_scaling")
+base = 1
+stat = "inteligencia"
+factor = 0.04
+
 [sub_resource type="Resource" id="Line_top"]
 script = ExtResource("3_line")
 card_type = "puddle"
-description = "Lanzás grasa al suelo. Quien pise la zona queda engrasado por 3 turnos (movimiento -2)."
+mp_cost = 10
+description = "Lanzás grasa al suelo. Quien la pise se mueve menos."
 card_range = 13
 throw_range = 75
 puddle_effect = "grease"
+duration = 3
+range_scaling = SubResource("Scale_Line_top_radius")
+duration_scaling = SubResource("Scale_Line_top_duration")
 
 [sub_resource type="Resource" id="Line_bottom"]
 script = ExtResource("3_line")
 card_type = "move"
-description = "Mover 3."
+description = "Te movés."
 card_range = 38
 range_scaling = SubResource("Scale_Line_bottom")
 

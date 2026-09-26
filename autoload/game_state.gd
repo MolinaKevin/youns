@@ -31,13 +31,39 @@ func _ready() -> void:
 	player_save = PlayerSaveData.new()
 
 	# Mock para probar
-	player_save.owned_card_ids = ["step", "dash", "strike", "slash", "block", "meteor", "arrow", "snipe", "grenade", "salto_rupestre", "envion", "charco", "charco_fuego", "charco_grasa", "enredadera", "charco_sangre", "charco_veneno", "charco_arena", "emboscada"]
+	player_save.owned_card_ids = ["step", "dash", "strike", "slash", "block", "barrera", "meditar", "golpe_escudo", "represalia", "tiron", "ancla", "demoler", "carga_explosiva", "muro", "golpe_de_roca", "muro_arcano", "derrumbe", "lanzar_roca", "chispa", "escarcha", "descarga", "aliento", "nova", "ceguera", "lentitud", "raices", "curar", "encantar_arma", "parpadeo", "traslado_charco", "granizada", "diluvio", "lluvia_acida", "trepar", "meteor", "arrow", "snipe", "grenade", "salto_rupestre", "envion", "charco", "charco_fuego", "charco_grasa", "enredadera", "charco_sangre", "charco_veneno", "charco_arena", "emboscada"]
 	player_save.equipped_deck_ids = [
 		"step", "step", "step",
 		"dash", "dash",
 		"strike", "strike", "strike",
 		"slash", "slash",
 		"block", "block", "block",
+		"barrera", "barrera",
+		"meditar", "meditar",
+		"golpe_escudo", "golpe_escudo",
+		"represalia", "represalia",
+		"tiron", "tiron",
+		"ancla", "ancla",
+		"demoler", "carga_explosiva",
+		"muro", "muro",
+		"golpe_de_roca", "golpe_de_roca",
+		"muro_arcano", "muro_arcano",
+		"derrumbe", "derrumbe",
+		"lanzar_roca", "lanzar_roca",
+		"chispa",
+		"escarcha",
+		"descarga",
+		"aliento",
+		"nova",
+		"ceguera",
+		"lentitud",
+		"raices",
+		"curar",
+		"encantar_arma",
+		"parpadeo",
+		"traslado_charco", "traslado_charco",
+		"granizada", "diluvio", "lluvia_acida",
+		"trepar", "trepar",
 		"meteor", "meteor",
 		"arrow", "arrow", "arrow",
 		"snipe", "snipe",
@@ -94,6 +120,7 @@ func load_player_save() -> void:
 	else:
 		player_save = PlayerSaveData.new()
 		save_player_save()
+	YounStatRules.migrate_keys(player_save)
 	YounStatRules.ensure_initialized(player_save)
 
 func save_player_save() -> void:

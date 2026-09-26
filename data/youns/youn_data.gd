@@ -47,6 +47,8 @@ extends Resource
 ## Estadísticas base: al evolucionar a este Youn reemplazan a las actuales
 ## (más lo ganado en la vida). Ver YounStatRules.
 @export var base_stats: YounStats
+## Solo para Youns sin base_stats: si tiene estadísticas, la vida sale de la
+## constitución (ver combat_max_hp()).
 @export var max_hp: int = 30
 @export var strategy: AiStrategy
 ## Mazo de cartas de habilidad cuando pelea como enemigo. Sin mazo usa `strategy`.
@@ -85,6 +87,12 @@ static func get_active_stage(save: PlayerSaveData) -> String:
 	if data == null:
 		return "bebe"
 	return data.stage
+
+## Vida al pelear como salvaje: sale de la constitución base (YounStatRules.max_hp).
+func combat_max_hp() -> int:
+	if base_stats == null:
+		return max_hp
+	return YounStatRules.max_hp(base_stats.to_dict())
 
 ## Radio de la huella en unidades de mundo.
 func combat_footprint_radius() -> float:

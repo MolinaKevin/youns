@@ -20,7 +20,7 @@ factor = 0.4
 [sub_resource type="Resource" id="Line_top"]
 script = ExtResource("3_line")
 card_type = "push"
-description = "Agarrá al enemigo cercano y empujalo en línea recta. Activa las trampas que cruce."
+description = "Agarrás al enemigo cercano y lo empujás en línea recta. Le afectan los charcos y trampas que cruce."
 card_range = 50
 throw_range = 88
 throw_scaling = SubResource("Scale_Line_top")
@@ -28,7 +28,7 @@ throw_scaling = SubResource("Scale_Line_top")
 [sub_resource type="Resource" id="Line_bottom"]
 script = ExtResource("3_line")
 card_type = "move"
-description = "Mover 3."
+description = "Te movés."
 card_range = 38
 range_scaling = SubResource("Scale_Line_bottom")
 

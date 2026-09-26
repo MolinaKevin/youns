@@ -13,6 +13,7 @@ class MockMapArea extends Node:
 	var enemy_pos  := Vector2(10.0, 0.0)
 	var los_result := true
 	var puddle_effects_result: Dictionary = {}
+	var puddle_damage_result: Dictionary = {}
 	var overwatch_cone_hit := false
 
 	var move_enemy_toward_calls := 0
@@ -43,14 +44,17 @@ class MockMapArea extends Node:
 	func get_puddle_effects_along(_from: Vector2, _to: Vector2) -> Dictionary:
 		return puddle_effects_result
 
+	func get_puddle_damage_along(_from: Vector2, _to: Vector2) -> Dictionary:
+		return puddle_damage_result
+
 	func start_move_selection(_range: float) -> void:
 		start_move_selection_calls += 1
 
 	func start_puddle_placement(_throw_range: float, _effect: String = "wet", _radius: float = 1.0) -> void: pass
 	func clear_puddle_placement() -> void: pass
 
-	func place_puddle(pos: Vector2, radius: float, effect: String = "wet") -> void:
-		place_puddle_calls.append({"pos": pos, "radius": radius, "effect": effect})
+	func place_puddle(pos: Vector2, radius: float, effect: String = "wet", turns: int = 0, damage: int = 0) -> void:
+		place_puddle_calls.append({"pos": pos, "radius": radius, "effect": effect, "turns": turns, "damage": damage})
 
 	func start_overwatch_selection(_cone_range: float, _half_angle: float) -> void: pass
 	func clear_overwatch_selection() -> void: pass
@@ -91,6 +95,18 @@ func test_estado_inicial_pilas_vacias() -> void:
 	assert_true(s.discard_pile.is_empty())
 
 
+func test_resumen_de_estados_para_mostrar_sobre_los_personajes() -> void:
+	var s := CombatState.new()
+	assert_eq(s.status_summary(true), "")
+	s.player_burning_turns = 2
+	s.player_block = 30
+	s.player_in_tree = true
+	assert_eq(s.status_summary(true), "Fuego 2 · Bloqueo 30 · En el árbol")
+	s.enemy_wet_turns = 3
+	s.enemy_ward = 20
+	assert_eq(s.status_summary(false), "Mojado 3 · Escudo mágico 20")
+
+
 func test_estado_inicial_sin_bloqueo() -> void:
 	var s := CombatState.new()
 	assert_eq(s.player_block, 0)
@@ -100,15 +116,79 @@ func test_estado_inicial_sin_bloqueo() -> void:
 # ── Fórmula de daño vs bloqueo ────────────────────────────────────────────────
 
 func _apply_damage(s: CombatState, amount: int) -> void:
-	var dmg := maxi(amount - s.enemy_block, 0)
-	s.enemy_block = maxi(s.enemy_block - amount, 0)
-	s.enemy_hp -= dmg
+	s.damage_enemy(amount)
 
 
 func _apply_damage_to_player(s: CombatState, amount: int) -> void:
-	var dmg := maxi(amount - s.player_block, 0)
-	s.player_block = maxi(s.player_block - amount, 0)
-	s.player_hp -= dmg
+	s.damage_player(amount)
+
+
+# ── MP ────────────────────────────────────────────────────────────────────────
+
+func test_restore_mp_suma_sin_pasar_el_maximo() -> void:
+	var s := CombatState.new()
+	s.player_max_mp = 100
+	s.player_mp = 50
+	assert_eq(s.restore_mp(30), 30)
+	assert_eq(s.player_mp, 80)
+	assert_eq(s.restore_mp(30), 20)
+	assert_eq(s.player_mp, 100)
+
+
+func test_mp_cost_de_una_mitad_suma_solo_lineas_activas() -> void:
+	var half := CardAction.new()
+	for cost in [20, 15, 30]:
+		var line := CardActionLine.new()
+		line.mp_cost = cost
+		half.lines.append(line)
+	half.lines[2].enabled = false
+	assert_eq(half.mp_cost(), 35)
+
+
+func test_meteor_y_barrera_cuestan_mp() -> void:
+	assert_gt(CardDatabase.cards_by_id["meteor"].top.mp_cost(), 0)
+	assert_gt(CardDatabase.cards_by_id["barrera"].top.mp_cost(), 0)
+
+
+func test_meditar_recupera_mp_escalando_con_espiritu() -> void:
+	var line: CardActionLine = CardDatabase.cards_by_id["meditar"].top.lines[0]
+	assert_eq(line.card_type, "mp_restore")
+	var low := line.resolved({"espiritu": 20}).restore_amount
+	var high := line.resolved({"espiritu": 100}).restore_amount
+	assert_gt(high, low)
+
+
+# ── Tipo de daño: físico → bloqueo, mágico → escudo mágico ───────────────────
+
+func test_danio_magico_lo_absorbe_el_escudo_magico_no_el_bloqueo() -> void:
+	var s := CombatState.new()
+	s.enemy_block = 50
+	s.enemy_ward = 30
+	var hp_inicial := s.enemy_hp
+	assert_eq(s.damage_enemy(40, CombatState.MAGICO), 10)
+	assert_eq(s.enemy_hp, hp_inicial - 10)
+	assert_eq(s.enemy_ward, 0)
+	assert_eq(s.enemy_block, 50)
+
+
+func test_danio_fisico_no_usa_el_escudo_magico() -> void:
+	var s := CombatState.new()
+	s.player_ward = 100
+	var hp_inicial := s.player_hp
+	assert_eq(s.damage_player(40), 40)
+	assert_eq(s.player_hp, hp_inicial - 40)
+	assert_eq(s.player_ward, 100)
+
+
+func test_danio_magico_al_jugador_gasta_escudo_magico() -> void:
+	var s := CombatState.new()
+	s.player_block = 100
+	s.player_ward = 25
+	var hp_inicial := s.player_hp
+	s.damage_player(20, CombatState.MAGICO)
+	assert_eq(s.player_hp, hp_inicial)
+	assert_eq(s.player_ward, 5)
+	assert_eq(s.player_block, 100)
 
 
 func test_danio_sin_bloqueo_reduce_hp_completo() -> void:
@@ -1046,17 +1126,13 @@ func test_bloqueo_acumulado_absorbe_daño_combinado() -> void:
 # ── Estados de combate — helpers ─────────────────────────────────────────────
 
 func _dmg_enemy_callable(s: CombatState) -> Callable:
-	return func(amount: int, _skip_anim: bool = false) -> void:
-		var dmg := maxi(amount - s.enemy_block, 0)
-		s.enemy_block = maxi(s.enemy_block - amount, 0)
-		s.enemy_hp -= dmg
+	return func(amount: int, _skip_anim: bool = false, damage_type: String = CombatState.FISICO) -> void:
+		s.damage_enemy(amount, damage_type)
 
 
 func _dmg_player_callable(s: CombatState) -> Callable:
-	return func(amount: int, _skip_anim: bool = false) -> void:
-		var dmg := maxi(amount - s.player_block, 0)
-		s.player_block = maxi(s.player_block - amount, 0)
-		s.player_hp -= dmg
+	return func(amount: int, _skip_anim: bool = false, damage_type: String = CombatState.FISICO) -> void:
+		s.damage_player(amount, damage_type)
 
 
 func _check_end_callable(s: CombatState) -> Callable:
@@ -1287,6 +1363,611 @@ func test_execute_puddle_usa_el_effect_y_rango_de_la_carta() -> void:
 	assert_eq(_map.place_puddle_calls[0]["pos"], Vector2(4.0, 2.0))
 
 
+func test_execute_puddle_pasa_duracion_y_danio() -> void:
+	var s := CombatState.new()
+	var card := _make_card("puddle")
+	card.puddle_effect = "fire"
+	card.card_range = 2
+	card.duration = 4
+	card.damage = 45
+	s.turn_actions.append(card)
+	var pa := _make_player_actions(s)
+	pa.pending_puddle_index = 0
+	pa._execute_puddle(Vector2(4.0, 2.0))
+	assert_eq(_map.place_puddle_calls[0]["turns"], 4)
+	assert_eq(_map.place_puddle_calls[0]["damage"], 45)
+
+
+func test_enemigo_que_pisa_fuego_toma_el_danio_del_charco() -> void:
+	var s := CombatState.new()
+	var ai := _make_ai(s)
+	_map.puddle_effects_result = {"fire": true, "poison": true}
+	_map.puddle_damage_result = {"fire": 55, "poison": 14}
+	ai._apply_enemy_zone_effects(Vector2.ZERO)
+	assert_eq(s.enemy_burning_turns, 3)
+	assert_eq(s.enemy_burn_damage, 55)
+	assert_eq(s.enemy_poison_damage, 14)
+
+
+func test_charco_sin_danio_propio_usa_el_danio_por_defecto() -> void:
+	var s := CombatState.new()
+	var ai := _make_ai(s)
+	_map.puddle_effects_result = {"fire": true}
+	ai._apply_enemy_zone_effects(Vector2.ZERO)
+	assert_eq(s.enemy_burn_damage, CombatState.BURN_DAMAGE)
+
+
+# ── Charcos en el mapa: duración ─────────────────────────────────────────────
+
+const MapAreaScript := preload("res://features/combat/scene/map_area.gd")
+
+
+func test_charco_con_duracion_desaparece_al_pasar_sus_rondas() -> void:
+	var map = MapAreaScript.new()
+	map.place_puddle(Vector2(5, 5), 1.0, "fire", 2, 40)
+	map.place_puddle(Vector2(15, 15), 1.0, "wet")  # sin duración
+	map.tick_puddles()
+	assert_eq(map.puddle_zones.size(), 2)
+	map.tick_puddles()
+	assert_eq(map.puddle_zones.size(), 1)
+	assert_eq(map.puddle_zones[0]["effect"], "wet")
+	assert_eq(map._puddle_visuals.size(), 1)
+	map.free()
+
+
+func test_lente_dura_lo_que_el_charco_mas_corto() -> void:
+	var map = MapAreaScript.new()
+	map.place_puddle(Vector2(5, 5), 1.0, "blood", 3, 20)
+	map.place_puddle(Vector2(6, 5), 1.0, "ice", 1)
+	var lens: Dictionary = map.puddle_zones.filter(func(z): return z["lens"])[0]
+	assert_eq(lens["effect"], "bloody_ice")
+	assert_eq(lens["turns"], 1)
+	assert_eq(lens["damage"], 20)
+	map.tick_puddles()
+	assert_eq(map.puddle_zones.size(), 1)
+	assert_eq(map.puddle_zones[0]["effect"], "blood")
+	assert_true(map.puddle_zones[0]["excl"].is_empty())
+	map.free()
+
+
+func test_arrastre_acerca_al_enemigo_sin_pasarse() -> void:
+	var map = MapAreaScript.new()
+	map.enemy_pos = Vector2(2, 2)
+	assert_eq(map.calculate_drag_landing(Vector2(2, 10), 3.0), Vector2(2, 5))
+	assert_eq(map.calculate_drag_landing(Vector2(2, 10), 20.0), Vector2(2, 10))
+	map.free()
+
+
+func test_arrastre_se_frena_en_un_obstaculo() -> void:
+	var map = MapAreaScript.new()
+	map.enemy_pos = Vector2(14, 25)  # al sur del obstáculo sólido de (14, 19), radio 1,5
+	var landing: Vector2 = map.calculate_drag_landing(Vector2(14, 12), 20.0)
+	assert_gt(landing.y, 20.5)
+	map.free()
+
+
+func test_romper_modulo_libera_el_paso() -> void:
+	var map = MapAreaScript.new()
+	var rock: Dictionary = map.get_module_at(Vector2(15.0, 15.0))
+	assert_eq(rock.get("type"), "rock")
+	assert_true(map._pos_blocked(Vector2(15.0, 15.0)))
+	assert_eq(map.break_modules(rock, 1), 1)
+	assert_false(map._pos_blocked(Vector2(15.0, 15.0)))
+	assert_true(map.get_module_at(Vector2(15.0, 15.0)).is_empty())
+	map.free()
+
+
+func test_paredes_puentes_y_plataformas_no_son_modulos() -> void:
+	var map = MapAreaScript.new()
+	assert_true(map.get_module_at(Vector2(14.0, 19.0)).is_empty())  # pared
+	assert_true(map.get_module_at(Vector2(13.0, 24.0)).is_empty())  # puente
+	assert_true(map.get_module_at(Vector2(8.0, 10.0)).is_empty())   # plataforma
+	map.free()
+
+
+func _map_for_modules():
+	var map = MapAreaScript.new()
+	map.solid_obstacles.clear()  # mapa vacío para ubicar los módulos a mano
+	map.player_pos = Vector2(2, 15)
+	map.enemy_pos = Vector2(28, 15)
+	return map
+
+
+func test_muro_levanta_modulos_en_fila_perpendicular() -> void:
+	var map = _map_for_modules()
+	assert_eq(map.build_modules(Vector2(10, 15), 3), 3)
+	var ys := []
+	for obs in map.solid_obstacles:
+		assert_eq(obs["pos"].x, 10.0)
+		ys.append(obs["pos"].y)
+	ys.sort()
+	assert_eq(ys, [14.0, 15.0, 16.0])
+	assert_true(map._pos_blocked(Vector2(10, 15)))
+	map.free()
+
+
+func test_muro_no_se_levanta_encima_de_un_actor() -> void:
+	var map = _map_for_modules()
+	assert_eq(map.build_modules(Vector2(28, 15), 1), 0)
+	map.free()
+
+
+func test_romper_varios_modulos_pegados() -> void:
+	var map = _map_for_modules()
+	map.build_modules(Vector2(10, 15), 3)
+	map.build_modules(Vector2(20, 15), 1)  # lejos: no está pegado
+	var middle: Dictionary = map.get_module_at(Vector2(10, 15))
+	assert_eq(map.break_modules(middle, 5), 3)
+	assert_eq(map.solid_obstacles.size(), 1)
+	map.free()
+
+
+func test_golpear_modulo_choca_al_enemigo() -> void:
+	var map = _map_for_modules()
+	map.build_modules(Vector2(10, 15), 1)
+	var module: Dictionary = map.solid_obstacles[0]
+	var result: Dictionary = map.slide_module(module, Vector2.RIGHT, 30.0)
+	assert_eq(result["hit"], "enemy")
+	assert_lt(result["pos"].x, 28.0 - map._enemy_shadow_radius)
+	map.free()
+
+
+func test_golpear_modulo_sin_choque_recorre_su_distancia() -> void:
+	var map = _map_for_modules()
+	map.build_modules(Vector2(10, 15), 1)
+	var result: Dictionary = map.slide_module(map.solid_obstacles[0], Vector2.RIGHT, 5.0)
+	assert_eq(result["hit"], "")
+	assert_almost_eq(result["pos"].x, 15.0, 0.001)
+	map.free()
+
+
+func test_golpear_modulo_se_frena_en_otro_obstaculo() -> void:
+	var map = _map_for_modules()
+	map.build_modules(Vector2(10, 15), 1)
+	var module: Dictionary = map.solid_obstacles[0]
+	map.build_modules(Vector2(14, 15), 1)
+	var result: Dictionary = map.slide_module(module, Vector2.RIGHT, 10.0)
+	assert_eq(result["hit"], "")
+	assert_lt(result["pos"].x, 13.0 + 0.001)
+	map.free()
+
+
+func test_derrumbe_tira_solo_los_modulos_pegados_al_enemigo() -> void:
+	var map = _map_for_modules()
+	map.build_modules(Vector2(26.6, 15), 1)  # pegado al enemigo (28, 15)
+	map.build_modules(Vector2(28, 13.6), 1)  # pegado
+	map.build_modules(Vector2(24, 15), 1)    # lejos
+	assert_eq(map.modules_adjacent_to_enemy().size(), 2)
+	assert_eq(map.collapse_modules_on_enemy(), 2)
+	assert_eq(map.solid_obstacles.size(), 1)
+	map.free()
+
+
+func test_muro_que_pasa_por_encima_del_enemigo_queda_pegado_para_derrumbe() -> void:
+	var map = _map_for_modules()
+	map.player_pos = Vector2(28, 25)
+	# Muro de 5 que cruza al enemigo (28, 15): los del medio se saltean.
+	map.build_modules(Vector2(28.5, 15), 5)
+	assert_lt(map.solid_obstacles.size(), 5)
+	assert_eq(map.modules_adjacent_to_enemy().size(), 2)
+	map.free()
+
+
+func test_lanzar_modulo_le_cae_al_enemigo_y_se_rompe() -> void:
+	var map = _map_for_modules()
+	map.build_modules(Vector2(4, 15), 1)
+	var module: Dictionary = map.solid_obstacles[0]
+	var hits: Dictionary = map.throw_module(module, Vector2(27.5, 15))
+	assert_true(hits["enemy"])
+	assert_false(hits["player"])
+	assert_true(map.solid_obstacles.is_empty())
+	map.free()
+
+
+func test_lanzar_modulo_al_vacio_no_le_pega_a_nadie() -> void:
+	var map = _map_for_modules()
+	map.build_modules(Vector2(4, 15), 1)
+	var hits: Dictionary = map.throw_module(map.solid_obstacles[0], Vector2(15, 5))
+	assert_false(hits["enemy"])
+	assert_false(hits["player"])
+	map.free()
+
+
+# ── Hechizos ──────────────────────────────────────────────────────────────────
+
+func test_set_enemy_status_respeta_la_resistencia() -> void:
+	var s := CombatState.new()
+	s.enemy_status_reduction = 1
+	assert_eq(s.set_enemy_status("blind", 3), 2)
+	assert_eq(s.enemy_blinded_turns, 2)
+	assert_eq(s.set_enemy_status("inexistente", 3), 0)
+
+
+func test_curar_no_pasa_el_maximo() -> void:
+	var s := CombatState.new()
+	s.player_max_hp = 200
+	s.player_hp = 150
+	assert_eq(s.heal_player(80), 50)
+	assert_eq(s.player_hp, 200)
+
+
+func test_chispa_convierte_grasa_en_fuego_y_escarcha_agua_en_hielo() -> void:
+	var map = _map_for_modules()
+	map.place_puddle(Vector2(10, 10), 1.0, "grease")
+	map.place_puddle(Vector2(20, 10), 1.0, "wet")
+	assert_eq(map.convert_puddles(Vector2(10, 10), 1.0, ["grease", "vine"], "fire"), 1)
+	assert_eq(map.convert_puddles(Vector2(20, 10), 1.0, ["wet"], "ice"), 1)
+	var effects: Array = map.puddle_zones.map(func(z): return z["effect"])
+	assert_eq(effects, ["fire", "ice"])
+	map.free()
+
+
+func test_descarga_se_propaga_por_el_agua() -> void:
+	var map = _map_for_modules()
+	map.enemy_pos = Vector2(10, 25)
+	map.place_puddle(Vector2(10, 22), 3.5, "wet")  # el enemigo está parado en el agua
+	var water: Array = map.puddles_on_segment(Vector2(2, 20), Vector2(14, 20), ["wet"])
+	assert_eq(water.size(), 1)
+	assert_true(map.is_pos_in_zones(map.enemy_pos, water))
+	assert_false(map.segment_hits_enemy(Vector2(2, 20), Vector2(14, 20)))
+	map.free()
+
+
+func test_aliento_alcanza_en_cono() -> void:
+	var map = _map_for_modules()
+	map.enemy_pos = Vector2(6, 16)
+	assert_true(map.is_enemy_in_cone(map.player_pos, Vector2.RIGHT, 5.0, 30.0))
+	assert_false(map.is_enemy_in_cone(map.player_pos, Vector2.LEFT, 5.0, 30.0))
+	assert_false(map.is_enemy_in_cone(map.player_pos, Vector2.RIGHT, 2.0, 30.0))
+	map.free()
+
+
+func test_meteoro_cae_al_resolver_y_le_pega_a_quien_siga_ahi() -> void:
+	var map = _map_for_modules()
+	map.place_delayed_zone(map.enemy_pos, 1.5, 120, "Meteoro")
+	map.place_delayed_zone(Vector2(15, 5), 1.5, 120, "Meteoro")
+	var hits: Array = map.resolve_delayed_zones()
+	assert_eq(hits.size(), 2)
+	assert_true(hits[0]["enemy"])
+	assert_false(hits[1]["enemy"])
+	assert_true(map.delayed_zones.is_empty())
+	map.free()
+
+
+func test_hechizo_retardado_cae_a_las_2_rondas_y_deja_su_charco() -> void:
+	var map = _map_for_modules()
+	map.place_delayed_zone(map.enemy_pos, 1.5, 120, "Meteoro", 2, "fire", 3)
+	assert_true(map.resolve_delayed_zones().is_empty())  # falta una ronda
+	assert_eq(map.delayed_zones.size(), 1)
+	assert_true(map.puddle_zones.is_empty())
+	var hits: Array = map.resolve_delayed_zones()
+	assert_eq(hits.size(), 1)
+	assert_true(hits[0]["enemy"])
+	assert_eq(hits[0]["tick_damage"], 30)  # 25 % del daño
+	assert_eq(map.puddle_zones.size(), 1)
+	assert_eq(map.puddle_zones[0]["effect"], "fire")
+	assert_eq(map.puddle_zones[0]["turns"], 3)
+	assert_eq(map.puddle_zones[0]["damage"], 30)
+	map.free()
+
+
+func test_hechizo_retardado_sin_efecto_no_deja_charco() -> void:
+	var map = _map_for_modules()
+	map.place_delayed_zone(map.enemy_pos, 1.5, 50, "Test")
+	map.resolve_delayed_zones()
+	assert_true(map.puddle_zones.is_empty())
+	map.free()
+
+
+func test_impacto_de_charco_aplica_su_estado_y_danio_por_turno() -> void:
+	var s := CombatState.new()
+	assert_eq(s.puddle_impact_on_enemy("fire", 30), ["burn", 3])
+	assert_eq(s.enemy_burn_damage, 30)
+	assert_eq(s.puddle_impact_on_player("ice", 0), ["freeze", 2])
+	assert_eq(s.player_frozen_turns, 2)
+	assert_eq(s.puddle_impact_on_enemy("dark_smoke", 0), [])
+
+
+func test_parpadeo_no_aparece_en_obstaculos_ni_encima_del_enemigo() -> void:
+	var map = _map_for_modules()
+	map.build_modules(Vector2(10, 15), 1)
+	assert_false(map.can_blink_to(Vector2(10, 15)))
+	assert_false(map.can_blink_to(map.enemy_pos))
+	assert_true(map.can_blink_to(Vector2(10, 5)))
+	map.blink_player_to(Vector2(10, 5))
+	assert_eq(map.player_pos, Vector2(10, 5))
+	map.free()
+
+
+func test_trasladar_charco_conserva_efecto_rondas_y_danio() -> void:
+	var map = _map_for_modules()
+	map.place_puddle(Vector2(10, 10), 1.0, "fire", 2, 45)
+	var moved: Dictionary = map.move_puddle(map.get_puddle_at(Vector2(10, 10)), Vector2(20, 12))
+	assert_eq(map.puddle_zones.size(), 1)
+	assert_eq(moved["pos"], Vector2(20, 12))
+	assert_eq(moved["effect"], "fire")
+	assert_eq(moved["turns"], 2)
+	assert_eq(moved["damage"], 45)
+	assert_eq(map._puddle_visuals.size(), 1)
+	map.free()
+
+
+func test_trasladar_charco_se_lleva_su_zona_combinada() -> void:
+	var map = _map_for_modules()
+	map.place_puddle(Vector2(10, 10), 1.0, "blood", 0, 20)
+	map.place_puddle(Vector2(11, 10), 1.0, "ice")
+	assert_eq(map.puddle_zones.size(), 3)  # sangre, lente de hielo sangriento, hielo
+	map.move_puddle(map.get_puddle_at(Vector2(11.8, 10)), Vector2(20, 20))
+	var effects: Array = map.puddle_zones.map(func(z): return z["effect"])
+	assert_eq(effects, ["blood", "ice"])
+	assert_true(map.puddle_zones[0]["excl"].is_empty())
+	map.free()
+
+
+func test_las_zonas_combinadas_no_se_pueden_elegir_para_trasladar() -> void:
+	var map = _map_for_modules()
+	map.place_puddle(Vector2(10, 10), 1.0, "blood")
+	map.place_puddle(Vector2(11, 10), 1.0, "ice")
+	var zone: Dictionary = map.get_puddle_at(Vector2(10.5, 10))
+	assert_false(zone.get("lens", false))
+	map.free()
+
+
+func test_set_enemy_status_sangrado() -> void:
+	var s := CombatState.new()
+	assert_eq(s.set_enemy_status("bleed", 4), 4)
+	assert_eq(s.enemy_bleeding_turns, 4)
+
+
+# ── Trepar árbol ──────────────────────────────────────────────────────────────
+
+func test_hay_arboles_para_trepar() -> void:
+	var map = MapAreaScript.new()
+	assert_eq(map.get_tree_at(Vector2(5.0, 24.0)).get("type"), "tree")
+	assert_true(map.get_tree_at(Vector2(15.0, 15.0)).is_empty())  # piedra, no árbol
+	assert_true(map._pos_blocked(Vector2(5.0, 24.0)))
+	map.free()
+
+
+func test_caer_del_arbol_sobre_el_enemigo_queda_pegado_a_el() -> void:
+	var map = MapAreaScript.new()
+	map.player_pos = Vector2(5.0, 25.4)
+	map.enemy_pos = Vector2(8.0, 24.0)
+	var tree: Dictionary = map.get_tree_at(Vector2(5.0, 24.0))
+	map.climb_tree(tree, map.enemy_pos)
+	assert_true(map.is_player_in_tree())
+	assert_true(map.drop_from_tree(map.enemy_pos))
+	assert_false(map.is_player_in_tree())
+	assert_almost_eq(map.player_pos.distance_to(map.enemy_pos), map.MIN_SEPARATION, 0.01)
+	map.free()
+
+
+func test_caer_del_arbol_en_un_lugar_libre() -> void:
+	var map = MapAreaScript.new()
+	map.player_pos = Vector2(5.0, 25.4)
+	var tree: Dictionary = map.get_tree_at(Vector2(5.0, 24.0))
+	map.climb_tree(tree, Vector2(8.0, 26.0))
+	assert_false(map.drop_from_tree(Vector2(8.0, 26.0)))
+	assert_eq(map.player_pos, Vector2(8.0, 26.0))
+	map.free()
+
+
+func test_arriba_del_arbol_el_enemigo_no_te_alcanza() -> void:
+	var s := CombatState.new()
+	s.player_in_tree = true
+	_map.enemy_pos = Vector2(1.0, 0.0)
+	var card := _make_monster_card(20, [_make_monster_action("attack", 2)])
+	var ai := _make_card_ai(s, _make_monster_deck([card]))
+	var hp := s.player_hp
+	await ai.execute_card(card)
+	assert_eq(s.player_hp, hp)
+
+
+func test_arriba_del_arbol_no_te_podes_mover() -> void:
+	var s := CombatState.new()
+	s.player_in_tree = true
+	s.turn_actions.append(_make_card("move"))
+	var pa := _make_player_actions(s)
+	pa.play_card(0)
+	assert_eq(pa.pending_move_index, -1)
+	assert_eq(_map.start_move_selection_calls, 0)
+
+
+func _map_with_tree(tree_pos := Vector2(10, 15)):
+	var map = _map_for_modules()
+	map.solid_obstacles.append({"pos": tree_pos, "radius": 0.6, "type": "tree"})
+	return map
+
+
+func test_talar_arbol_deja_un_tronco_tirado() -> void:
+	var map = _map_with_tree()
+	var tree: Dictionary = map.get_tree_at(Vector2(10, 15))
+	var result: Dictionary = map.fell_tree(tree, Vector2.RIGHT)
+	assert_false(result["enemy_hit"])
+	assert_true(map.get_tree_at(Vector2(10, 15)).is_empty())
+	var segments: Array = map.solid_obstacles.filter(func(o): return o.has("log_id"))
+	assert_eq(segments.size(), map.LOG_SEGMENTS)
+	assert_true(map._pos_blocked(Vector2(10.9, 15)))
+	assert_true(map.has_line_of_sight(Vector2(10.9, 13), Vector2(10.9, 17)))  # es bajo: se ve por encima
+	map.free()
+
+
+func test_el_tronco_se_rompe_entero_con_una_carta() -> void:
+	var map = _map_with_tree()
+	map.fell_tree(map.get_tree_at(Vector2(10, 15)), Vector2.RIGHT)
+	var piece: Dictionary = map.get_module_at(Vector2(10.9, 15))
+	assert_eq(map.break_modules(piece, 1), map.LOG_SEGMENTS)
+	assert_true(map.solid_obstacles.is_empty())
+	map.free()
+
+
+func test_arbol_que_cae_sobre_el_enemigo_le_pega() -> void:
+	var map = _map_with_tree(Vector2(26.2, 15))
+	var result: Dictionary = map.fell_tree(map.get_tree_at(Vector2(26.2, 15)), Vector2.RIGHT)
+	assert_true(result["enemy_hit"])
+	map.free()
+
+
+func test_talar_el_arbol_con_el_jugador_arriba_lo_tira() -> void:
+	var map = _map_with_tree()
+	var knocked := []
+	map.player_knocked_off_tree.connect(func(burning): knocked.append(burning))
+	map.climb_tree(map.get_tree_at(Vector2(10, 15)), Vector2(12, 12))
+	map.fell_tree(map.get_tree_at(Vector2(10, 15)), Vector2.RIGHT)
+	assert_eq(knocked, [false])
+	assert_false(map.is_player_in_tree())
+	map.free()
+
+
+func test_charco_de_fuego_prende_el_arbol_y_se_consume() -> void:
+	var map = _map_with_tree()
+	var knocked := []
+	map.player_knocked_off_tree.connect(func(burning): knocked.append(burning))
+	var tree: Dictionary = map.get_tree_at(Vector2(10, 15))
+	map.climb_tree(tree, Vector2(12, 12))
+	map.place_puddle(Vector2(10.5, 16), 1.0, "fire", 3, 30)
+	assert_true(map.is_tree_burning(tree))
+	assert_eq(knocked, [true])
+	map.tick_trees()
+	assert_false(map.get_tree_at(Vector2(10, 15)).is_empty())
+	map.tick_trees()
+	assert_true(map.get_tree_at(Vector2(10, 15)).is_empty())
+	map.free()
+
+
+func test_otros_charcos_no_prenden_arboles() -> void:
+	var map = _map_with_tree()
+	map.place_puddle(Vector2(10.5, 16), 1.0, "wet")
+	assert_false(map.is_tree_burning(map.get_tree_at(Vector2(10, 15))))
+	map.free()
+
+
+func test_golpear_un_modulo_contra_el_arbol_tira_al_de_arriba() -> void:
+	var map = _map_with_tree(Vector2(14, 15))
+	var knocked := []
+	map.player_knocked_off_tree.connect(func(burning): knocked.append(burning))
+	map.climb_tree(map.get_tree_at(Vector2(14, 15)), Vector2(12, 12))
+	map.build_modules(Vector2(10, 15), 1)
+	var module: Dictionary = map.get_module_at(Vector2(10, 15))
+	var result: Dictionary = map.slide_module(module, Vector2.RIGHT, 10.0)
+	assert_false(result["tree"].is_empty())
+	assert_eq(knocked, [false])
+	map.free()
+
+
+func test_agua_y_hielo_apagan_arboles_en_llamas() -> void:
+	var map = _map_with_tree()
+	var tree: Dictionary = map.get_tree_at(Vector2(10, 15))
+	map.ignite_trees_in_circle(Vector2(10, 15), 1.0)
+	assert_true(map.is_tree_burning(tree))
+	map.place_puddle(Vector2(10.5, 16), 1.0, "wet")
+	assert_false(map.is_tree_burning(tree))
+	map.ignite_trees_in_circle(Vector2(10, 15), 1.0)
+	assert_eq(map.extinguish_trees_in_circle(Vector2(10, 15), 1.0), 1)
+	map.free()
+
+
+func test_el_rayo_se_frena_en_el_primer_arbol() -> void:
+	var map = _map_with_tree(Vector2(8, 15))
+	var rod: Dictionary = map.first_tree_on_segment(Vector2(2, 15), Vector2(20, 15))
+	assert_false(rod.is_empty())
+	assert_lt(rod["t"], 0.5)
+	assert_true(map.first_tree_on_segment(Vector2(2, 10), Vector2(20, 10)).is_empty())
+	map.free()
+
+
+func test_charco_de_planta_junto_a_un_arbol_es_mas_grande() -> void:
+	var map = _map_with_tree()
+	map.place_puddle(Vector2(11.5, 15), 1.0, "vine")
+	map.place_puddle(Vector2(25, 5), 1.0, "vine")
+	assert_almost_eq(float(map.puddle_zones[0]["radius"]), 1.0 * map.TREE_VINE_RADIUS_MULT, 0.001)
+	assert_almost_eq(float(map.puddle_zones[1]["radius"]), 1.0, 0.001)
+	map.free()
+
+
+func test_el_fuego_del_arbol_se_propaga_por_la_planta_a_otro_arbol() -> void:
+	var map = _map_with_tree(Vector2(10, 15))
+	map.solid_obstacles.append({"pos": Vector2(13, 15), "radius": 0.6, "type": "tree"})
+	map.place_puddle(Vector2(11.5, 15), 1.0, "vine")  # une los dos árboles
+	map.ignite_trees_in_circle(Vector2(10, 15), 0.5)
+	assert_eq(map.puddle_zones[0]["effect"], "fire")
+	assert_true(map.is_tree_burning(map.get_tree_at(Vector2(13, 15))))
+	map.free()
+
+
+func test_ariete_empuja_el_tronco_entero() -> void:
+	var map = _map_with_tree(Vector2(10, 10))
+	map.fell_tree(map.get_tree_at(Vector2(10, 10)), Vector2.RIGHT)
+	var before: Array = map.solid_obstacles.map(func(o): return o["pos"])
+	map.slide_module(map.get_module_at(Vector2(10, 10)), Vector2.DOWN, 3.0)
+	var after: Array = map.solid_obstacles.map(func(o): return o["pos"])
+	for i in before.size():
+		assert_almost_eq((after[i] - before[i]).y, 3.0, 0.001)
+		assert_almost_eq((after[i] - before[i]).x, 0.0, 0.001)
+	map.free()
+
+
+func test_caer_del_arbol_en_un_charco_te_aplica_su_efecto() -> void:
+	var s := CombatState.new()
+	s.player_in_tree = true
+	_map.puddle_effects_result = {"poison": true}
+	_map.puddle_damage_result = {"poison": 14}
+	var pa := CombatPlayerActions.new()
+	pa.setup(s, _map, Callable(), _dmg_player_callable(s), func() -> bool: return false)
+	await pa.player_falls_from_tree(false)
+	assert_gt(s.player_poison_stacks, 0)
+	assert_eq(s.player_poison_damage, 14)
+
+
+func test_confirmar_deja_fija_la_vista_previa_en_el_clic() -> void:
+	var map = MapAreaScript.new()
+	map._last_click_pos = Vector2(7, 8)
+	map.lock_hover_at_last_click()
+	assert_true(map._hover_locked)
+	map.unlock_hover()
+	assert_false(map._hover_locked)
+	map.free()
+
+
+func test_cancelar_cierra_el_popup_de_confirmar() -> void:
+	var s := CombatState.new()
+	var pa := _make_player_actions(s)
+	var hidden := [0]
+	pa.confirm_popup_hide_requested.connect(func(): hidden[0] += 1)
+	pa.pending_cell = Vector2(3, 3)
+	pa.cancel_selection()
+	assert_eq(hidden[0], 1)
+	assert_eq(pa.pending_cell, Vector2(-1, -1))
+
+
+func test_caerse_de_un_arbol_en_llamas_hace_danio_y_prende_fuego() -> void:
+	var s := CombatState.new()
+	s.player_in_tree = true
+	var pa := CombatPlayerActions.new()
+	pa.setup(s, _map, Callable(), _dmg_player_callable(s), func() -> bool: return false)
+	var hp := s.player_hp
+	await pa.player_falls_from_tree(true)
+	assert_false(s.player_in_tree)
+	assert_eq(s.player_hp, hp - CombatPlayerActions.TREE_FALL_DAMAGE)
+	assert_gt(s.player_burning_turns, 0)
+
+
+func test_charcos_cuestan_mp() -> void:
+	for card: CardData in CardDatabase.cards_by_id.values():
+		for line: CardActionLine in card.top.lines + card.bottom.lines:
+			if line.card_type == "puddle":
+				assert_gt(line.mp_cost, 0, card.id)
+
+
+func test_danio_de_charco_a_lo_largo_de_un_segmento() -> void:
+	var map = MapAreaScript.new()
+	map.place_puddle(Vector2(5, 5), 1.0, "fire", 3, 40)
+	map.place_puddle(Vector2(5, 5), 1.0, "wet")
+	assert_eq(map.get_puddle_damage_along(Vector2(3, 5), Vector2(7, 5)), {"fire": 40})
+	assert_eq(map.get_puddle_damage_along(Vector2(20, 20), Vector2(21, 20)), {})
+	map.free()
+
+
 # ── CombatPlayerActions — overwatch ───────────────────────────────────────────
 
 func test_execute_overwatch_activa_estado_con_datos_de_la_carta() -> void:
@@ -1324,7 +2005,7 @@ func test_confirm_range_attack_gasta_la_accion_antes_del_danio() -> void:
 	s.turn_actions.append(_make_card("melee_attack", 0, 6))
 	var size_during_damage := [-1]
 	var pa := CombatPlayerActions.new()
-	pa.setup(s, _map, func(amount: int, _skip := false) -> void:
+	pa.setup(s, _map, func(amount: int, _skip := false, _type := CombatState.FISICO) -> void:
 		size_during_damage[0] = s.turn_actions.size()
 		s.turn_actions.clear()  # simula "fin de turno" durante la animación
 		s.enemy_hp -= amount, Callable(), func() -> bool: return false)
@@ -1335,6 +2016,23 @@ func test_confirm_range_attack_gasta_la_accion_antes_del_danio() -> void:
 
 	assert_eq(size_during_damage[0], 0)
 	assert_eq(s.enemy_hp, s.enemy_max_hp - 6)
+
+
+func test_encantar_arma_vuelve_magico_el_proximo_ataque_y_suma_danio() -> void:
+	var s := CombatState.new()
+	s.player_enchant_damage = 20
+	s.player_enchant_status = "burn"
+	s.turn_actions.append(_make_card("melee_attack", 0, 6))
+	var hits := []
+	var pa := CombatPlayerActions.new()
+	pa.setup(s, _map, func(amount: int, _skip := false, type := CombatState.FISICO) -> void:
+		hits.append([amount, type]), Callable(), func() -> bool: return false)
+	pa.pending_attack_index = 0
+	pa.pending_attack_range = 1
+	await pa._confirm_range_attack()
+	assert_eq(hits, [[26, CombatState.MAGICO]])
+	assert_eq(s.player_enchant_damage, 0)
+	assert_gt(s.enemy_burning_turns, 0)
 
 
 # ── Cartas de monstruo ────────────────────────────────────────────────────────
@@ -1405,6 +2103,57 @@ func test_carta_ataque_en_alcance_hace_base_mas_modificador() -> void:
 	var hp := s.player_hp
 	await ai.execute_card(card)
 	assert_eq(s.player_hp, hp - 8)  # base 6 + 2
+
+
+func test_contraataque_devuelve_el_golpe_cuerpo_a_cuerpo() -> void:
+	var s := CombatState.new()
+	s.player_counter_damage = 25
+	_map.enemy_pos = Vector2(1.0, 0.0)
+	var card := _make_monster_card(20, [_make_monster_action("attack", 2)])
+	var ai := _make_card_ai(s, _make_monster_deck([card]))
+	var enemy_hp := s.enemy_hp
+	await ai.execute_card(card)
+	assert_eq(s.enemy_hp, enemy_hp - 25)
+
+
+func test_contraataque_no_alcanza_ataques_a_distancia() -> void:
+	var s := CombatState.new()
+	s.player_counter_damage = 25
+	_map.enemy_pos = Vector2(7.0, 0.0)
+	var card := _make_monster_card(20, [_make_monster_action("attack", 0, -13)])
+	var ai := _make_card_ai(s, _make_monster_deck([card], 50, 4, 100))
+	var enemy_hp := s.enemy_hp
+	await ai.execute_card(card)
+	assert_eq(s.enemy_hp, enemy_hp)
+
+
+func test_contraataque_se_reinicia_cada_ronda() -> void:
+	var s := CombatState.new()
+	s.player_counter_damage = 25
+	var dm := CombatDeckManager.new()
+	dm.setup(s)
+	dm.reset_turn(0)
+	assert_eq(s.player_counter_damage, 0)
+
+
+# ── Resistencia a estados ────────────────────────────────────────────────────
+
+func test_status_turns_resta_la_reduccion_sin_bajar_de_1() -> void:
+	var s := CombatState.new()
+	s.player_status_reduction = 2
+	s.enemy_status_reduction = -1
+	assert_eq(s.status_turns(4, true), 2)
+	assert_eq(s.status_turns(2, true), 1)
+	assert_eq(s.status_turns(3, false), 4)
+
+
+func test_enemigo_resistente_se_prende_fuego_menos_turnos() -> void:
+	var s := CombatState.new()
+	s.enemy_status_reduction = 1
+	var ai := _make_ai(s)
+	_map.puddle_effects_result = {"fire": true}
+	ai._apply_enemy_zone_effects(Vector2.ZERO)
+	assert_eq(s.enemy_burning_turns, 2)
 
 
 func test_carta_ataque_fuera_de_alcance_no_hace_danio() -> void:

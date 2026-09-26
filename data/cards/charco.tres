@@ -17,24 +17,40 @@ base = 5
 stat = "fuerza"
 factor = 0.1
 
+[sub_resource type="Resource" id="Scale_Line_top_radius"]
+script = ExtResource("4_scaling")
+base = 3
+stat = "inteligencia"
+factor = 0.2
+
+[sub_resource type="Resource" id="Scale_Line_top_duration"]
+script = ExtResource("4_scaling")
+base = 1
+stat = "inteligencia"
+factor = 0.04
+
 [sub_resource type="Resource" id="Line_top"]
 script = ExtResource("3_line")
 card_type = "puddle"
-description = "Lanzá un charco de agua en el mapa. Quien pase por encima queda mojado y se mueve más lento por 3 turnos."
+mp_cost = 10
+description = "Lanzás un charco de agua. Quien lo pise queda mojado y se mueve más lento."
 card_range = 13
 throw_range = 88
+duration = 3
+range_scaling = SubResource("Scale_Line_top_radius")
+duration_scaling = SubResource("Scale_Line_top_duration")
 
 [sub_resource type="Resource" id="Line_bottom"]
 script = ExtResource("3_line")
 card_type = "move"
-description = "Mover 3."
+description = "Te movés."
 card_range = 38
 range_scaling = SubResource("Scale_Line_bottom")
 
 [sub_resource type="Resource" id="Line_bottom_2"]
 script = ExtResource("3_line")
 card_type = "melee_attack"
-description = "Atacar 1."
+description = "Golpe cuerpo a cuerpo."
 damage = 10
 damage_scaling = SubResource("Scale_Line_bottom_2")
 

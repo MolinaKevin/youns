@@ -15,3 +15,10 @@ func enabled_lines() -> Array[CardActionLine]:
 		if line != null and line.enabled:
 			result.append(line)
 	return result
+
+## MP que cuesta jugar la mitad: la suma de sus líneas activas.
+func mp_cost() -> int:
+	var total := 0
+	for line in enabled_lines():
+		total += line.mp_cost
+	return total

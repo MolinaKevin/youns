@@ -90,7 +90,7 @@ window.EVOLUCIONES = {
     { id: "campeon_2", nombre: "Campeón 2", etapa: "campeon", provisorio: true, inteligencias: ["logica", "espacial"],
       condiciones: { inteligencia: "Lógico-matemática o Espacial", stats: "Técnica > 150", crianza: "Disciplina ≥ 70", cartas: "Usar 25 ataques a distancia", bonus: "Evolucionar en la zona lógica" } },
     { id: "campeon_3", nombre: "Campeón 3", etapa: "campeon", provisorio: true, inteligencias: ["naturalista"],
-      condiciones: { inteligencia: "Naturalista", stats: "Espíritu > 150 y Vitalidad entre 500 y 700", crianza: "Estrés ≤ 30", cartas: "Jugar 20 mitades de charco", bonus: "Venir de Nguruvilu" } },
+      condiciones: { inteligencia: "Naturalista", stats: "Espíritu > 150 y Constitución entre 500 y 700", crianza: "Estrés ≤ 30", cartas: "Jugar 20 mitades de charco", bonus: "Venir de Nguruvilu" } },
     { id: "campeon_4", nombre: "Campeón 4", etapa: "campeon", provisorio: true, inteligencias: ["musical", "interpersonal"],
       condiciones: { inteligencia: "Musical o Interpersonal", stats: "Inteligencia > 140", crianza: "Felicidad ≥ 80", cartas: "Usar 30 líneas de bloqueo", bonus: "—" } },
     { id: "campeon_5", nombre: "Campeón 5", etapa: "campeon", provisorio: true, inteligencias: ["linguistica", "intrapersonal"],

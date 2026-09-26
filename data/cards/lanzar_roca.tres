@@ -1,0 +1,60 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_card"]
+[ext_resource type="Script" path="res://data/card_action.gd" id="2_action"]
+[ext_resource type="Script" path="res://data/card_action_line.gd" id="3_line"]
+[ext_resource type="Script" path="res://data/stat_scaling.gd" id="4_scaling"]
+
+[sub_resource type="Resource" id="Scale_Line_bottom"]
+script = ExtResource("4_scaling")
+base = 18
+stat = "agilidad"
+factor = 0.4
+
+[sub_resource type="Resource" id="Scale_dist"]
+script = ExtResource("4_scaling")
+base = 25
+stat = "constitucion"
+factor = 1.0
+
+[sub_resource type="Resource" id="Scale_dmg"]
+script = ExtResource("4_scaling")
+base = 30
+stat = "constitucion"
+factor = 0.6
+
+[sub_resource type="Resource" id="Line_top"]
+script = ExtResource("3_line")
+card_type = "module_throw"
+description = "Levantás un módulo pegado a vos y lo tirás: al caer se rompe y le pega a quien esté ahí."
+card_range = 13
+throw_range = 75
+throw_scaling = SubResource("Scale_dist")
+damage = 60
+damage_scaling = SubResource("Scale_dmg")
+
+[sub_resource type="Resource" id="Line_bottom"]
+script = ExtResource("3_line")
+card_type = "move"
+description = "Te movés."
+card_range = 38
+range_scaling = SubResource("Scale_Line_bottom")
+
+[sub_resource type="Resource" id="Resource_top"]
+script = ExtResource("2_action")
+lines = Array[ExtResource("3_line")]([SubResource("Line_top")])
+color = Color(0.3, 0.2, 0.16, 1)
+
+[sub_resource type="Resource" id="Resource_bottom"]
+script = ExtResource("2_action")
+lines = Array[ExtResource("3_line")]([SubResource("Line_bottom")])
+color = Color(0.08, 0.26, 0.14, 1)
+
+[resource]
+script = ExtResource("1_card")
+id = "lanzar_roca"
+name = "Lanzar Roca"
+initiative = 57
+top = SubResource("Resource_top")
+bottom = SubResource("Resource_bottom")
+metadata/_custom_type_script = "uid://cb2fptd8ugdit"
