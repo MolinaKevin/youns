@@ -1,0 +1,108 @@
+[gd_resource type="Resource" script_class="YounData" format=3]
+
+[ext_resource type="Script" path="res://data/youns/youn_data.gd" id="script"]
+[ext_resource type="Script" path="res://data/youns/youn_stats.gd" id="stats"]
+[ext_resource type="Script" path="res://data/youns/youn_evolution_stats.gd" id="evo_stats"]
+[ext_resource type="Script" path="res://data/card_action_line.gd" id="line"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition.gd" id="cond"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_intelligence.gd" id="c_intel"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_values.gd" id="c_values"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_value_check.gd" id="c_check"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_hour.gd" id="c_hour"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_zone.gd" id="c_zone"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_from_youn.gd" id="c_from"]
+[ext_resource type="Resource" path="res://data/cards/salto_rupestre.tres" id="signature"]
+
+[sub_resource type="Resource" id="BaseStats"]
+script = ExtResource("stats")
+constitucion = 90
+mente = 60
+fuerza = 105
+resistencia = 80
+agilidad = 95
+tecnica = 85
+inteligencia = 60
+espiritu = 65
+
+[sub_resource type="Resource" id="EvolutionStats"]
+script = ExtResource("evo_stats")
+mode = 0
+constitucion = 15.0
+mente = 5.0
+fuerza = 40.0
+resistencia = 15.0
+agilidad = 25.0
+tecnica = 15.0
+inteligencia = 5.0
+espiritu = 5.0
+
+[sub_resource type="Resource" id="Cond0"]
+script = ExtResource("c_intel")
+intelligences = PackedStringArray("corporal")
+
+[sub_resource type="Resource" id="Cond1Check0"]
+script = ExtResource("c_check")
+key = "fuerza"
+use_min = true
+min_value = 80.0
+
+[sub_resource type="Resource" id="Cond1Check1"]
+script = ExtResource("c_check")
+key = "agilidad"
+use_min = true
+min_value = 60.0
+
+[sub_resource type="Resource" id="Cond1"]
+script = ExtResource("c_values")
+kind = 1
+checks = Array[ExtResource("c_check")]([SubResource("Cond1Check0"), SubResource("Cond1Check1")])
+
+[sub_resource type="Resource" id="Cond2Check0"]
+script = ExtResource("c_check")
+key = "care_mistakes"
+use_min = false
+use_max = true
+max_value = 1.0
+
+[sub_resource type="Resource" id="Cond2"]
+script = ExtResource("c_values")
+kind = 2
+checks = Array[ExtResource("c_check")]([SubResource("Cond2Check0")])
+
+[sub_resource type="Resource" id="Cond3"]
+script = ExtResource("c_zone")
+zone_id = "right"
+
+[sub_resource type="Resource" id="Cond4"]
+script = ExtResource("c_from")
+youn_path = "res://data/youns/pombero.tres"
+
+[sub_resource type="Resource" id="Line0"]
+script = ExtResource("line")
+card_type = "melee_attack"
+description = "Zarpazo."
+damage = 35
+
+[sub_resource type="Resource" id="Line1"]
+script = ExtResource("line")
+card_type = "move"
+description = "Salto felino."
+card_range = 25
+
+[resource]
+script = ExtResource("script")
+id = "yaguarete_aba"
+youn_name = "Yaguareté-Abá"
+stage = "campeon"
+intelligences = PackedStringArray("corporal")
+evolves_to = Array[String](["res://data/youns/arasy.tres"])
+evolution_conditions = Array[ExtResource("cond")]([SubResource("Cond0"), SubResource("Cond1"), SubResource("Cond2"), SubResource("Cond3"), SubResource("Cond4")])
+signature_card = ExtResource("signature")
+color_changes = Dictionary[String, int]({"corporal": 4})
+granted_lines = Array[ExtResource("line")]([SubResource("Line0"), SubResource("Line1")])
+placeholder_shape = 4
+placeholder_color = Color(0.9, 0.75, 0.2, 1)
+placeholder_size = 1.0
+base_stats = SubResource("BaseStats")
+evolution_stats = SubResource("EvolutionStats")
+body_height = 1.4

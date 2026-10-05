@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://zone_left"]
 
-[ext_resource type="Script" path="res://features/world/zones/zone_left.gd" id="1"]
+[ext_resource type="Script" uid="uid://w0vfg42ihqs0" path="res://features/world/zones/zone_base.gd" id="1"]
 
 [sub_resource type="PlaneMesh" id="1"]
 size = Vector2(150, 150)

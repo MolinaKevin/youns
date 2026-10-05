@@ -68,3 +68,67 @@ func test_total_hours_increases_with_day() -> void:
 	GameState.current_day = 2
 	var day2 := GameState.get_total_hours()
 	assert_eq(day2 - day1, 24.0)
+
+
+# ── discard_pending_ticks (dormir) ────────────────────────────────────────────
+
+func test_discard_pending_ticks_no_emite_los_ticks_salteados() -> void:
+	var was_paused := GameState.clock_paused
+	var save_backup := GameState.player_save
+	GameState.player_save = null  # los ticks no tocan ninguna partida
+	GameState.clock_paused = false
+	GameState.discard_pending_ticks()
+	var ticks := [0]
+	var count := func() -> void: ticks[0] += 1
+	GameState.twenty_min_ticked.connect(count)
+	GameState.time_of_day_hours = 17.0  # 9 h de salto
+	GameState.discard_pending_ticks()
+	GameState._process(0.0)
+	GameState.twenty_min_ticked.disconnect(count)
+	GameState.clock_paused = was_paused
+	GameState.player_save = save_backup
+	assert_eq(ticks[0], 0)
+
+
+func test_sin_discard_los_ticks_salteados_se_emiten() -> void:
+	var was_paused := GameState.clock_paused
+	var save_backup := GameState.player_save
+	GameState.player_save = null  # los ticks no tocan ninguna partida
+	GameState.clock_paused = false
+	GameState.discard_pending_ticks()
+	var ticks := [0]
+	var count := func() -> void: ticks[0] += 1
+	GameState.twenty_min_ticked.connect(count)
+	GameState.time_of_day_hours = 9.0  # 1 h de salto: 3 ticks
+	GameState._process(0.0)
+	GameState.twenty_min_ticked.disconnect(count)
+	GameState.clock_paused = was_paused
+	GameState.player_save = save_backup
+	assert_eq(ticks[0], 3)
+
+
+# ── partida nueva: Youn inicial ───────────────────────────────────────────────
+
+func test_partida_nueva_registra_el_youn_inicial() -> void:
+	var save := PlayerSaveData.new()
+	GameState.setup_starting_youn(save)
+	assert_eq(save.current_youn_path, GameState.STARTING_YOUN_PATH)
+	assert_true(ResourceLoader.exists(save.current_youn_path))
+
+
+func test_partida_nueva_tiene_las_8_stats_iniciales() -> void:
+	var save := PlayerSaveData.new()
+	GameState.setup_starting_youn(save)
+	for key in YounStats.KEYS:
+		assert_eq(save.youn_stats.get(key), GameState.STARTING_STATS[key], key)
+
+
+func test_partida_nueva_arranca_la_etapa_ahora() -> void:
+	var save := PlayerSaveData.new()
+	GameState.setup_starting_youn(save)
+	assert_almost_eq(save.stage_entered_total_hour, GameState.get_total_hours(), 0.01)
+
+
+func test_el_youn_inicial_es_rookie() -> void:
+	var youn: YounData = load(GameState.STARTING_YOUN_PATH)
+	assert_eq(youn.stage, "adolescente")

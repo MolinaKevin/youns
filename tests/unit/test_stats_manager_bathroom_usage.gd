@@ -104,3 +104,35 @@ func test_accidente_suma_care_mistake() -> void:
 	GameState.player_save.care_mistakes = 0
 	StatsManager.apply_bathroom_accident()
 	assert_eq(GameState.player_save.care_mistakes, 1)
+
+
+# ── vencimiento — la hora de bathroom se cumple sin ir al baño ───────────────
+
+func _vencer_bathroom() -> void:
+	GameState.current_day = 1
+	GameState.time_of_day_hours = 12.0
+	# activado hace 2 h (dura 1 h)
+	StatsManager.active_states["bathroom"] = {"hour": GameState.get_total_hours() - 2.0, "stat_value": 100.0}
+	StatsManager.check_emotions()
+
+
+func test_bathroom_vencido_vacia_las_ganas() -> void:
+	GameState.player_save.ganas_bano = 100
+	_vencer_bathroom()
+	assert_eq(GameState.player_save.ganas_bano, 0)
+	assert_false("bathroom" in StatsManager.active_states)
+
+
+func test_bathroom_vencido_aplica_la_perdida_de_peso() -> void:
+	_vencer_bathroom()
+	assert_lt(GameState.player_save.weight, 20.0)
+	assert_eq(GameState.player_save.poop_pending, 0.0)
+
+
+func test_bathroom_vencido_no_vuelve_a_aparecer_enseguida() -> void:
+	# antes: las ganas quedaban en 100 y bathroom reaparecía y vencía en loop
+	GameState.player_save.ganas_bano = 100
+	_vencer_bathroom()
+	StatsManager._evaluate_emotion_rules()
+	assert_false("bathroom" in StatsManager.active_states)
+

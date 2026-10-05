@@ -71,4 +71,10 @@ func resolved(stats: Dictionary) -> CardActionLine:
 		r.restore_amount = restore_scaling.evaluate(stats)
 	if throw_scaling != null:
 		r.throw_range = throw_scaling.evaluate(stats)
+	# Salud baja del Youn: rinden menos el daño, el bloqueo y la curación.
+	var health: float = stats.get("health_factor", 1.0)
+	if health < 1.0:
+		r.damage = roundi(r.damage * health)
+		r.block_amount = roundi(r.block_amount * health)
+		r.restore_amount = roundi(r.restore_amount * health)
 	return r

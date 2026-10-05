@@ -43,18 +43,36 @@ func set_monster_deck(deck: MonsterDeck) -> void:
 	monster_deck = deck
 	_card_pile.clear()
 
-## Roba la carta de la ronda y toma su iniciativa. Las cartas no se repiten
-## hasta que se usaron todas; ahí se vuelve a mezclar el mazo.
+## Cuántas cartas mira el enemigo cada ronda para elegir la suya.
+const ROUND_OPTIONS := 3
+
+## Las cartas entre las que eligió esta ronda (incluye current_card). Las que no
+## eligió vuelven al mazo; en la revelación se muestran dadas vuelta.
+var round_options: Array[MonsterCard] = []
+
+## Roba la carta de la ronda y toma su iniciativa: mira ROUND_OPTIONS cartas
+## del mazo y se queda con una (choose_card). Solo se gasta la elegida.
+## Si quedan menos de ROUND_OPTIONS por usar, se vuelve a mezclar el mazo entero
+## (las que quedaban se juntan con las usadas), así siempre hay 3 opciones.
 func draw_card() -> MonsterCard:
+	round_options.clear()
 	if monster_deck == null or monster_deck.cards.is_empty():
 		current_card = null
 		return null
-	if _card_pile.is_empty():
+	if _card_pile.size() < ROUND_OPTIONS:
 		_card_pile.assign(monster_deck.cards)
 		_card_pile.shuffle()
-	current_card = _card_pile.pop_back()
+	var count := mini(ROUND_OPTIONS, _card_pile.size())
+	round_options.assign(_card_pile.slice(_card_pile.size() - count))
+	current_card = choose_card(round_options)
+	_card_pile.erase(current_card)
 	initiative = current_card.initiative
 	return current_card
+
+## Elige la carta de la ronda entre las opciones. PROVISORIO: al azar. Acá va a
+## ir la inteligencia de los enemigos.
+func choose_card(options: Array[MonsterCard]) -> MonsterCard:
+	return options.pick_random()
 
 # ── Turn ──────────────────────────────────────────────────────────────────────
 

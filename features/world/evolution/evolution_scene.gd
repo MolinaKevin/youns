@@ -4,6 +4,7 @@ extends Node3D
 signal finished
 signal approach_finished
 
+const PlaceholderModel := preload("res://features/world/party/placeholder_model.gd")
 const ORBIT_DISTANCE := 2.5
 const LOOK_AT_HEIGHT := 0.5
 const Y_FLOAT        := 0.5
@@ -123,7 +124,12 @@ func _load_model(data: YounData) -> void:
 	if _current_model:
 		_current_model.queue_free()
 		_current_model = null
-	if data == null or data.scene_idle == null:
+	if data == null:
+		return
+	if data.scene_idle == null:
+		# Sin modelo todavía: el provisorio de primitivas.
+		_current_model = PlaceholderModel.build(data)
+		_youn_holder.add_child(_current_model)
 		return
 	_current_model = data.scene_idle.instantiate()
 	_current_model.scale = Vector3.ONE * data.mesh_scale

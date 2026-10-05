@@ -10,7 +10,8 @@ extends Control
 @onready var add_button = $MarginContainer/MainVBox/Body/RightPanel/PreviewPanel/VBox/AddButton
 
 var owned_cards: Array[CardData] = []
-var current_deck: Array[String] = []
+## Copias propias (ver DeckRules): pueden traer cambios de las evoluciones.
+var current_deck: Array[CardData] = []
 var selected_card: CardData = null
 
 func _ready() -> void:
@@ -22,7 +23,7 @@ func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	LocalizationState.language_changed.connect(_apply_localized_text)
 	owned_cards = _get_owned_cards()
-	current_deck = GameState.player_save.equipped_deck_ids.duplicate()
+	current_deck = DeckRules.cards(GameState.player_save).duplicate()
 
 	card_grid.set_cards(owned_cards)
 	card_grid.card_selected.connect(_on_collection_card_selected)
@@ -42,7 +43,7 @@ func _on_collection_card_selected(card_data: CardData) -> void:
 func _on_add_pressed() -> void:
 	if selected_card == null:
 		return
-	current_deck.append(selected_card.id)
+	current_deck.append(selected_card.clone())
 	_refresh_deck_panel()
 
 func _remove_card_from_deck(index: int) -> void:
@@ -57,14 +58,13 @@ func _refresh_deck_panel() -> void:
 	_apply_localized_text()
 
 	for i in current_deck.size():
-		var card_id = current_deck[i]
-		var card_data: CardData = CardDatabase.get_card(card_id)
+		var card_data: CardData = current_deck[i]
 
 		var row = HBoxContainer.new()
 		deck_list.add_child(row)
 
 		var lbl = Label.new()
-		lbl.text = LocalizationState.card_name(card_id, card_data.name if card_data != null else card_id)
+		lbl.text = LocalizationState.card_name(card_data.id, card_data.name)
 		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(lbl)
 
@@ -74,13 +74,17 @@ func _refresh_deck_panel() -> void:
 		row.add_child(btn)
 
 func _on_save_pressed() -> void:
-	GameState.player_save.equipped_deck_ids = current_deck.duplicate()
-	GameState.save_player_save()
+	GameState.player_save.deck = current_deck.duplicate()
 
+## Las cartas que se pueden sumar al mazo: primero las guardadas de vidas
+## anteriores (con sus cambios), después la colección.
 func _get_owned_cards() -> Array[CardData]:
 	if GameState.player_save == null:
 		return []
-	return CardDatabase.get_cards_from_ids(GameState.player_save.owned_card_ids)
+	var cards: Array[CardData] = []
+	cards.append_array(GameState.player_save.saved_cards)
+	cards.append_array(CardDatabase.get_cards_from_ids(GameState.player_save.owned_card_ids))
+	return cards
 
 func _apply_localized_text(_language: String = "") -> void:
 	title_label.text = LocalizationState.t("deck.title")

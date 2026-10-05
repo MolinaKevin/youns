@@ -7,7 +7,9 @@ var _panel: PanelContainer
 var _message: Label
 var _yes_btn: Button
 var _no_btn: Button
-var _showing_not_implemented := false
+## El jugador eligió guardar: game_world guarda al despertar (con la hora y el
+## estado de la mañana).
+var save_requested := false
 
 
 func _ready() -> void:
@@ -74,15 +76,9 @@ func _build_ui() -> void:
 
 
 func _apply_text(_lang: String = "") -> void:
-	if _showing_not_implemented:
-		_message.text = LocalizationState.t("sleep.not_implemented")
-		_yes_btn.visible = false
-		_no_btn.text = LocalizationState.t("sleep.no")
-	else:
-		_message.text = LocalizationState.t("sleep.save_prompt")
-		_yes_btn.visible = true
-		_yes_btn.text = LocalizationState.t("sleep.yes")
-		_no_btn.text = LocalizationState.t("sleep.no")
+	_message.text = LocalizationState.t("sleep.save_prompt")
+	_yes_btn.text = LocalizationState.t("sleep.yes")
+	_no_btn.text = LocalizationState.t("sleep.no")
 
 
 func _fade_in() -> void:
@@ -97,9 +93,8 @@ func _show_dialog() -> void:
 
 
 func _on_yes() -> void:
-	_showing_not_implemented = true
-	_apply_text()
-	_no_btn.grab_focus()
+	save_requested = true
+	_on_no()
 
 
 func _on_no() -> void:
@@ -117,7 +112,11 @@ func _skip_time() -> void:
 	if GameState.time_of_day_hours >= float(wake_h):
 		GameState.current_day += 1
 	GameState.time_of_day_hours = float(wake_h)
+	# Durmiendo no corre el desgaste ni se tiran los dados de emociones: lo que
+	# pasa en la noche son solo los efectos de acá y de StatsManager.on_wake_up.
+	GameState.discard_pending_ticks()
 	StatsManager.add_energia(_calc_energia_recovery(hours_slept))
+	StatsManager.add_salud(StatsManager.salud_from_sleep(hours_slept))
 	GameState.clock_changed.emit(GameState.time_of_day_hours, GameState.current_day)
 
 

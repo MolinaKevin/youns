@@ -1,5 +1,7 @@
 extends CharacterBody3D
 
+const PlaceholderModel := preload("res://features/world/party/placeholder_model.gd")
+
 const GRAVITY     := 20.0
 const FOLLOW_DIST := 2.0
 const STOP_DIST   := 1.2
@@ -63,6 +65,11 @@ func _load_model(data: YounData) -> void:
 				mesh.material_override = mat
 		_bodies[key] = body
 
+	# Youn sin modelo todavía: uno de primitivas (PlaceholderModel), para que se vea.
+	if _bodies.is_empty():
+		_bodies["idle"] = PlaceholderModel.build(data)
+		_bodies["idle"].visible = false
+		add_child(_bodies["idle"])
 	print("EmotionBubble loaded bodies: ", _bodies.keys())
 	_switch_to("idle")
 

@@ -34,10 +34,15 @@ var halves_selectable := false:
 
 var _hover_tween: Tween
 var _empty_style := StyleBoxEmpty.new()
+## Panel de cada línea por mitad: {true: {índice en action.lines: panel}, false: {...}}.
+var _line_panels := {true: {}, false: {}}
+## Recuadro de la línea que se está usando en combate (ver set_active_line).
+var _active_line_style: StyleBoxFlat
 
 const FRAME_BG     := Color(0.07, 0.16, 0.24)
 const FRAME_BORDER := Color(0.35, 0.85, 1.0)
 const HALF_BORDER  := Color(1.0, 0.85, 0.35)
+const ACTIVE_LINE_BORDER := Color(1.0, 0.85, 0.35)
 
 func _ready() -> void:
 	_apply_styles()
@@ -58,6 +63,13 @@ func _ready() -> void:
 		pending_setup_card = null
 
 func _apply_styles() -> void:
+	_active_line_style = StyleBoxFlat.new()
+	_active_line_style.bg_color = Color(1.0, 0.85, 0.35, 0.18)
+	_active_line_style.border_color = ACTIVE_LINE_BORDER
+	_active_line_style.set_border_width_all(2)
+	_active_line_style.set_corner_radius_all(5)
+	_active_line_style.set_content_margin_all(2)
+
 	var bg := StyleBoxFlat.new()
 	bg.bg_color = FRAME_BG
 	bg.border_color = FRAME_BORDER
@@ -143,11 +155,14 @@ func _apply_card_data(card: CardData) -> void:
 	_refresh_half_styles()
 
 ## Una fila por línea de acción: íconos con su número (ver CardText.line_parts).
+## Cada fila va en un panel propio para poder recuadrarla (set_active_line).
 func _fill_half(half: Button, action: CardAction, marker: String) -> void:
 	var box: VBoxContainer = half.get_node("VBox")
 	for child in box.get_children():
 		box.remove_child(child)
 		child.queue_free()
+	var panels: Dictionary = _line_panels[half == top_half]
+	panels.clear()
 	if action == null:
 		return
 	# Se muestra el valor final para el Youn del jugador (ver StatScaling).
@@ -160,7 +175,12 @@ func _fill_half(half: Button, action: CardAction, marker: String) -> void:
 		var row := _line_row(line.resolved(stats), marker if i == 0 else "")
 		if not line.enabled:
 			row.modulate.a = 0.35
-		box.add_child(row)
+		var panel := PanelContainer.new()
+		panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		panel.add_theme_stylebox_override("panel", _empty_style)
+		panel.add_child(row)
+		box.add_child(panel)
+		panels[i] = panel
 
 const ICON_SIZE := 22.0
 const PART_GAP := 12
@@ -197,6 +217,17 @@ static func _small_label(text: String, size: int) -> Label:
 	label.add_theme_font_size_override("font_size", size)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
+
+## Recuadra la línea `line_index` (índice en action.lines) de una mitad, la que
+## se está usando en combate; -1 quita el recuadro. La mitad se ve entera aunque
+## no se pueda tocar mientras se juega.
+func set_active_line(is_top: bool, line_index: int) -> void:
+	for top in [true, false]:
+		for i in _line_panels[top]:
+			var active: bool = top == is_top and i == line_index
+			_line_panels[top][i].add_theme_stylebox_override("panel", _active_line_style if active else _empty_style)
+	if line_index >= 0:
+		(top_half if is_top else bottom_half).modulate.a = 1.0
 
 ## Habilita o apaga una mitad (se ve atenuada y no se puede tocar).
 func set_half_enabled(is_top: bool, enabled: bool) -> void:

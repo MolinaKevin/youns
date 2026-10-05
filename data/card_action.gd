@@ -7,6 +7,20 @@ class_name CardAction
 ## Color de la mitad: es su fondo en la carta. Cada mitad tiene el suyo, así una
 ## carta armada con mitades de otras cartas puede quedar de varios colores.
 @export var color: Color = Color(0.07, 0.16, 0.24)
+## Inteligencia de la mitad (ids de Intelligences). La pone una evolución al
+## recolorearla (y entonces `color` es el de esa inteligencia); vacío = sin
+## inteligencia (la carta como vino).
+@export var intelligence: String = ""
+
+## Copia propia de la mitad, con copias de sus líneas: para modificarla (en el
+## mazo de una partida) sin tocar la carta original.
+func clone() -> CardAction:
+	var copy: CardAction = duplicate()
+	var copied_lines: Array[CardActionLine] = []
+	for line in lines:
+		copied_lines.append(line.duplicate() if line != null else null)
+	copy.lines = copied_lines
+	return copy
 
 ## Líneas que se pueden ejecutar, en orden.
 func enabled_lines() -> Array[CardActionLine]:

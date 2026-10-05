@@ -3,6 +3,9 @@ extends Node
 signal stat_changed
 signal bathroom_accident
 signal evolution_triggered(from_data: YounData, to_data: YounData)
+## El Youn llegó al fin de su vida: empieza la secuencia de muerte y
+## reencarnación (game_world). Termina con complete_reincarnation().
+signal reincarnation_triggered(from_data: YounData, cause: String)
 
 const STATS_DIR := "res://data/stats/"
 const RULES_DIR := "res://data/emotions/rules/"
@@ -67,12 +70,31 @@ func set_stat(key: String, value: int) -> void:
 
 # ── Wrappers nombrados ────────────────────────────────────────────────────────
 
+# ── Guardado ─────────────────────────────────────────────────────────────────
+
+## Copia los estados activos a la partida (GameState.save_player_save).
+func write_to_save(save: PlayerSaveData) -> void:
+	save.active_states = active_states.duplicate(true)
+
+## Deja el estado como el de la partida (nueva o cargada).
+func restore_from_save(save: PlayerSaveData) -> void:
+	active_states = save.active_states.duplicate(true) if save != null else {}
+	_stat_accumulators.clear()
+	# Una evolución guardada a medias sigue bloqueando las emociones (game_world
+	# la retoma con _restore_pending_evolution).
+	_emotion_block_count = 1 if ("evolving" in active_states or "dying" in active_states) else 0
+	_queue_stat_changed()
+
 func block_emotions() -> void:   _emotion_block_count += 1
 func unblock_emotions() -> void: _emotion_block_count = maxi(0, _emotion_block_count - 1)
 
 func show_emotion(emotion_name: String) -> void:
 	if _emotion_block_count > 0 or emotion_name.is_empty():
 		return
+	# "sick" y el flag enfermo van juntos: mostrar la emoción enferma al Youn.
+	if emotion_name == "sick" and GameState.player_save and not GameState.player_save.enfermo:
+		GameState.player_save.enfermo = true
+		_queue_stat_changed()
 	if emotion_name not in active_states:
 		var rule := _find_emotion_rule(emotion_name)
 		var stat_value := 100.0
@@ -139,7 +161,9 @@ func set_enfermo(value: bool) -> void:
 	if GameState.player_save == null:
 		return
 	GameState.player_save.enfermo = value
-	if not value:
+	if value:
+		show_emotion("sick")
+	else:
 		clear_emotion("sick")
 	_queue_stat_changed()
 
@@ -191,17 +215,20 @@ func _apply_expire_penalty(rule: EmotionRule) -> void:
 	if rule.expire_care_mistakes != 0:
 		add_care_mistake(rule.expire_care_mistakes)
 
+## El Youn comió (ItemEffectMeal): anota la hora y se le va el hambre como
+## emoción. Cuánto baja el hambre o suben las ganas de ir al baño lo decide
+## cada comida con sus propios efectos.
 func on_meal_eaten() -> void:
 	if GameState.player_save == null:
 		return
-	var ps := GameState.player_save
-	ps.hambre = 0
-	ps.last_meal_total_hour = GameState.get_total_hours()
-	ps.ganas_bano = mini(ps.ganas_bano + 25, 100)
+	GameState.player_save.last_meal_total_hour = GameState.get_total_hours()
 	clear_emotion("hungry")
 	_queue_stat_changed()
 
-# ── Tick por media hora ───────────────────────────────────────────────────────
+# ── Tick cada 20 minutos ──────────────────────────────────────────────────────
+
+## Ticks por hora de juego (GameState.twenty_min_ticked, cada 20 minutos).
+const TICKS_PER_HOUR := 3.0
 
 func apply_stat_decay() -> void:
 	if GameState.player_save == null:
@@ -209,8 +236,9 @@ func apply_stat_decay() -> void:
 	for cfg: StatConfig in _stat_configs:
 		if cfg.stat_key.is_empty() or cfg.rate_per_hour == 0.0:
 			continue
-		var acc: float = _stat_accumulators.get(cfg.stat_key, 0.0) + cfg.rate_per_hour * 0.5
-		var to_apply := int(acc)
+		var acc: float = _stat_accumulators.get(cfg.stat_key, 0.0) + cfg.rate_per_hour / TICKS_PER_HOUR
+		# El margen evita perder un punto cuando la suma da 1.9999… en vez de 2.
+		var to_apply := int(acc + signf(acc) * 0.000001)
 		_stat_accumulators[cfg.stat_key] = acc - float(to_apply)
 		if to_apply == 0:
 			continue
@@ -230,17 +258,24 @@ func _emit_stat_changed() -> void:
 
 # ── sueño ────────────────────────────────────────────────────────────────────
 
+## Salud que recupera por hora dormida, hasta SLEEP_HEALTH_MAX_HOURS horas.
+const SLEEP_HEALTH_PER_HOUR := 2
+const SLEEP_HEALTH_MAX_HOURS := 8
+
+## Cuánta salud recupera durmiendo `hours` horas.
+func salud_from_sleep(hours: int) -> int:
+	return clampi(hours, 0, SLEEP_HEALTH_MAX_HOURS) * SLEEP_HEALTH_PER_HOUR
+
 func on_wake_up(sleep_duration_hours: float) -> void:
 	clear_emotion("tired")
+	clear_emotion("sleep")
 
 	var bathroom_rule := _find_emotion_rule("bathroom")
 	if "bathroom" in active_states and bathroom_rule:
 		var activation_hour: float = active_states["bathroom"].get("hour", 0.0)
 		var elapsed := GameState.get_total_hours() - activation_hour
 		if elapsed >= bathroom_rule.max_duration_hours * 0.5:
-			_apply_expire_penalty(bathroom_rule)
-			clear_emotion("bathroom")
-			bathroom_accident.emit()
+			apply_bathroom_accident()
 		else:
 			active_states["bathroom"]["hour"] += sleep_duration_hours
 
@@ -253,9 +288,22 @@ func on_wake_up(sleep_duration_hours: float) -> void:
 # ── check_status ──────────────────────────────────────────────────────────────
 
 func check_status() -> void:
+	_sync_sick_emotion()
+	if _check_health_death():
+		return
 	check_emotions()
 	_evaluate_emotion_rules()
 	check_evolution()
+
+## Salud en 0: el Youn muere (sin dejar carta) y el jugador pierde una vida.
+func _check_health_death() -> bool:
+	var ps := GameState.player_save
+	if ps == null or ps.salud > 0 or ps.current_youn_path.is_empty():
+		return false
+	if "dying" in active_states or "evolving" in active_states:
+		return true
+	start_reincarnation(ReincarnationRules.CAUSE_HEALTH)
+	return true
 
 func check_evolution() -> void:
 	var ps := GameState.player_save
@@ -263,11 +311,45 @@ func check_evolution() -> void:
 		return
 	if not ResourceLoader.exists(ps.current_youn_path):
 		return
+	# Ya está evolucionando o muriendo.
+	if "evolving" in active_states or "dying" in active_states:
+		return
 	var youn_data := load(ps.current_youn_path) as YounData
 	var target := EvolutionChecker.try_evolve(ps, youn_data)
-	if target.is_empty() or target == EvolutionChecker.REINCARNATE:
+	if target.is_empty():
+		return
+	if target == EvolutionChecker.REINCARNATE:
+		start_reincarnation()
 		return
 	start_evolution(target)
+
+## El Youn muere: por fin de su vida (campeón sin ultimate, o ultimate al
+## terminar su tiempo) o por salud en 0 (ReincarnationRules.CAUSE_*).
+func start_reincarnation(cause := ReincarnationRules.CAUSE_AGE) -> void:
+	var ps := GameState.player_save
+	if ps == null or "dying" in active_states:
+		return
+	var from_data: YounData = null
+	if not ps.current_youn_path.is_empty() and ResourceLoader.exists(ps.current_youn_path):
+		from_data = load(ps.current_youn_path) as YounData
+	active_states.clear()
+	active_states["dying"] = {"hour": GameState.get_total_hours(), "stat_value": 100.0, "cause": cause}
+	block_emotions()
+	reincarnation_triggered.emit(from_data, cause)
+
+## Nace el bebé elegido, con la carta heredada (ver ReincarnationRules). Si
+## murió por salud, el jugador pierde una vida.
+func complete_reincarnation(baby: YounData, inherited: CardData) -> void:
+	var ps := GameState.player_save
+	if ps == null or baby == null:
+		return
+	if active_states.get("dying", {}).get("cause", "") == ReincarnationRules.CAUSE_HEALTH:
+		ps.lives = maxi(0, ps.lives - 1)
+	ReincarnationRules.start_new_life(ps, baby, inherited)
+	active_states.clear()
+	_stat_accumulators.clear()
+	_emotion_block_count = 0
+	_queue_stat_changed()
 
 func start_evolution(to_path: String) -> void:
 	var ps := GameState.player_save
@@ -289,17 +371,43 @@ func start_evolution(to_path: String) -> void:
 	block_emotions()
 	evolution_triggered.emit(from_data, to_data)
 
-func complete_evolution() -> void:
+## Termina la evolución: aplica las stats y agrega la carta característica al
+## mazo. Devuelve lo que pasó, para la pantalla de evolución:
+## {"from": YounData, "to": YounData, "stat_changes": {"fuerza": 10, ...},
+##  "added_card": CardData (la copia que quedó en el mazo) o null,
+##  "discovery": condición descubierta (ver EvolutionDiscovery.discover)}.
+## Recolorear mitades y agregar líneas lo elige el jugador en esa pantalla.
+func complete_evolution() -> Dictionary:
 	var ps := GameState.player_save
 	if ps == null or ps.pending_evolution_path.is_empty():
-		return
+		return {}
+	var from_data: YounData = null
+	if not ps.current_youn_path.is_empty() and ResourceLoader.exists(ps.current_youn_path):
+		from_data = load(ps.current_youn_path) as YounData
+	var to_data: YounData = null
+	if ResourceLoader.exists(ps.pending_evolution_path):
+		to_data = load(ps.pending_evolution_path) as YounData
+	var stats_before := ps.youn_stats.duplicate()
+	# Qué condiciones se cumplieron (con el Youn y las stats de antes de evolucionar).
+	var met := EvolutionDiscovery.met_indices(to_data, EvolutionChecker.make_context(ps, from_data))
+	var discovery := EvolutionDiscovery.discover(ps, to_data, met)
 	ps.current_youn_path = ps.pending_evolution_path
-	if ResourceLoader.exists(ps.current_youn_path):
-		YounStatRules.apply_evolution(ps, load(ps.current_youn_path) as YounData)
+	if to_data != null:
+		YounStatRules.apply_evolution(ps, to_data)
+	var stat_changes := {}
+	for key in YounStats.KEYS:
+		var delta := int(ps.youn_stats.get(key, 0)) - int(stats_before.get(key, 0))
+		if delta != 0:
+			stat_changes[key] = delta
+	var added_card: CardData = null
+	if to_data != null and to_data.signature_card != null:
+		added_card = DeckRules.add_card(ps, to_data.signature_card)
 	ps.stage_entered_total_hour = GameState.get_total_hours()
 	ps.pending_evolution_path = ""
 	active_states.erase("evolving")
 	unblock_emotions()
+	return {"from": from_data, "to": to_data, "stat_changes": stat_changes, "added_card": added_card,
+		"discovery": discovery}
 
 func check_emotions() -> void:
 	var total_h := GameState.get_total_hours()
@@ -309,10 +417,13 @@ func check_emotions() -> void:
 			continue
 		var since_hour: float = active_states[emotion_name].get("hour", 0.0)
 		if total_h - since_hour >= rule.max_duration_hours:
+			# El baño vencido es un accidente: además de la penalidad, se vacía
+			# (si no, con las ganas en 100 vuelve a aparecer y vencer en loop).
+			if emotion_name == "bathroom":
+				apply_bathroom_accident()
+				continue
 			_apply_expire_penalty(rule)
 			clear_emotion(emotion_name)
-			if emotion_name == "bathroom":
-				bathroom_accident.emit()
 
 func _evaluate_emotion_rules() -> void:
 	var ps := GameState.player_save
@@ -328,17 +439,38 @@ func _evaluate_emotion_rules() -> void:
 	for emotion_name in triggered:
 		show_emotion(emotion_name)
 	for emotion_name in active_states.keys():
+		# "sick" solo se va curándolo (set_enfermo(false)).
+		if emotion_name == "sick":
+			continue
 		var rule := _find_emotion_rule(emotion_name)
-		if rule == null or rule.stat_key.is_empty():
+		if rule == null:
+			continue
+		# Emociones por horario (sleep): se van al salir de la franja. Sin Youn
+		# (p. ej. en combate) no se puede saber la franja: se dejan.
+		if rule is EmotionRuleTimeWindow:
+			if ctx["youn_data"] != null and rule.evaluate(ctx) <= 0.0:
+				clear_emotion(emotion_name)
+			continue
+		if rule.stat_key.is_empty():
 			continue
 		var current_val = GameState.player_save.get(rule.stat_key)
 		if current_val == null:
 			continue
+		# Si la stat mejoró desde que apareció, se vuelve a tirar el dado con el
+		# valor actual; si no sale, la emoción se va.
 		var stat_at_activation: float = active_states[emotion_name].get("stat_value", 100.0)
-		if float(current_val) < stat_at_activation:
+		if rule.improved_since(stat_at_activation, float(current_val)):
 			var prob := rule.evaluate(ctx)
 			if randf() >= prob:
 				clear_emotion(emotion_name)
+
+# El flag enfermo se guarda en la partida pero las emociones no: si el Youn
+# está enfermo (al cargar, o después de una evolución que borró todo), vuelve
+# a mostrar "sick".
+func _sync_sick_emotion() -> void:
+	var ps := GameState.player_save
+	if ps != null and ps.enfermo and "sick" not in active_states:
+		show_emotion("sick")
 
 func _find_emotion_rule(emotion_name: String) -> EmotionRule:
 	for rule in _emotion_rules:

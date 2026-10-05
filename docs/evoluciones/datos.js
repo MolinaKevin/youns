@@ -40,7 +40,8 @@ window.EVOLUCIONES = {
   ],
 
   reglas: [
-    "Bebé → Niño: fijo, cada bebé tiene su niño. El niño bonus sale de un evento aparte (p. ej. llevarlo a un lugar).",
+    "Bebé → Niño: fijo, a las 6 h. El niño bonus sale de un evento aparte (p. ej. llevarlo a un lugar).",
+    "Niño → Rookie (como DW1): al cumplir 1 día de vida, va al rookie dueño de su stat más alta (cada rookie tiene 4 de las 8). Empate entre rookies: el rookie por defecto del niño.",
     "Rookie → Campeón y Campeón → Ultimate: cada uno tiene 5 condiciones; con 3 cumplidas se accede.",
     "Las 5 condiciones: inteligencia, stats, crianza, cartas (lo usado en combate) y bonus.",
     "Si califica para varios: gana el de más condiciones; si empatan, el que cumple la inteligencia; si ambos, al azar.",
@@ -70,10 +71,10 @@ window.EVOLUCIONES = {
 
     // ── Rookies (en el código: etapa "adolescente") ──────────────────────────
     { id: "pombero", nombre: "Pombero", etapa: "rookie", inteligencias: ["corporal"], desde: [{ id: "nino_1", tipo: "normal" }],
-      notas: "Inteligencia provisoria." },
+      notas: "Rookie por defecto de Niño 1. Stats dominantes: Agilidad, Técnica, Inteligencia, Mente." },
     { id: "rookie_1b", nombre: "Rookie 1B", etapa: "rookie", provisorio: true, inteligencias: ["logica"], desde: [{ id: "nino_2", tipo: "normal" }] },
     { id: "nguruvilu", nombre: "Nguruvilu", etapa: "rookie", inteligencias: ["naturalista"], desde: [{ id: "nino_1", tipo: "normal" }],
-      notas: "Inteligencia provisoria." },
+      notas: "Stats dominantes: Espíritu, Constitución, Resistencia, Fuerza." },
     { id: "rookie_2b", nombre: "Rookie 2B", etapa: "rookie", provisorio: true, inteligencias: ["musical"], desde: [{ id: "nino_2", tipo: "normal" }] },
     { id: "rookie_3a", nombre: "Rookie 3A", etapa: "rookie", provisorio: true, inteligencias: ["espacial"], desde: [{ id: "nino_3", tipo: "normal" }] },
     { id: "rookie_3b", nombre: "Rookie 3B", etapa: "rookie", provisorio: true, inteligencias: ["interpersonal"], desde: [{ id: "nino_3", tipo: "normal" }] },
@@ -95,7 +96,7 @@ window.EVOLUCIONES = {
       condiciones: { inteligencia: "Musical o Interpersonal", stats: "Inteligencia > 140", crianza: "Felicidad ≥ 80", cartas: "Usar 30 líneas de bloqueo", bonus: "—" } },
     { id: "campeon_5", nombre: "Campeón 5", etapa: "campeon", provisorio: true, inteligencias: ["linguistica", "intrapersonal"],
       condiciones: { inteligencia: "Lingüística o Intrapersonal", stats: "Resistencia > 160", crianza: "Peso entre 15 y 25", cartas: "Usar el comodín mantener 10 veces", bonus: "—" } },
-    { id: "nguruvilu_campeon", nombre: "Nguruvilu (comodín)", etapa: "campeon", comodin: true,
+    { id: "mboi_tui", nombre: "Mbói Tu'i (comodín)", etapa: "campeon", comodin: true,
       desde: [{ id: "*rookies", tipo: "comodin" }],
       notas: "Campeón comodín: al que se cae si no se cumplen 3 condiciones de ningún campeón. Más débil, pero es el único que llega al Ultimate secreto." },
 
@@ -107,7 +108,7 @@ window.EVOLUCIONES = {
       desde: [{ id: "campeon_2", tipo: "condiciones" }],
       condiciones: { inteligencia: "Lógico-matemática", stats: "Técnica > 300", crianza: "—", cartas: "—", bonus: "—" } },
     { id: "ultimate_secreto", nombre: "Ultimate secreto", etapa: "ultimate", provisorio: true,
-      desde: [{ id: "nguruvilu_campeon", tipo: "especial" }],
+      desde: [{ id: "mboi_tui", tipo: "especial" }],
       notas: "Solo desde el Campeón comodín (como el traje de Monzaemon en DW1)." },
   ],
 };

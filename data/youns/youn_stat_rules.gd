@@ -6,8 +6,11 @@ extends RefCounted
 ## - PlayerSaveData.youn_stats: valor ACTUAL de cada estadística. De acá lee
 ##   todo el juego.
 ## - PlayerSaveData.youn_stat_gains: lo ganado durante esta vida (combates,
-##   entrenamiento...). Solo se usa al evolucionar.
-## - Al evolucionar: actual = base del nuevo Youn + lo ganado.
+##   entrenamiento...), solo como registro.
+## - Vida nueva: actual = base_stats del Youn (el bebé).
+## - Al evolucionar: se aplica el evolution_stats del nuevo Youn sobre las
+##   actuales, sumando o multiplicando (ver YounEvolutionStats). Lo que ya
+##   tenía se conserva; nada se reemplaza.
 ## - Al ganar estadísticas: se suma a la actual (y se anota como ganado); la
 ##   base del Youn nunca cambia.
 
@@ -77,12 +80,14 @@ static func gain_many(save: PlayerSaveData, amounts: Dictionary) -> void:
 	for key in amounts:
 		gain(save, key, int(amounts[key]))
 
-## El Youn evoluciona: sus estadísticas base reemplazan a las actuales y se le
-## suma todo lo ganado en esta vida.
+## El Youn evoluciona: el evolution_stats del nuevo Youn suma o multiplica las
+## actuales. Sin evolution_stats, quedan como están.
 static func apply_evolution(save: PlayerSaveData, new_youn: YounData) -> void:
-	var base := _base_of(new_youn)
-	for key in YounStats.KEYS:
-		save.youn_stats[key] = int(base.get(key, 0)) + int(save.youn_stat_gains.get(key, 0))
+	if new_youn == null or new_youn.evolution_stats == null:
+		return
+	var updated := new_youn.evolution_stats.apply_to(save.youn_stats)
+	for key in updated:
+		save.youn_stats[key] = updated[key]
 
 ## Vida nueva (huevo, reencarnación): arranca con la base y sin nada ganado.
 static func start_life(save: PlayerSaveData, youn: YounData) -> void:
@@ -101,13 +106,23 @@ static func migrate_keys(save: PlayerSaveData) -> void:
 				dict.erase(old_key)
 
 ## Si la partida todavía no tiene estadísticas, las arranca con la base del Youn
-## actual (partidas creadas antes de que existieran).
-static func ensure_initialized(save: PlayerSaveData) -> void:
+## actual (partidas creadas antes de que existieran). Si no hay Youn actual
+## registrado, usa `fallback` (p. ej. el Youn del grupo).
+static func ensure_initialized(save: PlayerSaveData, fallback: YounData = null) -> void:
 	if save == null or not save.youn_stats.is_empty():
 		return
-	if save.current_youn_path.is_empty() or not ResourceLoader.exists(save.current_youn_path):
+	if not save.current_youn_path.is_empty() and ResourceLoader.exists(save.current_youn_path):
+		start_life(save, load(save.current_youn_path) as YounData)
+	elif fallback != null:
+		start_life(save, fallback)
+
+## Suma una recompensa de stats ({"fuerza": 1, ...}) asegurando antes que la
+## partida tenga todas sus stats: sumar sobre stats vacías dejaría el resto en 0.
+static func reward(save: PlayerSaveData, amounts: Dictionary, fallback: YounData = null) -> void:
+	if save == null:
 		return
-	start_life(save, load(save.current_youn_path) as YounData)
+	ensure_initialized(save, fallback)
+	gain_many(save, amounts)
 
 static func _base_of(youn: YounData) -> Dictionary:
 	if youn == null or youn.base_stats == null:

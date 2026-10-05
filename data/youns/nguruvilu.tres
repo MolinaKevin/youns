@@ -10,6 +10,11 @@
 [ext_resource type="Resource" path="res://data/enemies/strategies/aggressive.tres" id="strategy"]
 [ext_resource type="Resource" path="res://data/enemies/monster_decks/bruto.tres" id="monster_deck"]
 [ext_resource type="Script" path="res://data/youns/youn_stats.gd" id="youn_stats_script"]
+[ext_resource type="Script" path="res://data/youns/youn_evolution_stats.gd" id="youn_evolution_stats_script"]
+[ext_resource type="Resource" path="res://data/cards/charco.tres" id="evo_signature"]
+[ext_resource type="Script" path="res://data/card_action_line.gd" id="evo_line_script"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_dominant_stat.gd" id="evo_dominant_script"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition.gd" id="evo_condition_script"]
 
 [sub_resource type="Resource" id="BaseStats"]
 script = ExtResource("youn_stats_script")
@@ -22,11 +27,58 @@ tecnica = 45
 inteligencia = 45
 espiritu = 60
 
+[sub_resource type="Resource" id="EvolutionStats"]
+script = ExtResource("youn_evolution_stats_script")
+constitucion = 25.0
+mente = 20.0
+fuerza = 25.0
+resistencia = 25.0
+agilidad = 15.0
+tecnica = 20.0
+inteligencia = 20.0
+espiritu = 30.0
+
+[sub_resource type="Resource" id="EvoLine0"]
+script = ExtResource("evo_line_script")
+card_type = "block"
+description = "Te cubrís."
+block_amount = 30
+
+[sub_resource type="Resource" id="EvoLine1"]
+script = ExtResource("evo_line_script")
+card_type = "puddle"
+description = "Deja un charco de agua."
+card_range = 10
+puddle_effect = "wet"
+
+[sub_resource type="Resource" id="EvoCondition0"]
+script = ExtResource("evo_dominant_script")
+kind = 1
+stat = "espiritu"
+
+[sub_resource type="Resource" id="EvoCondition1"]
+script = ExtResource("evo_dominant_script")
+kind = 1
+stat = "constitucion"
+
+[sub_resource type="Resource" id="EvoCondition2"]
+script = ExtResource("evo_dominant_script")
+kind = 1
+stat = "resistencia"
+
+[sub_resource type="Resource" id="EvoCondition3"]
+script = ExtResource("evo_dominant_script")
+kind = 1
+stat = "fuerza"
+
 [resource]
 script = ExtResource("1_script")
 id = "nguruvilu"
 youn_name = "Nguruvilu"
 stage = "adolescente"
+signature_card = ExtResource("evo_signature")
+color_changes = Dictionary[String, int]({"naturalista": 4})
+granted_lines = Array[ExtResource("evo_line_script")]([SubResource("EvoLine0"), SubResource("EvoLine1")])
 texture = ExtResource("3_texture")
 mesh_scale = 0.2
 mesh_y_offset = -0.8
@@ -39,6 +91,10 @@ scene_damage = ExtResource("2_damage")
 chase_speed = 5.0
 body_height = 4.0
 base_stats = SubResource("BaseStats")
+evolution_stats = SubResource("EvolutionStats")
+dominant_stats = PackedStringArray("espiritu", "constitucion", "resistencia", "fuerza")
+evolution_conditions = Array[ExtResource("evo_condition_script")]([SubResource("EvoCondition0"), SubResource("EvoCondition1"), SubResource("EvoCondition2"), SubResource("EvoCondition3")])
+intelligences = PackedStringArray("naturalista")
 strategy = ExtResource("strategy")
 monster_deck = ExtResource("monster_deck")
 loot_item_name = "Nguruvilu Claw"

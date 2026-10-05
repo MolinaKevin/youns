@@ -161,6 +161,21 @@ func heal_player(amount: int) -> int:
 	player_hp = clampi(player_hp + amount, player_hp, player_max_hp)
 	return player_hp - before
 
+## Saca los estados negativos del jugador. Devuelve si tenía alguno.
+func cleanse_player() -> bool:
+	var had := player_wet_turns > 0 or player_burning_turns > 0 or player_greasy_turns > 0 \
+		or player_entangled_turns > 0 or player_bleeding_turns > 0 or player_poison_stacks > 0 \
+		or player_blinded_turns > 0 or player_frozen_turns > 0
+	player_wet_turns = 0
+	player_burning_turns = 0
+	player_greasy_turns = 0
+	player_entangled_turns = 0
+	player_bleeding_turns = 0
+	player_poison_stacks = 0
+	player_blinded_turns = 0
+	player_frozen_turns = 0
+	return had
+
 ## El MP no se recupera solo: solo con líneas "mp_restore". Devuelve lo
 ## recuperado (nunca pasa el máximo).
 func restore_mp(amount: int) -> int:

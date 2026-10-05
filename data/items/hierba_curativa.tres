@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemData" format=3]
+
+[ext_resource type="Script" uid="uid://utilcb2pt1mr" path="res://data/items/item_data.gd" id="1_itemdata"]
+[ext_resource type="Script" uid="uid://dherd17v654fn" path="res://data/items/item_effect.gd" id="1_effect"]
+[ext_resource type="Script" path="res://data/items/item_effect_combat.gd" id="2_combat"]
+[ext_resource type="Texture2D" path="res://assets/icons/icon_3.png" id="3_icon"]
+
+[sub_resource type="Resource" id="Resource_combat"]
+script = ExtResource("2_combat")
+heal_hp = 80
+
+[resource]
+script = ExtResource("1_itemdata")
+id = "hierba_curativa"
+name = "Hierba Curativa"
+description = "Cura 80 de vida en combate."
+icon = ExtResource("3_icon")
+effects = Array[ExtResource("1_effect")]([SubResource("Resource_combat")])

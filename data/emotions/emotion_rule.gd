@@ -34,6 +34,14 @@ func evaluate(ctx: Dictionary) -> float:
 	return 0.0
 
 
+## ¿La stat mejoró respecto de cuando se activó la emoción? Para las reglas
+## LESS (tristeza, cansancio...) mejorar es subir; para el resto, bajar.
+func improved_since(value_at_activation: float, current: float) -> bool:
+	if comparison == Comparison.LESS:
+		return current > value_at_activation
+	return current < value_at_activation
+
+
 func _get_stat_value(ps: PlayerSaveData) -> float:
 	var raw = ps.get(stat_key)
 	if raw == null:

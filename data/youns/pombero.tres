@@ -11,6 +11,11 @@
 [ext_resource type="Resource" path="res://data/enemies/strategies/aggressive.tres" id="strategy"]
 [ext_resource type="Resource" path="res://data/enemies/monster_decks/bruto.tres" id="monster_deck"]
 [ext_resource type="Script" path="res://data/youns/youn_stats.gd" id="youn_stats_script"]
+[ext_resource type="Script" path="res://data/youns/youn_evolution_stats.gd" id="youn_evolution_stats_script"]
+[ext_resource type="Resource" path="res://data/cards/trepar.tres" id="evo_signature"]
+[ext_resource type="Script" path="res://data/card_action_line.gd" id="evo_line_script"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_dominant_stat.gd" id="evo_dominant_script"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition.gd" id="evo_condition_script"]
 
 [sub_resource type="Resource" id="BaseStats"]
 script = ExtResource("youn_stats_script")
@@ -23,11 +28,57 @@ tecnica = 55
 inteligencia = 50
 espiritu = 45
 
+[sub_resource type="Resource" id="EvolutionStats"]
+script = ExtResource("youn_evolution_stats_script")
+constitucion = 20.0
+mente = 15.0
+fuerza = 20.0
+resistencia = 15.0
+agilidad = 35.0
+tecnica = 30.0
+inteligencia = 25.0
+espiritu = 15.0
+
+[sub_resource type="Resource" id="EvoLine0"]
+script = ExtResource("evo_line_script")
+card_type = "move"
+description = "Te movés un poco más."
+card_range = 20
+
+[sub_resource type="Resource" id="EvoLine1"]
+script = ExtResource("evo_line_script")
+card_type = "melee_attack"
+description = "Golpe."
+damage = 20
+
+[sub_resource type="Resource" id="EvoCondition0"]
+script = ExtResource("evo_dominant_script")
+kind = 1
+stat = "agilidad"
+
+[sub_resource type="Resource" id="EvoCondition1"]
+script = ExtResource("evo_dominant_script")
+kind = 1
+stat = "tecnica"
+
+[sub_resource type="Resource" id="EvoCondition2"]
+script = ExtResource("evo_dominant_script")
+kind = 1
+stat = "inteligencia"
+
+[sub_resource type="Resource" id="EvoCondition3"]
+script = ExtResource("evo_dominant_script")
+kind = 1
+stat = "mente"
+
 [resource]
 script = ExtResource("1_script")
 id = "pombero"
 youn_name = "Pombero"
 stage = "adolescente"
+signature_card = ExtResource("evo_signature")
+color_changes = Dictionary[String, int]({"corporal": 4})
+granted_lines = Array[ExtResource("evo_line_script")]([SubResource("EvoLine0"), SubResource("EvoLine1")])
 texture = ExtResource("3_texture")
 mesh_scale = 0.2
 mesh_y_offset = -0.8
@@ -40,6 +91,10 @@ scene_damage = ExtResource("2_aoj80")
 chase_speed = 4.0
 body_height = 4.6
 base_stats = SubResource("BaseStats")
+evolution_stats = SubResource("EvolutionStats")
+dominant_stats = PackedStringArray("agilidad", "tecnica", "inteligencia", "mente")
+evolution_conditions = Array[ExtResource("evo_condition_script")]([SubResource("EvoCondition0"), SubResource("EvoCondition1"), SubResource("EvoCondition2"), SubResource("EvoCondition3")])
+intelligences = PackedStringArray("corporal")
 strategy = ExtResource("strategy")
 monster_deck = ExtResource("monster_deck")
 loot_item_name = "Pombero Claw"

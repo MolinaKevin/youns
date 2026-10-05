@@ -1,5 +1,7 @@
 extends Node3D
 
+const PlaceholderModel := preload("res://features/world/party/placeholder_model.gd")
+
 signal position_selected(pos: Vector2)
 signal player_anim_finished
 signal enemy_anim_finished
@@ -506,6 +508,13 @@ func setup_player(data: YounData) -> void:
 		_player_body.add_child(body)
 		_player_bodies[key] = body
 
+	# Sin modelo todavía: el provisorio de primitivas.
+	if _player_bodies.is_empty():
+		var placeholder := PlaceholderModel.build(data)
+		placeholder.visible = false
+		_player_body.add_child(placeholder)
+		_player_bodies["idle"] = placeholder
+
 	_switch_player_to("idle")
 
 func play_player_anim(anim_key: String) -> void:
@@ -612,6 +621,11 @@ func setup_enemy_youn(data: YounData) -> void:
 		_enemy_body.add_child(body)
 		_enemy_bodies[key] = body
 
+	if _enemy_bodies.is_empty() and data.mesh == null:
+		var placeholder := PlaceholderModel.build(data)
+		placeholder.visible = false
+		_enemy_body.add_child(placeholder)
+		_enemy_bodies["idle"] = placeholder
 	if _enemy_bodies.is_empty() and data.mesh and _enemy_fallback_mesh:
 		_enemy_fallback_mesh.mesh  = data.mesh
 		_enemy_fallback_mesh.scale = Vector3.ONE * data.mesh_scale

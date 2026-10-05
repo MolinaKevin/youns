@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://c6sj4ql5s1p65" path="res://assets/maps/hub/lab.glb" id="3_lab"]
 [ext_resource type="ArrayMesh" uid="uid://chrobcjle3fog" path="res://assets/youns/Monzaemon.obj" id="4_monzaemon"]
 [ext_resource type="Script" uid="uid://70sgg88cyq53" path="res://features/world/lab_interior/face_player.gd" id="5_face"]
+[ext_resource type="Script" path="res://features/world/save_station/save_station.gd" id="save_station"]
 
 [sub_resource type="BoxShape3D" id="1"]
 size = Vector3(130, 20, 130)
@@ -289,3 +290,7 @@ theme_override_constants/margin_bottom = 14
 layout_mode = 2
 text = "Monzaemon: Eso es todo lo que tiene el demo por ahora. Gracias por jugar."
 autowrap_mode = 3
+
+[node name="SaveStation" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.1, 7)
+script = ExtResource("save_station")

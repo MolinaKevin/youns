@@ -4,13 +4,22 @@ const HAND_SIZE := 6
 const DEFAULT_ENEMY_INITIATIVE := 50
 ## Oro que da ganar un combate (se suma al volver al mundo).
 const VICTORY_GOLD := 300
-## PLACEHOLDER: ganancia de stats fija que solo se muestra, no se aplica.
-## Los Youns todavía no tienen stats de combate; se define después.
-const PLACEHOLDER_STAT_GAINS := [["HP", 50], ["Ataque", 20], ["Defensa", 10], ["Velocidad", 10]]
+## Stats que suma ganar un combate en el mundo: +1 a cada una (8 en total).
+## A propósito rinde menos que una hora de gym (+10), pero no gasta tiempo.
+## PROVISORIO: las recompensas por combate se van a acomodar (docs/TODO.md).
+const VICTORY_STAT_GAINS := {
+	"constitucion": 1, "mente": 1, "fuerza": 1, "resistencia": 1,
+	"agilidad": 1, "tecnica": 1, "inteligencia": 1, "espiritu": 1,
+}
 ## Segundos entre la muerte (del enemigo o del jugador) y la pantalla de fin de lucha.
 const VICTORY_SCREEN_DELAY := 0.8
 ## Tamaño de la carta del enemigo mientras se revela en el centro.
 const REVEAL_CARD_ZOOM := 1.5
+## Tamaño de las cartas dadas vuelta (las que el enemigo no eligió) respecto de la elegida.
+const CARD_BACK_SCALE := 0.8
+## Distancia entre los lugares de la fila, en anchos de la carta elegida (<1:
+## se superponen un poco para que entren las 3).
+const CARD_SLOT_SPACING := 0.8
 ## Segundos que se ve el orden de la ronda antes de que actúe el enemigo.
 const TURN_ORDER_PAUSE := 0.8
 
@@ -18,7 +27,7 @@ const TURN_ORDER_PAUSE := 0.8
 enum Phase { PLANNING, REVEAL, ENEMY, ACTING }
 ## Comodines: en vez de la acción impresa, la mitad se gasta con uno de estos.
 ## ATTACK reemplaza una ▲, MOVE una ▼ y KEEP cualquiera de las dos.
-enum Wild { NONE, ATTACK, MOVE, KEEP }
+enum Wild { NONE, ATTACK, MOVE, KEEP, ITEM }
 
 const WILD_ATTACK: CardAction = preload("res://data/wildcards/wild_attack.tres")
 const WILD_MOVE: CardAction = preload("res://data/wildcards/wild_move.tres")
@@ -95,10 +104,19 @@ var _wild_title: Label
 var _wild_end_button: Button
 ## "Saltar acción": saltea la línea en curso (y gasta la mitad).
 var _skip_line_button: Button
+var _lines_label: Label
 ## "Comenzar ronda", centrado debajo de la carta del enemigo en la revelación.
 var _start_round_button: Button
 ## Mitad que se está gastando con "mantener carta" mientras se elige la carta.
 var _keep_half: Dictionary = {}
+## Comodín ▲▼ "Ítem": la mitad que se gasta ({"card", "is_top"}) mientras se
+## elige el ítem en _item_picker.
+var _item_half: Dictionary = {}
+## Dorsos de las cartas que el enemigo no eligió (en la revelación).
+var _card_backs: Array[Control] = []
+var _item_picker: PanelContainer
+var _item_list: VBoxContainer
+var _item_title: Label
 ## Índices de state.hand que no se descartan al final de la ronda.
 var _kept_indices: Array[int] = []
 var _enemy_pending := false
@@ -238,6 +256,11 @@ func _ready() -> void:
 	PauseMenu.enabled = true
 
 	log_message(LocalizationState.t("combat.started", [enemy_name_str]))
+	# Salud baja: las cartas rinden menos (ver CardScaling.health_penalty).
+	if GameState.player_save != null:
+		var penalty := CardScaling.health_penalty(GameState.player_save.salud)
+		if penalty > 0.0:
+			log_message(LocalizationState.t("combat.low_health", [roundi(penalty * 100)]))
 	_start_planning()
 
 func _exit_tree() -> void:
@@ -248,7 +271,8 @@ func _exit_tree() -> void:
 # ── Card pile management ──────────────────────────────────────────────────────
 
 func setup_draw_pile() -> void:
-	var deck_cards := CardDatabase.get_cards_from_ids(GameState.player_save.equipped_deck_ids)
+	# El mazo propio de la partida (con lo que le cambiaron las evoluciones).
+	var deck_cards := DeckRules.cards(GameState.player_save)
 	state.draw_pile.assign(deck_cards)
 	state.draw_pile.shuffle()
 	state.discard_pile.clear()
@@ -272,6 +296,7 @@ func refresh_hand() -> void:
 		for c in _turn_cards.size():
 			for is_top in [true, false]:
 				hand_section.set_half_enabled(c, is_top, _is_half_available(c, is_top))
+		_show_active_line()
 	draw_pile_button.text = LocalizationState.t("combat.draw_pile", [state.draw_pile.size()])
 	discard_pile_button.text = LocalizationState.t("combat.discard_pile", [state.discard_pile.size()])
 	if _preview_action != null and not state.turn_actions.has(_preview_action):
@@ -339,6 +364,9 @@ func _on_hand_half_selected(index: int, is_top: bool) -> void:
 		Wild.KEEP:
 			_start_keep(index, is_top)
 			return
+		Wild.ITEM:
+			_start_item(index, is_top)
+			return
 		Wild.ATTACK:
 			half = WILD_ATTACK
 		Wild.MOVE:
@@ -357,12 +385,24 @@ func _on_hand_half_selected(index: int, is_top: bool) -> void:
 	# Cambiar de mitad antes de hacer la primera línea no gasta nada.
 	if player_actions._has_pending_selection():
 		player_actions.cancel_selection()
-	_playing = {"card": index, "is_top": is_top, "lines": lines, "index": 0, "started": false, "active": false}
+	# "used": líneas hechas; al llegar a "cap" (tope de la etapa del Youn) la
+	# mitad termina. Las salteadas no cuentan.
+	_playing = {"card": index, "is_top": is_top, "lines": lines, "index": 0, "started": false, "active": false,
+		"wild": is_wild, "source": half, "used": 0, "cap": _line_cap()}
 	_start_current_line()
 
 ## Arranca la selección de objetivo de la línea actual de _playing.
 func _start_current_line() -> void:
 	if _playing.is_empty() or _phase != Phase.ACTING:
+		return
+	# Una línea que no alcanza de MP se saltea sola.
+	var lines: Array = _playing["lines"]
+	while _playing["index"] < lines.size() and lines[_playing["index"]].mp_cost > state.player_mp:
+		log_message(LocalizationState.t("combat.line_no_mp"))
+		_playing["index"] += 1
+	if _playing["index"] >= lines.size():
+		_end_playing()
+		refresh_hand()
 		return
 	var line: CardActionLine = _playing["lines"][_playing["index"]]
 	_starting_line = true
@@ -373,6 +413,23 @@ func _start_current_line() -> void:
 	# Si la línea no pudo ni arrancar (p. ej. enredado), se resuelve ya.
 	_resolve_playing()
 	refresh_hand()
+
+## Recuadra en la carta la línea de _playing que se está usando. Los comodines
+## reemplazan la mitad, así que no marcan nada en la carta.
+func _show_active_line() -> void:
+	if _playing.is_empty() or _playing["wild"]:
+		return
+	# _playing["lines"] son solo las activas: se busca su índice en la mitad.
+	var source: CardAction = _playing["source"]
+	var enabled_seen := -1
+	for i in source.lines.size():
+		var line: CardActionLine = source.lines[i]
+		if line == null or not line.enabled:
+			continue
+		enabled_seen += 1
+		if enabled_seen == _playing["index"]:
+			hand_section.set_active_line(_playing["card"], _playing["is_top"], i)
+			return
 
 func _is_half_available(card_index: int, is_top: bool) -> bool:
 	# Con una mitad empezada, hay que terminarla (o saltear sus líneas) primero.
@@ -387,10 +444,11 @@ func _is_half_available(card_index: int, is_top: bool) -> bool:
 			return is_top
 		Wild.MOVE:
 			return not is_top
-		Wild.KEEP:
+		Wild.KEEP, Wild.ITEM:
 			return true
-	# Sin MP suficiente no se puede jugar (los comodines no cuestan MP).
-	return _turn_cards[card_index].get_action(is_top).mp_cost() <= state.player_mp
+	# Hace falta MP para al menos una de sus líneas (los comodines no cuestan MP).
+	var half: CardAction = _turn_cards[card_index].get_action(is_top)
+	return half.enabled_lines().any(func(l: CardActionLine) -> bool: return l.mp_cost <= state.player_mp)
 
 # ── Comodines ─────────────────────────────────────────────────────────────────
 
@@ -411,7 +469,7 @@ func _build_wild_buttons() -> void:
 	_wild_title = Label.new()
 	_wild_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_wild_title)
-	for w in [Wild.ATTACK, Wild.MOVE, Wild.KEEP]:
+	for w in [Wild.ATTACK, Wild.MOVE, Wild.KEEP, Wild.ITEM]:
 		var b := Button.new()
 		b.toggle_mode = true
 		b.custom_minimum_size = Vector2(0, 40)
@@ -425,6 +483,10 @@ func _build_wild_buttons() -> void:
 		_wild_buttons[w] = b
 	var separator := HSeparator.new()
 	column.add_child(separator)
+	_lines_label = Label.new()
+	_lines_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_lines_label.visible = false
+	column.add_child(_lines_label)
 	_skip_line_button = Button.new()
 	_skip_line_button.custom_minimum_size = Vector2(0, 40)
 	_skip_line_button.pressed.connect(_on_skip_line_pressed)
@@ -444,6 +506,7 @@ func _wild_texts() -> void:
 	_set_wild_button(Wild.ATTACK, "sword", "▲  %d" % attack, LocalizationState.t("wildcard.attack", [attack]))
 	_set_wild_button(Wild.MOVE, "move", "▼  %d" % move, LocalizationState.t("wildcard.move", [move]))
 	_set_wild_button(Wild.KEEP, "keep", "▲▼  " + LocalizationState.t("wildcard.keep"), LocalizationState.t("wildcard.keep"))
+	_set_wild_button(Wild.ITEM, "heal", "▲▼  " + LocalizationState.t("wildcard.item"), LocalizationState.t("wildcard.item_tooltip"))
 	_wild_end_button.text = LocalizationState.t("combat.end_turn")
 	_skip_line_button.text = LocalizationState.t("combat.skip_line")
 
@@ -477,10 +540,15 @@ func _update_wild_buttons() -> void:
 		Wild.ATTACK: _used_top == -1 and not busy,
 		Wild.MOVE: _used_bottom == -1 and not busy,
 		Wild.KEEP: (_used_top == -1 or _used_bottom == -1) and not busy and not _keep_candidates().is_empty(),
+		Wild.ITEM: (_used_top == -1 or _used_bottom == -1) and not busy and not _combat_items().is_empty(),
 	}
 	for w in _wild_buttons:
 		_wild_buttons[w].disabled = not usable[w]
 	_skip_line_button.disabled = _playing.is_empty() or not _playing["active"]
+	# Cuántas líneas de la mitad lleva usadas, de las que permite la etapa.
+	_lines_label.visible = not _playing.is_empty() and not _playing["wild"]
+	if _lines_label.visible:
+		_lines_label.text = LocalizationState.t("combat.lines_used", [_playing["used"], _playing["cap"]])
 	var both_used := _used_top != -1 and _used_bottom != -1
 	_wild_end_button.modulate = Color(1.0, 0.85, 0.35) if both_used else Color.WHITE
 	if _armed_wild != Wild.NONE and not usable[_armed_wild]:
@@ -522,15 +590,134 @@ func _on_pile_card_selected(card: CardData) -> void:
 	_disarm_wild()
 	refresh_hand()
 
+# ── Comodín "Ítem" ───────────────────────────────────────────────────────────
+
+## Ítems del inventario que se pueden usar en combate: [{"index", "data", "count"}].
+func _combat_items() -> Array:
+	var result := []
+	var save: PlayerSaveData = GameState.player_save
+	if save == null:
+		return result
+	for i in save.inventory_items.size():
+		var entry: Dictionary = save.inventory_items[i]
+		var path: String = entry.get("data_path", "")
+		if path.is_empty() or not ResourceLoader.exists(path):
+			continue
+		var data := load(path) as ItemData
+		if data != null and data.is_combat_item():
+			result.append({"index": i, "data": data, "count": int(entry.get("count", 1))})
+	return result
+
+func _build_item_picker() -> void:
+	_item_picker = PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.03, 0.08, 0.12, 0.96)
+	style.border_color = Color(0.35, 0.85, 1.0)
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(8)
+	style.set_content_margin_all(14)
+	_item_picker.add_theme_stylebox_override("panel", style)
+	_item_picker.custom_minimum_size = Vector2(320, 0)
+	_item_picker.set_anchors_preset(Control.PRESET_CENTER)
+	_item_picker.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_item_picker.grow_vertical = Control.GROW_DIRECTION_BOTH
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 8)
+	_item_picker.add_child(column)
+	_item_title = Label.new()
+	_item_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(_item_title)
+	_item_list = VBoxContainer.new()
+	_item_list.add_theme_constant_override("separation", 6)
+	column.add_child(_item_list)
+	var cancel := Button.new()
+	cancel.text = LocalizationState.t("combat.item_cancel")
+	cancel.pressed.connect(_close_item_picker)
+	column.add_child(cancel)
+	_item_picker.visible = false
+	$UI.add_child(_item_picker)
+
+func _start_item(card_index: int, is_top: bool) -> void:
+	if player_actions._has_pending_selection():
+		player_actions.cancel_selection()
+	if _item_picker == null:
+		_build_item_picker()
+	_item_half = {"card": card_index, "is_top": is_top}
+	_item_title.text = LocalizationState.t("combat.item_title")
+	for child in _item_list.get_children():
+		child.queue_free()
+	for item in _combat_items():
+		var data: ItemData = item["data"]
+		var b := Button.new()
+		b.text = "%s  ×%d" % [LocalizationState.item_name(data.id, data.name), item["count"]]
+		b.tooltip_text = data.description
+		b.icon = data.icon
+		b.expand_icon = true
+		b.custom_minimum_size = Vector2(0, 40)
+		b.add_theme_constant_override("icon_max_width", 28)
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.pressed.connect(_use_item.bind(item["index"], data))
+		_item_list.add_child(b)
+	_item_picker.visible = true
+
+func _close_item_picker() -> void:
+	_item_half = {}
+	if _item_picker != null:
+		_item_picker.visible = false
+
+## Usa el ítem: aplica su efecto al combate, lo saca del inventario y gasta la
+## mitad elegida.
+func _use_item(inventory_index: int, data: ItemData) -> void:
+	if _item_half.is_empty():
+		return
+	var result := data.apply_in_combat(state)
+	_consume_inventory_item(inventory_index)
+	var parts: PackedStringArray = []
+	if result.get("healed", 0) > 0:
+		parts.append(LocalizationState.t("combat.item_healed", [result["healed"]]))
+	if result.get("mp", 0) > 0:
+		parts.append(LocalizationState.t("combat.item_mp", [result["mp"]]))
+	if result.get("cleansed", false):
+		parts.append(LocalizationState.t("combat.item_cleansed"))
+	log_message(LocalizationState.t("combat.item_used", [LocalizationState.item_name(data.id, data.name)])
+		+ (" " + ", ".join(parts) + "." if not parts.is_empty() else ""))
+	if _item_half["is_top"]:
+		_used_top = _item_half["card"]
+	else:
+		_used_bottom = _item_half["card"]
+	_close_item_picker()
+	_disarm_wild()
+	update_ui()
+	refresh_hand()
+
+func _consume_inventory_item(index: int) -> void:
+	var items: Array = GameState.player_save.inventory_items
+	if index < 0 or index >= items.size():
+		return
+	var entry: Dictionary = items[index]
+	var count := int(entry.get("count", 1))
+	if count > 1:
+		entry["count"] = count - 1
+		items[index] = entry
+	else:
+		items.remove_at(index)
+	GameState.player_save.inventory_items = items
+
+## Termina la mitad en juego (si no se hizo ninguna línea, no se gasta).
+func _end_playing() -> void:
+	_playing = {}
+	state.turn_actions.clear()
+
+## Tope de líneas por mitad para la etapa del Youn (DeckRules.line_cap).
+func _line_cap() -> int:
+	return DeckRules.line_cap(YounData.get_active_stage(GameState.player_save))
+
 ## La mitad en juego queda gastada (una vez hecha o salteada alguna línea).
+## El MP se cobra por cada línea hecha (ver _resolve_playing).
 func _mark_playing_started() -> void:
 	if _playing["started"]:
 		return
 	_playing["started"] = true
-	# El MP de toda la mitad se cobra al empezarla (_is_half_available ya
-	# verificó que alcanza).
-	for line: CardActionLine in _playing["lines"]:
-		state.player_mp -= line.mp_cost
 	if _playing["is_top"]:
 		_used_top = _playing["card"]
 	else:
@@ -556,6 +743,12 @@ func _resolve_playing() -> void:
 	var done: bool = not state.turn_actions.has(line)
 	if done:
 		_mark_playing_started()
+		# El MP se cobra por línea hecha, una sola vez (esto se llama varias veces
+		# por línea, p. ej. mientras le queda alcance a un movimiento).
+		if _playing.get("counted", -1) != _playing["index"]:
+			_playing["counted"] = _playing["index"]
+			state.player_mp -= line.mp_cost
+			_playing["used"] += 1
 	if player_actions._has_pending_selection():
 		return  # sigue en curso (p. ej. un movimiento con alcance restante)
 	if not done:
@@ -566,9 +759,12 @@ func _resolve_playing() -> void:
 		log_message(LocalizationState.t("combat.line_skipped"))
 	_playing["index"] += 1
 	_playing["active"] = false
+	if done and _playing["used"] >= _playing["cap"] and _playing["index"] < _playing["lines"].size():
+		log_message(LocalizationState.t("combat.line_cap_reached", [_playing["cap"]]))
+		_end_playing()
+		return
 	if _playing["index"] >= _playing["lines"].size():
-		_playing = {}
-		state.turn_actions.clear()
+		_end_playing()
 		return
 	# Diferido: CombatPlayerActions todavía puede estar terminando la línea anterior.
 	_start_current_line.call_deferred()
@@ -664,17 +860,82 @@ func _reveal_and_wait(monster_card: MonsterCard) -> void:
 	if monster_card != null:
 		monster_card_view.show_card(monster_card, enemy_ai.monster_deck)
 		await get_tree().process_frame  # que el panel calcule su tamaño
-		var center := Vector2(screen.x * 0.5, screen.y * 0.36)
-		monster_card_view.present_at(center, REVEAL_CARD_ZOOM)
-		button_y = center.y + monster_card_view.size.y * REVEAL_CARD_ZOOM * 0.5 + 24.0
+		# Las opciones que miró el enemigo van en fila (izquierda, centro,
+		# derecha): la elegida boca arriba en su lugar y las otras dadas vuelta.
+		var chosen_size: Vector2 = monster_card_view.size * REVEAL_CARD_ZOOM
+		var count := maxi(1, enemy_ai.round_options.size())
+		var chosen_slot := maxi(0, enemy_ai.round_options.find(monster_card))
+		var row_y := screen.y * 0.36
+		var spacing := chosen_size.x * CARD_SLOT_SPACING
+		var slot_centers: Array[Vector2] = []
+		for i in count:
+			slot_centers.append(Vector2(screen.x * 0.5 + (i - (count - 1) * 0.5) * spacing, row_y))
+		monster_card_view.present_at(slot_centers[chosen_slot], REVEAL_CARD_ZOOM)
+		button_y = row_y + chosen_size.y * 0.5 + 24.0
+		var back_slots: Array[Vector2] = []
+		var back_tilts: Array[float] = []
+		for i in count:
+			if i != chosen_slot:
+				back_slots.append(slot_centers[i])
+				back_tilts.append((i - (count - 1) * 0.5) * 7.0)
+		_show_card_backs(back_slots, back_tilts, chosen_size)
 	_start_round_button.text = LocalizationState.t("combat.start_round")
 	_start_round_button.reset_size()
 	_start_round_button.position = Vector2(screen.x * 0.5 - _start_round_button.size.x * 0.5, button_y)
 	_start_round_button.visible = true
 	await _start_round_button.pressed
 	_start_round_button.visible = false
+	_hide_card_backs()
 	if monster_card != null:
 		await monster_card_view.return_home()
+
+## Dorsos de las cartas que el enemigo miró y no eligió, en sus lugares de la
+## fila: un poco más chicos, inclinados y por detrás de la elegida.
+func _show_card_backs(centers: Array[Vector2], tilts: Array[float], chosen_size: Vector2) -> void:
+	_clear_card_backs()
+	var back_size := chosen_size * CARD_BACK_SCALE
+	for i in centers.size():
+		var back := _make_card_back(back_size)
+		$UI.add_child(back)
+		# Detrás de la carta elegida.
+		$UI.move_child(back, monster_card_view.get_index())
+		back.position = centers[i] - back_size * 0.5
+		back.pivot_offset = back_size * 0.5
+		back.rotation_degrees = tilts[i]
+		_card_backs.append(back)
+
+func _make_card_back(back_size: Vector2) -> PanelContainer:
+	var back := PanelContainer.new()
+	back.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	back.custom_minimum_size = back_size
+	back.size = back_size
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.14, 0.02, 0.04, 0.97)
+	style.border_color = Color(0.85, 0.2, 0.2)
+	style.set_border_width_all(3)
+	style.set_corner_radius_all(8)
+	back.add_theme_stylebox_override("panel", style)
+	var mark := Label.new()
+	mark.text = "?"
+	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	mark.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	mark.add_theme_font_size_override("font_size", int(back_size.y * 0.35))
+	mark.add_theme_color_override("font_color", Color(0.85, 0.2, 0.2, 0.8))
+	back.add_child(mark)
+	return back
+
+## Se desvanecen al arrancar la ronda.
+func _hide_card_backs() -> void:
+	for back in _card_backs:
+		var tw := back.create_tween()
+		tw.tween_property(back, "modulate:a", 0.0, 0.25)
+		tw.tween_callback(back.queue_free)
+	_card_backs.clear()
+
+func _clear_card_backs() -> void:
+	for back in _card_backs:
+		back.queue_free()
+	_card_backs.clear()
 
 ## Ordena a los personajes por iniciativa (menor primero; en empate va el jugador).
 func _build_turn_order(player_initiative: int) -> void:
@@ -698,6 +959,7 @@ func _on_end_turn_pressed() -> void:
 	_turn_cards.clear()
 	_playing = {}
 	_keep_half = {}
+	_close_item_picker()
 	pile_popup.visible = false
 	_disarm_wild()
 	refresh_hand()
@@ -902,13 +1164,24 @@ func log_message(text: String) -> void:
 ## Muestra la pantalla de fin de lucha y, al continuar, vuelve al mundo.
 func _show_victory() -> void:
 	await _prepare_result_screen()
-	var gold := VICTORY_GOLD if GameState.combat_return_pending else 0
-	result_screen.show_victory(PLACEHOLDER_STAT_GAINS, gold)
+	# Solo los combates del mundo dan recompensa (no el combate rápido del título).
+	var rewarded := GameState.combat_return_pending
+	var gold := VICTORY_GOLD if rewarded else 0
+	result_screen.show_victory(_victory_stat_lines() if rewarded else [], gold)
 	await result_screen.continue_pressed
-	if GameState.combat_return_pending:
+	if rewarded:
 		GameState.player_save.gold += gold
-		GameState.save_player_save()
+		var youn = PartyManager.youn
+		YounStatRules.reward(GameState.player_save, VICTORY_STAT_GAINS,
+			youn.youn_data if is_instance_valid(youn) else null)
 	_leave_combat()
+
+## [[nombre, cantidad], ...] de VICTORY_STAT_GAINS para la pantalla de victoria.
+func _victory_stat_lines() -> Array:
+	var lines := []
+	for key in VICTORY_STAT_GAINS:
+		lines.append([LocalizationState.t("youn_stat." + key), VICTORY_STAT_GAINS[key]])
+	return lines
 
 ## PLACEHOLDER de derrota: sin penalidad todavía. Se vuelve al mundo igual que
 ## al ganar (el enemigo del mundo huye, así no te vuelve a atrapar al aparecer).

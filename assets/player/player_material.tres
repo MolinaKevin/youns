@@ -1,0 +1,14 @@
+[gd_resource type="StandardMaterial3D" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/player/textures/pc_color.png" id="1_u7mhc"]
+[ext_resource type="Texture2D" path="res://assets/player/textures/pc_metallic.png" id="2_hqejo"]
+[ext_resource type="Texture2D" path="res://assets/player/textures/pc_normal.png" id="3_bux1k"]
+[ext_resource type="Texture2D" path="res://assets/player/textures/pc_roughness.png" id="4_3nmud"]
+
+[resource]
+albedo_texture = ExtResource("1_u7mhc")
+metallic = 1.0
+metallic_texture = ExtResource("2_hqejo")
+roughness_texture = ExtResource("4_3nmud")
+normal_enabled = true
+normal_texture = ExtResource("3_bux1k")

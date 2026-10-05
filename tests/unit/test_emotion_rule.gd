@@ -12,12 +12,13 @@ func before_each() -> void:
 func test_sick_no_dispara_con_salud_plena() -> void:
 	var rule: EmotionRule = load("res://data/emotions/rules/sick.tres")
 	save.salud = 100
-	assert_almost_eq(rule.evaluate({"save": save}), 0.0, 0.05)
+	# la curva baja a 0 en x=0.6: con salud alta no se enferma sola
+	assert_eq(rule.evaluate({"save": save}), 0.0)
 
 
 func test_sick_probabilidad_muy_baja_antes_del_threshold() -> void:
 	var rule: EmotionRule = load("res://data/emotions/rules/sick.tres")
-	save.salud = 70  # la curva termina en x≈0.526 con y≈0.045, el piso no llega a 0
+	save.salud = 55  # entre x≈0.526 (y≈0.045) y x=0.6 (y=0)
 	assert_lt(rule.evaluate({"save": save}), 0.1)
 
 
@@ -165,3 +166,12 @@ func test_sleep_no_dispara_fuera_de_la_ventana_horaria() -> void:
 	youn.wake_hour = 7
 	GameState.time_of_day_hours = 12.0
 	assert_eq(rule.evaluate({"save": save, "youn_data": youn}), 0.0)
+
+
+# ── hungry: la curva baja a 0 antes de hambre 65 ─────────────────────────────
+
+func test_hungry_no_dispara_con_hambre_baja() -> void:
+	var rule: EmotionRule = load("res://data/emotions/rules/hungry.tres")
+	for hambre in [0, 30, 60]:
+		save.hambre = hambre
+		assert_eq(rule.evaluate({"save": save}), 0.0, "hambre %d" % hambre)

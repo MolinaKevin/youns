@@ -59,6 +59,33 @@ func _load_recipes() -> void:
 	_loading = false
 	recipes_loaded.emit()
 
+# ── Guardado ─────────────────────────────────────────────────────────────────
+
+## Copia lo producido, el avance de las recetas y cuál estaba corriendo.
+func write_to_save(save: PlayerSaveData) -> void:
+	save.lab_pending_output = pending_output.duplicate(true)
+	var progress := recipe_progress.duplicate()
+	if active_recipe_id != "":
+		progress[active_recipe_id] = get_current_progress(active_recipe_id)
+	save.lab_recipe_progress = progress
+	save.lab_active_recipe_id = active_recipe_id
+
+## Deja el laboratorio como el de la partida (nueva o cargada).
+func restore_from_save(save: PlayerSaveData) -> void:
+	if active_timer:
+		active_timer.queue_free()
+		active_timer = null
+	active_recipe_id = ""
+	pending_output = save.lab_pending_output.duplicate(true)
+	recipe_progress = save.lab_recipe_progress.duplicate()
+	_loading = true
+	_load_recipes()
+	# La investigación que estaba corriendo sigue desde su avance.
+	var active := get_recipe_by_id(save.lab_active_recipe_id)
+	if active != null:
+		_start_recipe(active)
+	pending_output_changed.emit()
+
 func get_recipe_by_id(id: String) -> Resource:
 	for r in all_recipes:
 		if r.id == id:
@@ -99,7 +126,6 @@ func has_ingredients(recipe: Resource) -> bool:
 func _consume_ingredients(recipe: Resource) -> void:
 	if recipe.gold_cost > 0 and GameState.player_save != null:
 		GameState.player_save.gold = max(0, GameState.player_save.gold - recipe.gold_cost)
-		GameState.save_player_save()
 	for ing in recipe.ingredients:
 		var item_id: String = ing["id"]
 		var new_count: int = pending_output[item_id]["count"] - ing["amount"]
@@ -158,11 +184,9 @@ func _process_reward(reward: Dictionary, _recipe_name: String) -> void:
 			unlock_recipe(reward["id"])
 		"unlock_clock_ui":
 			GameState.player_save.clock_ui_unlocked = true
-			GameState.save_player_save()
 			GlobalHUD.sync_overworld_ui_visibility()
 		"unlock_care_ui":
 			GameState.player_save.care_ui_unlocked = true
-			GameState.save_player_save()
 			GlobalHUD.sync_overworld_ui_visibility()
 		"item":
 			var item_id: String = reward["id"]
@@ -210,7 +234,6 @@ func unlock_recipe(recipe_id: String) -> void:
 	if GameState.player_save.unlocked_recipe_ids.has(recipe_id):
 		return
 	GameState.player_save.unlocked_recipe_ids.append(recipe_id)
-	GameState.save_player_save()
 	var recipe := get_recipe_by_id(recipe_id)
 	if recipe:
 		_unlock_column(recipe.location, recipe.action_type)
@@ -229,7 +252,6 @@ func _complete_recipe(recipe_id: String) -> void:
 	if GameState.player_save.completed_recipe_ids.has(recipe_id):
 		return
 	GameState.player_save.completed_recipe_ids.append(recipe_id)
-	GameState.save_player_save()
 
 # ── Desbloqueo indirecto ──────────────────────────────────────────────────────
 

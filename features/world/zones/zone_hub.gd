@@ -1,8 +1,7 @@
-extends Node3D
+extends ZoneBase
 
 @export var toilet_data: ToiletData
 
-var zone_id := "hub"
 var _near_demo_monzaemon := false
 var _near_hub_npc := false
 var _hub_option_index := 0
@@ -17,7 +16,7 @@ var _typewriter_progress := 0.0
 var _typewriter_done := true
 
 func _ready() -> void:
-	$ZoneTrigger.body_entered.connect(_on_body_entered)
+	super._ready()
 	$LabWarp.body_entered.connect(_on_lab_warp_entered)
 	$DemoMonzaemon/InteractArea.body_entered.connect(_on_demo_monzaemon_entered)
 	$DemoMonzaemon/InteractArea.body_exited.connect(_on_demo_monzaemon_exited)
@@ -50,13 +49,9 @@ func _ready() -> void:
 	LaboratoryState.recipe_completed.connect(_on_recipe_completed)
 	LocalizationState.language_changed.connect(_apply_localized_text)
 	_build_floor_collision()
-	_fix_map_vertex_colors()
+	_fix_map_vertex_colors("CityMap")
 	_apply_localized_text()
 	_refresh_demo_bridge_visibility()
-
-func _on_body_entered(body: Node3D) -> void:
-	if body.name == "Player":
-		ZoneManager.enter_zone(zone_id)
 
 func _on_lab_warp_entered(body: Node3D) -> void:
 	if body.name == "Player":
@@ -266,19 +261,6 @@ func _is_nav_up(event: InputEvent) -> bool:
 func _is_nav_down(event: InputEvent) -> bool:
 	return event.is_action_pressed("move_down", true) or event.is_action_pressed("ui_down", true)
 
-func _fix_map_vertex_colors() -> void:
-	var city_map := get_node_or_null("CityMap")
-	if not city_map:
-		return
-	for node in city_map.find_children("*", "MeshInstance3D", true, false):
-		var mi := node as MeshInstance3D
-		for i in mi.get_surface_override_material_count():
-			var mat := mi.get_surface_override_material(i)
-			if mat == null:
-				mat = mi.mesh.surface_get_material(i)
-			if mat is StandardMaterial3D:
-				(mat as StandardMaterial3D).vertex_color_use_as_albedo = true
-
 func _build_floor_collision() -> void:
 	var body := StaticBody3D.new()
 	var col := CollisionShape3D.new()
@@ -393,6 +375,7 @@ func _run_bathroom_sequence() -> void:
 	var bypass_pt := Vector3(start_pos.x + side_dir.x * 1.5, youn_y, start_pos.z + side_dir.z * 1.5)
 
 	youn.play_anim("walk")
+	player.set_anim_base("walk")
 	_face_toward(player, start_pos)
 
 	var dist_p    := Vector2(player.global_position.x - start_pos.x,
@@ -428,6 +411,7 @@ func _run_bathroom_sequence() -> void:
 	# ── 1. Se miran — cámara al centro ───────────────────────────────────────
 	cam.target = cam_pivot
 	youn.play_anim("idle")
+	player.set_anim_base("idle")
 	_face_toward(youn, start_pos)
 	_face_toward(player, meeting_point)
 	await get_tree().create_timer(1.0).timeout

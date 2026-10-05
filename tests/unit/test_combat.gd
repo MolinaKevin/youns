@@ -2076,15 +2076,62 @@ func test_draw_card_toma_la_iniciativa_de_la_carta() -> void:
 	assert_eq(ai.initiative, 19)
 
 
-func test_draw_card_no_repite_hasta_usar_todo_el_mazo() -> void:
+func test_draw_card_no_repite_mientras_queden_3_por_usar() -> void:
+	# 6 cartas: en las primeras 4 rondas siempre quedan 3 o más sin usar
 	var s := CombatState.new()
-	var cards := [_make_monster_card(10, []), _make_monster_card(20, []), _make_monster_card(30, [])]
+	var cards := []
+	for i in 6:
+		cards.append(_make_monster_card(10 + i, []))
 	var ai := _make_card_ai(s, _make_monster_deck(cards))
 	var seen := []
-	for i in 3:
-		seen.append(ai.draw_card())
-	for c in cards:
-		assert_true(seen.has(c))
+	for i in 4:
+		var c := ai.draw_card()
+		assert_false(seen.has(c))
+		seen.append(c)
+
+
+func test_draw_card_mira_3_opciones_y_la_elegida_esta_entre_ellas() -> void:
+	var s := CombatState.new()
+	var cards := []
+	for i in 6:
+		cards.append(_make_monster_card(10 + i, []))
+	var ai := _make_card_ai(s, _make_monster_deck(cards))
+	var chosen := ai.draw_card()
+	assert_eq(ai.round_options.size(), CombatEnemyAI.ROUND_OPTIONS)
+	assert_true(ai.round_options.has(chosen))
+
+
+func test_las_opciones_son_3_cartas_distintas() -> void:
+	var s := CombatState.new()
+	var cards := []
+	for i in 6:
+		cards.append(_make_monster_card(10 + i, []))
+	var ai := _make_card_ai(s, _make_monster_deck(cards))
+	for round in 10:
+		ai.draw_card()
+		var unique := {}
+		for c in ai.round_options:
+			unique[c] = true
+		assert_eq(unique.size(), 3)
+
+
+func test_siempre_hay_3_opciones_aunque_queden_menos_en_el_mazo() -> void:
+	var s := CombatState.new()
+	var cards := [_make_monster_card(10, []), _make_monster_card(20, []), _make_monster_card(30, []), _make_monster_card(40, [])]
+	var ai := _make_card_ai(s, _make_monster_deck(cards))
+	var sizes := []
+	for i in 6:
+		ai.draw_card()
+		sizes.append(ai.round_options.size())
+	assert_eq(sizes, [3, 3, 3, 3, 3, 3])
+
+
+func test_con_mazo_de_menos_de_3_las_opciones_son_las_que_hay() -> void:
+	var s := CombatState.new()
+	var cards := [_make_monster_card(10, []), _make_monster_card(20, [])]
+	var ai := _make_card_ai(s, _make_monster_deck(cards))
+	ai.draw_card()
+	assert_eq(ai.round_options.size(), 2)
 
 
 func test_draw_card_sin_mazo_devuelve_null_y_mantiene_iniciativa() -> void:

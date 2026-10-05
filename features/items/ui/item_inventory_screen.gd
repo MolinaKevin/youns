@@ -134,6 +134,11 @@ func _on_use_pressed() -> void:
 	var data_path: String = item.get("data_path", "")
 	if not data_path.is_empty():
 		var data := load(data_path) as ItemData
+		if data and data.is_combat_only():
+			# Se usa con el comodín "Ítem" del combate: acá no se gasta.
+			GlobalHUD.show_toast(LocalizationState.t("inventory.combat_only"))
+			_close_popup()
+			return
 		if data:
 			data.apply_effects(GameState.player_save)
 			GlobalHUD.notify_youns_status_changed()
@@ -155,7 +160,6 @@ func _consume_selected_item() -> void:
 	else:
 		items.remove_at(_selected_index)
 	GameState.player_save.inventory_items = items
-	GameState.save_player_save()
 	_close_popup()
 	_refresh_inventory()
 

@@ -2,6 +2,11 @@
 
 [ext_resource type="Script" uid="uid://dkniy614ehfbc" path="res://data/youns/youn_data.gd" id="1_script"]
 [ext_resource type="Script" path="res://data/youns/youn_stats.gd" id="youn_stats_script"]
+[ext_resource type="Script" path="res://data/youns/youn_evolution_stats.gd" id="youn_evolution_stats_script"]
+[ext_resource type="Resource" path="res://data/cards/envion.tres" id="evo_signature"]
+[ext_resource type="Script" path="res://data/card_action_line.gd" id="evo_line_script"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_from_youn.gd" id="evo_from_script"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition.gd" id="evo_condition_script"]
 
 [sub_resource type="Resource" id="BaseStats"]
 script = ExtResource("youn_stats_script")
@@ -14,9 +19,35 @@ tecnica = 25
 inteligencia = 25
 espiritu = 30
 
+[sub_resource type="Resource" id="EvolutionStats"]
+script = ExtResource("youn_evolution_stats_script")
+constitucion = 15.0
+mente = 15.0
+fuerza = 15.0
+resistencia = 15.0
+agilidad = 15.0
+tecnica = 15.0
+inteligencia = 15.0
+espiritu = 15.0
+
+[sub_resource type="Resource" id="EvoLine0"]
+script = ExtResource("evo_line_script")
+card_type = "melee_attack"
+description = "Golpe extra."
+damage = 10
+
+[sub_resource type="Resource" id="EvoCondition0"]
+script = ExtResource("evo_from_script")
+youn_path = "res://data/youns/bebe_1.tres"
+
 [resource]
 script = ExtResource("1_script")
 id = "nino_1"
 youn_name = "Niño 1"
 stage = "nino"
+evolution_conditions = Array[ExtResource("evo_condition_script")]([SubResource("EvoCondition0")])
+signature_card = ExtResource("evo_signature")
+granted_lines = Array[ExtResource("evo_line_script")]([SubResource("EvoLine0")])
 base_stats = SubResource("BaseStats")
+evolution_stats = SubResource("EvolutionStats")
+evolves_to = Array[String](["res://data/youns/pombero.tres", "res://data/youns/nguruvilu.tres"])

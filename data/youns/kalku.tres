@@ -1,0 +1,109 @@
+[gd_resource type="Resource" script_class="YounData" format=3]
+
+[ext_resource type="Script" path="res://data/youns/youn_data.gd" id="script"]
+[ext_resource type="Script" path="res://data/youns/youn_stats.gd" id="stats"]
+[ext_resource type="Script" path="res://data/youns/youn_evolution_stats.gd" id="evo_stats"]
+[ext_resource type="Script" path="res://data/card_action_line.gd" id="line"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition.gd" id="cond"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_intelligence.gd" id="c_intel"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_values.gd" id="c_values"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_value_check.gd" id="c_check"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_hour.gd" id="c_hour"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_zone.gd" id="c_zone"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_from_youn.gd" id="c_from"]
+[ext_resource type="Resource" path="res://data/cards/descarga.tres" id="signature"]
+
+[sub_resource type="Resource" id="BaseStats"]
+script = ExtResource("stats")
+constitucion = 75
+mente = 105
+fuerza = 60
+resistencia = 65
+agilidad = 70
+tecnica = 85
+inteligencia = 105
+espiritu = 90
+
+[sub_resource type="Resource" id="EvolutionStats"]
+script = ExtResource("evo_stats")
+mode = 0
+constitucion = 5.0
+mente = 40.0
+fuerza = 5.0
+resistencia = 5.0
+agilidad = 10.0
+tecnica = 15.0
+inteligencia = 40.0
+espiritu = 15.0
+
+[sub_resource type="Resource" id="Cond0"]
+script = ExtResource("c_intel")
+intelligences = PackedStringArray("logica", "intrapersonal")
+
+[sub_resource type="Resource" id="Cond1Check0"]
+script = ExtResource("c_check")
+key = "mente"
+use_min = true
+min_value = 70.0
+
+[sub_resource type="Resource" id="Cond1Check1"]
+script = ExtResource("c_check")
+key = "inteligencia"
+use_min = true
+min_value = 70.0
+
+[sub_resource type="Resource" id="Cond1"]
+script = ExtResource("c_values")
+kind = 1
+checks = Array[ExtResource("c_check")]([SubResource("Cond1Check0"), SubResource("Cond1Check1")])
+
+[sub_resource type="Resource" id="Cond2Check0"]
+script = ExtResource("c_check")
+key = "discipline"
+use_min = true
+min_value = 70.0
+
+[sub_resource type="Resource" id="Cond2"]
+script = ExtResource("c_values")
+kind = 2
+checks = Array[ExtResource("c_check")]([SubResource("Cond2Check0")])
+
+[sub_resource type="Resource" id="Cond3"]
+script = ExtResource("c_zone")
+zone_id = "gym"
+
+[sub_resource type="Resource" id="Cond4"]
+script = ExtResource("c_hour")
+from_hour = 12.0
+to_hour = 18.0
+
+[sub_resource type="Resource" id="Line0"]
+script = ExtResource("line")
+card_type = "range_attack"
+description = "Maleficio a distancia."
+damage = 30
+card_range = 60
+
+[sub_resource type="Resource" id="Line1"]
+script = ExtResource("line")
+card_type = "mp_restore"
+description = "Concentración."
+restore_amount = 20
+
+[resource]
+script = ExtResource("script")
+id = "kalku"
+youn_name = "Kalku"
+stage = "campeon"
+intelligences = PackedStringArray("logica", "intrapersonal")
+evolves_to = Array[String](["res://data/youns/arasy.tres"])
+evolution_conditions = Array[ExtResource("cond")]([SubResource("Cond0"), SubResource("Cond1"), SubResource("Cond2"), SubResource("Cond3"), SubResource("Cond4")])
+signature_card = ExtResource("signature")
+color_changes = Dictionary[String, int]({"logica": 2, "intrapersonal": 2})
+granted_lines = Array[ExtResource("line")]([SubResource("Line0"), SubResource("Line1")])
+placeholder_shape = 1
+placeholder_color = Color(0.55, 0.35, 0.8, 1)
+placeholder_size = 1.0
+base_stats = SubResource("BaseStats")
+evolution_stats = SubResource("EvolutionStats")
+body_height = 1.4

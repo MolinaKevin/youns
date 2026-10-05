@@ -159,6 +159,15 @@ func set_half_enabled(index: int, is_top: bool, enabled: bool) -> void:
 		if child.has_method("set_half_enabled"):
 			child.set_half_enabled(is_top, enabled)
 
+## Recuadra la línea que se está usando en la carta `index` (ver CardView.set_active_line).
+func set_active_line(index: int, is_top: bool, line_index: int) -> void:
+	var wrappers := fan_container.get_children()
+	if index < 0 or index >= wrappers.size():
+		return
+	for child in wrappers[index].get_children():
+		if child.has_method("set_active_line"):
+			child.set_active_line(is_top, line_index)
+
 func show_all_cards() -> void:
 	for w in fan_container.get_children():
 		w.visible = true

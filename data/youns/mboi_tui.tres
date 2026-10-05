@@ -1,0 +1,60 @@
+[gd_resource type="Resource" script_class="YounData" format=3]
+
+[ext_resource type="Script" path="res://data/youns/youn_data.gd" id="script"]
+[ext_resource type="Script" path="res://data/youns/youn_stats.gd" id="stats"]
+[ext_resource type="Script" path="res://data/youns/youn_evolution_stats.gd" id="evo_stats"]
+[ext_resource type="Script" path="res://data/card_action_line.gd" id="line"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition.gd" id="cond"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_intelligence.gd" id="c_intel"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_values.gd" id="c_values"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_value_check.gd" id="c_check"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_hour.gd" id="c_hour"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_zone.gd" id="c_zone"]
+[ext_resource type="Script" path="res://data/youns/evolution/evolution_condition_from_youn.gd" id="c_from"]
+[ext_resource type="Resource" path="res://data/cards/charco_veneno.tres" id="signature"]
+
+[sub_resource type="Resource" id="BaseStats"]
+script = ExtResource("stats")
+constitucion = 80
+mente = 60
+fuerza = 75
+resistencia = 70
+agilidad = 65
+tecnica = 60
+inteligencia = 55
+espiritu = 60
+
+[sub_resource type="Resource" id="EvolutionStats"]
+script = ExtResource("evo_stats")
+mode = 1
+constitucion = 0.9
+mente = 0.9
+fuerza = 0.9
+resistencia = 0.9
+agilidad = 0.9
+tecnica = 0.9
+inteligencia = 0.9
+espiritu = 0.9
+
+[sub_resource type="Resource" id="Line0"]
+script = ExtResource("line")
+card_type = "melee_attack"
+description = "Mordida."
+damage = 20
+
+[resource]
+script = ExtResource("script")
+id = "mboi_tui"
+youn_name = "Mbói Tu'i"
+stage = "campeon"
+is_wildcard = true
+intelligences = PackedStringArray()
+evolves_to = Array[String](["res://data/youns/luison.tres"])
+signature_card = ExtResource("signature")
+granted_lines = Array[ExtResource("line")]([SubResource("Line0")])
+placeholder_shape = 3
+placeholder_color = Color(0.2, 0.65, 0.6, 1)
+placeholder_size = 1.0
+base_stats = SubResource("BaseStats")
+evolution_stats = SubResource("EvolutionStats")
+body_height = 1.4

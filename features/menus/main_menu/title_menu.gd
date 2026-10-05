@@ -1,7 +1,10 @@
 extends Control
 
+const GAME_WORLD := "res://features/world/game_world/game_world.tscn"
+
 const MENU_OPTIONS: Array[Dictionary] = [
-	{"label_key": "title.menu.new_game", "scene": "res://features/world/game_world/game_world.tscn"},
+	{"label_key": "title.menu.continue", "scene": "", "action": "continue"},
+	{"label_key": "title.menu.new_game", "scene": "", "action": "new_game"},
 	{"label_key": "title.menu.quick_battle", "scene": "res://features/combat/scene/combat.tscn"},
 	{"label_key": "title.menu.lab", "scene": "res://features/laboratory/scene/laboratory.tscn"},
 	{"label_key": "title.menu.deck_builder", "scene": "res://features/deck_builder/ui/deck_builder_screen.tscn"},
@@ -29,6 +32,8 @@ var _selected_index := 0
 var _buttons: Array[Button] = []
 var _language_options := ["es", "en"]
 var _language_selected_index := 0
+## Diálogo "¿Empezar una partida nueva?" abierto (el menú no responde).
+var _confirm_open := false
 
 func _ready() -> void:
 	GlobalHUD.set_clock_visible(false)
@@ -39,12 +44,14 @@ func _ready() -> void:
 	LocalizationState.language_changed.connect(_apply_localized_text)
 	_apply_localized_text()
 	_build_menu()
+	# Arranca en "Continuar" si hay partida; si no, en "Nueva partida".
+	_selected_index = 0 if not _buttons[0].disabled else 1
 	_update_selection()
 	if not LocalizationState.has_saved_language():
 		_set_language_overlay_visible(true)
 
 func _input(event: InputEvent) -> void:
-	if not visible:
+	if not visible or _confirm_open:
 		return
 	if language_overlay.visible:
 		if event.is_action_pressed("ui_down") or event.is_action_pressed("ui_right"):
@@ -79,6 +86,8 @@ func _build_menu() -> void:
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		button.pressed.connect(_on_option_pressed.bind(_buttons.size()))
+		# "Continuar" solo si hay una partida guardada.
+		button.disabled = option.get("action", "") == "continue" and not GameState.has_saved_game()
 		_style_button(button)
 		options_container.add_child(button)
 		_buttons.append(button)
@@ -119,7 +128,11 @@ func _style_button(button: Button) -> void:
 	button.add_theme_stylebox_override("disabled", disabled)
 
 func _move_selection(delta: int) -> void:
-	_selected_index = wrapi(_selected_index + delta, 0, _buttons.size())
+	# Saltea las opciones deshabilitadas.
+	for i in _buttons.size():
+		_selected_index = wrapi(_selected_index + delta, 0, _buttons.size())
+		if not _buttons[_selected_index].disabled:
+			break
 	_update_selection()
 
 func _update_selection() -> void:
@@ -138,9 +151,22 @@ func _on_option_pressed(index: int) -> void:
 	_selected_index = index
 	_update_selection()
 
+	if _buttons[index].disabled:
+		return
 	var option: Dictionary = MENU_OPTIONS[index]
 	var scene_path: String = option.scene
 	var action: String = option.get("action", "")
+
+	if action == "continue":
+		if GameState.load_game():
+			get_tree().change_scene_to_file(GAME_WORLD)
+		return
+	if action == "new_game":
+		if GameState.has_saved_game():
+			_confirm_new_game()
+		else:
+			_start_new_game()
+		return
 
 	if action == "exit":
 		get_tree().quit()
@@ -151,6 +177,26 @@ func _on_option_pressed(index: int) -> void:
 
 	if scene_path != "":
 		get_tree().change_scene_to_file(scene_path)
+
+func _start_new_game() -> void:
+	GameState.start_new_game()
+	get_tree().change_scene_to_file(GAME_WORLD)
+
+## Hay una partida guardada: la nueva la va a pisar al guardar.
+func _confirm_new_game() -> void:
+	var dialog := ConfirmationDialog.new()
+	dialog.title = LocalizationState.t("title.menu.new_game")
+	dialog.dialog_text = LocalizationState.t("title.new_game_confirm")
+	dialog.ok_button_text = LocalizationState.t("title.new_game_yes")
+	dialog.cancel_button_text = LocalizationState.t("title.new_game_no")
+	dialog.confirmed.connect(_start_new_game)
+	dialog.visibility_changed.connect(func() -> void:
+		_confirm_open = dialog.visible
+		if not dialog.visible:
+			dialog.queue_free())
+	add_child(dialog)
+	_confirm_open = true
+	dialog.popup_centered()
 
 func _apply_localized_text(_language: String = "") -> void:
 	kick_label.text = LocalizationState.t("title.prototype")

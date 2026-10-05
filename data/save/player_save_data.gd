@@ -2,7 +2,13 @@ extends Resource
 class_name PlayerSaveData
 
 @export var owned_card_ids: Array[String] = []
+## Ids del mazo equipado. Solo sirven para armar `deck` la primera vez (ver
+## DeckRules.ensure_deck): el mazo de verdad es `deck`.
 @export var equipped_deck_ids: Array[String] = []
+## El mazo de la partida: copias propias de las cartas (CardData.clone), así las
+## evoluciones pueden recolorear mitades y agregarles líneas. Lo usan el combate
+## y el armado de mazo.
+@export var deck: Array[CardData] = []
 @export var inventory_slots: int = 20
 @export var inventory_items: Array[Dictionary] = []
 
@@ -43,9 +49,41 @@ class_name PlayerSaveData
 # métricas de cuidado de arriba (p. ej. `energia` de cuidado ≠ "energia" de acá).
 ## Valor actual de cada una de las 8 estadísticas (YounStats.KEYS).
 @export var youn_stats: Dictionary = {}
-## Lo ganado en esta vida; al evolucionar se suma a la base del nuevo Youn.
+## Lo ganado en esta vida (registro; la evolución trabaja sobre youn_stats).
 @export var youn_stat_gains: Dictionary = {}
 
+@export_group("Estado al guardar")
+## Reloj del juego (GameState.current_day / time_of_day_hours).
+@export var saved_day: int = 1
+@export var saved_hour: float = 8.0
+@export var world_intro_seen: bool = false
+## Dónde estaba el jugador: zona exterior (ZoneManager.ZONES), interior (ruta de
+## escena, vacío si estaba afuera) y posición.
+@export var saved_zone: String = "hub"
+@export var saved_interior: String = ""
+@export var saved_position: Vector3 = Vector3.ZERO
+@export var has_saved_position: bool = false
+## Estados activos del Youn (StatsManager.active_states).
+@export var active_states: Dictionary = {}
+## Laboratorio: lo producido sin retirar y el avance de cada receta.
+@export var lab_pending_output: Dictionary = {}
+@export var lab_recipe_progress: Dictionary = {}
+## Receta que estaba corriendo (sigue desde su avance al cargar).
+@export var lab_active_recipe_id: String = ""
+@export_group("")
+
 @export var current_youn_path: String = ""
+## Evoluciones descubiertas (progreso del jugador, no del Youn): id del Youn →
+## índices en su evolution_conditions de las condiciones ya reveladas. Ver
+## EvolutionDiscovery.
+@export var discovered_evolutions: Dictionary = {}
+## Cartas reencarnadas: la que heredó cada huevo (progreso del jugador). Quedan
+## para poder sumarlas a los mazos de las vidas siguientes.
+@export var saved_cards: Array[CardData] = []
+## Vidas del jugador: se pierde una si el Youn muere por salud (llega a 0).
+## Solo se muestran en ese momento; no son una mecánica central.
+@export var lives: int = 3
+## El listado de cartas reencarnadas se desbloquea con la primera reencarnación.
+@export var reincarnated_cards_unlocked: bool = false
 @export var pending_evolution_path: String = ""
 @export var stage_entered_total_hour: float = 0.0

@@ -2,6 +2,12 @@
 
 [ext_resource type="Script" uid="uid://dkniy614ehfbc" path="res://data/youns/youn_data.gd" id="1_script"]
 [ext_resource type="Script" path="res://data/youns/youn_stats.gd" id="youn_stats_script"]
+[ext_resource type="Script" path="res://data/card_data.gd" id="card_data_script"]
+[ext_resource type="Resource" path="res://data/cards/block.tres" id="card_block"]
+[ext_resource type="Resource" path="res://data/cards/dash.tres" id="card_dash"]
+[ext_resource type="Resource" path="res://data/cards/slash.tres" id="card_slash"]
+[ext_resource type="Resource" path="res://data/cards/step.tres" id="card_step"]
+[ext_resource type="Resource" path="res://data/cards/strike.tres" id="card_strike"]
 
 [sub_resource type="Resource" id="BaseStats"]
 script = ExtResource("youn_stats_script")
@@ -19,4 +25,6 @@ script = ExtResource("1_script")
 id = "bebe_1"
 youn_name = "Bebé 1"
 stage = "bebe"
+starting_deck = Array[ExtResource("card_data_script")]([ExtResource("card_step"), ExtResource("card_step"), ExtResource("card_strike"), ExtResource("card_strike"), ExtResource("card_block"), ExtResource("card_block"), ExtResource("card_dash"), ExtResource("card_slash")])
 base_stats = SubResource("BaseStats")
+evolves_to = Array[String](["res://data/youns/nino_1.tres"])

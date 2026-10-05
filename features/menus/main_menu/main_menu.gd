@@ -10,6 +10,9 @@ const MENU_ITEMS := [
 	{name_key = "main_menu.map",       icon = "res://assets/icons/icon_4.png", scene = ""},
 	{name_key = "main_menu.inventory", icon = "res://assets/icons/icon_5.png", scene = "res://features/items/ui/item_inventory_screen.tscn"},
 	{name_key = "main_menu.sleep",     icon = "res://assets/icons/icon_6.png", scene = ""},
+	{name_key = "main_menu.evolutions", icon = "res://assets/icons/icon_4.png", scene = "res://features/world/evolution/evolution_tree_screen.tscn"},
+	# Solo después de la primera reencarnación (ver _is_item_unlocked).
+	{name_key = "main_menu.reincarnated_cards", icon = "res://assets/icons/icon_3.png", scene = "res://features/cards/ui/reincarnated_cards_screen.tscn", unlock = "reincarnated_cards"},
 ]
 
 const SLEEP_ITEM_INDEX := 5
@@ -44,16 +47,38 @@ func _ready() -> void:
 	_refresh_gold()
 
 	grid.columns = COLUMNS
+	_build_items()
+	# Se rearma al abrirse: un ítem se pudo desbloquear jugando.
+	visibility_changed.connect(func() -> void:
+		if visible:
+			_build_items())
+
+func _build_items() -> void:
+	for item in _items:
+		grid.remove_child(item)
+		item.queue_free()
+	_items.clear()
+	_item_textures.clear()
 	for data in MENU_ITEMS:
+		# Los ítems bloqueados van al final de la lista: saltearlos no corre los índices.
+		if not _is_item_unlocked(data):
+			continue
 		var item := MenuItem.instantiate()
 		grid.add_child(item)
 		var tex := load(data.icon) as Texture2D if data.icon != "" else null
 		item.setup(LocalizationState.t(data.name_key), tex)
 		_items.append(item)
 		_item_textures.append(tex)
+	_selected = mini(_selected, _items.size() - 1)
 	_apply_localized_text()
 	_update_sleep_state()
 	_update_selection()
+
+func _is_item_unlocked(data: Dictionary) -> bool:
+	match data.get("unlock", ""):
+		"reincarnated_cards":
+			return GameState.player_save != null and GameState.player_save.reincarnated_cards_unlocked
+	return true
 
 func _input(event: InputEvent) -> void:
 	if not visible:

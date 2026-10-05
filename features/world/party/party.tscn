@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://b5w2to2dpwlvl" path="res://features/world/world_map/player_3d.gd" id="1_player"]
 [ext_resource type="Script" uid="uid://dk56v0lver72g" path="res://features/world/party/youn_3d.gd" id="2_youn"]
 [ext_resource type="Script" uid="uid://gwfx6glk2ehg" path="res://features/world/world_map/camera_rig.gd" id="3_camera"]
-[ext_resource type="ArrayMesh" uid="uid://coexakq0deec7" path="res://assets/Player/Player 1.obj" id="4_player_mesh"]
+[ext_resource type="PackedScene" path="res://features/world/party/player_model.tscn" id="4_player_model"]
 [ext_resource type="Resource" uid="uid://cng7r4v1l2x5k" path="res://data/youns/nguruvilu.tres" id="5_youn_data"]
 [ext_resource type="Script" uid="uid://26ebcltnj7aj" path="res://features/world/party/emotion_bubble.gd" id="7_ec2iw"]
 
@@ -18,9 +18,8 @@ height = 1.6
 [node name="Player" type="CharacterBody3D" parent="." unique_id=1299522672]
 script = ExtResource("1_player")
 
-[node name="Body" type="MeshInstance3D" parent="Player" unique_id=1067969072]
-transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, 0, -0.1, 0)
-mesh = ExtResource("4_player_mesh")
+[node name="Body" parent="Player" unique_id=1067969072 instance=ExtResource("4_player_model")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.9, 0)
 
 [node name="Collision" type="CollisionShape3D" parent="Player" unique_id=753560908]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)

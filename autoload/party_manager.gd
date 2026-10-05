@@ -26,6 +26,13 @@ func place_at_spawn(scene: Node) -> void:
 	youn.global_position = pos + Vector3(1.5, 0, 1.5)
 	youn.velocity = Vector3.ZERO
 
+## Pone al grupo en una posición (el Youn al lado del jugador).
+func place_at(pos: Vector3) -> void:
+	player.global_position = pos
+	player.velocity = Vector3.ZERO
+	youn.global_position = pos + Vector3(1.5, 0, 1.5)
+	youn.velocity = Vector3.ZERO
+
 func set_party_visible(visible: bool) -> void:
 	for child in get_children():
 		if child is Node3D:

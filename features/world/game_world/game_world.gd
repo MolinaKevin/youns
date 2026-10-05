@@ -2,6 +2,11 @@ extends Node3D
 
 const SleepOverlay    := preload("res://features/world/ui/sleep_overlay.gd")
 const EvolutionScene  := preload("res://features/world/evolution/evolution_scene.tscn")
+const Poop            := preload("res://features/world/items/poop.gd")
+const EvolutionScreen := preload("res://features/world/evolution/evolution_screen.gd")
+const YounInteraction := preload("res://features/world/party/youn_interaction.gd")
+const EvolutionDiscoveryScreen := preload("res://features/world/evolution/evolution_discovery_screen.gd")
+const ReincarnationSequence := preload("res://features/world/reincarnation/reincarnation_sequence.gd")
 
 @onready var menu: Control = $MenuLayer/MainMenu
 @onready var pause_overlay: ColorRect = $MenuLayer/PauseOverlay
@@ -79,15 +84,48 @@ func _ready() -> void:
 	GameState.clock_changed.connect(_check_end_of_night)
 	StatsManager.bathroom_accident.connect(_on_bathroom_accident)
 	StatsManager.evolution_triggered.connect(_on_evolution_triggered)
+	StatsManager.reincarnation_triggered.connect(_on_reincarnation_triggered)
 	_setup_screen_fx()
+	_sync_party_youn()
+	_restore_saved_location()
 	_restore_after_combat()
 	_restore_pending_evolution()
+	_restore_pending_reincarnation()
 	LocalizationState.language_changed.connect(_refresh_intro_language)
 	menu.sleep_requested.connect(_on_sleep_requested)
 	_setup_intro()
 
+## El Youn del grupo es el de la partida: al cargar una en la que ya evolucionó,
+## el modelo tiene que ser el del Youn actual (party.tscn trae el inicial).
+func _sync_party_youn() -> void:
+	var ps := GameState.player_save
+	var youn := PartyManager.youn
+	if ps == null or not is_instance_valid(youn) or ps.current_youn_path.is_empty():
+		return
+	if not ResourceLoader.exists(ps.current_youn_path):
+		return
+	if youn.youn_data != null and youn.youn_data.resource_path == ps.current_youn_path:
+		return
+	if youn.has_method("load_youn"):
+		youn.load_youn(load(ps.current_youn_path) as YounData)
+
+## Después de "Nueva partida" o "Continuar": el jugador aparece al inicio o
+## donde estaba al guardar.
+func _restore_saved_location() -> void:
+	var loc := GameState.pending_location
+	if loc.is_empty():
+		return
+	GameState.pending_location = {}
+	if loc.get("start", false):
+		ZoneManager.reset_to_start()
+	else:
+		ZoneManager.restore_location(loc["zone"], loc["position"], loc.get("interior", ""))
+
 func _input(event: InputEvent) -> void:
 	if _sleeping or _handle_intro_input(event):
+		return
+	# El menú rápido (G) usa Enter para elegir, que también abre este menú.
+	if QuickMenu.visible or YounInteraction.running:
 		return
 	if _is_menu_pressed(event) and not intro_layer.visible:
 		if menu.visible or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
@@ -304,6 +342,8 @@ func _exit_tree() -> void:
 		StatsManager.bathroom_accident.disconnect(_on_bathroom_accident)
 	if StatsManager.evolution_triggered.is_connected(_on_evolution_triggered):
 		StatsManager.evolution_triggered.disconnect(_on_evolution_triggered)
+	if StatsManager.reincarnation_triggered.is_connected(_on_reincarnation_triggered):
+		StatsManager.reincarnation_triggered.disconnect(_on_reincarnation_triggered)
 	PauseMenu.enabled = false
 
 func _on_sleep_requested() -> void:
@@ -323,6 +363,9 @@ func _on_sleep_requested() -> void:
 		var sleep_duration := GameState.get_total_hours() - _sleep_start_hour
 		StatsManager.add_hambre(20)
 		StatsManager.on_wake_up(sleep_duration)
+		if overlay.save_requested:
+			GameState.save_player_save()
+			GlobalHUD.show_toast(LocalizationState.t("game.saved"))
 	)
 	add_child(overlay)
 
@@ -370,11 +413,51 @@ func _refresh_intro_language(_language: String = "") -> void:
 		_show_intro_page()
 
 
-func _on_bathroom_accident() -> void:
-	pass # TODO: spawnear objeto visual de caca en la posición del Youn
-	# Al agregar la animación: StatsManager.block_emotions() al inicio,
-	# StatsManager.unblock_emotions() en el callback de fin de animación.
+## Máximo de cacas en el suelo: al pasarlo se borra la más vieja.
+const MAX_POOPS := 10
+var _poops: Array[Node3D] = []
 
+## Deja una caca en el suelo donde está el Youn. Va colgada de la zona actual,
+## así se oculta en los interiores y se va si la zona se descarga.
+## Al agregar una animación: StatsManager.block_emotions() al inicio,
+## StatsManager.unblock_emotions() en el callback de fin de animación.
+func _on_bathroom_accident() -> void:
+	var youn := PartyManager.youn
+	if not is_instance_valid(youn):
+		return
+	var poop: Node3D = Poop.new()
+	var parent: Node3D = ZoneManager.get_current_zone_node()
+	(parent if parent else self).add_child(poop)
+	poop.global_position = _ground_below(youn.global_position)
+	poop.rotation.y = randf() * TAU
+	_poops = _poops.filter(func(p: Node3D) -> bool: return is_instance_valid(p))
+	_poops.append(poop)
+	while _poops.size() > MAX_POOPS:
+		_poops.pop_front().queue_free()
+
+func _ground_below(pos: Vector3) -> Vector3:
+	var query := PhysicsRayQueryParameters3D.create(pos + Vector3.UP, pos + Vector3.DOWN * 5.0)
+	query.exclude = [PartyManager.youn.get_rid(), PartyManager.player.get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	return hit["position"] if not hit.is_empty() else pos
+
+
+## Fin de la vida del Youn: muerte, carta heredada, huevo y bebé.
+func _on_reincarnation_triggered(from_data: YounData, cause: String) -> void:
+	var sequence := ReincarnationSequence.new()
+	sequence.setup(from_data, cause)
+	add_child(sequence)
+
+## Partida guardada en medio de una muerte: se retoma desde el principio.
+func _restore_pending_reincarnation() -> void:
+	if not "dying" in StatsManager.active_states:
+		return
+	var ps := GameState.player_save
+	var from_data: YounData = null
+	if ps and not ps.current_youn_path.is_empty() and ResourceLoader.exists(ps.current_youn_path):
+		from_data = load(ps.current_youn_path) as YounData
+	var cause: String = StatsManager.active_states["dying"].get("cause", ReincarnationRules.CAUSE_AGE)
+	call_deferred("_on_reincarnation_triggered", from_data, cause)
 
 func _restore_pending_evolution() -> void:
 	if not "evolving" in StatsManager.active_states:
@@ -433,21 +516,39 @@ func _on_evolution_triggered(from_data: YounData, to_data: YounData) -> void:
 	evo.finished.connect(func() -> void:
 		_world_env.environment = saved_env
 		_apply_kf(_to_kf)
-		StatsManager.complete_evolution()
+		var result := StatsManager.complete_evolution()
 		if to_data and PartyManager.youn.has_method("load_youn"):
 			PartyManager.youn.load_youn(to_data)
 		evo.queue_free()
 		ZoneManager.set_world_visible(true)
 		PartyManager.player.visible = true
 		PartyManager.set_party_visible(true)
-		PartyManager.camera_rig.enabled = true
-		PartyManager.player.set_physics_process(true)
-		PartyManager.youn.set_physics_process(true)
-		GlobalHUD.set_clock_paused(false)
-		GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
-		GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
-		var bubble = PartyManager.youn.get_node_or_null("EmotionBubble")
-		if bubble:
-			bubble.unfreeze()
+		# Pantalla de evolución: el jugador sigue quieto y el reloj parado hasta
+		# que toca "Terminar".
+		var screen := EvolutionScreen.new()
+		screen.setup(result)
+		screen.finished.connect(_show_evolution_discovery.bind(result))
+		add_child(screen)
 	)
 	evo.start(from_data, to_data, cam_transform)
+
+## "¡Evolución desbloqueada!" y la condición descubierta, después de la
+## pantalla de evolución.
+func _show_evolution_discovery(result: Dictionary) -> void:
+	var screen := EvolutionDiscoveryScreen.new()
+	screen.setup(result)
+	screen.finished.connect(_end_evolution)
+	add_child(screen)
+
+## Devuelve el control al jugador después de las pantallas de evolución.
+func _end_evolution() -> void:
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	PartyManager.camera_rig.enabled = true
+	PartyManager.player.set_physics_process(true)
+	PartyManager.youn.set_physics_process(true)
+	GlobalHUD.set_clock_paused(false)
+	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
+	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
+	var bubble = PartyManager.youn.get_node_or_null("EmotionBubble")
+	if bubble:
+		bubble.unfreeze()

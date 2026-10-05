@@ -1,13 +1,16 @@
 extends CanvasLayer
 
+const YounInteraction := preload("res://features/world/party/youn_interaction.gd")
+
 const ITEM_SIZE := Vector2(88, 88)
 const ICON_SIZE := 30
 
+## anim: animación del jugador (player_model.gd) en la escena con el Youn.
 const ITEMS := {
-	"up":    {key = "quick_menu.reward", icon = "res://assets/icons/icon_1.png"},
-	"right": {key = "quick_menu.play",   icon = "res://assets/icons/icon_2.png"},
-	"left":  {key = "quick_menu.deny",   icon = "res://assets/icons/icon_3.png"},
-	"down":  {key = "quick_menu.punish", icon = "res://assets/icons/icon_4.png"},
+	"up":    {key = "quick_menu.reward", icon = "res://assets/icons/icon_1.png", anim = "item_give"},
+	"right": {key = "quick_menu.play",   icon = "res://assets/icons/icon_2.png", anim = "happy"},
+	"left":  {key = "quick_menu.deny",   icon = "res://assets/icons/icon_3.png", anim = "talk"},
+	"down":  {key = "quick_menu.punish", icon = "res://assets/icons/icon_4.png", anim = "angry"},
 }
 
 @onready var cross: GridContainer = $Center/Cross
@@ -99,12 +102,13 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.keycode == KEY_G and event.pressed and not event.echo:
 		if visible:
 			close()
-		else:
+		elif not YounInteraction.running:
 			open()
 		return
 
 	if not visible:
 		return
+	get_viewport().set_input_as_handled()
 
 	if event.is_action_pressed("ui_up"):
 		_selected = "up"
@@ -145,13 +149,16 @@ func close() -> void:
 	get_tree().paused = false
 
 
+## Cierra el menú, juega la escena con el Youn y recién al final aplica la acción.
 func _activate() -> void:
-	match _selected:
+	var dir := _selected
+	close()
+	await YounInteraction.run(ITEMS[dir].anim)
+	match dir:
 		"up":   _cmd_premiar()
 		"down": _cmd_castigar()
 		"left": _cmd_negar()
 		"right": _cmd_jugar()
-	close()
 
 
 func _cmd_premiar() -> void:
@@ -178,7 +185,9 @@ func _cmd_negar() -> void:
 
 
 func _cmd_jugar() -> void:
-	StatsManager.add_felicidad(+2)
+	# Jugar ~4 veces por día (cada 4 h despierto) mantiene estables el
+	# aburrimiento (+3/h) y la felicidad (-1/h).
+	StatsManager.add_felicidad(+4)
 	StatsManager.add_confianza(+2)
 	StatsManager.add_estres(-2)
-	StatsManager.add_aburrimiento(-4)
+	StatsManager.add_aburrimiento(-12)

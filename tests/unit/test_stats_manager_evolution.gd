@@ -1,12 +1,18 @@
 extends GutTest
 
-const WILDCARD_CAMPEON := "res://data/youns/nguruvilu_campeon.tres"
+const WILDCARD_CAMPEON := "res://data/youns/mboi_tui.tres"
 
 var _save_day: int
 var _save_hour: float
 
 
+var _zone := ""
+
+
 func before_each() -> void:
+	# Zona fija que ninguna condición usa: los tests no dependen de dónde quedó el jugador.
+	_zone = ZoneManager.current_zone
+	ZoneManager.current_zone = "crossroads"
 	_save_day = GameState.current_day
 	_save_hour = GameState.time_of_day_hours
 	GameState.current_day = 10
@@ -17,6 +23,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
+	ZoneManager.current_zone = _zone
 	GameState.current_day = _save_day
 	GameState.time_of_day_hours = _save_hour
 	GameState.player_save = null
@@ -27,6 +34,8 @@ func after_each() -> void:
 func _make_rookie_save(days_in_stage: float) -> PlayerSaveData:
 	var ps := PlayerSaveData.new()
 	ps.current_youn_path = "res://data/youns/pombero.tres"
+	# Sin 3 condiciones de ningún campeón: va al comodín.
+	ps.care_mistakes = 5
 	ps.stage_entered_total_hour = GameState.get_total_hours() - days_in_stage * 24.0
 	return ps
 
@@ -75,13 +84,14 @@ func test_check_evolution_bloquea_emociones() -> void:
 	assert_true(StatsManager.emotions_blocked)
 
 
-func test_check_evolution_no_hace_nada_si_reencarnacion() -> void:
+func test_check_evolution_al_reencarnar_no_evoluciona_sino_que_muere() -> void:
 	var ps := PlayerSaveData.new()
 	ps.current_youn_path = WILDCARD_CAMPEON
 	ps.stage_entered_total_hour = GameState.get_total_hours() - 6.0 * 24.0
 	GameState.player_save = ps
 	StatsManager.check_evolution()
 	assert_eq(ps.pending_evolution_path, "")
+	assert_true("dying" in StatsManager.active_states)
 
 
 # ── complete_evolution ────────────────────────────────────────────────────────
@@ -123,3 +133,37 @@ func test_complete_evolution_desbloquea_emociones() -> void:
 	StatsManager.block_emotions()
 	StatsManager.complete_evolution()
 	assert_false(StatsManager.emotions_blocked)
+
+
+# ── complete_evolution: carta característica y cambios de stats ───────────────
+
+func _evolve_to(path: String) -> Dictionary:
+	var ps := GameState.player_save
+	ps.current_youn_path = "res://data/youns/nguruvilu.tres"
+	YounStatRules.start_life(ps, load(ps.current_youn_path))
+	ps.equipped_deck_ids = ["strike", "block"]
+	ps.pending_evolution_path = path
+	return StatsManager.complete_evolution()
+
+
+func test_completar_evolucion_agrega_la_carta_caracteristica_al_mazo() -> void:
+	var to: YounData = load(WILDCARD_CAMPEON)
+	var result := _evolve_to(WILDCARD_CAMPEON)
+	if to.signature_card == null:
+		pass_test("el campeón no tiene carta característica")
+		return
+	assert_eq(GameState.player_save.deck.size(), 3)
+	assert_eq(result["added_card"], GameState.player_save.deck[2])
+	assert_eq(result["added_card"].id, to.signature_card.id)
+	assert_ne(result["added_card"], to.signature_card)
+
+
+func test_completar_evolucion_devuelve_los_cambios_de_stats() -> void:
+	var nguruvilu: YounData = load("res://data/youns/nguruvilu.tres")
+	var before := nguruvilu.base_stats.to_dict()
+	var result := _evolve_to(WILDCARD_CAMPEON)
+	var evo: YounEvolutionStats = (load(WILDCARD_CAMPEON) as YounData).evolution_stats
+	var expected: int = evo.apply_to(before)["fuerza"] - before["fuerza"]
+	assert_eq(result["stat_changes"].get("fuerza", 0), expected)
+	assert_eq((result["to"] as YounData).resource_path, WILDCARD_CAMPEON)
+

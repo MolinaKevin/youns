@@ -122,3 +122,11 @@ func test_multiples_emociones_se_pausean_correctamente() -> void:
 	assert_false("tired" in StatsManager.active_states)
 	assert_almost_eq(StatsManager.active_states["hungry"]["hour"], ACTIVATION_HOUR + sleep_duration, 0.01)
 	assert_almost_eq(StatsManager.active_states["sad"]["hour"], ACTIVATION_HOUR + sleep_duration, 0.01)
+
+
+# ── sleep ─────────────────────────────────────────────────────────────────────
+
+func test_sleep_se_elimina_al_despertar() -> void:
+	StatsManager.active_states["sleep"] = {"hour": ACTIVATION_HOUR, "stat_value": 100.0}
+	StatsManager.on_wake_up(8.0)
+	assert_false("sleep" in StatsManager.active_states)
