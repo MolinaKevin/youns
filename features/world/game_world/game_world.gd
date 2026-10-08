@@ -1,7 +1,7 @@
 extends Node3D
 
 const SleepOverlay    := preload("res://features/world/ui/sleep_overlay.gd")
-const EvolutionScene  := preload("res://features/world/evolution/evolution_scene.tscn")
+const EVOLUTION_SCENE := preload("res://features/world/evolution/evolution_scene.tscn")
 const Poop            := preload("res://features/world/items/poop.gd")
 const EvolutionScreen := preload("res://features/world/evolution/evolution_screen.gd")
 const YounInteraction := preload("res://features/world/party/youn_interaction.gd")
@@ -483,7 +483,7 @@ func _on_evolution_triggered(from_data: YounData, to_data: YounData) -> void:
 	PartyManager.youn.set_physics_process(false)
 	GlobalHUD.set_clock_paused(true)
 
-	var evo := EvolutionScene.instantiate()
+	var evo := EVOLUTION_SCENE.instantiate()
 	add_child(evo)
 	evo.global_position = PartyManager.youn.global_position
 

@@ -188,6 +188,20 @@ func _leave_interior_silently() -> void:
 func get_current_zone_node() -> Node3D:
 	return _loaded.get(current_zone)
 
+
+## Geometría del mapa técnico, delegada al mismo WorldBoundary que determina
+## dónde puede caminar el jugador y a qué zona pertenece.
+func get_map_bounds() -> Rect2:
+	return _boundary.get_map_bounds() if _boundary else Rect2()
+
+
+func get_map_zone_edges() -> Array[Dictionary]:
+	return _boundary.get_map_zone_edges() if _boundary else []
+
+
+func get_map_zone_centers() -> Dictionary:
+	return _boundary.get_map_zone_centers() if _boundary else {}
+
 # ── Interiores ──────────────────────────────────────────────────────────────
 
 func enter_interior(scene_path: String, spawn_name := "SpawnPoint") -> void:

@@ -55,7 +55,7 @@ static func line_parts(line: CardActionLine) -> Array[Dictionary]:
 	var dmg_color: Color = MAGIC_COLOR if line.damage_type == CombatState.MAGICO else Color.WHITE
 	match line.card_type:
 		"move":
-			add.call("move", line.card_range, Color.WHITE, true)
+			parts.append({"icon": ICONS["move"], "value": line.movement_module_label(), "color": Color.WHITE})
 		"melee_attack":
 			# Cuerpo a cuerpo: el alcance es una regla del combate, no de la carta.
 			add.call("sword", line.damage, dmg_color, true)
@@ -171,7 +171,9 @@ static func line_summary(line: CardActionLine) -> String:
 		parts.append(LocalizationState.t("card.stat.damage", [line.damage]))
 	if line.block_amount > 0:
 		parts.append(LocalizationState.t("card.stat.block", [line.block_amount]))
-	if line.card_range > 0:
+	if line.card_type == "move":
+		parts.append("%s módulos" % line.movement_module_label())
+	elif line.card_range > 0:
 		parts.append(LocalizationState.t("card.stat.range", [line.card_range]))
 	if line.throw_range > 0:
 		parts.append(LocalizationState.t("card.stat.throw", [line.throw_range]))

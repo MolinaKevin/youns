@@ -1,6 +1,11 @@
 extends Resource
 class_name CardActionLine
 
+## Una unidad visible de movimiento equivale a varias celdas de la grilla
+## interna. Las cartas hablan en módulos; el mapa conserva la precisión de
+## CombatGrid.CELL para caminos, diagonales y obstáculos.
+const MOVEMENT_MODULE_CELLS := 8
+
 ## Una línea de acción dentro de una mitad de carta ("Mover 2", "Atacar 3"...).
 ## Las líneas de una mitad se ejecutan en orden. Cada campo se interpreta según
 ## card_type (p. ej. card_range es la distancia en "move" y el radio en "puddle").
@@ -9,6 +14,13 @@ class_name CardActionLine
 ## Texto libre de la línea. Por ahora solo se guarda, no se muestra en ningún lado.
 @export var description: String = ""
 @export var card_range: int = 0
+## Con 0, una carta antigua deriva sus módulos de card_range para poder
+## migrarla sin cambiar su comportamiento de golpe.
+@export_group("Movimiento modular")
+@export var movement_base_modules: int = 0
+@export var movement_extra_modules: int = 0
+@export_range(0.5, 1.5, 0.01) var movement_stat_multiplier: float = 1.0
+@export_group("")
 ## En "puddle" es el daño por turno del estado que deja (fuego, sangre,
 ## veneno por acumulación); 0 = el de CombatState.
 @export var damage: int = 0
@@ -78,3 +90,36 @@ func resolved(stats: Dictionary) -> CardActionLine:
 		r.block_amount = roundi(r.block_amount * health)
 		r.restore_amount = roundi(r.restore_amount * health)
 	return r
+
+
+## Las cartas existentes usaban card_range en celdas: se redondean al módulo
+## más cercano durante la transición.
+func movement_modules() -> int:
+	if movement_base_modules > 0:
+		return movement_base_modules
+	return maxi(1, roundi(float(card_range) / float(MOVEMENT_MODULE_CELLS)))
+
+
+func movement_effective_modules() -> float:
+	return float(movement_modules() + movement_extra_modules) * movement_stat_multiplier
+
+
+func movement_range_cells() -> int:
+	return movement_cells_for_modules(movement_effective_modules())
+
+
+func movement_module_label() -> String:
+	return movement_modules_label(movement_effective_modules())
+
+
+static func movement_cells_for_modules(modules: float) -> int:
+	return maxi(1, roundi(modules * MOVEMENT_MODULE_CELLS))
+
+
+static func movement_modules_label(modules: float) -> String:
+	var rounded := snappedf(modules, 0.1)
+	return str(roundi(rounded)) if is_equal_approx(rounded, float(roundi(rounded))) else "%.1f" % rounded
+
+
+static func movement_modules_label_for_cells(cells: int) -> String:
+	return movement_modules_label(float(cells) / float(MOVEMENT_MODULE_CELLS))

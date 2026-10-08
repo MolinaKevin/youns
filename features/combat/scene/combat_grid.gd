@@ -98,16 +98,16 @@ static func reachable(start: Vector2i, max_steps: int, passable: Callable) -> Di
 		buckets.erase(cost)
 	var result := {}
 	for idx in reached:
-		var cell := origin + Vector2i(idx % side, idx / side)
+		var cell := origin + Vector2i(idx % side, floori(float(idx) / float(side)))
 		var p := parent[idx]
-		result[cell] = {"parent": origin + Vector2i(p % side, p / side), "cost": float(dist[idx]) / ORTHO_COST}
+		result[cell] = {"parent": origin + Vector2i(p % side, floori(float(p) / float(side))), "cost": float(dist[idx]) / ORTHO_COST}
 	return result
 
 ## Consulta (y guarda) si la casilla del índice idx es transitable.
 static func _open(idx: int, side: int, origin: Vector2i, state: PackedByteArray, passable: Callable) -> bool:
 	var st := state[idx]
 	if st == 0:
-		st = 1 if passable.call(origin + Vector2i(idx % side, idx / side)) else 2
+		st = 1 if passable.call(origin + Vector2i(idx % side, floori(float(idx) / float(side)))) else 2
 		state[idx] = st
 	return st == 1
 

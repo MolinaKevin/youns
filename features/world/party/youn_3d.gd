@@ -2,9 +2,15 @@ extends CharacterBody3D
 
 const PlaceholderModel := preload("res://features/world/party/placeholder_model.gd")
 
-const GRAVITY     := 20.0
-const FOLLOW_DIST := 2.0
-const STOP_DIST   := 1.2
+const GRAVITY := 20.0
+## El Youn arranca a seguir recién al abrir esta distancia.
+const FOLLOW_START_DIST := 2.0
+## A esta separación ya usa la velocidad completa del jugador.
+const FOLLOW_FULL_SPEED_DIST := 5.0
+## Aceleración/frenado horizontal; produce el seguimiento con inercia.
+const FOLLOW_ACCELERATION := 4.0
+const FOLLOW_DECELERATION := 7.0
+const WALK_ANIMATION_MAX_SPEED := 4.0
 
 @export var youn_data: YounData
 
@@ -108,19 +114,25 @@ func _physics_process(delta: float) -> void:
 	to_player.y = 0.0
 	var dist := to_player.length()
 
-	if dist > FOLLOW_DIST:
-		var dir := to_player.normalized()
-		velocity.x = dir.x * (youn_data.chase_speed if youn_data else 5.8)
-		velocity.z = dir.z * (youn_data.chase_speed if youn_data else 5.8)
-		_face_dir(dir, delta)
-		_switch_to("run")
-	elif dist > STOP_DIST:
-		var dir := to_player.normalized()
-		var speed := (youn_data.wander_speed if youn_data else 2.2) * (dist / FOLLOW_DIST)
+	# Seguimiento con inercia, estilo compañero: empieza cuando el jugador se
+	# aleja, sube progresivamente desde cero y nunca supera su velocidad real.
+	# El Youn puede recuperar terreno si el jugador se detiene, pero nunca pasa
+	# la velocidad máxima del modo actual (caminar o correr) del jugador.
+	var max_follow_speed := Vector2(_player.velocity.x, _player.velocity.z).length()
+	if _player.has_method("movement_speed"):
+		max_follow_speed = _player.movement_speed()
+	var distance_ratio := inverse_lerp(FOLLOW_START_DIST, FOLLOW_FULL_SPEED_DIST, dist)
+	var target_speed := max_follow_speed * clampf(distance_ratio, 0.0, 1.0)
+	var current_speed := Vector2(velocity.x, velocity.z).length()
+	var rate := FOLLOW_ACCELERATION if target_speed > current_speed else FOLLOW_DECELERATION
+	var speed := move_toward(current_speed, target_speed, rate * delta)
+
+	if speed > 0.01 and dist > 0.01:
+		var dir := to_player / dist
 		velocity.x = dir.x * speed
 		velocity.z = dir.z * speed
 		_face_dir(dir, delta)
-		_switch_to("walk")
+		_switch_to("walk" if speed <= WALK_ANIMATION_MAX_SPEED else "run")
 	else:
 		velocity.x = 0.0
 		velocity.z = 0.0

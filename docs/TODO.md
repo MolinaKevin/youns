@@ -39,6 +39,15 @@ Pendientes conocidos, agrupados por sistema. Al resolver uno, borrarlo de acá.
 - [ ] El entrenamiento **bonus** es igual al normal (+10, 1 h): falta
       definirlo (`features/world/ui/training_overlay.gd`, `TRAININGS`).
 
+## Laboratorio
+
+- [ ] **Recetas y recursos del laboratorio**: retomar el diseño e
+      implementación de recetas que consuman los recursos nuevos. Los **Ecos
+      de color** ya se obtienen al jugar cartas y se guardan en el depósito
+      del laboratorio; falta definir y conectar las **Resonancias de
+      inteligencia** garantizadas al vencer Youns, las **Muestras de hábitat**
+      raras (10 %), y recetas que combinen estos recursos con Datos.
+
 ## Mundo exterior
 
 - [ ] **Animaciones del personaje principal**: se usan idle, run, walk (en
@@ -62,6 +71,10 @@ Pendientes conocidos, agrupados por sistema. Al resolver uno, borrarlo de acá.
 
 ## Diseño todavía sin implementar
 
+- [ ] **Patrones modulares por línea de acción**: diseñados en
+      `docs/patrones_modulares.md`. Implementar formas, módulos, escalado suave
+      por estadísticas y extensiones de módulos sin aplicarlos a toda la mitad
+      de una carta.
 - [ ] Evolución: condición de **cartas** (uso por tipo durante la etapa).
       Hoy las 5 condiciones de cada campeón/ultimate usan inteligencia, stats,
       crianza y dos bonus (zona, horario o "venir de").
@@ -130,6 +143,3 @@ Pendientes conocidos, agrupados por sistema. Al resolver uno, borrarlo de acá.
 - [ ] Código sin uso: `features/world/world_map/world_map.gd`, `enemy_3d.gd`
       y `world_map.tscn` (de ahí solo se usan `player_3d.gd`, `camera_rig.gd`
       y los shaders), y `RunStateData` / `current_run` en `GameState`.
-- [ ] `world_enemy.tscn` (enemigos con EnemyData) no está puesto en ninguna
-      zona; en el mundo solo hay Youns salvajes.
-

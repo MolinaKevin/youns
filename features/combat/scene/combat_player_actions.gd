@@ -1,10 +1,9 @@
 class_name CombatPlayerActions
 extends RefCounted
 
-# Todas las distancias de las cartas y de este archivo están en casillas de la
-# grilla (CombatGrid.CELL). Se pasan a unidades de mundo con _w() solo al hablar
-# con el mapa.
-const MOVE_MODE_RANGE     := 38   # "Mover" con cualquier mitad
+# Las acciones espaciales internas usan celdas de CombatGrid. Las líneas
+# "move" se presentan y se configuran en módulos (8 celdas por módulo).
+const MOVE_MODE_MODULES   := 5    # "Mover" con cualquier mitad
 const MELEE_RANGE         := 13   # alcance cuerpo a cuerpo (las cartas melee no traen rango)
 const NEARBY_TRAP_RANGE   := 100  # trampa colocada "cerca"
 const WET_MOVE_PENALTY    := 13
@@ -167,14 +166,14 @@ func play_as_move(index: int) -> void:
 		return
 	card_preview_show_requested.emit(card)
 	var penalty := _move_penalty()
-	var effective_range := maxi(1, MOVE_MODE_RANGE - penalty)
+	var effective_range := maxi(1, CardActionLine.movement_cells_for_modules(MOVE_MODE_MODULES) - penalty)
 	if penalty > 0:
-		log_requested.emit("Movimiento reducido a %d (penalización %d)." % [effective_range, penalty])
+		log_requested.emit("Movimiento reducido por estado.")
 	pending_move_section = "hand"
 	pending_move_index = index
 	pending_move_range = effective_range
 	map_area.start_move_selection(_w(effective_range))
-	log_requested.emit("Move mode: choose a tile up to %d spaces away." % effective_range)
+	log_requested.emit("Modo mover: elegí un destino hasta %s módulos." % CardActionLine.movement_modules_label_for_cells(effective_range))
 
 func play_card(index: int) -> void:
 	var card = state.turn_actions[index]
@@ -190,7 +189,7 @@ func play_card(index: int) -> void:
 		return
 	match card.card_type:
 		"move":
-			start_move_selection("hand", index, card.card_range, card.name)
+			start_move_selection("hand", index, card.movement_range_cells(), card.name)
 		"melee_attack":
 			var r: int = card.card_range if card.card_range > 0 else MELEE_RANGE
 			start_range_attack_selection(index, card, r)
@@ -231,7 +230,7 @@ func play_card(index: int) -> void:
 
 # ── Selection starters ────────────────────────────────────────────────────────
 
-func start_move_selection(section_name: String, index: int, move_range: int, card_name: String) -> void:
+func start_move_selection(section_name: String, index: int, move_range_cells: int, card_name: String) -> void:
 	if state.player_entangled_turns > 0:
 		log_requested.emit("¡Estás enredado! No podés moverte (%d turnos)." % state.player_entangled_turns)
 		card_preview_hide_requested.emit()
@@ -241,14 +240,14 @@ func start_move_selection(section_name: String, index: int, move_range: int, car
 		card_preview_hide_requested.emit()
 		return
 	var penalty := _move_penalty()
-	var effective_range := maxi(1, move_range - penalty)
+	var effective_range := maxi(1, move_range_cells - penalty)
 	if penalty > 0:
-		log_requested.emit("Movimiento reducido a %d (penalización %d)." % [effective_range, penalty])
+		log_requested.emit("Movimiento reducido por estado.")
 	pending_move_section = section_name
 	pending_move_index = index
 	pending_move_range = effective_range
 	map_area.start_move_selection(_w(effective_range))
-	log_requested.emit("Selected %s. Choose a tile up to %d spaces away." % [card_name, effective_range])
+	log_requested.emit("%s: elegí un destino hasta %s módulos." % [card_name, CardActionLine.movement_modules_label_for_cells(effective_range)])
 
 func start_range_attack_selection(index: int, card: CardActionLine, range_override: int = 0) -> void:
 	pending_attack_section = "hand"

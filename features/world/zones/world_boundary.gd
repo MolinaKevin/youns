@@ -191,6 +191,61 @@ func zone_at(pos: Vector3) -> String:
 		return ""
 	return _zone_names[_zone_of[_idx(ix, iz)]]
 
+
+## Datos geométricos para la cartografía técnica. Usan exactamente la misma
+## grilla XZ que define el suelo caminable y la zona actual del jugador.
+func get_map_bounds() -> Rect2:
+	return Rect2(_origin, Vector2(_w, _h) * CELL)
+
+
+## Segmentos del borde de cada zona. Una arista aparece sólo si la celda vecina
+## pertenece a otra zona (o a ninguna); así el mapa no depende de tamaños
+## aproximados escritos a mano.
+func get_map_zone_edges() -> Array[Dictionary]:
+	var edges: Array[Dictionary] = []
+	for iz in _h:
+		for ix in _w:
+			var zone_index := _zone_of[_idx(ix, iz)]
+			if zone_index == 0:
+				continue
+			var zone_id := _zone_names[zone_index]
+			var p := _origin + Vector2(ix, iz) * CELL
+			if _zone_at_cell(ix, iz - 1) != zone_index:
+				edges.append({"zone": zone_id, "from": p, "to": p + Vector2(CELL, 0)})
+			if _zone_at_cell(ix + 1, iz) != zone_index:
+				edges.append({"zone": zone_id, "from": p + Vector2(CELL, 0), "to": p + Vector2(CELL, CELL)})
+			if _zone_at_cell(ix, iz + 1) != zone_index:
+				edges.append({"zone": zone_id, "from": p + Vector2(CELL, CELL), "to": p + Vector2(0, CELL)})
+			if _zone_at_cell(ix - 1, iz) != zone_index:
+				edges.append({"zone": zone_id, "from": p + Vector2(0, CELL), "to": p})
+	return edges
+
+
+## Centro visual de cada zona calculado desde sus celdas reales. Es preferible
+## al origen de una escena para zonas irregulares, como la pradera.
+func get_map_zone_centers() -> Dictionary:
+	var sums: Dictionary = {}
+	var counts: Dictionary = {}
+	for iz in _h:
+		for ix in _w:
+			var zone_index := _zone_of[_idx(ix, iz)]
+			if zone_index == 0:
+				continue
+			var zone_id := _zone_names[zone_index]
+			var cell_center := _origin + (Vector2(ix, iz) + Vector2(0.5, 0.5)) * CELL
+			sums[zone_id] = sums.get(zone_id, Vector2.ZERO) + cell_center
+			counts[zone_id] = counts.get(zone_id, 0) + 1
+	var centers: Dictionary = {}
+	for zone_id in sums:
+		centers[zone_id] = sums[zone_id] / float(counts[zone_id])
+	return centers
+
+
+func _zone_at_cell(ix: int, iz: int) -> int:
+	if ix < 0 or iz < 0 or ix >= _w or iz >= _h:
+		return 0
+	return _zone_of[_idx(ix, iz)]
+
 # Entre una celda caminable y otra vacía (o de río) va pared; contra lo
 # reservado (el bosque del gym) no, que ya tiene las suyas.
 func _needs_wall(a: int, b: int) -> bool:
@@ -288,7 +343,7 @@ func _distance_to_walkable() -> PackedInt32Array:
 			continue
 		dist[i] = 0
 		var ix := i % _w
-		var iz := i / _w
+		var iz := floori(float(i) / float(_w))
 		if _cell_at(ix - 1, iz) != WALKABLE or _cell_at(ix + 1, iz) != WALKABLE or _cell_at(ix, iz - 1) != WALKABLE or _cell_at(ix, iz + 1) != WALKABLE:
 			frontier.append(i)
 	var d := 0
@@ -297,7 +352,7 @@ func _distance_to_walkable() -> PackedInt32Array:
 		var next := PackedInt32Array()
 		for i in frontier:
 			var ix := i % _w
-			var iz := i / _w
+			var iz := floori(float(i) / float(_w))
 			for dz in [-1, 0, 1]:
 				for dx in [-1, 0, 1]:
 					var nx: int = ix + dx

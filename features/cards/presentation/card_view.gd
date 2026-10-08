@@ -33,7 +33,7 @@ var halves_selectable := false:
 			_apply_input_mode()
 
 var _hover_tween: Tween
-var _empty_style := StyleBoxEmpty.new()
+var _empty_style: StyleBox = StyleBoxEmpty.new()
 ## Panel de cada línea por mitad: {true: {índice en action.lines: panel}, false: {...}}.
 var _line_panels := {true: {}, false: {}}
 ## Recuadro de la línea que se está usando en combate (ver set_active_line).
@@ -210,11 +210,11 @@ static func _line_row(line: CardActionLine, marker: String) -> HBoxContainer:
 		row.add_child(group)
 	return row
 
-static func _small_label(text: String, size: int) -> Label:
+static func _small_label(text: String, font_size: int) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", size)
+	label.add_theme_font_size_override("font_size", font_size)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
 
@@ -225,7 +225,10 @@ func set_active_line(is_top: bool, line_index: int) -> void:
 	for top in [true, false]:
 		for i in _line_panels[top]:
 			var active: bool = top == is_top and i == line_index
-			_line_panels[top][i].add_theme_stylebox_override("panel", _active_line_style if active else _empty_style)
+			var line_style: StyleBox = _empty_style
+			if active:
+				line_style = _active_line_style
+			_line_panels[top][i].add_theme_stylebox_override("panel", line_style)
 	if line_index >= 0:
 		(top_half if is_top else bottom_half).modulate.a = 1.0
 

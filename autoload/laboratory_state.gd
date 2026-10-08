@@ -190,16 +190,61 @@ func _process_reward(reward: Dictionary, _recipe_name: String) -> void:
 			GlobalHUD.sync_overworld_ui_visibility()
 		"item":
 			var item_id: String = reward["id"]
-			var current_count: int = pending_output.get(item_id, {}).get("count", 0)
-			if current_count < 99:
-				var amount: int = reward.get("amount", 1)
-				var item_recipe := get_recipe_by_id(item_id)
-				var item_name: String = item_id
-				if item_recipe:
-					item_name = item_recipe.item_name if item_recipe.item_name != "" else item_recipe.recipe_name
-				pending_output[item_id] = {"id": item_id, "name": item_name, "count": mini(current_count + amount, 99)}
-				pending_output_changed.emit()
+			var item_recipe := get_recipe_by_id(item_id)
+			var item_name: String = item_recipe.item_name if item_recipe and item_recipe.item_name != "" else item_id
+			if item_recipe and item_name == item_id:
+				item_name = item_recipe.recipe_name
+			_add_output_item(item_id, item_name, reward.get("amount", 1), 99)
 			_check_indirect_unlocks(item_id)
+
+
+## Registra los dos colores de una carta como Ecos. Una carta monocolor da un
+## solo Eco aunque sus dos mitades compartan el mismo color.
+func add_echoes_from_card(card: CardData) -> void:
+	if card == null:
+		return
+	var echo_ids: Array[String] = []
+	for action in [card.top, card.bottom]:
+		if action == null:
+			continue
+		var echo_id := "eco_" + echo_color_id(action.color)
+		if echo_id not in echo_ids:
+			echo_ids.append(echo_id)
+	for echo_id in echo_ids:
+		_add_output_item(echo_id, LocalizationState.item_name(echo_id, echo_id), 1, 999)
+
+
+## Convierte el tono visual de una mitad de carta a una de las ocho familias
+## que se muestran en el depósito del laboratorio.
+func echo_color_id(color: Color) -> String:
+	var hue := color.h
+	if hue < 0.035 or hue >= 0.96:
+		return "rojo"
+	if hue < 0.10:
+		return "naranja"
+	if hue < 0.17:
+		return "amarillo"
+	if hue < 0.45:
+		return "verde"
+	if hue < 0.55:
+		return "cian"
+	if hue < 0.72:
+		return "azul"
+	if hue < 0.86:
+		return "violeta"
+	return "rosa"
+
+
+func _add_output_item(item_id: String, item_name: String, amount: int, limit: int) -> void:
+	var current_count: int = pending_output.get(item_id, {}).get("count", 0)
+	if current_count >= limit or amount <= 0:
+		return
+	pending_output[item_id] = {
+		"id": item_id,
+		"name": item_name,
+		"count": mini(current_count + amount, limit),
+	}
+	pending_output_changed.emit()
 
 # ── Output ────────────────────────────────────────────────────────────────────
 

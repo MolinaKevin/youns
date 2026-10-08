@@ -61,6 +61,32 @@ func test_resolved_escala_bloqueo_movimiento_y_lanzamiento() -> void:
 	assert_eq(r.throw_range, 70)
 
 
+func test_movimiento_modular_convierte_modulos_a_celdas() -> void:
+	var line := CardActionLine.new()
+	line.card_type = "move"
+	line.movement_base_modules = 3
+	assert_eq(line.movement_range_cells(), 24)
+	assert_eq(line.movement_module_label(), "3")
+
+
+func test_movimiento_modular_suma_modulos_y_aplica_multiplicador() -> void:
+	var line := CardActionLine.new()
+	line.card_type = "move"
+	line.movement_base_modules = 3
+	line.movement_extra_modules = 1
+	line.movement_stat_multiplier = 1.5
+	assert_eq(line.movement_range_cells(), 48)
+	assert_eq(line.movement_module_label(), "6")
+
+
+func test_movimiento_heredado_se_convierte_a_modulos() -> void:
+	var line := CardActionLine.new()
+	line.card_type = "move"
+	line.card_range = 38
+	assert_eq(line.movement_modules(), 5)
+	assert_eq(line.movement_range_cells(), 40)
+
+
 func test_cartas_con_stat_50_dan_su_valor_original() -> void:
 	# Las fórmulas actuales son provisorias: a 50 (un rookie típico) cada línea
 	# vale lo mismo que su valor fijo guardado.

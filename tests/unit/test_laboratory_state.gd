@@ -124,6 +124,41 @@ func test_reward_item_en_99_no_incrementa() -> void:
 	assert_eq(LaboratoryState.pending_output["potion"]["count"], 99)
 
 
+# ── Ecos de cartas ───────────────────────────────────────────────────────────
+
+func test_ecos_registra_los_dos_colores_de_una_carta() -> void:
+	var card := CardData.new()
+	card.top = CardAction.new()
+	card.top.color = Color.RED
+	card.bottom = CardAction.new()
+	card.bottom.color = Color.BLUE
+	LaboratoryState.add_echoes_from_card(card)
+	assert_eq(LaboratoryState.pending_output["eco_rojo"]["count"], 1)
+	assert_eq(LaboratoryState.pending_output["eco_azul"]["count"], 1)
+
+
+func test_ecos_monocolor_da_un_solo_eco() -> void:
+	var card := CardData.new()
+	card.top = CardAction.new()
+	card.top.color = Color(0.10, 0.50, 0.20)
+	card.bottom = CardAction.new()
+	card.bottom.color = Color(0.05, 0.30, 0.12)
+	LaboratoryState.add_echoes_from_card(card)
+	assert_eq(LaboratoryState.pending_output["eco_verde"]["count"], 1)
+	assert_eq(LaboratoryState.pending_output.size(), 1)
+
+
+func test_ecos_de_laboratorio_pueden_acumular_mas_de_99() -> void:
+	var card := CardData.new()
+	card.top = CardAction.new()
+	card.top.color = Color.RED
+	card.bottom = CardAction.new()
+	card.bottom.color = Color.RED
+	_put_item("eco_rojo", 99)
+	LaboratoryState.add_echoes_from_card(card)
+	assert_eq(LaboratoryState.pending_output["eco_rojo"]["count"], 100)
+
+
 # ── take_all_output ───────────────────────────────────────────────────────────
 
 func test_take_all_output_retorna_los_items() -> void:

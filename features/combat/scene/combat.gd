@@ -37,7 +37,6 @@ const _CombatPlayerActions = preload("res://features/combat/scene/combat_player_
 const _CombatEnemyAI = preload("res://features/combat/scene/combat_enemy_ai.gd")
 const _AiAction   = preload("res://data/enemies/ai_action.gd")
 const _AiStrategy = preload("res://data/enemies/ai_strategy.gd")
-const _EnemyData  = preload("res://data/enemies/enemy_data.gd")
 
 @onready var player_stats = $UI/MainVBox/TopBar/PlayerStats
 @onready var move_mode_button = $UI/MainVBox/TopBar/MoveModeButton
@@ -172,33 +171,21 @@ func _ready() -> void:
 
 	var enemy_name_str := ""
 	var wild_youn: YounData = GameState.pending_wild_youn_data
-	if wild_youn:
-		GameState.pending_wild_youn_data = null
-		state.enemy_hp     = wild_youn.combat_max_hp()
-		state.enemy_max_hp = state.enemy_hp
-		if wild_youn.base_stats != null:
-			state.enemy_status_reduction = YounStatRules.status_reduction(wild_youn.base_stats.to_dict())
-		map_area.set_enemy_hp(state.enemy_hp)
-		map_area.setup_enemy_youn(wild_youn)
-		enemy_ai = _CombatEnemyAI.new()
-		enemy_ai.setup(state, map_area, wild_youn.strategy, deal_damage_to_enemy, deal_damage_to_player, check_combat_end)
-		enemy_ai.initiative = DEFAULT_ENEMY_INITIATIVE
-		enemy_ai.set_monster_deck(wild_youn.monster_deck)
-		enemy_name_str = wild_youn.youn_name
-	else:
-		var enemy_data: _EnemyData = GameState.pending_enemy_data
-		if enemy_data == null:
-			enemy_data = load("res://data/enemies/goblin.tres")
-		GameState.pending_enemy_data = null
-		state.enemy_hp     = enemy_data.max_hp
-		state.enemy_max_hp = enemy_data.max_hp
-		map_area.set_enemy_hp(state.enemy_hp)
-		map_area.setup_enemy(enemy_data.mesh, enemy_data.mesh_scale, enemy_data.combat_footprint_radius())
-		enemy_ai = _CombatEnemyAI.new()
-		enemy_ai.setup(state, map_area, enemy_data.strategy, deal_damage_to_enemy, deal_damage_to_player, check_combat_end)
-		enemy_ai.initiative = enemy_data.initiative
-		enemy_ai.set_monster_deck(enemy_data.monster_deck)
-		enemy_name_str = LocalizationState.enemy_name(enemy_data.id, enemy_data.enemy_name)
+	# El combate de prueba del menú también pelea contra un Youn.
+	if wild_youn == null:
+		wild_youn = load("res://data/youns/pombero.tres")
+	GameState.pending_wild_youn_data = null
+	state.enemy_hp     = wild_youn.combat_max_hp()
+	state.enemy_max_hp = state.enemy_hp
+	if wild_youn.base_stats != null:
+		state.enemy_status_reduction = YounStatRules.status_reduction(wild_youn.base_stats.to_dict())
+	map_area.set_enemy_hp(state.enemy_hp)
+	map_area.setup_enemy_youn(wild_youn)
+	enemy_ai = _CombatEnemyAI.new()
+	enemy_ai.setup(state, map_area, wild_youn.strategy, deal_damage_to_enemy, deal_damage_to_player, check_combat_end)
+	enemy_ai.initiative = DEFAULT_ENEMY_INITIATIVE
+	enemy_ai.set_monster_deck(wild_youn.monster_deck)
+	enemy_name_str = wild_youn.youn_name
 
 	enemy_ai.log_requested.connect(log_message)
 	enemy_ai.card_action_started.connect(func(i): monster_card_view.highlight(i))
@@ -718,6 +705,8 @@ func _mark_playing_started() -> void:
 	if _playing["started"]:
 		return
 	_playing["started"] = true
+	if not _playing["wild"]:
+		LaboratoryState.add_echoes_from_card(_turn_cards[_playing["card"]])
 	if _playing["is_top"]:
 		_used_top = _playing["card"]
 	else:

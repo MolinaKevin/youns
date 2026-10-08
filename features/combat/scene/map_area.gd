@@ -572,14 +572,6 @@ func _find_anim_player(node: Node) -> AnimationPlayer:
 			return found
 	return null
 
-func setup_enemy(mesh: Mesh, mesh_scale: float, shadow_radius: float = 0.65) -> void:
-	_enemy_shadow_radius = shadow_radius
-	if _enemy_fallback_mesh:
-		_enemy_fallback_mesh.visible = true
-		if mesh:
-			_enemy_fallback_mesh.mesh  = mesh
-			_enemy_fallback_mesh.scale = Vector3.ONE * mesh_scale
-
 func setup_enemy_youn(data: YounData) -> void:
 	if not data:
 		return

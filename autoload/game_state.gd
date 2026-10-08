@@ -16,7 +16,6 @@ var test_mode := true
 
 var player_save: PlayerSaveData
 var current_run: RunStateData
-var pending_enemy_data: EnemyData
 var pending_wild_youn_data
 var combat_return_pending := false
 var combat_return_position := Vector3.ZERO
@@ -230,7 +229,6 @@ func save_player_save() -> void:
 func _reset_session() -> void:
 	combat_return_pending = false
 	combat_world_enemy_id = ""
-	pending_enemy_data = null
 	discard_pending_ticks()
 
 func load_run_state() -> void:

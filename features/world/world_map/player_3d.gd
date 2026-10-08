@@ -1,12 +1,22 @@
 extends CharacterBody3D
 
-const SPEED        := 6.0
+## Velocidad de desplazamiento normal y multiplicador al mantener Shift.
+const SPEED        := 7.0
+const SPRINT_MULTIPLIER := 1.4
 const GRAVITY      := 20.0
 const ROTATE_SPEED := 12.0
 
 var camera_rig: Node3D
 ## Modelo con animaciones (player_model.gd); puede faltar en escenas viejas.
 var _model: Node3D
+
+
+func is_sprinting() -> bool:
+	return Input.is_action_pressed("sprint")
+
+
+func movement_speed() -> float:
+	return SPEED * (SPRINT_MULTIPLIER if is_sprinting() else 1.0)
 
 func _ready() -> void:
 	camera_rig = get_parent().get_node_or_null("CameraRig")
@@ -32,8 +42,9 @@ func _physics_process(delta: float) -> void:
 			cos(yaw) * input.y - sin(yaw) * input.x
 		).normalized()
 
-	velocity.x = direction.x * SPEED
-	velocity.z = direction.z * SPEED
+	var speed := movement_speed()
+	velocity.x = direction.x * speed
+	velocity.z = direction.z * speed
 
 	if direction.length() > 0.1:
 		rotation.y = lerp_angle(rotation.y, atan2(direction.x, direction.z), ROTATE_SPEED * delta)
