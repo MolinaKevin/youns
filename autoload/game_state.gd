@@ -4,7 +4,7 @@ signal clock_changed(current_hour: float, current_day: int)
 signal twenty_min_ticked
 
 const HOURS_PER_DAY := 24.0
-const DAY_DURATION_MINUTES := 12.0
+const DAY_DURATION_MINUTES := 1.0  # TODO: volver a 12.0 — rapidísimo solo para testear a mano
 const DAY_DURATION_SECONDS := DAY_DURATION_MINUTES * 60.0
 
 const SAVE_PATH := "user://player_save.tres"
@@ -20,6 +20,9 @@ var pending_wild_youn_data
 var combat_return_pending := false
 var combat_return_position := Vector3.ZERO
 var combat_world_enemy_id := ""
+## Bioma de la zona donde arrancó el combate (ZoneManager.get_current_biome()
+## al momento de la transición); null si esa zona no tiene bioma asignado.
+var combat_biome: BiomeData
 var world_intro_seen := false
 var ui_return_scene_path := ""
 var current_day := 1
@@ -57,50 +60,16 @@ func _make_new_save() -> PlayerSaveData:
 	var save := PlayerSaveData.new()
 	save.owned_card_ids = ["step", "dash", "strike", "slash", "block", "barrera", "meditar", "golpe_escudo", "represalia", "tiron", "ancla", "demoler", "carga_explosiva", "muro", "golpe_de_roca", "muro_arcano", "derrumbe", "lanzar_roca", "chispa", "escarcha", "descarga", "aliento", "nova", "ceguera", "lentitud", "raices", "curar", "encantar_arma", "parpadeo", "traslado_charco", "granizada", "diluvio", "lluvia_acida", "trepar", "meteor", "arrow", "snipe", "grenade", "salto_rupestre", "envion", "charco", "charco_fuego", "charco_grasa", "enredadera", "charco_sangre", "charco_veneno", "charco_arena", "emboscada"]
 	save.equipped_deck_ids = [
-		"step", "step", "step",
-		"dash", "dash",
-		"strike", "strike", "strike",
-		"slash", "slash",
-		"block", "block", "block",
-		"barrera", "barrera",
-		"meditar", "meditar",
-		"golpe_escudo", "golpe_escudo",
-		"represalia", "represalia",
-		"tiron", "tiron",
-		"ancla", "ancla",
-		"demoler", "carga_explosiva",
-		"muro", "muro",
-		"golpe_de_roca", "golpe_de_roca",
-		"muro_arcano", "muro_arcano",
-		"derrumbe", "derrumbe",
-		"lanzar_roca", "lanzar_roca",
-		"chispa",
-		"escarcha",
-		"descarga",
-		"aliento",
-		"nova",
-		"ceguera",
-		"lentitud",
-		"raices",
-		"curar",
-		"encantar_arma",
-		"parpadeo",
-		"traslado_charco", "traslado_charco",
-		"granizada", "diluvio", "lluvia_acida",
-		"trepar", "trepar",
-		"meteor", "meteor",
-		"arrow", "arrow", "arrow",
-		"snipe", "snipe",
+		# Mazo chico para probar módulos, rangos y áreas en combate.
+		"step", "step", "dash",
+		"arrow", "arrow", "snipe",
 		"grenade", "grenade",
-		"bear_trap", "bear_trap",
-		"spike_trap", "spike_trap",
-		"salto_rupestre", "salto_rupestre",
-		"envion", "envion",
-		"charco", "charco",
-		"charco_fuego", "charco_grasa",
-		"enredadera", "charco_sangre",
-		"charco_veneno", "charco_arena",
-		"emboscada", "emboscada",
+		"charco_fuego", "charco_fuego",
+		"nova", "nova",
+		"aliento", "aliento",
+		# Módulos y árboles (TreeSystem/ModuleSystem): crear, romper, lanzar,
+		# golpear, derrumbar, trepar.
+		"muro", "demoler", "lanzar_roca", "golpe_de_roca", "derrumbe", "trepar",
 	]
 	save.inventory_slots = 20
 	save.inventory_items = []

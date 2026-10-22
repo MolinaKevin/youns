@@ -1,0 +1,68 @@
+[gd_resource type="Resource" script_class="NpcDialogue" format=3]
+
+[ext_resource type="Script" path="res://data/dialogue/npc_dialogue_line.gd" id="1_5lpo2"]
+[ext_resource type="Script" path="res://data/dialogue/npc_choice.gd" id="1_jlary"]
+[ext_resource type="Script" path="res://data/dialogue/npc_dialogue.gd" id="2_4f5fg"]
+[ext_resource type="Resource" path="res://data/items/antidoto.tres" id="2_s0abw"]
+[ext_resource type="Resource" path="res://data/items/antistres.tres" id="3_t40i0"]
+[ext_resource type="Resource" path="res://data/items/comida.tres" id="4_o8ueg"]
+[ext_resource type="Resource" path="res://data/items/carne_podrida.tres" id="5_hjq70"]
+[ext_resource type="Resource" path="res://data/items/estresor.tres" id="6_qil5f"]
+[ext_resource type="Resource" path="res://data/items/cansador.tres" id="7_nwipb"]
+[ext_resource type="Resource" path="res://data/items/vaciador_estomago.tres" id="8_o7hh5"]
+[ext_resource type="Resource" path="res://data/items/semilla_embrujada.tres" id="9_wdqog"]
+[ext_resource type="Resource" path="res://data/items/brebaje_mapuche.tres" id="10_0646g"]
+
+[sub_resource type="Resource" id="Resource_nn30h"]
+script = ExtResource("1_jlary")
+give_item = ExtResource("2_s0abw")
+
+[sub_resource type="Resource" id="Resource_yjfjc"]
+script = ExtResource("1_jlary")
+give_item = ExtResource("3_t40i0")
+
+[sub_resource type="Resource" id="Resource_qrcjm"]
+script = ExtResource("1_jlary")
+give_item = ExtResource("4_o8ueg")
+
+[sub_resource type="Resource" id="Resource_oe41e"]
+script = ExtResource("1_jlary")
+label_key = "world.hub.npc.rest"
+restore_energy = true
+
+[sub_resource type="Resource" id="Resource_emllc"]
+script = ExtResource("1_jlary")
+label_key = "world.hub.npc.debug_carne_podrida"
+give_item = ExtResource("5_hjq70")
+
+[sub_resource type="Resource" id="Resource_keeio"]
+script = ExtResource("1_jlary")
+label_key = "world.hub.npc.debug_estresor"
+give_item = ExtResource("6_qil5f")
+
+[sub_resource type="Resource" id="Resource_qmpau"]
+script = ExtResource("1_jlary")
+label_key = "world.hub.npc.debug_cansador"
+give_item = ExtResource("7_nwipb")
+
+[sub_resource type="Resource" id="Resource_chah5"]
+script = ExtResource("1_jlary")
+label_key = "world.hub.npc.debug_vaciador"
+give_item = ExtResource("8_o7hh5")
+
+[sub_resource type="Resource" id="Resource_7avbd"]
+script = ExtResource("1_jlary")
+give_item = ExtResource("9_wdqog")
+
+[sub_resource type="Resource" id="Resource_dpb5v"]
+script = ExtResource("1_jlary")
+give_item = ExtResource("10_0646g")
+
+[sub_resource type="Resource" id="Resource_y7cla"]
+script = ExtResource("1_5lpo2")
+key = "world.hub.npc"
+
+[resource]
+script = ExtResource("2_4f5fg")
+lines = Array[ExtResource("1_5lpo2")]([SubResource("Resource_y7cla")])
+choices = Array[ExtResource("1_jlary")]([SubResource("Resource_nn30h"), SubResource("Resource_yjfjc"), SubResource("Resource_qrcjm"), SubResource("Resource_oe41e"), SubResource("Resource_emllc"), SubResource("Resource_keeio"), SubResource("Resource_qmpau"), SubResource("Resource_chah5"), SubResource("Resource_7avbd"), SubResource("Resource_dpb5v")])

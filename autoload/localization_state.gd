@@ -51,6 +51,9 @@ func item_name(item_id: String, fallback: String = "") -> String:
 func enemy_name(enemy_id: String, fallback: String = "") -> String:
 	return t("enemy.name.%s" % enemy_id) if has_key("enemy.name.%s" % enemy_id) else fallback
 
+func biome_name(biome_id: String, fallback: String = "") -> String:
+	return t("biome.name.%s" % biome_id) if has_key("biome.name.%s" % biome_id) else fallback
+
 func youn_stage_name(stage_id: String) -> String:
 	return t("youn.stage.%s" % stage_id) if has_key("youn.stage.%s" % stage_id) else stage_id
 

@@ -9,6 +9,9 @@ const ROTATE_SPEED := 12.0
 var camera_rig: Node3D
 ## Modelo con animaciones (player_model.gd); puede faltar en escenas viejas.
 var _model: Node3D
+## Bloquea el movimiento horizontal sin tocar set_physics_process(), así la
+## gravedad sigue actuando (p.ej. cutscenes donde el jugador tiene que caer).
+var movement_locked := false
 
 
 func is_sprinting() -> bool:
@@ -28,10 +31,12 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
 
-	var input := Vector2(
-		Input.get_axis("move_left", "move_right"),
-		Input.get_axis("move_up",   "move_down")
-	)
+	var input := Vector2.ZERO
+	if not movement_locked:
+		input = Vector2(
+			Input.get_axis("move_left", "move_right"),
+			Input.get_axis("move_up",   "move_down")
+		)
 
 	var direction := Vector3.ZERO
 	if input.length() > 0.1 and camera_rig:

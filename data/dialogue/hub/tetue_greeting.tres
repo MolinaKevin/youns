@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="NpcDialogue" format=3]
+
+[ext_resource type="Script" path="res://data/dialogue/npc_dialogue_line.gd" id="1_vvycd"]
+[ext_resource type="Script" path="res://data/dialogue/npc_dialogue.gd" id="2_otlbh"]
+
+[sub_resource type="Resource" id="Resource_ew88r"]
+script = ExtResource("1_vvycd")
+key = "world.hub.tetue.1"
+mirrored = true
+
+[sub_resource type="Resource" id="Resource_twke0"]
+script = ExtResource("1_vvycd")
+key = "world.hub.tetue.2"
+mirrored = true
+
+[sub_resource type="Resource" id="Resource_j2tqy"]
+script = ExtResource("1_vvycd")
+key = "world.hub.tetue.3"
+mirrored = true
+
+[sub_resource type="Resource" id="Resource_ujnsi"]
+script = ExtResource("1_vvycd")
+key = "world.hub.tetue.4"
+mirrored = true
+
+[resource]
+script = ExtResource("2_otlbh")
+lines = Array[ExtResource("1_vvycd")]([SubResource("Resource_ew88r"), SubResource("Resource_twke0"), SubResource("Resource_j2tqy"), SubResource("Resource_ujnsi")])

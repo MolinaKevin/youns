@@ -29,18 +29,18 @@ restore_scaling = SubResource("S_restore")
 script = ExtResource("3_line")
 card_type = "move"
 description = "Te movés."
-card_range = 38
+movement_base_modules = 5
 range_scaling = SubResource("Scale_Line_bottom")
 
 [sub_resource type="Resource" id="Resource_top"]
 script = ExtResource("2_action")
 lines = Array[ExtResource("3_line")]([SubResource("Line_top")])
-color = Color(0.1, 0.3, 0.16, 1)
+intelligence = "linguistica"
 
 [sub_resource type="Resource" id="Resource_bottom"]
 script = ExtResource("2_action")
 lines = Array[ExtResource("3_line")]([SubResource("Line_bottom")])
-color = Color(0.08, 0.26, 0.14, 1)
+intelligence = "linguistica"
 
 [resource]
 script = ExtResource("1_card")

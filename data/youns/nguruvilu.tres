@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" uid="uid://dpr155ilv2vjg" path="res://assets/youns/nguruvilu/punch.fbx" id="1_x0k2r"]
 [ext_resource type="PackedScene" uid="uid://dpnosd6muiufl" path="res://assets/youns/nguruvilu/damage.fbx" id="2_damage"]
 [ext_resource type="Texture2D" uid="uid://cd3gvo4xbftwr" path="res://assets/youns/nguruvilu/texture.png" id="3_texture"]
+[ext_resource type="Texture2D" path="res://assets/youns/luzmala/portraits/luzmala_neutral.png" id="portrait"]
 [ext_resource type="PackedScene" uid="uid://6k7va8am6ouy" path="res://assets/youns/nguruvilu/run.fbx" id="5_run"]
 [ext_resource type="PackedScene" uid="uid://b2p3y0m2gtm5c" path="res://assets/youns/nguruvilu/walk.fbx" id="6_walk"]
 [ext_resource type="Resource" path="res://data/enemies/strategies/aggressive.tres" id="strategy"]
@@ -80,6 +81,7 @@ signature_card = ExtResource("evo_signature")
 color_changes = Dictionary[String, int]({"naturalista": 4})
 granted_lines = Array[ExtResource("evo_line_script")]([SubResource("EvoLine0"), SubResource("EvoLine1")])
 texture = ExtResource("3_texture")
+portrait = ExtResource("portrait")
 mesh_scale = 0.2
 mesh_y_offset = -0.8
 mesh_rotation_y = 3.14159265

@@ -62,7 +62,7 @@ func _add_station_interaction(station_name: String, stat_key: String) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if _near_stat == "" or is_instance_valid(_overlay):
 		return
-	if event.is_action_pressed("interact") and not (event is InputEventKey and event.echo):
+	if InputPresses.is_interact_pressed(event):
 		get_viewport().set_input_as_handled()
 		_open_training(_near_stat)
 

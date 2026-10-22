@@ -10,7 +10,7 @@ func _ready() -> void:
 	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
 	PauseMenu.enabled = false
 	_setup_environment()
-	_setup_screen_fx()
+	Ps1ScreenFx.attach(self)
 	_build_floor_collision()
 	_fix_map_vertex_colors()
 	$LabWarp.body_entered.connect(_on_lab_warp_entered)
@@ -21,9 +21,9 @@ func _on_lab_warp_entered(body: Node3D) -> void:
 		get_tree().change_scene_to_file.call_deferred("res://features/world/lab_interior/lab_interior.tscn")
 
 func _input(event: InputEvent) -> void:
-	if _is_menu_pressed(event):
+	if InputPresses.is_menu_pressed(event):
 		_toggle_menu()
-	elif _is_cancel_pressed(event) and menu.visible:
+	elif InputPresses.is_cancel_pressed(event) and menu.visible:
 		_toggle_menu()
 
 func _toggle_menu() -> void:
@@ -49,18 +49,6 @@ func _setup_environment() -> void:
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
-
-func _setup_screen_fx() -> void:
-	var layer := CanvasLayer.new()
-	layer.layer = 0
-	var rect := ColorRect.new()
-	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var mat := ShaderMaterial.new()
-	mat.shader = preload("res://features/world/world_map/ps1_screen.gdshader")
-	mat.set_shader_parameter("pixel_size", 2.0)
-	rect.material = mat
-	layer.add_child(rect)
-	add_child(layer)
 
 func _fix_map_vertex_colors() -> void:
 	var city_map := get_node_or_null("CityMap")
@@ -199,20 +187,6 @@ func _mat(color: Color) -> ShaderMaterial:
 	m.shader = _ps1_shader
 	m.set_shader_parameter("albedo", color)
 	return m
-
-func _is_cancel_pressed(event: InputEvent) -> bool:
-	if not event.is_action_pressed("ui_cancel"):
-		return false
-	if event is InputEventKey:
-		return not event.echo
-	return true
-
-func _is_menu_pressed(event: InputEvent) -> bool:
-	if not event.is_action_pressed("menu_toggle"):
-		return false
-	if event is InputEventKey:
-		return not event.echo
-	return true
 
 func _exit_tree() -> void:
 	PauseMenu.enabled = false

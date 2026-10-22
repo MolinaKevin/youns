@@ -95,6 +95,7 @@ func _arrange_fan() -> void:
 		if not halves_mode:
 			angle = asin(clampf(x_offset / FAN_RADIUS, -1.0, 1.0))
 			y_drop = FAN_RADIUS - sqrt(maxf(0.0, FAN_RADIUS * FAN_RADIUS - x_offset * x_offset))
+		@warning_ignore("integer_division")
 		var z := n / 2 - absi(i - n / 2)
 
 		wrapper.pivot_offset = Vector2(CARD_W * 0.5, CARD_H)
@@ -146,10 +147,10 @@ func _kill_tween(wrapper: Control) -> void:
 			tw.kill()
 		_hover_tweens.erase(wrapper)
 
-func set_card_visible_at(index: int, is_visible: bool) -> void:
+func set_card_visible_at(index: int, should_be_visible: bool) -> void:
 	var wrappers := fan_container.get_children()
 	if index >= 0 and index < wrappers.size():
-		wrappers[index].visible = is_visible
+		wrappers[index].visible = should_be_visible
 
 func set_half_enabled(index: int, is_top: bool, enabled: bool) -> void:
 	var wrappers := fan_container.get_children()

@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="IntelligenceData" format=3]
+
+[ext_resource type="Script" path="res://data/youns/intelligence_data.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+id = "musical"
+color = Color(0.772549, 0.415686, 0.878431, 1)

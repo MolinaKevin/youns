@@ -1,72 +1,15 @@
 extends Node3D
 
 const SleepOverlay    := preload("res://features/world/ui/sleep_overlay.gd")
-const EVOLUTION_SCENE := preload("res://features/world/evolution/evolution_scene.tscn")
-const Poop            := preload("res://features/world/items/poop.gd")
-const EvolutionScreen := preload("res://features/world/evolution/evolution_screen.gd")
 const YounInteraction := preload("res://features/world/party/youn_interaction.gd")
-const EvolutionDiscoveryScreen := preload("res://features/world/evolution/evolution_discovery_screen.gd")
-const ReincarnationSequence := preload("res://features/world/reincarnation/reincarnation_sequence.gd")
 
 @onready var menu: Control = $MenuLayer/MainMenu
 @onready var pause_overlay: ColorRect = $MenuLayer/PauseOverlay
-@onready var intro_layer: CanvasLayer = $IntroLayer
-@onready var intro_title: Label = $IntroLayer/Panel/Margin/VBox/Title
-@onready var intro_body: RichTextLabel = $IntroLayer/Panel/Margin/VBox/Body
-@onready var intro_hint: Label = $IntroLayer/Panel/Margin/VBox/Hint
+@onready var intro: IntroTutorial = $IntroLayer
+@onready var world_lighting: WorldLighting = $WorldLighting
 
-# Un keyframe por sector. Noche usa hora 20→28 (28 = 4h del día siguiente) para manejar el wrap.
-# [hora, sky, fog_color, fog_density, fog_energy, ambient_color, ambient_energy, sun_color, sun_energy, fill_energy]
-const LIGHTING_KF := [
-	[4.0,  Color(0.72,0.48,0.28), Color(0.65,0.48,0.32), 0.022, 0.40, Color(0.52,0.38,0.22), 0.35, Color(1.00,0.70,0.40), 0.45, 0.08],  # Mañana
-	[8.0,  Color(0.45,0.62,0.82), Color(0.52,0.60,0.70), 0.015, 0.60, Color(0.45,0.48,0.44), 0.55, Color(1.00,0.96,0.82), 0.85, 0.14],  # Día
-	[16.0, Color(0.68,0.32,0.12), Color(0.60,0.36,0.20), 0.025, 0.42, Color(0.46,0.24,0.12), 0.38, Color(1.00,0.48,0.18), 0.55, 0.08],  # Tarde
-	[20.0, Color(0.05,0.06,0.16), Color(0.07,0.09,0.20), 0.030, 0.20, Color(0.09,0.10,0.20), 0.14, Color(0.60,0.65,1.00), 0.00, 0.02],  # Noche
-	[28.0, Color(0.72,0.48,0.28), Color(0.65,0.48,0.32), 0.022, 0.40, Color(0.52,0.38,0.22), 0.35, Color(1.00,0.70,0.40), 0.45, 0.08],  # Mañana (wrap)
-]
-
-var _world_env: WorldEnvironment
-var _sun: DirectionalLight3D
-var _fill: DirectionalLight3D
-
-const TRANSITION_DURATION := 2.0
-var _period_idx: int = -1
-var _transition_t: float = 1.0
-var _from_kf: Array = []
-var _to_kf: Array = []
-
-var _intro_index := 0
-var _intro_active := false
 var _sleeping := false
-var _sleep_penalty_applied := false
-var _was_in_sleep_range := false
-var _slept_this_cycle := false
-var _sleep_tracking_initialized := false
-var _sick_sleep_count := 0
 var _sleep_start_hour := 0.0
-
-const INTRO_PAGES := [
-	{
-		"title_key": "world.intro.page_1.title",
-		"body_key": "world.intro.page_1.body"
-	},
-	{
-		"title_key": "world.intro.page_2.title",
-		"body_key": "world.intro.page_2.body"
-	},
-	{
-		"title_key": "world.intro.page_3.title",
-		"body_key": "world.intro.page_3.body"
-	},
-	{
-		"title_key": "world.intro.page_4.title",
-		"body_key": "world.intro.page_4.body"
-	},
-	{
-		"title_key": "world.intro.page_5.title",
-		"body_key": "world.intro.page_5.body"
-	}
-]
 
 func _ready() -> void:
 	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
@@ -77,23 +20,15 @@ func _ready() -> void:
 	PartyManager.set_party_visible(true)
 	PartyManager.camera_rig.enabled = true
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	_setup_environment()
-	_update_lighting(GameState.time_of_day_hours, GameState.current_day)
-	GameState.clock_changed.connect(_update_lighting)
-	GameState.clock_changed.connect(_check_sleep_penalty)
-	GameState.clock_changed.connect(_check_end_of_night)
-	StatsManager.bathroom_accident.connect(_on_bathroom_accident)
-	StatsManager.evolution_triggered.connect(_on_evolution_triggered)
-	StatsManager.reincarnation_triggered.connect(_on_reincarnation_triggered)
-	_setup_screen_fx()
+	Ps1ScreenFx.attach(self)
 	_sync_party_youn()
 	_restore_saved_location()
 	_restore_after_combat()
-	_restore_pending_evolution()
-	_restore_pending_reincarnation()
-	LocalizationState.language_changed.connect(_refresh_intro_language)
+	YounLifeEvents.world_lighting = world_lighting
+	YounLifeEvents.restore_pending_evolution()
+	YounLifeEvents.restore_pending_reincarnation()
 	menu.sleep_requested.connect(_on_sleep_requested)
-	_setup_intro()
+	intro.start()
 
 ## El Youn del grupo es el de la partida: al cargar una en la que ya evolucionó,
 ## el modelo tiene que ser el del Youn actual (party.tscn trae el inicial).
@@ -122,15 +57,20 @@ func _restore_saved_location() -> void:
 		ZoneManager.restore_location(loc["zone"], loc["position"], loc.get("interior", ""))
 
 func _input(event: InputEvent) -> void:
-	if _sleeping or _handle_intro_input(event):
+	if Dialogue.is_busy():
+		if Dialogue.handle_input(event):
+			get_viewport().set_input_as_handled()
+		return
+
+	if _sleeping or intro.handle_input(event):
 		return
 	# El menú rápido (G) usa Enter para elegir, que también abre este menú.
 	if QuickMenu.visible or YounInteraction.running:
 		return
-	if _is_menu_pressed(event) and not intro_layer.visible:
+	if InputPresses.is_menu_pressed(event) and not intro.is_active():
 		if menu.visible or Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 			_toggle_menu()
-	elif _is_cancel_pressed(event) and menu.visible:
+	elif InputPresses.is_cancel_pressed(event) and menu.visible:
 		_toggle_menu()
 
 func _toggle_menu() -> void:
@@ -143,116 +83,6 @@ func _toggle_menu() -> void:
 	PartyManager.camera_rig.enabled = not showing
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if showing else Input.MOUSE_MODE_CAPTURED
 	get_tree().paused = showing
-
-func _setup_environment() -> void:
-	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.fog_enabled = true
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	_world_env = WorldEnvironment.new()
-	_world_env.environment = env
-	add_child(_world_env)
-
-	_sun = DirectionalLight3D.new()
-	_sun.transform = Transform3D(
-		Basis(Vector3(0.866, -0.354, 0.354), Vector3(0.0, 0.707, 0.707), Vector3(-0.5, -0.612, 0.612)),
-		Vector3(0, 10, 0))
-	_sun.shadow_enabled = true
-	add_child(_sun)
-
-	_fill = DirectionalLight3D.new()
-	_fill.transform = Transform3D(
-		Basis(Vector3(-0.866, -0.2, -0.46), Vector3(0.0, 0.917, -0.4), Vector3(0.5, -0.346, -0.795)),
-		Vector3(0, 8, 0))
-	_fill.shadow_enabled = false
-	add_child(_fill)
-
-func _get_period_idx(hour: float) -> int:
-	var h := hour if hour >= 4.0 else hour + 24.0
-	for i in range(LIGHTING_KF.size() - 1):
-		if h >= (LIGHTING_KF[i][0] as float) and h < (LIGHTING_KF[i + 1][0] as float):
-			return i
-	return 0
-
-func _update_lighting(current_hour: float, _day: int) -> void:
-	if _world_env == null:
-		return
-	var new_idx := _get_period_idx(current_hour)
-	if new_idx == _period_idx:
-		return
-	var is_init := _period_idx < 0
-	_from_kf = LIGHTING_KF[maxi(_period_idx, 0)]
-	_period_idx = new_idx
-	_to_kf = LIGHTING_KF[new_idx]
-	if is_init:
-		_transition_t = 1.0
-		_apply_kf(_to_kf)
-	elif _transition_t < 1.0:
-		_from_kf = _snapshot_lighting()
-		_transition_t = 0.0
-	else:
-		_transition_t = 0.0
-
-func _process(delta: float) -> void:
-	if _transition_t >= 1.0 or _world_env == null:
-		return
-	_transition_t = minf(_transition_t + delta / TRANSITION_DURATION, 1.0)
-	_apply_kf_lerp(_from_kf, _to_kf, _transition_t)
-
-func _apply_kf(kf: Array) -> void:
-	var env := _world_env.environment
-	env.background_color     = kf[1] as Color
-	env.fog_light_color      = kf[2] as Color
-	env.fog_density          = kf[3] as float
-	env.fog_light_energy     = kf[4] as float
-	env.ambient_light_color  = kf[5] as Color
-	env.ambient_light_energy = kf[6] as float
-	var sun_energy: float    = kf[8] as float
-	_sun.light_color    = kf[7] as Color
-	_sun.light_energy   = sun_energy
-	_sun.shadow_enabled = sun_energy > 0.05
-	_fill.light_energy  = kf[9] as float
-
-func _apply_kf_lerp(a: Array, b: Array, t: float) -> void:
-	var env := _world_env.environment
-	env.background_color     = (a[1] as Color).lerp(b[1] as Color, t)
-	env.fog_light_color      = (a[2] as Color).lerp(b[2] as Color, t)
-	env.fog_density          = lerpf(a[3] as float, b[3] as float, t)
-	env.fog_light_energy     = lerpf(a[4] as float, b[4] as float, t)
-	env.ambient_light_color  = (a[5] as Color).lerp(b[5] as Color, t)
-	env.ambient_light_energy = lerpf(a[6] as float, b[6] as float, t)
-	var sun_energy: float    = lerpf(a[8] as float, b[8] as float, t)
-	_sun.light_color    = (a[7] as Color).lerp(b[7] as Color, t)
-	_sun.light_energy   = sun_energy
-	_sun.shadow_enabled = sun_energy > 0.05
-	_fill.light_energy  = lerpf(a[9] as float, b[9] as float, t)
-
-func _snapshot_lighting() -> Array:
-	var env := _world_env.environment
-	return [
-		0.0,
-		env.background_color,
-		env.fog_light_color,
-		env.fog_density,
-		env.fog_light_energy,
-		env.ambient_light_color,
-		env.ambient_light_energy,
-		_sun.light_color,
-		_sun.light_energy,
-		_fill.light_energy,
-	]
-
-func _setup_screen_fx() -> void:
-	var layer := CanvasLayer.new()
-	layer.layer = 0
-	var rect := ColorRect.new()
-	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var mat := ShaderMaterial.new()
-	mat.shader = preload("res://features/world/world_map/ps1_screen.gdshader")
-	mat.set_shader_parameter("pixel_size", 2.0)
-	rect.material = mat
-	layer.add_child(rect)
-	add_child(layer)
 
 func _restore_after_combat() -> void:
 	if not GameState.combat_return_pending:
@@ -269,91 +99,11 @@ func _restore_after_combat() -> void:
 		StatsManager.apply_bathroom_accident()
 
 
-func _setup_intro() -> void:
-	if GameState.combat_return_pending or GameState.world_intro_seen:
-		intro_layer.visible = false
-		return
-	_intro_active = true
-	_intro_index = 0
-	intro_layer.visible = true
-	GlobalHUD.set_clock_visible(false)
-	GlobalHUD.set_clock_paused(true)
-	GlobalHUD.set_youns_status_visible(false)
-	PartyManager.camera_rig.enabled = false
-	PartyManager.player.set_physics_process(false)
-	PartyManager.youn.set_physics_process(false)
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	_show_intro_page()
-
-func _show_intro_page() -> void:
-	var page: Dictionary = INTRO_PAGES[_intro_index]
-	intro_title.text = LocalizationState.t(page["title_key"])
-	intro_body.text = LocalizationState.t(page["body_key"])
-	intro_hint.text = LocalizationState.t("world.intro.hint", [_intro_index + 1, INTRO_PAGES.size()])
-
-func _handle_intro_input(event: InputEvent) -> bool:
-	if not _intro_active:
-		return false
-	if event.is_action_pressed("ui_accept") or (
-		event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE
-	):
-		_intro_index += 1
-		if _intro_index >= INTRO_PAGES.size():
-			_close_intro()
-		else:
-			_show_intro_page()
-		return true
-	return true
-
-func _close_intro() -> void:
-	_intro_active = false
-	GameState.world_intro_seen = true
-	intro_layer.visible = false
-	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
-	GlobalHUD.set_clock_paused(false)
-	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
-	PartyManager.camera_rig.enabled = true
-	PartyManager.player.set_physics_process(true)
-	PartyManager.youn.set_physics_process(true)
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-
-func _is_cancel_pressed(event: InputEvent) -> bool:
-	if not event.is_action_pressed("ui_cancel"):
-		return false
-	if event is InputEventKey:
-		return not event.echo
-	return true
-
-func _is_menu_pressed(event: InputEvent) -> bool:
-	if not event.is_action_pressed("menu_toggle"):
-		return false
-	if event is InputEventKey:
-		return not event.echo
-	return true
-
 func _exit_tree() -> void:
-	if GameState.clock_changed.is_connected(_update_lighting):
-		GameState.clock_changed.disconnect(_update_lighting)
-	if GameState.clock_changed.is_connected(_check_sleep_penalty):
-		GameState.clock_changed.disconnect(_check_sleep_penalty)
-	if GameState.clock_changed.is_connected(_check_end_of_night):
-		GameState.clock_changed.disconnect(_check_end_of_night)
-	if StatsManager.bathroom_accident.is_connected(_on_bathroom_accident):
-		StatsManager.bathroom_accident.disconnect(_on_bathroom_accident)
-	if StatsManager.evolution_triggered.is_connected(_on_evolution_triggered):
-		StatsManager.evolution_triggered.disconnect(_on_evolution_triggered)
-	if StatsManager.reincarnation_triggered.is_connected(_on_reincarnation_triggered):
-		StatsManager.reincarnation_triggered.disconnect(_on_reincarnation_triggered)
 	PauseMenu.enabled = false
 
 func _on_sleep_requested() -> void:
-	_slept_this_cycle = true
-	if GameState.player_save != null and GameState.player_save.enfermo:
-		_sick_sleep_count += 1
-		if _sick_sleep_count >= 2:
-			_sick_sleep_count = 0
-			StatsManager.set_enfermo(false)
-			StatsManager.add_care_mistake(1)
+	YounLifeEvents.mark_player_slept()
 	_sleep_start_hour = GameState.get_total_hours()
 	_toggle_menu()
 	_sleeping = true
@@ -368,187 +118,3 @@ func _on_sleep_requested() -> void:
 			GlobalHUD.show_toast(LocalizationState.t("game.saved"))
 	)
 	add_child(overlay)
-
-func _check_sleep_penalty(hour: float, _day: int) -> void:
-	var youn_node = PartyManager.youn if PartyManager else null
-	if not is_instance_valid(youn_node) or youn_node.youn_data == null:
-		return
-	var data: YounData = youn_node.youn_data
-	if not _hour_in_range(hour, data.sleep_hour, data.wake_hour):
-		_sleep_penalty_applied = false
-		return
-	if _sleep_penalty_applied:
-		return
-	var penalty_h := (data.sleep_hour + 1) % 24
-	if _hour_in_range(hour, penalty_h, data.wake_hour):
-		_sleep_penalty_applied = true
-		StatsManager.add_care_mistake(1)
-
-func _check_end_of_night(hour: float, _day: int) -> void:
-	var youn_node = PartyManager.youn if PartyManager else null
-	if not is_instance_valid(youn_node) or youn_node.youn_data == null:
-		return
-	var data: YounData = youn_node.youn_data
-	var in_sleep := _hour_in_range(hour, data.sleep_hour, data.wake_hour)
-	if not _sleep_tracking_initialized:
-		_was_in_sleep_range = in_sleep
-		_sleep_tracking_initialized = true
-		return
-	if in_sleep and not _was_in_sleep_range:
-		_slept_this_cycle = false
-	if not in_sleep and _was_in_sleep_range:
-		if not _slept_this_cycle:
-			StatsManager.add_salud(-20)
-			if GameState.player_save != null and GameState.player_save.energia < 20:
-				StatsManager.set_enfermo(true)
-	_was_in_sleep_range = in_sleep
-
-func _hour_in_range(hour: float, from_h: int, to_h: int) -> bool:
-	if from_h > to_h:
-		return hour >= float(from_h) or hour < float(to_h)
-	return hour >= float(from_h) and hour < float(to_h)
-
-func _refresh_intro_language(_language: String = "") -> void:
-	if _intro_active:
-		_show_intro_page()
-
-
-## Máximo de cacas en el suelo: al pasarlo se borra la más vieja.
-const MAX_POOPS := 10
-var _poops: Array[Node3D] = []
-
-## Deja una caca en el suelo donde está el Youn. Va colgada de la zona actual,
-## así se oculta en los interiores y se va si la zona se descarga.
-## Al agregar una animación: StatsManager.block_emotions() al inicio,
-## StatsManager.unblock_emotions() en el callback de fin de animación.
-func _on_bathroom_accident() -> void:
-	var youn := PartyManager.youn
-	if not is_instance_valid(youn):
-		return
-	var poop: Node3D = Poop.new()
-	var parent: Node3D = ZoneManager.get_current_zone_node()
-	(parent if parent else self).add_child(poop)
-	poop.global_position = _ground_below(youn.global_position)
-	poop.rotation.y = randf() * TAU
-	_poops = _poops.filter(func(p: Node3D) -> bool: return is_instance_valid(p))
-	_poops.append(poop)
-	while _poops.size() > MAX_POOPS:
-		_poops.pop_front().queue_free()
-
-func _ground_below(pos: Vector3) -> Vector3:
-	var query := PhysicsRayQueryParameters3D.create(pos + Vector3.UP, pos + Vector3.DOWN * 5.0)
-	query.exclude = [PartyManager.youn.get_rid(), PartyManager.player.get_rid()]
-	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-	return hit["position"] if not hit.is_empty() else pos
-
-
-## Fin de la vida del Youn: muerte, carta heredada, huevo y bebé.
-func _on_reincarnation_triggered(from_data: YounData, cause: String) -> void:
-	var sequence := ReincarnationSequence.new()
-	sequence.setup(from_data, cause)
-	add_child(sequence)
-
-## Partida guardada en medio de una muerte: se retoma desde el principio.
-func _restore_pending_reincarnation() -> void:
-	if not "dying" in StatsManager.active_states:
-		return
-	var ps := GameState.player_save
-	var from_data: YounData = null
-	if ps and not ps.current_youn_path.is_empty() and ResourceLoader.exists(ps.current_youn_path):
-		from_data = load(ps.current_youn_path) as YounData
-	var cause: String = StatsManager.active_states["dying"].get("cause", ReincarnationRules.CAUSE_AGE)
-	call_deferred("_on_reincarnation_triggered", from_data, cause)
-
-func _restore_pending_evolution() -> void:
-	if not "evolving" in StatsManager.active_states:
-		return
-	var target_path: String = StatsManager.active_states["evolving"].get("target_youn_path", "")
-	if target_path.is_empty():
-		return
-	var ps := GameState.player_save
-	var from_data: YounData = null
-	if ps and not ps.current_youn_path.is_empty() and ResourceLoader.exists(ps.current_youn_path):
-		from_data = load(ps.current_youn_path) as YounData
-	var to_data: YounData = null
-	if ResourceLoader.exists(target_path):
-		to_data = load(target_path) as YounData
-	call_deferred("_on_evolution_triggered", from_data, to_data)
-
-
-func _on_evolution_triggered(from_data: YounData, to_data: YounData) -> void:
-	await get_tree().create_timer(4.0).timeout
-	var cam_transform := get_viewport().get_camera_3d().global_transform
-	PartyManager.camera_rig.enabled = false
-	PartyManager.player.set_physics_process(false)
-	PartyManager.youn.set_physics_process(false)
-	GlobalHUD.set_clock_paused(true)
-
-	var evo := EVOLUTION_SCENE.instantiate()
-	add_child(evo)
-	evo.global_position = PartyManager.youn.global_position
-
-	var saved_env := _world_env.environment
-	evo.approach_finished.connect(func():
-		_transition_t = 1.0
-		ZoneManager.set_world_visible(false)
-		PartyManager.player.visible = false
-		var bubble = PartyManager.youn.get_node_or_null("EmotionBubble")
-		if bubble:
-			bubble.freeze()
-		GlobalHUD.set_clock_visible(false)
-		GlobalHUD.set_youns_status_visible(false)
-		_sun.light_energy = 4.0
-		_sun.light_color = Color(1.0, 0.95, 0.9)
-		_sun.shadow_enabled = false
-		_fill.light_energy = 2.5
-		_fill.light_color = Color(0.85, 0.9, 1.0)
-		var black_env := Environment.new()
-		black_env.background_mode = Environment.BG_COLOR
-		black_env.background_color = _world_env.environment.background_color
-		black_env.fog_enabled = false
-		black_env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-		black_env.ambient_light_color = Color(1.0, 1.0, 1.0)
-		black_env.ambient_light_energy = 1.0
-		_world_env.environment = black_env
-		var bg_tw := create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-		bg_tw.tween_property(black_env, "background_color", Color.BLACK, 0.5)
-	)
-	evo.finished.connect(func() -> void:
-		_world_env.environment = saved_env
-		_apply_kf(_to_kf)
-		var result := StatsManager.complete_evolution()
-		if to_data and PartyManager.youn.has_method("load_youn"):
-			PartyManager.youn.load_youn(to_data)
-		evo.queue_free()
-		ZoneManager.set_world_visible(true)
-		PartyManager.player.visible = true
-		PartyManager.set_party_visible(true)
-		# Pantalla de evolución: el jugador sigue quieto y el reloj parado hasta
-		# que toca "Terminar".
-		var screen := EvolutionScreen.new()
-		screen.setup(result)
-		screen.finished.connect(_show_evolution_discovery.bind(result))
-		add_child(screen)
-	)
-	evo.start(from_data, to_data, cam_transform)
-
-## "¡Evolución desbloqueada!" y la condición descubierta, después de la
-## pantalla de evolución.
-func _show_evolution_discovery(result: Dictionary) -> void:
-	var screen := EvolutionDiscoveryScreen.new()
-	screen.setup(result)
-	screen.finished.connect(_end_evolution)
-	add_child(screen)
-
-## Devuelve el control al jugador después de las pantallas de evolución.
-func _end_evolution() -> void:
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	PartyManager.camera_rig.enabled = true
-	PartyManager.player.set_physics_process(true)
-	PartyManager.youn.set_physics_process(true)
-	GlobalHUD.set_clock_paused(false)
-	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
-	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
-	var bubble = PartyManager.youn.get_node_or_null("EmotionBubble")
-	if bubble:
-		bubble.unfreeze()

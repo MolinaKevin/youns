@@ -25,8 +25,10 @@ LaboratoryState="*res://autoload/laboratory_state.gd"
 CardDatabase="*uid://d2esdbav6afwl"
 PauseMenu="*res://features/menus/pause_menu/pause_menu.tscn"
 QuickMenu="*res://features/menus/quick_menu/quick_menu.tscn"
+Dialogue="*res://features/dialogue/dialogue_box.tscn"
 PartyManager="*uid://cuca14l87sjvn"
 ZoneManager="*uid://brjjvk68i1rvr"
+YounLifeEvents="*res://autoload/youn_life_events.gd"
 
 [display]
 

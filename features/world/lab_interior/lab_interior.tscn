@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" uid="uid://rp06nqi1rdwa" path="res://assets/maps/hub/lab_interior.glb" id="1_map"]
 [ext_resource type="Script" uid="uid://c8s3yln0xrml7" path="res://features/world/lab_interior/lab_interior.gd" id="2_script"]
-[ext_resource type="ArrayMesh" uid="uid://chrobcjle3fog" path="res://assets/youns/Monzaemon.obj" id="3_monzaemon"]
+[ext_resource type="ArrayMesh" uid="uid://chrobcjle3fog" path="res://assets/youns/monzaemon/Monzaemon.obj" id="3_monzaemon"]
 [ext_resource type="Script" uid="uid://70sgg88cyq53" path="res://features/world/lab_interior/face_player.gd" id="4_face"]
 [ext_resource type="PackedScene" path="res://features/laboratory/scene/laboratory.tscn" id="5_lab"]
 [ext_resource type="ArrayMesh" uid="uid://duh1oyddfvm5k" path="res://assets/models/Digimon World - Item Monitor.obj" id="6_terminal_mesh"]

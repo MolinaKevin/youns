@@ -24,7 +24,8 @@ var _current_path := ""
 ## Botón de cada Youn (por resource_path), para dibujar las líneas.
 var _nodes := {}
 var _links: Control
-var _detail: VBoxContainer
+var _detail: EvolutionDetailOverlay
+var _focus_nav: EvolutionFocusNav
 
 func _ready() -> void:
 	GlobalHUD.set_clock_visible(false)
@@ -33,8 +34,11 @@ func _ready() -> void:
 	ZoneManager.set_world_visible(false)
 	PartyManager.set_party_visible(false)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_detail = EvolutionDetailOverlay.new(self)
+	_focus_nav = EvolutionFocusNav.new(self)
 	_load_youns()
 	_build()
+	_focus_nav.focus_initial.call_deferred()
 
 func _load_youns() -> void:
 	var save := GameState.player_save
@@ -113,22 +117,7 @@ func _build() -> void:
 			if data.stage == stage:
 				stage_col.add_child(_node_button(data))
 
-	# Detalle del Youn elegido.
-	var detail_panel := PanelContainer.new()
-	detail_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	detail_panel.custom_minimum_size = Vector2(0, 230)
-	var style := StyleBoxFlat.new()
-	style.bg_color = PANEL_BG
-	style.border_color = KNOWN
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(8)
-	style.set_content_margin_all(16)
-	detail_panel.add_theme_stylebox_override("panel", style)
-	body.add_child(detail_panel)
-	_detail = VBoxContainer.new()
-	_detail.add_theme_constant_override("separation", 8)
-	detail_panel.add_child(_detail)
-	_detail.add_child(_text(LocalizationState.t("tree.hint"), 15, Color(0.7, 0.75, 0.8)))
+	_detail.build()
 
 	var back := Button.new()
 	back.text = LocalizationState.t("reincarnated.back")
@@ -156,7 +145,8 @@ func _node_button(data: YounData) -> Button:
 	hover.bg_color = Color(0.1, 0.22, 0.3)
 	b.add_theme_stylebox_override("hover", hover)
 	b.add_theme_stylebox_override("pressed", hover)
-	b.pressed.connect(_show_detail.bind(data))
+	b.pressed.connect(_detail.show_for.bind(data))
+	b.focus_entered.connect(_focus_nav.on_node_focused.bind(b))
 	_nodes[data.resource_path] = b
 	return b
 
@@ -187,47 +177,30 @@ func _draw_links() -> void:
 			var to := _links.get_global_transform().affine_inverse() * (b.global_position + Vector2(0, b.size.y * 0.5))
 			_links.draw_line(from, to, LINK, 2.0, true)
 
-# ── Detalle ─────────────────────────────────────────────────────────────────
-
-func _show_detail(data: YounData) -> void:
-	for child in _detail.get_children():
-		child.queue_free()
-	_detail.add_child(_text(data.youn_name, 24, Color.WHITE))
-	_detail.add_child(_text(LocalizationState.youn_stage_name(data.stage), 16, Color(0.7, 0.75, 0.8)))
-	if data.resource_path == _current_path:
-		_detail.add_child(_text(LocalizationState.t("tree.current"), 15, CURRENT))
-	if not data.intelligences.is_empty():
-		var names: PackedStringArray = []
-		for id in data.intelligences:
-			names.append(Intelligences.display_name(id))
-		_detail.add_child(_text(LocalizationState.t("tree.intelligences", [", ".join(names)]), 16, KNOWN))
-	_detail.add_child(HSeparator.new())
-	if data.is_wildcard:
-		_detail.add_child(_text(LocalizationState.t("evolution.wildcard"), 15, Color.WHITE))
-		return
-	if data.evolution_conditions.is_empty():
-		_detail.add_child(_text(LocalizationState.t("evolution.no_conditions"), 15, Color.WHITE))
-		return
-	_detail.add_child(_text(LocalizationState.t("tree.conditions"), 16, Color.WHITE))
-	var known: Array = GameState.player_save.discovered_evolutions.get(EvolutionDiscovery.youn_key(data), [])
-	for i in data.evolution_conditions.size():
-		if known.has(i):
-			_detail.add_child(_text("• " + data.evolution_conditions[i].describe(), 15, CURRENT))
-		else:
-			_detail.add_child(_text("• ???????", 15, HIDDEN))
-
-func _text(value: String, size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.text = value
-	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_font_size_override("font_size", size)
-	label.add_theme_color_override("font_color", color)
-	return label
-
 func _unhandled_input(event: InputEvent) -> void:
+	if not _detail.is_open():
+		if event.is_action_pressed("ui_left"):
+			get_viewport().set_input_as_handled()
+			_focus_nav.move(Vector2.LEFT)
+			return
+		if event.is_action_pressed("ui_right"):
+			get_viewport().set_input_as_handled()
+			_focus_nav.move(Vector2.RIGHT)
+			return
+		if event.is_action_pressed("ui_up"):
+			get_viewport().set_input_as_handled()
+			_focus_nav.move(Vector2.UP)
+			return
+		if event.is_action_pressed("ui_down"):
+			get_viewport().set_input_as_handled()
+			_focus_nav.move(Vector2.DOWN)
+			return
 	if event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
-		_on_back()
+		if _detail.is_open():
+			_detail.close_overlay()
+		else:
+			_on_back()
 
 func _on_back() -> void:
 	get_tree().change_scene_to_file(GAME_WORLD)

@@ -34,11 +34,12 @@ func test_ensure_deck_no_pisa_un_mazo_existente() -> void:
 
 func test_recolor_cambia_color_e_inteligencia_de_la_copia_sola() -> void:
 	var original: CardData = load(DILUVIO)
+	var original_intelligence := original.top.intelligence
 	var copy := original.clone()
 	DeckRules.recolor(copy.top, "musical")
 	assert_eq(copy.top.intelligence, "musical")
 	assert_ne(copy.top.color, original.top.color)
-	assert_eq(original.top.intelligence, "")
+	assert_eq(original.top.intelligence, original_intelligence)
 
 
 func test_add_line_agrega_una_copia_al_final() -> void:

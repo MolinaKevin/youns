@@ -15,7 +15,6 @@ var enabled := true
 
 func _ready() -> void:
 	target = get_parent().get_node_or_null("Player")
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 func _input(event: InputEvent) -> void:
 	if not enabled:

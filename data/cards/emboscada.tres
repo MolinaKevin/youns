@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://cb2fptd8ugdit" path="res://data/card_data.gd" id="1_emboscada"]
 [ext_resource type="Script" path="res://data/card_action.gd" id="2_action"]
 [ext_resource type="Script" path="res://data/card_action_line.gd" id="3_line"]
+[ext_resource type="Script" path="res://data/card_pattern.gd" id="99_pattern"]
 [ext_resource type="Script" path="res://data/stat_scaling.gd" id="4_scaling"]
 
 [sub_resource type="Resource" id="Scale_Line_top"]
@@ -17,11 +18,19 @@ base = 18
 stat = "agilidad"
 factor = 0.4
 
+[sub_resource type="Resource" id="Pattern_Line_top"]
+script = ExtResource("99_pattern")
+shape = "cone"
+origin = "self"
+direction = "cursor"
+cone_half_angle = 10.0
+
 [sub_resource type="Resource" id="Line_top"]
 script = ExtResource("3_line")
 card_type = "overwatch"
+pattern = SubResource("Pattern_Line_top")
 description = "Apuntás un cono. Si el enemigo entra este turno, recibe un golpe poderoso; si no, se cancela."
-card_range = 50
+primary_base_modules = 6
 damage = 150
 damage_scaling = SubResource("Scale_Line_top")
 
@@ -29,18 +38,18 @@ damage_scaling = SubResource("Scale_Line_top")
 script = ExtResource("3_line")
 card_type = "move"
 description = "Te movés."
-card_range = 38
+movement_base_modules = 5
 range_scaling = SubResource("Scale_Line_bottom")
 
 [sub_resource type="Resource" id="Resource_top"]
 script = ExtResource("2_action")
 lines = Array[ExtResource("3_line")]([SubResource("Line_top")])
-color = Color(0.2, 0.2, 0.23, 1)
+intelligence = "linguistica"
 
 [sub_resource type="Resource" id="Resource_bottom"]
 script = ExtResource("2_action")
 lines = Array[ExtResource("3_line")]([SubResource("Line_bottom")])
-color = Color(0.08, 0.26, 0.14, 1)
+intelligence = "linguistica"
 
 [resource]
 script = ExtResource("1_emboscada")

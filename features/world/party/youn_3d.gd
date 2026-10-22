@@ -15,6 +15,9 @@ const WALK_ANIMATION_MAX_SPEED := 4.0
 @export var youn_data: YounData
 
 var _player: CharacterBody3D
+## Bloquea el seguimiento horizontal sin tocar set_physics_process(), así la
+## gravedad sigue actuando (p.ej. cutscenes donde el Youn tiene que caer).
+var movement_locked := false
 var _bodies: Dictionary = {}   # "idle" -> Node3D, "walk" -> Node3D, etc.
 var _current_anim: String = ""
 var _emotion_bubble: AnimatedSprite3D = null
@@ -67,7 +70,7 @@ func _load_model(data: YounData) -> void:
 		body.visible = false
 		add_child(body)
 		if mat:
-			for mesh in _find_meshes(body):
+			for mesh in Node3DSearch.find_meshes(body):
 				mesh.material_override = mat
 		_bodies[key] = body
 
@@ -91,7 +94,7 @@ func _switch_to(anim_key: String) -> void:
 	if target in _bodies:
 		var body: Node3D = _bodies[target]
 		body.visible = true
-		var anim_player := _find_anim_player(body)
+		var anim_player := Node3DSearch.find_anim_player(body)
 		if anim_player:
 			var list := anim_player.get_animation_list()
 			if not list.is_empty():
@@ -105,6 +108,13 @@ func _switch_to(anim_key: String) -> void:
 func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
+
+	if movement_locked:
+		velocity.x = 0.0
+		velocity.z = 0.0
+		_switch_to("idle")
+		move_and_slide()
+		return
 
 	if not _player:
 		move_and_slide()
@@ -165,23 +175,6 @@ func _face_dir(dir: Vector3, delta: float) -> void:
 	rotation.y = lerp_angle(rotation.y, target_angle, rotate_speed * delta)
 
 
-func _find_meshes(node: Node) -> Array[MeshInstance3D]:
-	var result: Array[MeshInstance3D] = []
-	if node is MeshInstance3D:
-		result.append(node)
-	for child in node.get_children():
-		result.append_array(_find_meshes(child))
-	return result
-
-
-func _find_anim_player(node: Node) -> AnimationPlayer:
-	if node is AnimationPlayer:
-		return node
-	for child in node.get_children():
-		var found := _find_anim_player(child)
-		if found:
-			return found
-	return null
 
 
 # ── Emotion bubble ────────────────────────────────────────────────────────────

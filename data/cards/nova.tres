@@ -4,6 +4,7 @@
 [ext_resource type="Script" path="res://data/card_action.gd" id="2_action"]
 [ext_resource type="Script" path="res://data/card_action_line.gd" id="3_line"]
 [ext_resource type="Script" path="res://data/stat_scaling.gd" id="4_scaling"]
+[ext_resource type="Script" path="res://data/card_pattern.gd" id="5_pattern"]
 
 [sub_resource type="Resource" id="Scale_Line_bottom"]
 script = ExtResource("4_scaling")
@@ -23,14 +24,20 @@ base = 5
 stat = "inteligencia"
 factor = 0.4
 
+[sub_resource type="Resource" id="Pattern_circle"]
+script = ExtResource("5_pattern")
+shape = "circle"
+origin = "self"
+
 [sub_resource type="Resource" id="Line_top"]
 script = ExtResource("3_line")
 card_type = "nova"
 mp_cost = 20
 description = "Estallido alrededor tuyo: daño mágico y el enemigo sale despedido hacia afuera."
 damage = 30
-card_range = 25
-throw_range = 50
+primary_base_modules = 3
+cast_base_modules = 6
+pattern = SubResource("Pattern_circle")
 damage_scaling = SubResource("S_damage")
 range_scaling = SubResource("S_range")
 
@@ -38,18 +45,18 @@ range_scaling = SubResource("S_range")
 script = ExtResource("3_line")
 card_type = "move"
 description = "Te movés."
-card_range = 38
+movement_base_modules = 5
 range_scaling = SubResource("Scale_Line_bottom")
 
 [sub_resource type="Resource" id="Resource_top"]
 script = ExtResource("2_action")
 lines = Array[ExtResource("3_line")]([SubResource("Line_top")])
-color = Color(0.24, 0.12, 0.36, 1)
+intelligence = "linguistica"
 
 [sub_resource type="Resource" id="Resource_bottom"]
 script = ExtResource("2_action")
 lines = Array[ExtResource("3_line")]([SubResource("Line_bottom")])
-color = Color(0.08, 0.26, 0.14, 1)
+intelligence = "linguistica"
 
 [resource]
 script = ExtResource("1_card")

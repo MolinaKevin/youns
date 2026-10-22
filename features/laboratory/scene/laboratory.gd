@@ -188,9 +188,19 @@ func _on_take_all() -> void:
 	if not interaction_enabled:
 		return
 	var taken := LaboratoryState.take_all_output()
+	var save := GameState.player_save
 	for item_id in taken:
-		# TODO: agregar item al inventario del jugador (id: item_id, count: taken[item_id]["count"])
-		pass
+		var entry: Dictionary = taken[item_id]
+		var added := false
+		for i in save.inventory_items.size():
+			var existing: Dictionary = save.inventory_items[i]
+			if existing.get("id") == item_id:
+				existing["count"] = existing.get("count", 0) + entry["count"]
+				save.inventory_items[i] = existing
+				added = true
+				break
+		if not added and save.inventory_items.size() < save.inventory_slots:
+			save.inventory_items.append(entry.duplicate())
 	for child in output_list.get_children():
 		child.queue_free()
 

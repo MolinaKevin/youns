@@ -3,12 +3,14 @@
 [ext_resource type="Script" path="res://features/world/zones/zone_gym.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://dyqvi2tnhrtjq" path="res://assets/maps/gym/gym.glb" id="2_gym"]
 [ext_resource type="Script" path="res://features/world/zones/gym_forest.gd" id="3_forest"]
+[ext_resource type="Resource" path="res://data/biomes/pradera.tres" id="biome_pradera"]
 
 [sub_resource type="BoxShape3D" id="1"]
 size = Vector3(66, 20, 78)
 
 [node name="ZoneGym" type="Node3D"]
 script = ExtResource("1")
+biome = ExtResource("biome_pradera")
 
 [node name="GymMap" parent="." instance=ExtResource("2_gym")]
 

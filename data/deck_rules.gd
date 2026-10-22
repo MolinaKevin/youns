@@ -4,8 +4,6 @@ extends RefCounted
 ## Reglas del mazo de la partida (PlayerSaveData.deck): copias propias de las
 ## cartas que las evoluciones modifican.
 
-const Intelligences := preload("res://data/youns/intelligences.gd")
-
 ## Máximo absoluto de líneas en una mitad (el tope del ultimate).
 const MAX_LINES_PER_HALF := 5
 
@@ -45,7 +43,6 @@ static func recolor(action: CardAction, intelligence: String) -> void:
 	if action == null:
 		return
 	action.intelligence = intelligence
-	action.color = Intelligences.half_color(intelligence)
 
 static func can_add_line(action: CardAction) -> bool:
 	return action != null and action.lines.size() < MAX_LINES_PER_HALF

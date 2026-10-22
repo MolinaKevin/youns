@@ -20,7 +20,7 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not enabled:
 		return
-	if _is_menu_pressed(event):
+	if InputPresses.is_menu_pressed(event):
 		if visible:
 			close()
 		else:
@@ -49,13 +49,6 @@ func _on_deck() -> void:
 func _on_quit() -> void:
 	get_tree().paused = false
 	get_tree().quit()
-
-func _is_menu_pressed(event: InputEvent) -> bool:
-	if not event.is_action_pressed("menu_toggle"):
-		return false
-	if event is InputEventKey:
-		return not event.echo
-	return true
 
 func _apply_localized_text(_language: String = "") -> void:
 	title_label.text = LocalizationState.t("pause.title")

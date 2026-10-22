@@ -188,6 +188,15 @@ func _leave_interior_silently() -> void:
 func get_current_zone_node() -> Node3D:
 	return _loaded.get(current_zone)
 
+## Bioma de una zona (o null si no tiene asignado / no está cargada).
+func get_biome(zone_id: String) -> BiomeData:
+	var zone: ZoneBase = _loaded.get(zone_id)
+	return zone.biome if zone else null
+
+## Bioma de la zona donde está parado el jugador ahora mismo.
+func get_current_biome() -> BiomeData:
+	return get_biome(current_zone)
+
 
 ## Geometría del mapa técnico, delegada al mismo WorldBoundary que determina
 ## dónde puede caminar el jugador y a qué zona pertenece.

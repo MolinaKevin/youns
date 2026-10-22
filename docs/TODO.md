@@ -71,10 +71,17 @@ Pendientes conocidos, agrupados por sistema. Al resolver uno, borrarlo de acá.
 
 ## Diseño todavía sin implementar
 
-- [ ] **Patrones modulares por línea de acción**: diseñados en
-      `docs/patrones_modulares.md`. Implementar formas, módulos, escalado suave
-      por estadísticas y extensiones de módulos sin aplicarlos a toda la mitad
-      de una carta.
+- [ ] **Patrones modulares por línea de acción**: diseño en
+      `docs/patrones_modulares.md`; las cartas ya usan módulos explícitos.
+  - [ ] Aplicar `CardPattern` gradualmente a las demás acciones espaciales;
+        hoy charcos, explosiones, trampas, muros, empujes y vigilancia ya
+        declaran línea, círculo o cono; Arrow, Nova y Aliento validan el
+        impacto con la geometría reutilizable.
+  - **Para considerar, no obligatorio:** fórmula final del multiplicador
+        `×0.50–×1.50`; fuentes de `+1 módulo`; formas cruz, muro y anillo;
+        dimensión secundaria (ancho, apertura o grosor); migrar mazos enemigos;
+        renombrar `module_count` de obstáculos para distinguirlo de estos
+        módulos; tutorial/indicadores visuales de la mecánica.
 - [ ] Evolución: condición de **cartas** (uso por tipo durante la etapa).
       Hoy las 5 condiciones de cada campeón/ultimate usan inteligencia, stats,
       crianza y dos bonus (zona, horario o "venir de").
@@ -143,3 +150,18 @@ Pendientes conocidos, agrupados por sistema. Al resolver uno, borrarlo de acá.
 - [ ] Código sin uso: `features/world/world_map/world_map.gd`, `enemy_3d.gd`
       y `world_map.tscn` (de ahí solo se usan `player_3d.gd`, `camera_rig.gd`
       y los shaders), y `RunStateData` / `current_run` en `GameState`.
+- [ ] **Log de combate sin traducir**: `combat.gd` pasa casi todos sus
+      `log_message(...)` por `LocalizationState.t(...)`, pero
+      `combat_player_actions.gd` y los resolvers de
+      `features/combat/scene/pending_actions/` tienen ~148 mensajes en
+      español hardcodeado (ninguno usa el helper). Falta decidir si se migran
+      a claves de `es.json`/`en.json` o si el log de combate queda fuera del
+      alcance de traducción a propósito.
+- [ ] **Inteligencias placeholder en cartas base**: al sacar el campo `color`
+      de `CardAction` (ahora se deriva de `intelligence`), las 106 mitades de
+      los 53 `.tres` de `data/cards/` más `wild_attack.tres`/`wild_move.tres`
+      no tenían ninguna asignada, así que quedaron todas en `"linguistica"`
+      como placeholder. Falta curarlas una por una con la inteligencia real
+      de cada mitad (y, en el caso de los wildcards de combate, probablemente
+      convenga que cada uno tenga una distinta para que se distingan a simple
+      vista como antes).

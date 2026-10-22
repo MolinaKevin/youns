@@ -87,6 +87,76 @@ func test_movimiento_heredado_se_convierte_a_modulos() -> void:
 	assert_eq(line.movement_range_cells(), 40)
 
 
+func test_patron_heredado_convierte_alcance_y_lanzamiento_a_modulos() -> void:
+	var line := CardActionLine.new()
+	line.card_range = 13
+	line.throw_range = 38
+	assert_eq(line.primary_modules(), 2)
+	assert_eq(line.primary_range_cells(), 16)
+	assert_eq(line.cast_modules(), 5)
+	assert_eq(line.cast_range_cells(), 40)
+
+
+func test_patron_modular_aplica_extra_y_multiplicador() -> void:
+	var line := CardActionLine.new()
+	line.primary_base_modules = 3
+	line.primary_extra_modules = 1
+	line.primary_stat_multiplier = 1.5
+	assert_eq(line.primary_range_cells(), 48)
+	assert_eq(line.primary_module_label(), "6")
+
+
+func test_rango_modular_conserva_el_escalado_heredado() -> void:
+	var scaling := StatScaling.new()
+	scaling.base = 18
+	scaling.stat = "agilidad"
+	scaling.factor = 0.4
+	var line := CardActionLine.new()
+	line.card_type = "move"
+	line.movement_base_modules = 5
+	line.range_scaling = scaling
+	var resolved := line.resolved({"agilidad": 0})
+	# 18 celdas se redondeaba antes a 2 módulos; la migración mantiene eso.
+	assert_eq(resolved.movement_range_cells(), 16)
+
+
+func test_patron_reutilizable_indica_si_necesita_direccion() -> void:
+	var pattern := CardPattern.new()
+	pattern.shape = "line"
+	pattern.direction = "cursor"
+	assert_true(pattern.needs_direction())
+	pattern.shape = "circle"
+	assert_false(pattern.needs_direction())
+
+
+func test_acciones_espaciales_tienen_patron_declarado() -> void:
+	var expected := {
+		"charco": "circle",
+		"chispa": "circle",
+		"granizada": "circle",
+		"grenade": "circle",
+		"bear_trap": "circle",
+		"envion": "line",
+		"ancla": "line",
+		"descarga": "line",
+		"golpe_de_roca": "cone",
+		"emboscada": "cone",
+	}
+	for card_id: String in expected:
+		var card: CardData = CardDatabase.cards_by_id[card_id]
+		var spatial_line: CardActionLine = null
+		for half in [card.top, card.bottom]:
+			for line: CardActionLine in half.lines:
+				if line.card_type != "move":
+					spatial_line = line
+					break
+			if spatial_line != null:
+				break
+		assert_not_null(spatial_line, "%s tiene una acción espacial" % card_id)
+		assert_not_null(spatial_line.pattern, "%s declara CardPattern" % card_id)
+		assert_eq(spatial_line.pattern.shape, expected[card_id], "%s usa la forma correcta" % card_id)
+
+
 func test_cartas_con_stat_50_dan_su_valor_original() -> void:
 	# Las fórmulas actuales son provisorias: a 50 (un rookie típico) cada línea
 	# vale lo mismo que su valor fijo guardado.

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="YounData" load_steps=4 format=3]
+
+[ext_resource type="Script" uid="uid://dkniy614ehfbc" path="res://data/youns/youn_data.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/youns/tetue/portraits/tetue_neutral.png" id="2_portrait"]
+[ext_resource type="PackedScene" path="res://assets/youns/pombero/idle.fbx" id="3_placeholder_model"]
+
+[resource]
+script = ExtResource("1_script")
+id = "tetue"
+youn_name = "Tetue"
+portrait = ExtResource("2_portrait")
+dialogue_portrait_position = Vector2(-225, -115)
+portrait_scale = Vector2(0.36, 0.36)
+dialogue_nameplate_side = "right"
+mesh_scale = 0.2
+mesh_y_offset = -0.8
+scene_idle = ExtResource("3_placeholder_model")

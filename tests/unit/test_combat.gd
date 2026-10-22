@@ -30,6 +30,15 @@ class MockMapArea extends Node:
 	func check_and_trigger_traps(_pos: Vector2) -> int:
 		return 0
 
+	func check_and_trigger_traps_along_path(_from: Vector2, _to: Vector2, _contact_margin: float = 0.0) -> int:
+		return 0
+
+	func player_area_contact_radius() -> float:
+		return 0.0
+
+	func enemy_area_contact_radius() -> float:
+		return 0.0
+
 	func start_self_highlight() -> void: pass
 	func clear_self_highlight() -> void: pass
 	func start_attack_selection(_range: float) -> void: pass
@@ -41,11 +50,14 @@ class MockMapArea extends Node:
 		move_enemy_toward_calls += 1
 		return true
 
-	func get_puddle_effects_along(_from: Vector2, _to: Vector2) -> Dictionary:
+	func get_puddle_effects_along(_from: Vector2, _to: Vector2, _contact_margin: float = 0.0) -> Dictionary:
 		return puddle_effects_result
 
-	func get_puddle_damage_along(_from: Vector2, _to: Vector2) -> Dictionary:
+	func get_puddle_damage_along(_from: Vector2, _to: Vector2, _contact_margin: float = 0.0) -> Dictionary:
 		return puddle_damage_result
+
+	func trigger_zone_effects_along(_from: Vector2, _to: Vector2, _contact_margin: float = 0.0) -> Dictionary:
+		return puddle_effects_result
 
 	func start_move_selection(_range: float) -> void:
 		start_move_selection_calls += 1
@@ -71,6 +83,96 @@ class MockMapArea extends Node:
 
 	func is_segment_in_overwatch_cone(_from: Vector2, _to: Vector2, _origin: Vector2, _dir: Vector2, _cone_range: float, _half_angle_deg: float) -> bool:
 		return overwatch_cone_hit
+
+	func clear_card_pattern_preview() -> void: pass
+
+	# ── trap / grenade ──
+	var place_trap_calls: Array = []
+	var place_delayed_zone_calls: Array = []
+	func start_trap_placement(_a, _b: float = 0.0) -> void: pass
+	func clear_trap_placement() -> void: pass
+	func place_trap(pos: Vector2, radius: float, damage: int, card_name: String) -> void:
+		place_trap_calls.append({"pos": pos, "radius": radius, "damage": damage, "name": card_name})
+	func calculate_grenade_landing(_from: Vector2, target: Vector2, _bounce: float) -> Vector2:
+		return target
+	func show_grenade_preview(_landing: Vector2, _radius: float) -> void: pass
+	func clear_grenade_preview() -> void: pass
+	func is_enemy_in_explosion(_center: Vector2, _radius: float) -> bool:
+		return true
+
+	# ── rock_jump ──
+	const MIN_SEPARATION := 0.1
+	func get_rocks_in_range(_origin: Vector2, _range: float) -> Array[Dictionary]:
+		return [{"pos": Vector2(5.0, 0.0)}]
+	func start_rock_jump_selection(_range: float) -> void: pass
+	func get_rock_near(pos: Vector2) -> Dictionary:
+		return {"pos": pos}
+	func start_jump_landing_selection(_rock_pos: Vector2, _range: float) -> void: pass
+	func can_jump_land_at(_pos: Vector2) -> bool:
+		return true
+	func clear_rock_jump_selection() -> void: pass
+	func land_player_from_jump(pos: Vector2) -> void:
+		player_pos = pos
+	func is_enemy_near_pos(pos: Vector2, radius: float) -> bool:
+		return (pos - enemy_pos).length() <= radius
+
+	# ── push / pull / anchor (animaciones reales: señales en vez de callbacks) ──
+	signal player_anim_finished
+	signal enemy_reached_target
+	signal enemy_anim_finished
+	var push_enemy_to_calls: Array = []
+	func play_player_anim(_anim: String) -> void:
+		player_anim_finished.emit.call_deferred()
+	func play_enemy_anim(_anim: String) -> void:
+		enemy_anim_finished.emit.call_deferred()
+	func push_enemy_to(pos: Vector2) -> void:
+		push_enemy_to_calls.append(pos)
+		enemy_pos = pos
+		enemy_reached_target.emit.call_deferred()
+	func calculate_push_landing(target: Vector2, _range: float) -> Vector2:
+		return target
+	func calculate_drag_landing(target: Vector2, _range: float) -> Vector2:
+		return target
+	func clear_push_selection() -> void: pass
+	func start_push_enemy_selection(_range: float) -> void: pass
+	func start_anchor_selection(_range: float) -> void: pass
+	func start_push_cone(_range: float) -> void: pass
+	func is_click_on_enemy(_pos: Vector2) -> bool:
+		return true
+	func is_pos_in_push_cone(_pos: Vector2, _range: float) -> bool:
+		return true
+
+	# ── módulos ──
+	var build_modules_calls: Array = []
+	var break_modules_calls: Array = []
+	func start_module_selection(_range: float) -> void: pass
+	func start_collapse_selection(_range: float) -> void: pass
+	func clear_module_selection() -> void: pass
+	func get_module_at(_pos: Vector2) -> Dictionary:
+		return {}
+	func get_tree_at(_pos: Vector2) -> Dictionary:
+		return {}
+	func obstacle_gap(_obs: Dictionary) -> float:
+		return 0.0
+	func build_modules(pos: Vector2, count: int) -> int:
+		build_modules_calls.append({"pos": pos, "count": count})
+		return count
+	func break_modules(obs: Dictionary, count: int) -> int:
+		break_modules_calls.append({"obs": obs, "count": count})
+		return count
+
+	# ── hechizos ──
+	var blink_calls: Array = []
+	func start_spell_selection(_range: float) -> void: pass
+	func clear_spell_selection() -> void: pass
+	func can_blink_to(_pos: Vector2) -> bool:
+		return true
+	func blink_player_to(pos: Vector2) -> void:
+		blink_calls.append(pos)
+	func place_delayed_zone(pos: Vector2, radius: float, damage: int, _card_name: String, delay: int, effect: String, duration: int) -> void:
+		place_delayed_zone_calls.append({"pos": pos, "radius": radius, "damage": damage, "delay": delay, "effect": effect, "duration": duration})
+	func is_tree_near(_pos: Vector2, _range: float) -> bool:
+		return false
 
 
 var _map: MockMapArea
@@ -1038,6 +1140,15 @@ func _make_player_actions(p_state: CombatState) -> CombatPlayerActions:
 	return pa
 
 
+## Para familias cuyo execute() llega a _finish() (llama a _check_combat_end)
+## o puede pegarle a alguien — _make_player_actions() pasa Callable() vacíos
+## y eso rompe en esos casos.
+func _make_full_player_actions(p_state: CombatState) -> CombatPlayerActions:
+	var pa := CombatPlayerActions.new()
+	pa.setup(p_state, _map, _dmg_enemy_callable(p_state), _dmg_player_callable(p_state), _check_end_callable(p_state))
+	return pa
+
+
 # ── Block card — confirm_self_action ──────────────────────────────────────────
 
 func test_block_card_suma_block_amount_al_player_block() -> void:
@@ -1045,8 +1156,8 @@ func test_block_card_suma_block_amount_al_player_block() -> void:
 	s.turn_actions.append(_make_card("block", 5))
 
 	var pa := _make_player_actions(s)
-	pa.pending_self_index = 0
-	pa._confirm_self_action()
+	pa._self_action.index = 0
+	pa._self_action.execute(Vector2.ZERO)
 
 	assert_eq(s.player_block, 5)
 
@@ -1056,8 +1167,8 @@ func test_block_card_consume_la_accion_del_turno() -> void:
 	s.turn_actions.append(_make_card("block", 5))
 
 	var pa := _make_player_actions(s)
-	pa.pending_self_index = 0
-	pa._confirm_self_action()
+	pa._self_action.index = 0
+	pa._self_action.execute(Vector2.ZERO)
 
 	assert_eq(s.turn_actions.size(), 0)
 
@@ -1065,8 +1176,8 @@ func test_block_card_consume_la_accion_del_turno() -> void:
 func test_confirm_self_action_con_indice_invalido_no_muta_estado() -> void:
 	var s := CombatState.new()
 	var pa := _make_player_actions(s)
-	pa.pending_self_index = -1
-	pa._confirm_self_action()
+	pa._self_action.index = -1
+	pa._self_action.execute(Vector2.ZERO)
 	assert_eq(s.player_block, 0)
 
 
@@ -1075,17 +1186,19 @@ func test_confirm_self_action_con_indice_invalido_no_muta_estado() -> void:
 func test_cancel_selection_limpia_pending_attack_index() -> void:
 	var s := CombatState.new()
 	var pa := _make_player_actions(s)
-	pa.pending_attack_index = 0
+	pa._attack_action.index = 0
+	pa._current_action = pa._attack_action
 	pa.cancel_selection()
-	assert_eq(pa.pending_attack_index, -1)
+	assert_eq(pa._attack_action.index, -1)
 
 
 func test_cancel_selection_limpia_pending_self_index() -> void:
 	var s := CombatState.new()
 	var pa := _make_player_actions(s)
-	pa.pending_self_index = 0
+	pa._self_action.index = 0
+	pa._current_action = pa._self_action
 	pa.cancel_selection()
-	assert_eq(pa.pending_self_index, -1)
+	assert_eq(pa._self_action.index, -1)
 
 
 # ── Block stacking ────────────────────────────────────────────────────────────
@@ -1097,11 +1210,11 @@ func test_dos_cartas_de_bloqueo_acumulan_block_amount() -> void:
 
 	var pa := _make_player_actions(s)
 
-	pa.pending_self_index = 0
-	pa._confirm_self_action()  # acción 1 consumida, acción 2 queda en índice 0
+	pa._self_action.index = 0
+	pa._self_action.execute(Vector2.ZERO)  # acción 1 consumida, acción 2 queda en índice 0
 
-	pa.pending_self_index = 0
-	pa._confirm_self_action()  # carta 2
+	pa._self_action.index = 0
+	pa._self_action.execute(Vector2.ZERO)  # carta 2
 
 	assert_eq(s.player_block, 8)
 
@@ -1112,10 +1225,10 @@ func test_bloqueo_acumulado_absorbe_daño_combinado() -> void:
 	s.turn_actions.append(_make_card("block", 4))
 
 	var pa := _make_player_actions(s)
-	pa.pending_self_index = 0
-	pa._confirm_self_action()
-	pa.pending_self_index = 0
-	pa._confirm_self_action()
+	pa._self_action.index = 0
+	pa._self_action.execute(Vector2.ZERO)
+	pa._self_action.index = 0
+	pa._self_action.execute(Vector2.ZERO)
 
 	var hp_inicial := s.player_hp
 	_apply_damage_to_player(s, 6)  # 6 daño contra 8 de bloqueo → 0 daño
@@ -1303,7 +1416,7 @@ func test_start_move_selection_bloqueada_por_enredado() -> void:
 	s.player_entangled_turns = 2
 	var pa := _make_player_actions(s)
 	pa.start_move_selection("hand", 0, 3, "Test")
-	assert_eq(pa.pending_move_index, -1)
+	assert_eq(pa._move_action.index, -1)
 	assert_eq(_map.start_move_selection_calls, 0)
 
 
@@ -1312,7 +1425,7 @@ func test_start_move_selection_bloqueada_por_congelado() -> void:
 	s.player_frozen_turns = 2
 	var pa := _make_player_actions(s)
 	pa.start_move_selection("hand", 0, 3, "Test")
-	assert_eq(pa.pending_move_index, -1)
+	assert_eq(pa._move_action.index, -1)
 	assert_eq(_map.start_move_selection_calls, 0)
 
 
@@ -1322,7 +1435,7 @@ func test_start_move_selection_penaliza_rango_por_mojado_y_engrasado() -> void:
 	s.player_greasy_turns = 1
 	var pa := _make_player_actions(s)
 	pa.start_move_selection("hand", 0, 50, "Test")
-	assert_eq(pa.pending_move_range, 12)  # 50 - (13 mojado + 25 engrasado), en casillas
+	assert_eq(pa._move_action.range_cells, 12)  # 50 - (13 mojado + 25 engrasado), en casillas
 
 
 # ── CombatPlayerActions — ceguera reduce rango de ataque ─────────────────────
@@ -1334,7 +1447,7 @@ func test_start_range_attack_selection_reduce_rango_por_cegado() -> void:
 	card.card_range = 50
 	var pa := _make_player_actions(s)
 	pa.start_range_attack_selection(0, card)
-	assert_eq(pa.pending_attack_range, CombatPlayerActions.BLINDED_RANGE)
+	assert_eq(pa._attack_action.range_cells, CardActionLine.cells_for_modules(CombatPlayerActions.BLINDED_RANGE_MODULES))
 
 
 func test_start_range_attack_selection_sin_cegado_usa_rango_completo() -> void:
@@ -1343,7 +1456,7 @@ func test_start_range_attack_selection_sin_cegado_usa_rango_completo() -> void:
 	card.card_range = 5
 	var pa := _make_player_actions(s)
 	pa.start_range_attack_selection(0, card)
-	assert_eq(pa.pending_attack_range, 5)
+	assert_eq(pa._attack_action.range_cells, 5)
 
 
 # ── CombatPlayerActions — charcos usan el effect/rango de la carta ──────────
@@ -1355,8 +1468,8 @@ func test_execute_puddle_usa_el_effect_y_rango_de_la_carta() -> void:
 	card.card_range = 2
 	s.turn_actions.append(card)
 	var pa := _make_player_actions(s)
-	pa.pending_puddle_index = 0
-	pa._execute_puddle(Vector2(4.0, 2.0))
+	pa._puddle_action.index = 0
+	pa._puddle_action.execute(Vector2(4.0, 2.0))
 	assert_eq(_map.place_puddle_calls.size(), 1)
 	assert_eq(_map.place_puddle_calls[0]["effect"], "fire")
 	assert_almost_eq(_map.place_puddle_calls[0]["radius"], 2 * CombatGrid.CELL, 0.0001)  # 2 casillas
@@ -1372,8 +1485,8 @@ func test_execute_puddle_pasa_duracion_y_danio() -> void:
 	card.damage = 45
 	s.turn_actions.append(card)
 	var pa := _make_player_actions(s)
-	pa.pending_puddle_index = 0
-	pa._execute_puddle(Vector2(4.0, 2.0))
+	pa._puddle_action.index = 0
+	pa._puddle_action.execute(Vector2(4.0, 2.0))
 	assert_eq(_map.place_puddle_calls[0]["turns"], 4)
 	assert_eq(_map.place_puddle_calls[0]["damage"], 45)
 
@@ -1407,11 +1520,11 @@ func test_charco_con_duracion_desaparece_al_pasar_sus_rondas() -> void:
 	map.place_puddle(Vector2(5, 5), 1.0, "fire", 2, 40)
 	map.place_puddle(Vector2(15, 15), 1.0, "wet")  # sin duración
 	map.tick_puddles()
-	assert_eq(map.puddle_zones.size(), 2)
+	assert_eq(map._puddle_system.zones.size(), 2)
 	map.tick_puddles()
-	assert_eq(map.puddle_zones.size(), 1)
-	assert_eq(map.puddle_zones[0]["effect"], "wet")
-	assert_eq(map._puddle_visuals.size(), 1)
+	assert_eq(map._puddle_system.zones.size(), 1)
+	assert_eq(map._puddle_system.zones[0]["effect"], "wet")
+	assert_eq(map._puddle_system.visuals.size(), 1)
 	map.free()
 
 
@@ -1419,14 +1532,14 @@ func test_lente_dura_lo_que_el_charco_mas_corto() -> void:
 	var map = MapAreaScript.new()
 	map.place_puddle(Vector2(5, 5), 1.0, "blood", 3, 20)
 	map.place_puddle(Vector2(6, 5), 1.0, "ice", 1)
-	var lens: Dictionary = map.puddle_zones.filter(func(z): return z["lens"])[0]
+	var lens: Dictionary = map._puddle_system.zones.filter(func(z): return z["lens"])[0]
 	assert_eq(lens["effect"], "bloody_ice")
 	assert_eq(lens["turns"], 1)
 	assert_eq(lens["damage"], 20)
 	map.tick_puddles()
-	assert_eq(map.puddle_zones.size(), 1)
-	assert_eq(map.puddle_zones[0]["effect"], "blood")
-	assert_true(map.puddle_zones[0]["excl"].is_empty())
+	assert_eq(map._puddle_system.zones.size(), 1)
+	assert_eq(map._puddle_system.zones[0]["effect"], "blood")
+	assert_true(map._puddle_system.zones[0]["excl"].is_empty())
 	map.free()
 
 
@@ -1597,7 +1710,7 @@ func test_chispa_convierte_grasa_en_fuego_y_escarcha_agua_en_hielo() -> void:
 	map.place_puddle(Vector2(20, 10), 1.0, "wet")
 	assert_eq(map.convert_puddles(Vector2(10, 10), 1.0, ["grease", "vine"], "fire"), 1)
 	assert_eq(map.convert_puddles(Vector2(20, 10), 1.0, ["wet"], "ice"), 1)
-	var effects: Array = map.puddle_zones.map(func(z): return z["effect"])
+	var effects: Array = map._puddle_system.zones.map(func(z): return z["effect"])
 	assert_eq(effects, ["fire", "ice"])
 	map.free()
 
@@ -1608,7 +1721,7 @@ func test_descarga_se_propaga_por_el_agua() -> void:
 	map.place_puddle(Vector2(10, 22), 3.5, "wet")  # el enemigo está parado en el agua
 	var water: Array = map.puddles_on_segment(Vector2(2, 20), Vector2(14, 20), ["wet"])
 	assert_eq(water.size(), 1)
-	assert_true(map.is_pos_in_zones(map.enemy_pos, water))
+	assert_true(MapArea.is_pos_in_zones(map.enemy_pos, water))
 	assert_false(map.segment_hits_enemy(Vector2(2, 20), Vector2(14, 20)))
 	map.free()
 
@@ -1639,15 +1752,15 @@ func test_hechizo_retardado_cae_a_las_2_rondas_y_deja_su_charco() -> void:
 	map.place_delayed_zone(map.enemy_pos, 1.5, 120, "Meteoro", 2, "fire", 3)
 	assert_true(map.resolve_delayed_zones().is_empty())  # falta una ronda
 	assert_eq(map.delayed_zones.size(), 1)
-	assert_true(map.puddle_zones.is_empty())
+	assert_true(map._puddle_system.zones.is_empty())
 	var hits: Array = map.resolve_delayed_zones()
 	assert_eq(hits.size(), 1)
 	assert_true(hits[0]["enemy"])
 	assert_eq(hits[0]["tick_damage"], 30)  # 25 % del daño
-	assert_eq(map.puddle_zones.size(), 1)
-	assert_eq(map.puddle_zones[0]["effect"], "fire")
-	assert_eq(map.puddle_zones[0]["turns"], 3)
-	assert_eq(map.puddle_zones[0]["damage"], 30)
+	assert_eq(map._puddle_system.zones.size(), 1)
+	assert_eq(map._puddle_system.zones[0]["effect"], "fire")
+	assert_eq(map._puddle_system.zones[0]["turns"], 3)
+	assert_eq(map._puddle_system.zones[0]["damage"], 30)
 	map.free()
 
 
@@ -1655,7 +1768,7 @@ func test_hechizo_retardado_sin_efecto_no_deja_charco() -> void:
 	var map = _map_for_modules()
 	map.place_delayed_zone(map.enemy_pos, 1.5, 50, "Test")
 	map.resolve_delayed_zones()
-	assert_true(map.puddle_zones.is_empty())
+	assert_true(map._puddle_system.zones.is_empty())
 	map.free()
 
 
@@ -1683,12 +1796,12 @@ func test_trasladar_charco_conserva_efecto_rondas_y_danio() -> void:
 	var map = _map_for_modules()
 	map.place_puddle(Vector2(10, 10), 1.0, "fire", 2, 45)
 	var moved: Dictionary = map.move_puddle(map.get_puddle_at(Vector2(10, 10)), Vector2(20, 12))
-	assert_eq(map.puddle_zones.size(), 1)
+	assert_eq(map._puddle_system.zones.size(), 1)
 	assert_eq(moved["pos"], Vector2(20, 12))
 	assert_eq(moved["effect"], "fire")
 	assert_eq(moved["turns"], 2)
 	assert_eq(moved["damage"], 45)
-	assert_eq(map._puddle_visuals.size(), 1)
+	assert_eq(map._puddle_system.visuals.size(), 1)
 	map.free()
 
 
@@ -1696,11 +1809,11 @@ func test_trasladar_charco_se_lleva_su_zona_combinada() -> void:
 	var map = _map_for_modules()
 	map.place_puddle(Vector2(10, 10), 1.0, "blood", 0, 20)
 	map.place_puddle(Vector2(11, 10), 1.0, "ice")
-	assert_eq(map.puddle_zones.size(), 3)  # sangre, lente de hielo sangriento, hielo
+	assert_eq(map._puddle_system.zones.size(), 3)  # sangre, lente de hielo sangriento, hielo
 	map.move_puddle(map.get_puddle_at(Vector2(11.8, 10)), Vector2(20, 20))
-	var effects: Array = map.puddle_zones.map(func(z): return z["effect"])
+	var effects: Array = map._puddle_system.zones.map(func(z): return z["effect"])
 	assert_eq(effects, ["blood", "ice"])
-	assert_true(map.puddle_zones[0]["excl"].is_empty())
+	assert_true(map._puddle_system.zones[0]["excl"].is_empty())
 	map.free()
 
 
@@ -1769,7 +1882,7 @@ func test_arriba_del_arbol_no_te_podes_mover() -> void:
 	s.turn_actions.append(_make_card("move"))
 	var pa := _make_player_actions(s)
 	pa.play_card(0)
-	assert_eq(pa.pending_move_index, -1)
+	assert_eq(pa._move_action.index, -1)
 	assert_eq(_map.start_move_selection_calls, 0)
 
 
@@ -1826,7 +1939,7 @@ func test_charco_de_fuego_prende_el_arbol_y_se_consume() -> void:
 	var tree: Dictionary = map.get_tree_at(Vector2(10, 15))
 	map.climb_tree(tree, Vector2(12, 12))
 	map.place_puddle(Vector2(10.5, 16), 1.0, "fire", 3, 30)
-	assert_true(map.is_tree_burning(tree))
+	assert_true(MapArea.is_tree_burning(tree))
 	assert_eq(knocked, [true])
 	map.tick_trees()
 	assert_false(map.get_tree_at(Vector2(10, 15)).is_empty())
@@ -1838,7 +1951,7 @@ func test_charco_de_fuego_prende_el_arbol_y_se_consume() -> void:
 func test_otros_charcos_no_prenden_arboles() -> void:
 	var map = _map_with_tree()
 	map.place_puddle(Vector2(10.5, 16), 1.0, "wet")
-	assert_false(map.is_tree_burning(map.get_tree_at(Vector2(10, 15))))
+	assert_false(MapArea.is_tree_burning(map.get_tree_at(Vector2(10, 15))))
 	map.free()
 
 
@@ -1859,9 +1972,9 @@ func test_agua_y_hielo_apagan_arboles_en_llamas() -> void:
 	var map = _map_with_tree()
 	var tree: Dictionary = map.get_tree_at(Vector2(10, 15))
 	map.ignite_trees_in_circle(Vector2(10, 15), 1.0)
-	assert_true(map.is_tree_burning(tree))
+	assert_true(MapArea.is_tree_burning(tree))
 	map.place_puddle(Vector2(10.5, 16), 1.0, "wet")
-	assert_false(map.is_tree_burning(tree))
+	assert_false(MapArea.is_tree_burning(tree))
 	map.ignite_trees_in_circle(Vector2(10, 15), 1.0)
 	assert_eq(map.extinguish_trees_in_circle(Vector2(10, 15), 1.0), 1)
 	map.free()
@@ -1880,8 +1993,8 @@ func test_charco_de_planta_junto_a_un_arbol_es_mas_grande() -> void:
 	var map = _map_with_tree()
 	map.place_puddle(Vector2(11.5, 15), 1.0, "vine")
 	map.place_puddle(Vector2(25, 5), 1.0, "vine")
-	assert_almost_eq(float(map.puddle_zones[0]["radius"]), 1.0 * map.TREE_VINE_RADIUS_MULT, 0.001)
-	assert_almost_eq(float(map.puddle_zones[1]["radius"]), 1.0, 0.001)
+	assert_almost_eq(float(map._puddle_system.zones[0]["radius"]), 1.0 * map.TREE_VINE_RADIUS_MULT, 0.001)
+	assert_almost_eq(float(map._puddle_system.zones[1]["radius"]), 1.0, 0.001)
 	map.free()
 
 
@@ -1890,8 +2003,8 @@ func test_el_fuego_del_arbol_se_propaga_por_la_planta_a_otro_arbol() -> void:
 	map.solid_obstacles.append({"pos": Vector2(13, 15), "radius": 0.6, "type": "tree"})
 	map.place_puddle(Vector2(11.5, 15), 1.0, "vine")  # une los dos árboles
 	map.ignite_trees_in_circle(Vector2(10, 15), 0.5)
-	assert_eq(map.puddle_zones[0]["effect"], "fire")
-	assert_true(map.is_tree_burning(map.get_tree_at(Vector2(13, 15))))
+	assert_eq(map._puddle_system.zones[0]["effect"], "fire")
+	assert_true(MapArea.is_tree_burning(map.get_tree_at(Vector2(13, 15))))
 	map.free()
 
 
@@ -1968,6 +2081,19 @@ func test_danio_de_charco_a_lo_largo_de_un_segmento() -> void:
 	map.free()
 
 
+func test_areas_exigen_contacto_de_un_tercio_de_la_huella() -> void:
+	var map = _map_for_modules()
+	map._enemy_shadow_radius = 0.3
+	map.enemy_pos = Vector2(11.09, 10.0) # radio 1 + margen de área 0,1
+	assert_true(map.is_enemy_in_area_circle(Vector2(10, 10), 1.0))
+	map.enemy_pos = Vector2(11.11, 10.0)
+	assert_false(map.is_enemy_in_area_circle(Vector2(10, 10), 1.0))
+	# La conversión de charcos conserva su intersección propia, sin este umbral.
+	map.place_puddle(Vector2(12.0, 10.0), 1.0, "grease")
+	assert_eq(map.convert_puddles(Vector2(10, 10), 1.0, ["grease"], "fire"), 1)
+	map.free()
+
+
 # ── CombatPlayerActions — overwatch ───────────────────────────────────────────
 
 func test_execute_overwatch_activa_estado_con_datos_de_la_carta() -> void:
@@ -1977,8 +2103,9 @@ func test_execute_overwatch_activa_estado_con_datos_de_la_carta() -> void:
 	s.turn_actions.append(card)
 	_map.player_pos = Vector2(1.0, 1.0)
 	var pa := _make_player_actions(s)
-	pa.pending_overwatch_index = 0
-	pa._execute_overwatch(Vector2(1.0, 0.0))
+	pa._overwatch_action.index = 0
+	pa._overwatch_action.dir = Vector2(1.0, 0.0)
+	pa._overwatch_action.execute(Vector2(1.0, 0.0))
 	assert_true(s.player_overwatch_active)
 	assert_eq(s.player_overwatch_damage, 15)
 	assert_almost_eq(s.player_overwatch_range, 4 * CombatGrid.CELL, 0.0001)  # 4 casillas
@@ -2009,10 +2136,10 @@ func test_confirm_range_attack_gasta_la_accion_antes_del_danio() -> void:
 		size_during_damage[0] = s.turn_actions.size()
 		s.turn_actions.clear()  # simula "fin de turno" durante la animación
 		s.enemy_hp -= amount, Callable(), func() -> bool: return false)
-	pa.pending_attack_index = 0
-	pa.pending_attack_range = 1
+	pa._attack_action.index = 0
+	pa._attack_action.range_cells = 1
 
-	await pa._confirm_range_attack()
+	await pa._attack_action.execute(Vector2.ZERO)
 
 	assert_eq(size_during_damage[0], 0)
 	assert_eq(s.enemy_hp, s.enemy_max_hp - 6)
@@ -2027,12 +2154,147 @@ func test_encantar_arma_vuelve_magico_el_proximo_ataque_y_suma_danio() -> void:
 	var pa := CombatPlayerActions.new()
 	pa.setup(s, _map, func(amount: int, _skip := false, type := CombatState.FISICO) -> void:
 		hits.append([amount, type]), Callable(), func() -> bool: return false)
-	pa.pending_attack_index = 0
-	pa.pending_attack_range = 1
-	await pa._confirm_range_attack()
+	pa._attack_action.index = 0
+	pa._attack_action.range_cells = 1
+	await pa._attack_action.execute(Vector2.ZERO)
 	assert_eq(hits, [[26, CombatState.MAGICO]])
 	assert_eq(s.player_enchant_damage, 0)
 	assert_gt(s.enemy_burning_turns, 0)
+
+
+# ── trap ──────────────────────────────────────────────────────────────────────
+
+func test_trap_place_coloca_la_trampa_y_consume_la_carta() -> void:
+	var s := CombatState.new()
+	s.turn_actions.append(_make_card("trap_place", 0, 20))
+	var pa := _make_full_player_actions(s)
+	pa.play_card(0)
+	pa._on_position_selected(Vector2(1.0, 0.0))
+	pa._on_confirm_yes()
+	assert_eq(_map.place_trap_calls.size(), 1)
+	assert_eq(s.turn_actions.size(), 0)
+
+
+# ── grenade ───────────────────────────────────────────────────────────────────
+
+func test_grenade_le_pega_al_enemigo_y_consume_la_carta() -> void:
+	var s := CombatState.new()
+	var c := _make_card("grenade", 0, 30)
+	c.card_range = 500
+	c.throw_range = 500
+	s.turn_actions.append(c)
+	var pa := _make_full_player_actions(s)
+	pa.play_card(0)
+	pa._on_position_selected(_map.enemy_pos)
+	pa._on_confirm_yes()
+	assert_eq(s.turn_actions.size(), 0)
+	assert_lt(s.enemy_hp, s.enemy_max_hp)
+	# La granada espera 0.6s reales antes de cerrar su vista previa (ver
+	# CombatGrenadeAction.execute) — dejamos que termine antes del próximo test.
+	await get_tree().create_timer(0.7).timeout
+
+
+# ── rock_jump ─────────────────────────────────────────────────────────────────
+
+func test_rock_jump_cae_sobre_el_enemigo_hace_danio() -> void:
+	var s := CombatState.new()
+	var c := _make_card("rock_jump", 0, 40)
+	c.card_range = 500
+	s.turn_actions.append(c)
+	var pa := _make_full_player_actions(s)
+	pa.play_card(0)
+	pa._on_position_selected(_map.enemy_pos)  # fase 0: el mock siempre "encuentra" una piedra
+	pa._on_position_selected(_map.enemy_pos)  # fase 1: aterrizar sobre el enemigo
+	pa._on_confirm_yes()
+	assert_eq(s.turn_actions.size(), 0)
+	assert_lt(s.enemy_hp, s.enemy_max_hp)
+
+
+func test_rock_jump_sin_pegarle_al_enemigo_no_hace_danio() -> void:
+	var s := CombatState.new()
+	var c := _make_card("rock_jump", 0, 40)
+	c.card_range = 500
+	s.turn_actions.append(c)
+	var pa := _make_full_player_actions(s)
+	pa.play_card(0)
+	pa._on_position_selected(Vector2(5.0, 0.0))
+	pa._on_position_selected(Vector2(-5.0, 0.0))  # lejos del enemigo (10, 0)
+	pa._on_confirm_yes()
+	assert_eq(s.turn_actions.size(), 0)
+	assert_eq(s.enemy_hp, s.enemy_max_hp)
+
+
+# ── push / pull / anchor ──────────────────────────────────────────────────────
+
+func test_pull_acerca_al_enemigo_y_consume_la_carta() -> void:
+	var s := CombatState.new()
+	var c := _make_card("pull", 0, 0)
+	c.card_range = 500
+	c.throw_range = 500
+	s.turn_actions.append(c)
+	var pa := _make_full_player_actions(s)
+	pa.play_card(0)
+	pa._on_position_selected(_map.enemy_pos)  # pull no tiene segunda fase
+	pa._on_confirm_yes()
+	# push/pull animan de verdad (señales de map_area, no un Callable):
+	# hay que dejar correr unos frames para que la cadena de awaits resuelva.
+	for i in 10:
+		await get_tree().process_frame
+	assert_eq(s.turn_actions.size(), 0)
+	assert_eq(_map.push_enemy_to_calls.size(), 1)
+	assert_eq(_map.push_enemy_to_calls[0], _map.player_pos)
+
+
+# ── módulos ───────────────────────────────────────────────────────────────────
+
+func test_build_levanta_modulos_y_consume_la_carta() -> void:
+	var s := CombatState.new()
+	var c := _make_card("build", 0, 0)
+	c.card_range = 500
+	c.module_count = 2
+	s.turn_actions.append(c)
+	var pa := _make_full_player_actions(s)
+	pa.play_card(0)
+	pa._on_position_selected(Vector2(1.0, 0.0))
+	pa._on_confirm_yes()
+	for i in 5:
+		await get_tree().process_frame
+	assert_eq(_map.build_modules_calls.size(), 1)
+	assert_eq(_map.build_modules_calls[0]["count"], 2)
+	assert_eq(s.turn_actions.size(), 0)
+
+
+# ── hechizos ──────────────────────────────────────────────────────────────────
+
+func test_blink_teletransporta_al_jugador_y_consume_la_carta() -> void:
+	var s := CombatState.new()
+	var c := _make_card("blink", 0, 0)
+	c.card_range = 500
+	c.throw_range = 500
+	s.turn_actions.append(c)
+	var pa := _make_full_player_actions(s)
+	pa.play_card(0)
+	pa._on_position_selected(Vector2(2.0, 0.0))
+	pa._on_confirm_yes()
+	assert_eq(_map.blink_calls.size(), 1)
+	assert_eq(_map.blink_calls[0], Vector2(2.0, 0.0))
+	assert_eq(s.turn_actions.size(), 0)
+
+
+func test_delayed_area_marca_la_zona_y_consume_la_carta() -> void:
+	var s := CombatState.new()
+	var c := _make_card("delayed_area", 0, 50)
+	c.card_range = 500
+	c.throw_range = 500
+	c.delay = 2
+	s.turn_actions.append(c)
+	var pa := _make_full_player_actions(s)
+	pa.play_card(0)
+	pa._on_position_selected(Vector2(3.0, 0.0))
+	pa._on_confirm_yes()
+	assert_eq(_map.place_delayed_zone_calls.size(), 1)
+	assert_eq(_map.place_delayed_zone_calls[0]["damage"], 50)
+	assert_eq(s.turn_actions.size(), 0)
 
 
 # ── Cartas de monstruo ────────────────────────────────────────────────────────
@@ -2107,7 +2369,7 @@ func test_las_opciones_son_3_cartas_distintas() -> void:
 	for i in 6:
 		cards.append(_make_monster_card(10 + i, []))
 	var ai := _make_card_ai(s, _make_monster_deck(cards))
-	for round in 10:
+	for _round in 10:
 		ai.draw_card()
 		var unique := {}
 		for c in ai.round_options:

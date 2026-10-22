@@ -4,6 +4,7 @@
 [ext_resource type="Script" path="res://data/card_action.gd" id="2_action"]
 [ext_resource type="Script" path="res://data/card_action_line.gd" id="3_line"]
 [ext_resource type="Script" path="res://data/stat_scaling.gd" id="4_scaling"]
+[ext_resource type="Script" path="res://data/card_pattern.gd" id="5_pattern"]
 
 [sub_resource type="Resource" id="Scale_Line_bottom"]
 script = ExtResource("4_scaling")
@@ -23,15 +24,23 @@ base = 1
 stat = "inteligencia"
 factor = 0.04
 
+[sub_resource type="Resource" id="Pattern_cone"]
+script = ExtResource("5_pattern")
+shape = "cone"
+origin = "self"
+direction = "cursor"
+cone_half_angle = 35.0
+
 [sub_resource type="Resource" id="Line_top"]
 script = ExtResource("3_line")
 card_type = "cone_blast"
 mp_cost = 20
 description = "Soplás fuego en cono: daño mágico y deja al enemigo en llamas."
 damage = 40
-throw_range = 50
+cast_base_modules = 6
 status_effect = "burn"
 duration = 3
+pattern = SubResource("Pattern_cone")
 damage_scaling = SubResource("S_damage")
 duration_scaling = SubResource("S_duration")
 
@@ -39,18 +48,18 @@ duration_scaling = SubResource("S_duration")
 script = ExtResource("3_line")
 card_type = "move"
 description = "Te movés."
-card_range = 38
+movement_base_modules = 5
 range_scaling = SubResource("Scale_Line_bottom")
 
 [sub_resource type="Resource" id="Resource_top"]
 script = ExtResource("2_action")
 lines = Array[ExtResource("3_line")]([SubResource("Line_top")])
-color = Color(0.4, 0.18, 0.06, 1)
+intelligence = "linguistica"
 
 [sub_resource type="Resource" id="Resource_bottom"]
 script = ExtResource("2_action")
 lines = Array[ExtResource("3_line")]([SubResource("Line_bottom")])
-color = Color(0.08, 0.26, 0.14, 1)
+intelligence = "linguistica"
 
 [resource]
 script = ExtResource("1_card")

@@ -82,11 +82,15 @@ var player_overwatch_half_angle: float   = 45.0
 var player_overwatch_damage:     int     = 0
 var player_overwatch_damage_type: String = FISICO
 
-var hand: Array = []
+var hand: Array[CardData] = []
 ## Las dos mitades elegidas este turno (superior de una carta, inferior de la otra).
 var turn_actions: Array = []
 var draw_pile: Array = []
 var discard_pile: Array = []
+
+## Ecos juntados jugando cartas en este combate (echo_id -> cantidad). Se
+## acreditan al depósito del laboratorio solo si se gana (CombatResultFlow).
+var echoes_earned: Dictionary = {}
 
 ## Duración real de un estado para quien lo recibe: la base menos su
 ## reducción por resistencia, nunca menos de 1.
@@ -94,35 +98,13 @@ func status_turns(base: int, on_player: bool) -> int:
 	var reduction := player_status_reduction if on_player else enemy_status_reduction
 	return maxi(1, base - reduction)
 
-## Qué deja un charco al caerle encima a alguien (traslado de charco, hechizos
-## que dejan charcos): efecto → [estado, turnos base].
-const PUDDLE_IMPACTS := {
-	"wet": ["wet", 3], "fire": ["burn", 3], "poison": ["poison", 3], "blood": ["bleed", 4],
-	"grease": ["slow", 3], "vine": ["entangle", 2], "sand": ["blind", 2], "ice": ["freeze", 2],
-}
-
-## Un charco le cae encima al enemigo: le aplica su estado (con el daño por
-## turno del charco si tiene). Devuelve [estado, turnos] o [] si no aplica nada.
+## Compatibilidad temporal para tests y llamados externos antiguos. Las reglas
+## reales de zonas viven en CombatZoneEffectResolver.
 func puddle_impact_on_enemy(effect: String, tick_damage: int) -> Array:
-	if not PUDDLE_IMPACTS.has(effect):
-		return []
-	match effect:
-		"fire": enemy_burn_damage = tick_damage if tick_damage > 0 else BURN_DAMAGE
-		"poison": enemy_poison_damage = tick_damage if tick_damage > 0 else POISON_DAMAGE_PER_STACK
-		"blood": enemy_bleed_damage = tick_damage if tick_damage > 0 else BLEED_DAMAGE
-	var status: String = PUDDLE_IMPACTS[effect][0]
-	return [status, set_enemy_status(status, PUDDLE_IMPACTS[effect][1])]
+	return CombatZoneEffectResolver.new().apply_direct_impact(self, effect, tick_damage, false)
 
-## Igual que puddle_impact_on_enemy, para el jugador.
 func puddle_impact_on_player(effect: String, tick_damage: int) -> Array:
-	if not PUDDLE_IMPACTS.has(effect):
-		return []
-	match effect:
-		"fire": player_burn_damage = tick_damage if tick_damage > 0 else BURN_DAMAGE
-		"poison": player_poison_damage = tick_damage if tick_damage > 0 else POISON_DAMAGE_PER_STACK
-		"blood": player_bleed_damage = tick_damage if tick_damage > 0 else BLEED_DAMAGE
-	var status: String = PUDDLE_IMPACTS[effect][0]
-	return [status, set_player_status(status, PUDDLE_IMPACTS[effect][1])]
+	return CombatZoneEffectResolver.new().apply_direct_impact(self, effect, tick_damage, true)
 
 ## Aplica un estado al jugador por `base` turnos (menos su resistencia).
 func set_player_status(effect: String, base: int) -> int:

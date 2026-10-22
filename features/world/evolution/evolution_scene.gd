@@ -139,15 +139,6 @@ func _load_model(data: YounData) -> void:
 		var mat := StandardMaterial3D.new()
 		mat.albedo_texture = data.texture
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-		for mesh in _find_meshes(_current_model):
+		for mesh in Node3DSearch.find_meshes(_current_model):
 			mesh.material_override = mat
 	_youn_holder.add_child(_current_model)
-
-
-func _find_meshes(node: Node) -> Array[MeshInstance3D]:
-	var result: Array[MeshInstance3D] = []
-	if node is MeshInstance3D:
-		result.append(node)
-	for child in node.get_children():
-		result.append_array(_find_meshes(child))
-	return result

@@ -2,10 +2,15 @@
 
 [ext_resource type="Script" path="res://features/world/game_world/game_world.gd"    id="1_gw"]
 [ext_resource type="PackedScene" path="res://features/menus/main_menu/main_menu.tscn" id="2_menu"]
+[ext_resource type="PackedScene" path="res://features/world/game_world/world_lighting.tscn" id="3_lighting"]
+[ext_resource type="Script" path="res://features/world/game_world/intro_tutorial.gd" id="4_intro"]
+[ext_resource type="Texture2D" path="res://assets/ui/PNG/Double/Transparent border/panel-transparent-border-015.png" id="5_border"]
 
 [node name="GameWorld" type="Node3D"]
 process_mode = 3
 script = ExtResource("1_gw")
+
+[node name="WorldLighting" parent="." instance=ExtResource("3_lighting")]
 
 [node name="MenuLayer" type="CanvasLayer" parent="."]
 
@@ -24,6 +29,7 @@ visible = false
 overlay_mode = true
 
 [node name="IntroLayer" type="CanvasLayer" parent="."]
+script = ExtResource("4_intro")
 
 [node name="Backdrop" type="ColorRect" parent="IntroLayer"]
 layout_mode = 1
@@ -34,7 +40,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.03, 0.04, 0.05, 0.82)
 
-[node name="Panel" type="Panel" parent="IntroLayer"]
+[node name="Panel" type="Control" parent="IntroLayer"]
 layout_mode = 0
 anchor_left = 0.18
 anchor_top = 0.17
@@ -43,8 +49,32 @@ anchor_bottom = 0.83
 grow_horizontal = 2
 grow_vertical = 2
 
+[node name="Background" type="ColorRect" parent="IntroLayer/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.055, 0.043, 0.03, 0.94)
+
+[node name="Border" type="NinePatchRect" parent="IntroLayer/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("5_border")
+patch_margin_left = 12
+patch_margin_top = 12
+patch_margin_right = 12
+patch_margin_bottom = 12
+draw_center = false
+modulate = Color(0.69, 0.59, 0.4, 1)
+
 [node name="Margin" type="MarginContainer" parent="IntroLayer/Panel"]
-layout_mode = 0
+layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -61,6 +91,11 @@ theme_override_constants/separation = 14
 
 [node name="Title" type="Label" parent="IntroLayer/Panel/Margin/VBox"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.96, 0.86, 0.62, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 30
 text = "Demo"
 horizontal_alignment = 1
 
@@ -68,10 +103,14 @@ horizontal_alignment = 1
 custom_minimum_size = Vector2(0, 220)
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_colors/default_color = Color(0.96, 0.93, 0.84, 1)
+theme_override_font_sizes/normal_font_size = 24
 bbcode_enabled = true
 scroll_active = false
 
 [node name="Hint" type="Label" parent="IntroLayer/Panel/Margin/VBox"]
 layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.8, 0.58, 0.9)
+theme_override_font_sizes/font_size = 18
 text = "Enter o Espacio para continuar"
 horizontal_alignment = 1

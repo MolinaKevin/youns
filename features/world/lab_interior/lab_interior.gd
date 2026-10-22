@@ -31,25 +31,25 @@ func _ready() -> void:
 	_refresh_analysis_terminal()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _is_cancel_pressed(event) and _terminal_clock_open:
+	if InputPresses.is_cancel_pressed(event) and _terminal_clock_open:
 		get_viewport().set_input_as_handled()
 		_toggle_terminal_clock(false)
 		return
-	if _is_cancel_pressed(event) and lab_ui.visible:
+	if InputPresses.is_cancel_pressed(event) and lab_ui.visible:
 		get_viewport().set_input_as_handled()
 		_toggle_lab()
 		return
-	if _is_cancel_pressed(event) and menu.visible:
+	if InputPresses.is_cancel_pressed(event) and menu.visible:
 		get_viewport().set_input_as_handled()
 		_toggle_menu()
 		return
-	if _is_menu_pressed(event):
+	if InputPresses.is_menu_pressed(event):
 		get_viewport().set_input_as_handled()
 		_toggle_menu()
 		return
-	elif _near_monzaemon and _is_interact_pressed(event):
+	elif _near_monzaemon and InputPresses.is_interact_pressed(event):
 		_toggle_lab()
-	elif _near_terminal and _is_interact_pressed(event):
+	elif _near_terminal and InputPresses.is_interact_pressed(event):
 		_toggle_terminal_clock(not _terminal_clock_open)
 
 func _toggle_lab() -> void:
@@ -113,27 +113,6 @@ func _toggle_menu() -> void:
 	GlobalHUD.set_youns_status_visible(false if showing else GlobalHUD.has_persistent_care_ui())
 	PartyManager.camera_rig.enabled = not showing
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if showing else Input.MOUSE_MODE_CAPTURED
-
-func _is_cancel_pressed(event: InputEvent) -> bool:
-	if not event.is_action_pressed("ui_cancel"):
-		return false
-	if event is InputEventKey:
-		return not event.echo
-	return true
-
-func _is_menu_pressed(event: InputEvent) -> bool:
-	if not event.is_action_pressed("menu_toggle"):
-		return false
-	if event is InputEventKey:
-		return not event.echo
-	return true
-
-func _is_interact_pressed(event: InputEvent) -> bool:
-	if not event.is_action_pressed("interact"):
-		return false
-	if event is InputEventKey:
-		return not event.echo
-	return true
 
 func _exit_tree() -> void:
 	PauseMenu.enabled = false

@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="BiomeData" format=3]
+
+[ext_resource type="Script" path="res://data/biomes/biome_data.gd" id="1_script"]
+[ext_resource type="Script" path="res://data/biomes/pradera_combat_layout.gd" id="2_layout_script"]
+
+[sub_resource type="Resource" id="PraderaCombatLayout_pradera"]
+script = ExtResource("2_layout_script")
+
+[resource]
+script = ExtResource("1_script")
+id = "pradera"
+combat_layout = SubResource("PraderaCombatLayout_pradera")

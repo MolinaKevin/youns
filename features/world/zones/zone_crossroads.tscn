@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://zone_crossroads"]
 
 [ext_resource type="Script" uid="uid://w0vfg42ihqs0" path="res://features/world/zones/zone_base.gd" id="1"]
+[ext_resource type="Resource" path="res://data/biomes/pradera.tres" id="biome_pradera"]
 
 [sub_resource type="PlaneMesh" id="1"]
 size = Vector2(150, 150)
@@ -13,6 +14,7 @@ size = Vector3(130, 20, 130)
 
 [node name="ZoneCrossroads" type="Node3D"]
 script = ExtResource("1")
+biome = ExtResource("biome_pradera")
 
 [node name="Floor" type="StaticBody3D" parent="."]
 

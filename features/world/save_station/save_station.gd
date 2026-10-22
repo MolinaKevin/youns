@@ -99,7 +99,7 @@ func _apply_text(_language: String = "") -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not _near or _dialog != null:
 		return
-	if event.is_action_pressed("interact") and not (event is InputEventKey and event.echo):
+	if InputPresses.is_interact_pressed(event):
 		get_viewport().set_input_as_handled()
 		_open_dialog()
 
@@ -173,6 +173,6 @@ class _CancelCatcher extends Node:
 	func _ready() -> void:
 		process_mode = Node.PROCESS_MODE_ALWAYS
 	func _unhandled_input(event: InputEvent) -> void:
-		if event.is_action_pressed("ui_cancel") and not (event is InputEventKey and event.echo):
+		if InputPresses.is_cancel_pressed(event):
 			get_viewport().set_input_as_handled()
 			cancelled.emit()

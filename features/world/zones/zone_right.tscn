@@ -2,9 +2,10 @@
 
 [ext_resource type="Script" uid="uid://rx6q8c0t2q3m" path="res://features/world/zones/zone_right.gd" id="1"]
 [ext_resource type="PackedScene" uid="uid://cq54nofj1l3bn" path="res://assets/maps/hub/pradera_derecha.glb" id="2_pradera"]
-[ext_resource type="PackedScene" path="res://features/world/enemies/world_wild_youn.tscn" id="3_world_enemy"]
+[ext_resource type="PackedScene" path="res://features/world/npcs/world_youn.tscn" id="3_world_enemy"]
 [ext_resource type="Resource" uid="uid://ctpvd6ffvqhhm" path="res://data/youns/pombero.tres" id="4_agumon_data"]
 [ext_resource type="Resource" path="res://data/youns/monzaemon.tres" id="5_monzaemon_data"]
+[ext_resource type="Resource" path="res://data/biomes/pradera.tres" id="biome_pradera"]
 
 [sub_resource type="PlaneMesh" id="1"]
 size = Vector2(240, 240)
@@ -17,6 +18,7 @@ size = Vector3(130, 20, 130)
 
 [node name="ZoneCrossroads" type="Node3D" unique_id=81379989]
 script = ExtResource("1")
+biome = ExtResource("biome_pradera")
 
 [node name="PraderaDerecha" parent="." unique_id=1560200473 instance=ExtResource("2_pradera")]
 

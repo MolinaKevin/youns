@@ -19,10 +19,13 @@ var _stat_change_pending := false
 ## Mapa de estados activos: emotion_name -> total_hour en que apareció
 var active_states: Dictionary = {}
 
+var _life_stage: StatsLifeStage
+
 var emotions_blocked: bool:
 	get: return _emotion_block_count > 0
 
 func _ready() -> void:
+	_life_stage = StatsLifeStage.new(self)
 	_stat_configs = _load_stat_configs()
 	_emotion_rules = _load_emotion_rules()
 	GameState.twenty_min_ticked.connect(apply_stat_decay)
@@ -80,8 +83,8 @@ func write_to_save(save: PlayerSaveData) -> void:
 func restore_from_save(save: PlayerSaveData) -> void:
 	active_states = save.active_states.duplicate(true) if save != null else {}
 	_stat_accumulators.clear()
-	# Una evolución guardada a medias sigue bloqueando las emociones (game_world
-	# la retoma con _restore_pending_evolution).
+	# Una evolución guardada a medias sigue bloqueando las emociones
+	# (YounLifeEvents la retoma con restore_pending_evolution()).
 	_emotion_block_count = 1 if ("evolving" in active_states or "dying" in active_states) else 0
 	_queue_stat_changed()
 
@@ -289,87 +292,27 @@ func on_wake_up(sleep_duration_hours: float) -> void:
 
 func check_status() -> void:
 	_sync_sick_emotion()
-	if _check_health_death():
+	if _life_stage.check_health_death():
 		return
 	check_emotions()
 	_evaluate_emotion_rules()
 	check_evolution()
 
-## Salud en 0: el Youn muere (sin dejar carta) y el jugador pierde una vida.
-func _check_health_death() -> bool:
-	var ps := GameState.player_save
-	if ps == null or ps.salud > 0 or ps.current_youn_path.is_empty():
-		return false
-	if "dying" in active_states or "evolving" in active_states:
-		return true
-	start_reincarnation(ReincarnationRules.CAUSE_HEALTH)
-	return true
-
 func check_evolution() -> void:
-	var ps := GameState.player_save
-	if ps == null or ps.current_youn_path.is_empty():
-		return
-	if not ResourceLoader.exists(ps.current_youn_path):
-		return
-	# Ya está evolucionando o muriendo.
-	if "evolving" in active_states or "dying" in active_states:
-		return
-	var youn_data := load(ps.current_youn_path) as YounData
-	var target := EvolutionChecker.try_evolve(ps, youn_data)
-	if target.is_empty():
-		return
-	if target == EvolutionChecker.REINCARNATE:
-		start_reincarnation()
-		return
-	start_evolution(target)
+	_life_stage.check_evolution()
 
 ## El Youn muere: por fin de su vida (campeón sin ultimate, o ultimate al
 ## terminar su tiempo) o por salud en 0 (ReincarnationRules.CAUSE_*).
 func start_reincarnation(cause := ReincarnationRules.CAUSE_AGE) -> void:
-	var ps := GameState.player_save
-	if ps == null or "dying" in active_states:
-		return
-	var from_data: YounData = null
-	if not ps.current_youn_path.is_empty() and ResourceLoader.exists(ps.current_youn_path):
-		from_data = load(ps.current_youn_path) as YounData
-	active_states.clear()
-	active_states["dying"] = {"hour": GameState.get_total_hours(), "stat_value": 100.0, "cause": cause}
-	block_emotions()
-	reincarnation_triggered.emit(from_data, cause)
+	_life_stage.start_reincarnation(cause)
 
 ## Nace el bebé elegido, con la carta heredada (ver ReincarnationRules). Si
 ## murió por salud, el jugador pierde una vida.
 func complete_reincarnation(baby: YounData, inherited: CardData) -> void:
-	var ps := GameState.player_save
-	if ps == null or baby == null:
-		return
-	if active_states.get("dying", {}).get("cause", "") == ReincarnationRules.CAUSE_HEALTH:
-		ps.lives = maxi(0, ps.lives - 1)
-	ReincarnationRules.start_new_life(ps, baby, inherited)
-	active_states.clear()
-	_stat_accumulators.clear()
-	_emotion_block_count = 0
-	_queue_stat_changed()
+	_life_stage.complete_reincarnation(baby, inherited)
 
 func start_evolution(to_path: String) -> void:
-	var ps := GameState.player_save
-	if ps == null or to_path.is_empty():
-		return
-	var from_data: YounData = null
-	if not ps.current_youn_path.is_empty() and ResourceLoader.exists(ps.current_youn_path):
-		from_data = load(ps.current_youn_path) as YounData
-	var to_data: YounData = null
-	if ResourceLoader.exists(to_path):
-		to_data = load(to_path) as YounData
-	ps.pending_evolution_path = to_path
-	active_states.clear()
-	active_states["evolving"] = {
-		"hour": GameState.get_total_hours(),
-		"stat_value": 100.0,
-		"target_youn_path": to_path,
-	}
-	block_emotions()
-	evolution_triggered.emit(from_data, to_data)
+	_life_stage.start_evolution(to_path)
 
 ## Termina la evolución: aplica las stats y agrega la carta característica al
 ## mazo. Devuelve lo que pasó, para la pantalla de evolución:
@@ -378,36 +321,7 @@ func start_evolution(to_path: String) -> void:
 ##  "discovery": condición descubierta (ver EvolutionDiscovery.discover)}.
 ## Recolorear mitades y agregar líneas lo elige el jugador en esa pantalla.
 func complete_evolution() -> Dictionary:
-	var ps := GameState.player_save
-	if ps == null or ps.pending_evolution_path.is_empty():
-		return {}
-	var from_data: YounData = null
-	if not ps.current_youn_path.is_empty() and ResourceLoader.exists(ps.current_youn_path):
-		from_data = load(ps.current_youn_path) as YounData
-	var to_data: YounData = null
-	if ResourceLoader.exists(ps.pending_evolution_path):
-		to_data = load(ps.pending_evolution_path) as YounData
-	var stats_before := ps.youn_stats.duplicate()
-	# Qué condiciones se cumplieron (con el Youn y las stats de antes de evolucionar).
-	var met := EvolutionDiscovery.met_indices(to_data, EvolutionChecker.make_context(ps, from_data))
-	var discovery := EvolutionDiscovery.discover(ps, to_data, met)
-	ps.current_youn_path = ps.pending_evolution_path
-	if to_data != null:
-		YounStatRules.apply_evolution(ps, to_data)
-	var stat_changes := {}
-	for key in YounStats.KEYS:
-		var delta := int(ps.youn_stats.get(key, 0)) - int(stats_before.get(key, 0))
-		if delta != 0:
-			stat_changes[key] = delta
-	var added_card: CardData = null
-	if to_data != null and to_data.signature_card != null:
-		added_card = DeckRules.add_card(ps, to_data.signature_card)
-	ps.stage_entered_total_hour = GameState.get_total_hours()
-	ps.pending_evolution_path = ""
-	active_states.erase("evolving")
-	unblock_emotions()
-	return {"from": from_data, "to": to_data, "stat_changes": stat_changes, "added_card": added_card,
-		"discovery": discovery}
+	return _life_stage.complete_evolution()
 
 func check_emotions() -> void:
 	var total_h := GameState.get_total_hours()

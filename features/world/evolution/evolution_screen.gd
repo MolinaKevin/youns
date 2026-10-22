@@ -344,7 +344,7 @@ func _on_half_pressed(card: CardData, is_top: bool) -> void:
 		return
 	if _section == Section.COLORS and _selected_color != "" and _remaining_colors.get(_selected_color, 0) > 0:
 		_history.append({"type": "color", "card": card, "action": action,
-			"prev_color": action.color, "prev_intelligence": action.intelligence, "id": _selected_color})
+			"prev_intelligence": action.intelligence, "id": _selected_color})
 		DeckRules.recolor(action, _selected_color)
 		_remaining_colors[_selected_color] -= 1
 		if _remaining_colors[_selected_color] <= 0:
@@ -378,7 +378,6 @@ func _undo(type: String) -> void:
 			continue
 		var action: CardAction = op["action"]
 		if type == "color":
-			action.color = op["prev_color"]
 			action.intelligence = op["prev_intelligence"]
 			_remaining_colors[op["id"]] += 1
 		else:

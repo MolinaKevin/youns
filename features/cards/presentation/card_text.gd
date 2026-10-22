@@ -45,13 +45,15 @@ static func icon(key: String) -> Texture2D:
 	return ICONS.get(key)
 
 ## Partes que se muestran de una línea: [{"icon": Texture2D, "value": String, "color": Color}].
-## El primer ícono dice qué hace la línea; los siguientes, sus distancias en casillas:
+## El primer ícono dice qué hace la línea; los siguientes, sus distancias en módulos:
 ## target = rango, throw = distancia de lanzamiento, radius = radio del área.
 static func line_parts(line: CardActionLine) -> Array[Dictionary]:
 	var parts: Array[Dictionary] = []
-	var add := func(key: String, value: int, color := Color.WHITE, show_zero := false) -> void:
-		if value > 0 or show_zero:
-			parts.append({"icon": ICONS[key], "value": str(value) if value > 0 else "", "color": color})
+	var add := func(key: String, value: Variant, color := Color.WHITE, show_zero := false) -> void:
+		var value_text := str(value)
+		var has_value := value_text != "" and value_text != "0"
+		if has_value or show_zero:
+			parts.append({"icon": ICONS[key], "value": value_text if has_value else "", "color": color})
 	var dmg_color: Color = MAGIC_COLOR if line.damage_type == CombatState.MAGICO else Color.WHITE
 	match line.card_type:
 		"move":
@@ -61,7 +63,7 @@ static func line_parts(line: CardActionLine) -> Array[Dictionary]:
 			add.call("sword", line.damage, dmg_color, true)
 		"range_attack":
 			add.call("bow", line.damage, dmg_color, true)
-			add.call("target", line.card_range)
+			add.call("target", line.primary_module_label())
 		"block":
 			add.call("shield", line.block_amount, Color.WHITE, true)
 		"ward":
@@ -73,91 +75,91 @@ static func line_parts(line: CardActionLine) -> Array[Dictionary]:
 			add.call("heal", line.restore_amount, MP_COLOR, true)
 		"grenade":
 			add.call("bomb", line.damage, dmg_color, true)
-			add.call("throw", line.throw_range)
-			add.call("radius", line.card_range)
+			add.call("throw", line.cast_module_label())
+			add.call("radius", line.primary_module_label())
 		"trap_place", "trap_throw":
 			add.call("trap", line.damage, Color.WHITE, true)  # las trampas siempre hacen daño físico
-			add.call("throw", line.throw_range)
-			add.call("radius", line.card_range)
+			add.call("throw", line.cast_module_label())
+			add.call("radius", line.primary_module_label())
 		"puddle":
 			var tint: Color = PUDDLE_COLORS.get(line.puddle_effect, Color.WHITE)
 			# El número junto a la gota es el daño por turno del estado que deja.
 			add.call("drop", line.damage, tint.lightened(0.3), true)
-			add.call("throw", line.throw_range)
-			add.call("radius", line.card_range)
+			add.call("throw", line.cast_module_label())
+			add.call("radius", line.primary_module_label())
 			add.call("clock", line.duration)
 		"push":
-			add.call("push", line.throw_range, Color.WHITE, true)
-			add.call("target", line.card_range)
+			add.call("push", line.cast_module_label(), Color.WHITE, true)
+			add.call("target", line.primary_module_label())
 		"pull":
-			add.call("pull", line.throw_range, Color.WHITE, true)
-			add.call("target", line.card_range)
+			add.call("pull", line.cast_module_label(), Color.WHITE, true)
+			add.call("target", line.primary_module_label())
 		"break":
 			add.call("break", line.module_count, Color.WHITE, true)
-			add.call("target", line.card_range)
+			add.call("target", line.primary_module_label())
 		"build":
 			add.call("wall", line.module_count, Color.WHITE, true)
-			add.call("target", line.card_range)
+			add.call("target", line.primary_module_label())
 		"element_bolt":
 			add.call("drop", 0, PUDDLE_COLORS.get(line.puddle_effect, Color.WHITE).lightened(0.3), true)
 			add.call("bomb", line.damage, MAGIC_COLOR, true)
-			add.call("throw", line.throw_range)
-			add.call("radius", line.card_range)
+			add.call("throw", line.cast_module_label())
+			add.call("radius", line.primary_module_label())
 		"chain_bolt":
 			add.call("bow", line.damage, MAGIC_COLOR, true)
-			add.call("target", line.throw_range)
+			add.call("target", line.cast_module_label())
 		"delayed_area":
 			add.call("bomb", line.damage, MAGIC_COLOR, true)
 			add.call("drop", 0, PUDDLE_COLORS.get(line.puddle_effect, Color.WHITE).lightened(0.3), true)
-			add.call("throw", line.throw_range)
-			add.call("radius", line.card_range)
+			add.call("throw", line.cast_module_label())
+			add.call("radius", line.primary_module_label())
 			add.call("clock", line.delay)
 		"cone_blast":
 			add.call("sword", line.damage, MAGIC_COLOR, true)
-			add.call("target", line.throw_range)
+			add.call("target", line.cast_module_label())
 		"curse":
 			add.call("eye", line.damage, MAGIC_COLOR, true)
 			add.call("clock", line.duration)
-			add.call("target", line.throw_range)
+			add.call("target", line.cast_module_label())
 		"nova":
-			add.call("push", line.throw_range, MAGIC_COLOR, true)
+			add.call("push", line.cast_module_label(), MAGIC_COLOR, true)
 			add.call("sword", line.damage, MAGIC_COLOR)
-			add.call("radius", line.card_range)
+			add.call("radius", line.primary_module_label())
 		"heal":
 			add.call("heal", line.restore_amount, Color(0.5, 1.0, 0.55), true)
 		"enchant":
 			add.call("sword", line.damage, MAGIC_COLOR, true)
 		"puddle_hop":
 			add.call("drop", line.damage, MAGIC_COLOR, true)
-			add.call("throw", line.throw_range)
-			add.call("move", line.card_range)
+			add.call("throw", line.cast_module_label())
+			add.call("move", line.primary_module_label())
 		"tree_climb":
 			add.call("jump", line.damage, Color.WHITE, true)
-			add.call("move", line.throw_range)
+			add.call("move", line.cast_module_label())
 		"blink":
-			add.call("move", line.throw_range, MAGIC_COLOR, true)
+			add.call("move", line.cast_module_label(), MAGIC_COLOR, true)
 		"module_throw":
 			add.call("wall", 0, Color.WHITE, true)
-			add.call("throw", line.throw_range)
+			add.call("throw", line.cast_module_label())
 			add.call("bomb", line.damage, dmg_color)
 		"collapse":
 			add.call("wall", 0, Color.WHITE, true)
 			add.call("sword", line.damage, dmg_color)
-			add.call("target", line.card_range)
+			add.call("target", line.primary_module_label())
 		"module_push":
 			add.call("wall", 0, Color.WHITE, true)
-			add.call("push", line.throw_range)
+			add.call("push", line.cast_module_label())
 			add.call("sword", line.damage, dmg_color)
 		"anchor":
-			add.call("anchor", line.throw_range, Color.WHITE, true)
-			add.call("throw", line.card_range)
+			add.call("anchor", line.cast_module_label(), Color.WHITE, true)
+			add.call("throw", line.primary_module_label())
 		"rock_jump":
 			add.call("jump", line.damage, dmg_color, true)
-			add.call("target", line.card_range)
-			add.call("throw", line.throw_range)
+			add.call("target", line.primary_module_label())
+			add.call("throw", line.cast_module_label())
 		"overwatch":
 			add.call("eye", line.damage, dmg_color, true)
-			add.call("target", line.card_range)
+			add.call("target", line.primary_module_label())
 		_:
 			parts.append({"icon": null, "value": LocalizationState.card_type_name(line.card_type), "color": Color.WHITE})
 	if line.mp_cost > 0:
@@ -173,10 +175,10 @@ static func line_summary(line: CardActionLine) -> String:
 		parts.append(LocalizationState.t("card.stat.block", [line.block_amount]))
 	if line.card_type == "move":
 		parts.append("%s módulos" % line.movement_module_label())
-	elif line.card_range > 0:
-		parts.append(LocalizationState.t("card.stat.range", [line.card_range]))
-	if line.throw_range > 0:
-		parts.append(LocalizationState.t("card.stat.throw", [line.throw_range]))
+	elif line.primary_range_cells() > 0:
+		parts.append(LocalizationState.t("card.stat.range", [line.primary_module_label()]))
+	if line.cast_range_cells() > 0:
+		parts.append(LocalizationState.t("card.stat.throw", [line.cast_module_label()]))
 	if line.duration > 0:
 		parts.append(LocalizationState.t("card.stat.duration", [line.duration]))
 	if line.mp_cost > 0:

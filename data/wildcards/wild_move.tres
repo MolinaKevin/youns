@@ -12,4 +12,4 @@ card_range = 25
 [resource]
 script = ExtResource("1_action")
 lines = Array[ExtResource("2_line")]([SubResource("Line_0")])
-color = Color(0.08, 0.26, 0.14, 1)
+intelligence = "linguistica"

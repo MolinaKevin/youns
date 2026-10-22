@@ -10,6 +10,42 @@ const MOVEMENT_MODULE_CELLS := 8
 ## Las líneas de una mitad se ejecutan en orden. Cada campo se interpreta según
 ## card_type (p. ej. card_range es la distancia en "move" y el radio en "puddle").
 
+## Constantes para comparar card_type sin escribir el string a mano: un typo
+## en TYPE_MOVE es error de compilación, un typo en "move" no. El campo sigue
+## siendo String (no un enum) para no tener que resavear los .tres de cartas.
+const TYPE_MOVE := "move"
+const TYPE_MELEE_ATTACK := "melee_attack"
+const TYPE_RANGE_ATTACK := "range_attack"
+const TYPE_GRENADE := "grenade"
+const TYPE_TRAP_PLACE := "trap_place"
+const TYPE_TRAP_THROW := "trap_throw"
+const TYPE_BLOCK := "block"
+const TYPE_WARD := "ward"
+const TYPE_MP_RESTORE := "mp_restore"
+const TYPE_COUNTER := "counter"
+const TYPE_NOVA := "nova"
+const TYPE_HEAL := "heal"
+const TYPE_ENCHANT := "enchant"
+const TYPE_ELEMENT_BOLT := "element_bolt"
+const TYPE_CHAIN_BOLT := "chain_bolt"
+const TYPE_DELAYED_AREA := "delayed_area"
+const TYPE_CONE_BLAST := "cone_blast"
+const TYPE_CURSE := "curse"
+const TYPE_BLINK := "blink"
+const TYPE_PUDDLE_HOP := "puddle_hop"
+const TYPE_TREE_CLIMB := "tree_climb"
+const TYPE_ROCK_JUMP := "rock_jump"
+const TYPE_PUSH := "push"
+const TYPE_PULL := "pull"
+const TYPE_ANCHOR := "anchor"
+const TYPE_BREAK := "break"
+const TYPE_MODULE_PUSH := "module_push"
+const TYPE_BUILD := "build"
+const TYPE_MODULE_THROW := "module_throw"
+const TYPE_COLLAPSE := "collapse"
+const TYPE_PUDDLE := "puddle"
+const TYPE_OVERWATCH := "overwatch"
+
 @export var card_type: String
 ## Texto libre de la línea. Por ahora solo se guarda, no se muestra en ningún lado.
 @export var description: String = ""
@@ -30,6 +66,21 @@ const MOVEMENT_MODULE_CELLS := 8
 @export var block_amount: int = 0
 @export var bounce: float = 0.0
 @export var throw_range: int = 0
+## Dimensiones espaciales para líneas que no son movimiento. La primaria
+## corresponde a card_range (alcance, radio o largo según la acción); la de
+## lanzamiento corresponde a throw_range. En 0, ambas derivan sus módulos de
+## los valores antiguos durante la migración.
+@export_group("Patrón modular")
+@export var primary_base_modules: int = 0
+@export var primary_extra_modules: int = 0
+@export_range(0.5, 1.5, 0.01) var primary_stat_multiplier: float = 1.0
+@export var cast_base_modules: int = 0
+@export var cast_extra_modules: int = 0
+@export_range(0.5, 1.5, 0.01) var cast_stat_multiplier: float = 1.0
+## Nulo = la línea conserva su comportamiento actual; los patrones nuevos se
+## agregan de forma gradual por recurso.
+@export var pattern: CardPattern
+@export_group("")
 @export var puddle_effect: String = "wet"
 ## Estado que aplica la línea (maldiciones, aliento, encantar arma). Ver
 ## CombatState.set_enemy_status.
@@ -74,7 +125,13 @@ func resolved(stats: Dictionary) -> CardActionLine:
 	if block_scaling != null:
 		r.block_amount = block_scaling.evaluate(stats)
 	if range_scaling != null:
-		r.card_range = range_scaling.evaluate(stats)
+		var scaled_range_modules := modules_from_cells(range_scaling.evaluate(stats))
+		if r.movement_base_modules > 0:
+			r.movement_extra_modules = scaled_range_modules - r.movement_base_modules
+		elif r.primary_base_modules > 0:
+			r.primary_extra_modules = scaled_range_modules - r.primary_base_modules
+		else:
+			r.card_range = range_scaling.evaluate(stats)
 	if module_scaling != null:
 		r.module_count = module_scaling.evaluate(stats)
 	if duration_scaling != null:
@@ -82,7 +139,11 @@ func resolved(stats: Dictionary) -> CardActionLine:
 	if restore_scaling != null:
 		r.restore_amount = restore_scaling.evaluate(stats)
 	if throw_scaling != null:
-		r.throw_range = throw_scaling.evaluate(stats)
+		var scaled_cast_modules := modules_from_cells(throw_scaling.evaluate(stats))
+		if r.cast_base_modules > 0:
+			r.cast_extra_modules = scaled_cast_modules - r.cast_base_modules
+		else:
+			r.throw_range = throw_scaling.evaluate(stats)
 	# Salud baja del Youn: rinden menos el daño, el bloqueo y la curación.
 	var health: float = stats.get("health_factor", 1.0)
 	if health < 1.0:
@@ -123,3 +184,48 @@ static func movement_modules_label(modules: float) -> String:
 
 static func movement_modules_label_for_cells(cells: int) -> String:
 	return movement_modules_label(float(cells) / float(MOVEMENT_MODULE_CELLS))
+
+
+func primary_modules() -> int:
+	return primary_base_modules if primary_base_modules > 0 else modules_from_cells(card_range)
+
+
+func primary_effective_modules() -> float:
+	return float(primary_modules() + primary_extra_modules) * primary_stat_multiplier
+
+
+func primary_range_cells() -> int:
+	return cells_for_modules(primary_effective_modules())
+
+
+func primary_module_label() -> String:
+	return modules_label(primary_effective_modules())
+
+
+func cast_modules() -> int:
+	return cast_base_modules if cast_base_modules > 0 else modules_from_cells(throw_range)
+
+
+func cast_effective_modules() -> float:
+	return float(cast_modules() + cast_extra_modules) * cast_stat_multiplier
+
+
+func cast_range_cells() -> int:
+	return cells_for_modules(cast_effective_modules())
+
+
+func cast_module_label() -> String:
+	return modules_label(cast_effective_modules())
+
+
+static func modules_from_cells(cells: int) -> int:
+	return maxi(0, roundi(float(cells) / float(MOVEMENT_MODULE_CELLS)))
+
+
+static func cells_for_modules(modules: float) -> int:
+	return maxi(0, roundi(modules * MOVEMENT_MODULE_CELLS))
+
+
+static func modules_label(modules: float) -> String:
+	var rounded := snappedf(modules, 0.1)
+	return str(roundi(rounded)) if is_equal_approx(rounded, float(roundi(rounded))) else "%.1f" % rounded

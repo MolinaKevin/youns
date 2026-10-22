@@ -6,6 +6,10 @@ extends Node3D
 # nodo ZoneTrigger de las escenas ya no se usa.
 var zone_id := ""
 
+## Bioma de esta zona (data/biomes/*.tres). Se asigna a mano en el Inspector;
+## varias zonas pueden compartir el mismo recurso de bioma.
+@export var biome: BiomeData
+
 func _ready() -> void:
 	pass
 

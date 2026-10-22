@@ -97,7 +97,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _busy:
 		get_viewport().set_input_as_handled()
 		return
-	if event.is_action_pressed("ui_cancel") and not (event is InputEventKey and event.echo):
+	if InputPresses.is_cancel_pressed(event):
 		get_viewport().set_input_as_handled()
 		_close()
 

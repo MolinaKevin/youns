@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="NpcDialogue" format=3]
+
+[ext_resource type="Script" path="res://data/dialogue/npc_dialogue_line.gd" id="1_gcbaa"]
+[ext_resource type="Script" path="res://data/dialogue/npc_dialogue.gd" id="2_qmfv2"]
+
+[sub_resource type="Resource" id="Resource_jbhy1"]
+script = ExtResource("1_gcbaa")
+key = "world.hub.luzmala_npc.1"
+
+[sub_resource type="Resource" id="Resource_3fah8"]
+script = ExtResource("1_gcbaa")
+key = "world.hub.luzmala_npc.2"
+mirrored = true
+
+[sub_resource type="Resource" id="Resource_sew0l"]
+script = ExtResource("1_gcbaa")
+key = "world.hub.luzmala_npc.3"
+
+[sub_resource type="Resource" id="Resource_ns0y1"]
+script = ExtResource("1_gcbaa")
+key = "world.hub.luzmala_npc.4"
+youn_data_path = "res://data/youns/tetue.tres"
+
+[resource]
+script = ExtResource("2_qmfv2")
+lines = Array[ExtResource("1_gcbaa")]([SubResource("Resource_jbhy1"), SubResource("Resource_3fah8"), SubResource("Resource_sew0l"), SubResource("Resource_ns0y1")])

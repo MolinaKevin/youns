@@ -88,6 +88,15 @@ Se conserva el cálculo actual de casillas alcanzables, diagonales y obstáculos
 Una mejora `+1 módulo de movimiento` aumenta el presupuesto; la agilidad puede
 aplicar el multiplicador suave antes de las penalizaciones de estados.
 
+## Contacto con áreas
+
+La huella circular de un Youn se configura por diámetro modular. Para charcos,
+explosiones, líneas y conos no alcanza con rozar el borde: el área debe entrar
+al menos un tercio del radio de la huella. En una zona circular de radio `R` y
+una huella de radio `r`, el impacto ocurre hasta `R + r / 3`. Esto no cambia
+las colisiones físicas, ni la intersección usada para mezclar o convertir
+charcos.
+
 ## Una línea, no una mitad
 
 Cada `CardActionLine` resuelve su propia selección, patrón, estadística y
@@ -118,3 +127,41 @@ no cambiar de golpe todos los recursos existentes, una línea que no declare
 módulos de 8 celdas. El multiplicador editable empieza en `×1.00`; más adelante
 se definirá qué estadística, estado o mejora lo modifica entre `×0.50` y
 `×1.50`.
+
+El mismo puente ya se aplica a las demás líneas espaciales: la dimensión
+principal (`card_range`: alcance, radio o largo según el tipo) y la dimensión
+de lanzamiento (`throw_range`) se derivan a módulos si todavía no declaran sus
+campos `primary_*` o `cast_*`. Los recursos actuales siguen funcionando, pero
+la interfaz y el combate usan sus equivalentes modulares. Quedan para la fase
+siguiente las formas nuevas (línea, cruz, anillo, etc.) y la dimensión
+secundaria (ancho, apertura o grosor).
+
+Las reglas globales de combate también usan módulos: movimiento libre, trampa
+cercana, penalizaciones por mojado/grasiento y límite por ceguera. El alcance
+cuerpo a cuerpo es una excepción intencional: es un contacto fijo de 2 módulos
+y no se amplifica con estadísticas.
+
+## Próximo trabajo y consideraciones
+
+Los recursos de cartas ya declaran `movement_base_modules`,
+`primary_base_modules` y `cast_base_modules` en lugar de sus rangos antiguos.
+El puente de compatibilidad queda en el código para recursos viejos o de mods.
+
+La base de datos ya cuenta con `CardPattern`: una línea puede declarar forma,
+origen, dirección, dimensión secundaria, desplazamiento inicial y colisión.
+El generador reutilizable ya resuelve y previsualiza línea, círculo y cono.
+`Arrow`, `Nova` y `Aliento` son las cartas de prueba conectadas de punta a
+punta. Charcos, explosiones, trampas, muros, empujes, tirones, Descarga y
+vigilancia ya declaran su geometría mediante `CardPattern`; se irán conectando
+a reglas especiales adicionales a medida que esas acciones evolucionen.
+
+Lo siguiente queda como **consideración de diseño, no como obligación**:
+
+- Fórmula final y fuentes del multiplicador `×0.50–×1.50`.
+- Fuentes de módulos extra (`+1 módulo`).
+- Cruz, muro, anillo y otras formas.
+- Dimensión secundaria: ancho, apertura o grosor.
+- Migrar los mazos de enemigos a módulos.
+- Renombrar `module_count` de obstáculos para no confundirlo con los módulos
+  de alcance.
+- Tutorial e indicadores visuales para explicar la mecánica.

@@ -125,38 +125,41 @@ func test_reward_item_en_99_no_incrementa() -> void:
 
 
 # ── Ecos de cartas ───────────────────────────────────────────────────────────
+# El conteo por carta (qué Ecos da) es puro (LaboratoryEchoes.echo_ids_for_card);
+# combate es quien lo va acumulando y acá solo se prueba el acreditado final.
 
-func test_ecos_registra_los_dos_colores_de_una_carta() -> void:
+func test_echo_ids_for_card_una_por_inteligencia() -> void:
 	var card := CardData.new()
 	card.top = CardAction.new()
-	card.top.color = Color.RED
+	card.top.intelligence = "logica"
 	card.bottom = CardAction.new()
-	card.bottom.color = Color.BLUE
-	LaboratoryState.add_echoes_from_card(card)
-	assert_eq(LaboratoryState.pending_output["eco_rojo"]["count"], 1)
-	assert_eq(LaboratoryState.pending_output["eco_azul"]["count"], 1)
+	card.bottom.intelligence = "musical"
+	var ids := LaboratoryEchoes.echo_ids_for_card(card)
+	assert_true(ids.has("eco_logica"))
+	assert_true(ids.has("eco_musical"))
+	assert_eq(ids.size(), 2)
 
 
-func test_ecos_monocolor_da_un_solo_eco() -> void:
+func test_echo_ids_for_card_misma_inteligencia_da_un_solo_id() -> void:
 	var card := CardData.new()
 	card.top = CardAction.new()
-	card.top.color = Color(0.10, 0.50, 0.20)
+	card.top.intelligence = "espacial"
 	card.bottom = CardAction.new()
-	card.bottom.color = Color(0.05, 0.30, 0.12)
-	LaboratoryState.add_echoes_from_card(card)
-	assert_eq(LaboratoryState.pending_output["eco_verde"]["count"], 1)
-	assert_eq(LaboratoryState.pending_output.size(), 1)
+	card.bottom.intelligence = "espacial"
+	var ids := LaboratoryEchoes.echo_ids_for_card(card)
+	assert_eq(ids, ["eco_espacial"] as Array[String])
 
 
-func test_ecos_de_laboratorio_pueden_acumular_mas_de_99() -> void:
-	var card := CardData.new()
-	card.top = CardAction.new()
-	card.top.color = Color.RED
-	card.bottom = CardAction.new()
-	card.bottom.color = Color.RED
-	_put_item("eco_rojo", 99)
-	LaboratoryState.add_echoes_from_card(card)
-	assert_eq(LaboratoryState.pending_output["eco_rojo"]["count"], 100)
+func test_deposit_echoes_acredita_lo_juntado_en_el_combate() -> void:
+	LaboratoryState.deposit_echoes({"eco_logica": 3, "eco_musical": 1})
+	assert_eq(LaboratoryState.pending_output["eco_logica"]["count"], 3)
+	assert_eq(LaboratoryState.pending_output["eco_musical"]["count"], 1)
+
+
+func test_deposit_echoes_pueden_acumular_mas_de_99() -> void:
+	_put_item("eco_logica", 99)
+	LaboratoryState.deposit_echoes({"eco_logica": 2})
+	assert_eq(LaboratoryState.pending_output["eco_logica"]["count"], 100)
 
 
 # ── take_all_output ───────────────────────────────────────────────────────────

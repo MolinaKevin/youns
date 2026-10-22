@@ -32,8 +32,13 @@ extends Resource
 ## Solo bebés: el mazo con el que nace (al reencarnar se le suma la carta
 ## heredada).
 @export var starting_deck: Array[CardData] = []
-@export_group("")
-
+@export_group("Visual")
+## Ilustración utilizada en menús y diálogos. No es la textura del modelo 3D.
+@export var portrait: Texture2D
+## Ajustes exclusivos del retrato en la caja de diálogo.
+@export var dialogue_portrait_position: Vector2 = Vector2(-145, -70)
+@export var portrait_scale: Vector2 = Vector2(0.36, 0.36)
+@export_enum("left", "right") var dialogue_nameplate_side: String = "left"
 @export var texture: Texture2D
 @export var mesh: Mesh
 
@@ -71,7 +76,11 @@ extends Resource
 ## Radio de la huella en combate, en casillas de la grilla (CombatGrid.CELL):
 ## es la sombra que se ve bajo el personaje y las casillas que ocupa. Más grande
 ## = ocupa más lugar (no puede pasar por huecos chicos, está "más cerca" al atacar).
-@export_range(1, 60, 1) var combat_footprint_cells: int = 5
+## Diámetro de la sombra/huella en módulos de combate (1 módulo = 8 celdas).
+## 1.0 equivale a un módulo completo de diámetro.
+@export_range(0.25, 8.0, 0.25) var combat_footprint_modules: float = 1.0
+## Compatibilidad para recursos antiguos que todavía guarden la medida en celdas.
+@export_storage var combat_footprint_cells: int = 0
 @export_range(0.1, 5.0, 0.05) var collision_radius: float = 0.35
 @export_range(0.1, 5.0, 0.05) var collision_height: float = 1.6
 
@@ -134,6 +143,9 @@ func combat_max_hp() -> int:
 		return max_hp
 	return YounStatRules.max_hp(base_stats.to_dict())
 
-## Radio de la huella en unidades de mundo.
+## Radio de la huella en unidades de mundo. El tamaño se configura por diámetro
+## modular para que la sombra y las reglas de alcance hablen el mismo idioma.
 func combat_footprint_radius() -> float:
-	return float(combat_footprint_cells) * CombatGrid.CELL
+	if combat_footprint_cells > 0:
+		return float(combat_footprint_cells) * CombatGrid.CELL
+	return combat_footprint_modules * float(CardActionLine.MOVEMENT_MODULE_CELLS) * CombatGrid.CELL * 0.5

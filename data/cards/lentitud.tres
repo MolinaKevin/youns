@@ -24,25 +24,25 @@ mp_cost = 15
 description = "Maldición: el enemigo se mueve menos."
 status_effect = "slow"
 duration = 3
-throw_range = 100
+cast_base_modules = 13
 duration_scaling = SubResource("S_duration")
 
 [sub_resource type="Resource" id="Line_bottom"]
 script = ExtResource("3_line")
 card_type = "move"
 description = "Te movés."
-card_range = 38
+movement_base_modules = 5
 range_scaling = SubResource("Scale_Line_bottom")
 
 [sub_resource type="Resource" id="Resource_top"]
 script = ExtResource("2_action")
 lines = Array[ExtResource("3_line")]([SubResource("Line_top")])
-color = Color(0.24, 0.12, 0.36, 1)
+intelligence = "linguistica"
 
 [sub_resource type="Resource" id="Resource_bottom"]
 script = ExtResource("2_action")
 lines = Array[ExtResource("3_line")]([SubResource("Line_bottom")])
-color = Color(0.08, 0.26, 0.14, 1)
+intelligence = "linguistica"
 
 [resource]
 script = ExtResource("1_card")

@@ -16,8 +16,10 @@ var recipes_by_ingredient: Dictionary = {}
 
 var unlocked_columns: Array = []
 var _loading := true
+var _echoes: LaboratoryEchoes
 
 func _ready() -> void:
+	_echoes = LaboratoryEchoes.new(self)
 	call_deferred("_load_recipes_when_ready")
 
 func _load_recipes_when_ready() -> void:
@@ -198,41 +200,9 @@ func _process_reward(reward: Dictionary, _recipe_name: String) -> void:
 			_check_indirect_unlocks(item_id)
 
 
-## Registra los dos colores de una carta como Ecos. Una carta monocolor da un
-## solo Eco aunque sus dos mitades compartan el mismo color.
-func add_echoes_from_card(card: CardData) -> void:
-	if card == null:
-		return
-	var echo_ids: Array[String] = []
-	for action in [card.top, card.bottom]:
-		if action == null:
-			continue
-		var echo_id := "eco_" + echo_color_id(action.color)
-		if echo_id not in echo_ids:
-			echo_ids.append(echo_id)
-	for echo_id in echo_ids:
-		_add_output_item(echo_id, LocalizationState.item_name(echo_id, echo_id), 1, 999)
-
-
-## Convierte el tono visual de una mitad de carta a una de las ocho familias
-## que se muestran en el depósito del laboratorio.
-func echo_color_id(color: Color) -> String:
-	var hue := color.h
-	if hue < 0.035 or hue >= 0.96:
-		return "rojo"
-	if hue < 0.10:
-		return "naranja"
-	if hue < 0.17:
-		return "amarillo"
-	if hue < 0.45:
-		return "verde"
-	if hue < 0.55:
-		return "cian"
-	if hue < 0.72:
-		return "azul"
-	if hue < 0.86:
-		return "violeta"
-	return "rosa"
+## Acredita al depósito los Ecos juntados en un combate (ver CombatState.echoes_earned).
+func deposit_echoes(counts: Dictionary) -> void:
+	_echoes.deposit(counts)
 
 
 func _add_output_item(item_id: String, item_name: String, amount: int, limit: int) -> void:
