@@ -35,7 +35,7 @@ func check_combat_end() -> bool:
 func _show_victory() -> void:
 	await _prepare_result_screen()
 	# Solo los combates del mundo dan recompensa (no el combate rápido del título).
-	var rewarded := GameState.combat_return_pending
+	var rewarded := GameState.world_combat.active
 	var gold := Combat.VICTORY_GOLD if rewarded else 0
 	host.result_screen.show_victory(_victory_stat_lines() + _echo_reward_lines() if rewarded else [], gold)
 	await host.result_screen.continue_pressed
@@ -75,7 +75,7 @@ func _prepare_result_screen() -> void:
 	await host.get_tree().create_timer(Combat.VICTORY_SCREEN_DELAY).timeout
 
 func _leave_combat() -> void:
-	if not GameState.combat_return_pending:
+	if not GameState.world_combat.active:
 		# Combate abierto directo desde el editor: no hay mundo al que volver.
 		host.get_tree().reload_current_scene()
 		return

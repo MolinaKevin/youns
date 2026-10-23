@@ -1,5 +1,7 @@
 extends Node3D
 
+const CollisionLayers := preload("res://shared/world_collision_layers.gd")
+
 @onready var menu: Control = $MenuLayer/MainMenu
 
 var _ps1_shader := preload("res://features/world/world_map/ps1_vertex.gdshader")
@@ -12,6 +14,7 @@ func _ready() -> void:
 	_setup_environment()
 	Ps1ScreenFx.attach(self)
 	_build_floor_collision()
+	CollisionLayers.configure_camera_terrain_colliders(self)
 	_fix_map_vertex_colors()
 	$LabWarp.body_entered.connect(_on_lab_warp_entered)
 	PartyManager.place_at_spawn(self)
@@ -65,6 +68,7 @@ func _fix_map_vertex_colors() -> void:
 
 func _build_floor_collision() -> void:
 	var body := StaticBody3D.new()
+	body.collision_layer = CollisionLayers.GROUND
 	var col := CollisionShape3D.new()
 	var shape := BoxShape3D.new()
 	shape.size = Vector3(200, 0.1, 200)
@@ -75,6 +79,7 @@ func _build_floor_collision() -> void:
 
 func _build_terrain() -> void:
 	var body := StaticBody3D.new()
+	body.collision_layer = CollisionLayers.GROUND
 
 	var mesh_inst := MeshInstance3D.new()
 	var plane := PlaneMesh.new()

@@ -23,6 +23,10 @@ var _clock_val: Label
 var _states_val: Label
 var _anim_youn_val: Label
 var _anim_player_val: Label
+## Posición del jugador y zona según la grilla de WorldBoundary: para reportar
+## exactamente dónde hay una pared invisible o un agujero en el piso.
+var _pos_val: Label
+var _zone_val: Label
 
 
 func _ready() -> void:
@@ -144,6 +148,18 @@ func _ready() -> void:
 	sep5.add_theme_constant_override("separation", 2)
 	vbox.add_child(sep5)
 
+	# Posición y zona van en el texto de la izquierda: el panel suele quedar
+	# cortado por el borde derecho de la pantalla.
+	for key in ["_pos", "_zone"]:
+		var info := Label.new()
+		info.add_theme_font_size_override("font_size", 11)
+		info.add_theme_color_override("font_color", Color(1.0, 0.8, 0.4))
+		vbox.add_child(info)
+		if key == "_pos":
+			_pos_val = info
+		else:
+			_zone_val = info
+
 	for pair in [["Youn anim", "_anim_youn"], ["Player", "_anim_player"]]:
 		var row := HBoxContainer.new()
 		vbox.add_child(row)
@@ -156,10 +172,9 @@ func _ready() -> void:
 		val.add_theme_font_size_override("font_size", 11)
 		val.add_theme_color_override("font_color", Color(0.4, 1.0, 0.6))
 		row.add_child(val)
-		if pair[1] == "_anim_youn":
-			_anim_youn_val = val
-		else:
-			_anim_player_val = val
+		match pair[1]:
+			"_anim_youn": _anim_youn_val = val
+			"_anim_player": _anim_player_val = val
 
 	LocalizationState.language_changed.connect(_on_language_changed)
 	_refresh()
@@ -185,12 +200,30 @@ func _refresh() -> void:
 			_anim_player_val.text = "move" if spd > 0.5 else "idle"
 		else:
 			_anim_player_val.text = "-"
+	_refresh_position()
 	var ps := GameState.player_save
 	if ps == null:
 		return
 	for key in _value_labels:
 		var val = ps.get(key)
 		_value_labels[key].text = "%.1f" % val if val is float else str(val)
+
+
+func _refresh_position() -> void:
+	if _pos_val == null:
+		return
+	var player = PartyManager.player if PartyManager else null
+	if not is_instance_valid(player):
+		_pos_val.text = "Pos -"
+		_zone_val.text = "Zona -"
+		return
+	var p: Vector3 = player.global_position
+	_pos_val.text = "Pos %.0f, %.1f, %.0f" % [p.x, p.y, p.z]
+	var boundary = ZoneManager.get("_boundary")
+	var zone := ""
+	if boundary != null and is_instance_valid(boundary):
+		zone = boundary.zone_at(p)
+	_zone_val.text = "Zona " + (zone if zone != "" else "-")
 
 
 func _get_current_states() -> Array[String]:

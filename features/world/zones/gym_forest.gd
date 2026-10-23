@@ -3,8 +3,10 @@ extends Node3D
 const ForestBuilder := preload("res://features/world/zones/forest_builder.gd")
 
 ## Bosque que rodea al gym: paredes invisibles para no salir de la arena ni del
-## camino al hub, árboles densos (los mismos modelos del gym.glb, con MultiMesh)
-## y suelo de bosque. Coordenadas locales de la zona del gym: la arena está
+## camino al hub. El suelo y los árboles de alrededor ahora salen de la guía
+## AutoForest_Gym (assets/maps/world/auto_fill.glb, ver AutoDecoration); con
+## build_own_forest vuelve el bosque generado acá (árboles densos con
+## MultiMesh y suelo de bosque). Coordenadas locales de la zona del gym: la arena está
 ## centrada en el origen y el camino al hub va hacia -Z hasta el borde del hub.
 
 ## Radio de la pared invisible alrededor de la arena (el anillo de árboles del
@@ -21,13 +23,24 @@ const ForestBuilder := preload("res://features/world/zones/forest_builder.gd")
 @export var forest_radius := 64.0
 ## Hacia el este (+X) el bosque se corta antes: más allá está la pradera.
 @export var east_limit := 48.0
+## Hacia el oeste (-X) el bosque termina antes del río que baja junto a la
+## montaña del hub (x -16 del mundo). WorldBoundary usa el valor por defecto
+## de acá.
+@export var west_limit := -26.0
+## Hacia el sur (+Z) el bosque termina antes: detrás está la ribera, con su
+## propio bosque y el cañón del río (z 115 del mundo). WorldBoundary usa el
+## valor por defecto de acá.
+@export var south_limit := 42.0
 @export var tree_spacing := 3.2
 @export var tree_seed := 1234
+## false: el suelo y los árboles los pone AutoDecoration desde AutoForest_Gym.
+@export var build_own_forest := false
 
 func _ready() -> void:
 	_build_walls()
-	_build_ground()
-	_build_trees()
+	if build_own_forest:
+		_build_ground()
+		_build_trees()
 
 ## Rectángulo (en XZ locales) que cubre este bosque. WorldBoundary no pone
 ## paredes ni árboles ahí.
@@ -35,10 +48,10 @@ func covered_rect() -> Rect2:
 	return Rect2(_ground_min_x(), hub_edge_z, east_limit - _ground_min_x(), _ground_max_z() - hub_edge_z)
 
 func _ground_min_x() -> float:
-	return -forest_radius - 8.0
+	return maxf(west_limit, -forest_radius - 8.0)
 
 func _ground_max_z() -> float:
-	return forest_radius + 8.0
+	return minf(forest_radius + 8.0, south_limit)
 
 # ── Paredes ─────────────────────────────────────────────────────────────────
 
@@ -106,7 +119,7 @@ func _build_trees() -> void:
 func _is_forest(p: Vector3) -> bool:
 	if Vector2(p.x, p.z).length() < wall_radius + 0.8:
 		return false
-	if p.x < _ground_min_x() + 2.0 or p.x > east_limit - 1.5 or p.z > forest_radius + 6.0:
+	if p.x < _ground_min_x() + 2.0 or p.x > east_limit - 1.5 or p.z > minf(forest_radius + 6.0, south_limit - 2.0):
 		return false
 	if p.z < hub_edge_z + 1.0:
 		return false

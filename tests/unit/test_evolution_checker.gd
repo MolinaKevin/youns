@@ -12,7 +12,7 @@ var _zone := ""
 func before_each() -> void:
 	# Zona fija que ninguna condición usa: los tests no dependen de dónde quedó el jugador.
 	_zone = ZoneManager.current_zone
-	ZoneManager.current_zone = "crossroads"
+	ZoneManager.enter_zone("crossroads")
 	_save_day = GameState.current_day
 	_save_hour = GameState.time_of_day_hours
 	GameState.current_day = 10
@@ -20,7 +20,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	ZoneManager.current_zone = _zone
+	ZoneManager.enter_zone(_zone)
 	GameState.current_day = _save_day
 	GameState.time_of_day_hours = _save_hour
 

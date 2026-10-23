@@ -1,7 +1,7 @@
 class_name ZoneBase
 extends Node3D
 
-# Lo asigna ZoneManager al instanciar la zona (clave en ZoneManager.ZONES).
+# Lo asigna ZoneManager al instanciar la zona (clave en ZoneManager.catalog).
 # La zona actual la decide ZoneManager según dónde está parado el jugador; el
 # nodo ZoneTrigger de las escenas ya no se usa.
 var zone_id := ""

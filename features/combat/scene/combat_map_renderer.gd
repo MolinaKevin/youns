@@ -17,6 +17,19 @@ func make_ground(width: float, height: float) -> MeshInstance3D:
 func show_disc(mesh_instance: MeshInstance3D, center: Vector2, radius: float) -> void:
 	build_tile_disc(mesh_instance, center, radius, 0.0, 0.02)
 
+## Círculo continuo para alcances grandes. A diferencia de build_tile_disc(),
+## no crea una celda por cada fracción del tablero.
+func show_simple_disc(mesh_instance: MeshInstance3D, center: Vector2, radius: float, height := 0.02) -> void:
+	var mesh := CylinderMesh.new()
+	mesh.top_radius = radius
+	mesh.bottom_radius = radius
+	mesh.height = 0.002
+	mesh.radial_segments = 64
+	mesh_instance.mesh = mesh
+	mesh_instance.position = Vector3(center.x, height, center.y)
+	mesh_instance.material_override = mesh_instance.get_meta("fill_mat") if mesh_instance.has_meta("fill_mat") else null
+	mesh_instance.visible = true
+
 func show_disc_ring(mesh_instance: MeshInstance3D, center: Vector2, radius: float, inner: float) -> void:
 	build_tile_disc(mesh_instance, center, radius, inner, 0.02)
 

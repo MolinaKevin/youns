@@ -1,6 +1,6 @@
 extends Control
 
-const GAME_WORLD := "res://features/world/game_world/game_world.tscn"
+const WORLD_LOADING := "res://features/world/game_world/world_loading.tscn"
 
 const MENU_OPTIONS: Array[Dictionary] = [
 	{"label_key": "title.menu.continue", "scene": "", "action": "continue"},
@@ -159,7 +159,7 @@ func _on_option_pressed(index: int) -> void:
 
 	if action == "continue":
 		if GameState.load_game():
-			get_tree().change_scene_to_file(GAME_WORLD)
+			get_tree().change_scene_to_file(WORLD_LOADING)
 		return
 	if action == "new_game":
 		if GameState.has_saved_game():
@@ -180,7 +180,7 @@ func _on_option_pressed(index: int) -> void:
 
 func _start_new_game() -> void:
 	GameState.start_new_game()
-	get_tree().change_scene_to_file(GAME_WORLD)
+	get_tree().change_scene_to_file(WORLD_LOADING)
 
 ## Hay una partida guardada: la nueva la va a pisar al guardar.
 func _confirm_new_game() -> void:

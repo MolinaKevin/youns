@@ -1,5 +1,7 @@
 extends CharacterBody3D
 
+const CollisionLayers := preload("res://shared/world_collision_layers.gd")
+
 ## Velocidad de desplazamiento normal y multiplicador al mantener Shift.
 const SPEED        := 7.0
 const SPRINT_MULTIPLIER := 1.4
@@ -22,6 +24,10 @@ func movement_speed() -> float:
 	return SPEED * (SPRINT_MULTIPLIER if is_sprinting() else 1.0)
 
 func _ready() -> void:
+	# Los pisos de los mapas (Floor, *Meadow, rampas, suelo del hub...) están en
+	# la capa GROUND (ver CollisionLayers.configure_ground_colliders) y las
+	# paredes en OBSTACLES: el jugador tiene que chocar con las dos, si no se cae.
+	collision_mask = CollisionLayers.ACTOR_WORLD_MASK
 	camera_rig = get_parent().get_node_or_null("CameraRig")
 	_model = get_node_or_null("Body")
 	if _model != null and not _model.has_method("set_base"):

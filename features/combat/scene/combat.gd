@@ -85,7 +85,7 @@ func _enter_tree() -> void:
 	# MapArea ya tendrá el contexto al construir sus elementos.
 	var combat_map := get_node_or_null("CombatWorld/MapArea") as MapArea
 	if combat_map != null:
-		combat_map.setup_biome(GameState.combat_biome)
+		combat_map.setup_biome(GameState.world_combat.biome)
 
 func _ready() -> void:
 	GlobalHUD.set_clock_visible(false)
@@ -136,11 +136,10 @@ func _ready() -> void:
 	player_actions.move_mode_button_reset_requested.connect(func(): move_mode_button.button_pressed = false)
 
 	var enemy_name_str := ""
-	var wild_youn: YounData = GameState.pending_wild_youn_data
+	var wild_youn: YounData = GameState.world_combat.take_wild_youn_data()
 	# El combate de prueba del menú también pelea contra un Youn.
 	if wild_youn == null:
 		wild_youn = load("res://data/youns/pombero.tres")
-	GameState.pending_wild_youn_data = null
 	state.enemy_hp     = wild_youn.combat_max_hp()
 	state.enemy_max_hp = state.enemy_hp
 	if wild_youn.base_stats != null:

@@ -1,7 +1,7 @@
 class_name EvolutionConditionZone
 extends EvolutionCondition
 
-## BONUS: evolucionar estando en una zona (clave de ZoneManager.ZONES).
+## BONUS: evolucionar estando en una zona (clave de ZoneManager.catalog).
 
 @export var zone_id := ""
 

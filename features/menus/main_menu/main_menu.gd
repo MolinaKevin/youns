@@ -127,7 +127,7 @@ func _activate() -> void:
 		return
 	var scene: String = MENU_ITEMS[_selected].scene
 	if scene != "":
-		GameState.ui_return_scene_path = "res://features/world/game_world/game_world.tscn" if overlay_mode else ""
+		GameState.ui_return.set_return("res://features/world/game_world/game_world.tscn" if overlay_mode else "")
 		get_tree().paused = false
 		get_tree().change_scene_to_file(scene)
 

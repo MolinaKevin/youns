@@ -68,9 +68,16 @@ func fill_rect(r: Rect2, value: int, only_empty := false) -> void:
 		if not only_empty or cells[i] == EMPTY:
 			cells[i] = value
 
-func fill_triangle(a: Vector2, b: Vector2, c: Vector2) -> void:
+# only_empty: igual que en fill_rect, no pisar lo que ya tiene algo.
+func fill_triangle(a: Vector2, b: Vector2, c: Vector2, value := WALKABLE, only_empty := false) -> void:
 	for i in triangle_cells(a, b, c):
-		cells[i] = WALKABLE
+		if not only_empty or cells[i] == EMPTY:
+			cells[i] = value
+
+## Tipo de la celda donde cae ese punto del mundo (EMPTY si está fuera).
+func cell_type_at(pos: Vector3) -> int:
+	var c := ((Vector2(pos.x, pos.z) - origin) / CELL).floor()
+	return cell_at(int(c.x), int(c.y))
 
 func zone_index(zone_id: String) -> int:
 	var index := zone_names.find(zone_id)
@@ -96,7 +103,7 @@ func zone_at_cell(ix: int, iz: int) -> int:
 		return 0
 	return zone_of[idx(ix, iz)]
 
-## En qué zona está ese punto del mundo (clave de ZoneManager.ZONES), según el
+## En qué zona está ese punto del mundo (clave de ZoneManager.catalog), según el
 ## suelo de cada zona. Vacío si no cae en ninguna (p. ej. en una pared).
 func zone_at(pos: Vector3) -> String:
 	if zone_of.is_empty():
@@ -107,6 +114,98 @@ func zone_at(pos: Vector3) -> String:
 	if ix < 0 or iz < 0 or ix >= w or iz >= h:
 		return ""
 	return zone_names[zone_of[idx(ix, iz)]]
+
+
+# ── Ruta de recuperación del compañero ──────────────────────────────────────
+
+## Ruta A* por las celdas transitables reales del mundo. WALKABLE es el suelo
+## de las zonas; RESERVED es el área del gym, que tiene su propio borde visual
+## pero también se puede recorrer. CLEAR (río, cañón, roca) nunca forma parte
+## de la ruta, por lo que el compañero no intenta cruzar un precipicio.
+func find_walkable_path(from: Vector3, to: Vector3, max_visited := 8000) -> Array[Vector2]:
+	var start := _nearest_walkable_cell(from)
+	var goal := _nearest_walkable_cell(to)
+	if start.x < 0 or goal.x < 0:
+		return []
+	if start == goal:
+		return [cell_center(start.x, start.y)]
+
+	var frontier: Array[Vector2i] = [start]
+	var came_from := {start: start}
+	var cost := {start: 0.0}
+	var visited := 0
+	while not frontier.is_empty() and visited < max_visited:
+		var current_index := 0
+		var current_score := INF
+		for i in frontier.size():
+			var candidate: Vector2i = frontier[i]
+			var score: float = cost[candidate] + _heuristic(candidate, goal)
+			if score < current_score:
+				current_score = score
+				current_index = i
+		var current: Vector2i = frontier[current_index]
+		frontier.remove_at(current_index)
+		visited += 1
+		if current == goal:
+			return _reconstruct_path(came_from, current)
+		for step in _path_neighbors():
+			var next := current + step
+			if not _is_path_walkable(next.x, next.y):
+				continue
+			# No cortar diagonalmente entre dos paredes o bordes de cañón.
+			if step.x != 0 and step.y != 0 and (not _is_path_walkable(current.x + step.x, current.y) or not _is_path_walkable(current.x, current.y + step.y)):
+				continue
+			var step_cost := 1.41421356 if step.x != 0 and step.y != 0 else 1.0
+			var new_cost: float = cost[current] + step_cost
+			if not cost.has(next) or new_cost < cost[next]:
+				cost[next] = new_cost
+				came_from[next] = current
+				if next not in frontier:
+					frontier.append(next)
+	return []
+
+
+func _nearest_walkable_cell(pos: Vector3, max_radius := 8) -> Vector2i:
+	var p := ((Vector2(pos.x, pos.z) - origin) / CELL).floor()
+	var center := Vector2i(int(p.x), int(p.y))
+	if _is_path_walkable(center.x, center.y):
+		return center
+	for radius in range(1, max_radius + 1):
+		for dz in range(-radius, radius + 1):
+			for dx in range(-radius, radius + 1):
+				if abs(dx) != radius and abs(dz) != radius:
+					continue
+				var candidate := center + Vector2i(dx, dz)
+				if _is_path_walkable(candidate.x, candidate.y):
+					return candidate
+	return Vector2i(-1, -1)
+
+
+func _is_path_walkable(ix: int, iz: int) -> bool:
+	var cell := cell_at(ix, iz)
+	return cell == WALKABLE or cell == RESERVED
+
+
+static func _path_neighbors() -> Array[Vector2i]:
+	return [Vector2i(-1, -1), Vector2i(0, -1), Vector2i(1, -1), Vector2i(-1, 0), Vector2i(1, 0), Vector2i(-1, 1), Vector2i(0, 1), Vector2i(1, 1)]
+
+
+static func _heuristic(a: Vector2i, b: Vector2i) -> float:
+	var dx: int = abs(a.x - b.x)
+	var dz: int = abs(a.y - b.y)
+	return float(maxi(dx, dz)) + (1.41421356 - 1.0) * float(mini(dx, dz))
+
+
+func _reconstruct_path(came_from: Dictionary, current: Vector2i) -> Array[Vector2]:
+	var path_cells: Array[Vector2i] = [current]
+	while came_from[current] != current:
+		current = came_from[current]
+		path_cells.append(current)
+	path_cells.reverse()
+	var result: Array[Vector2] = []
+	for cell in path_cells:
+		result.append(cell_center(cell.x, cell.y))
+	return result
 
 ## Datos geométricos para la cartografía técnica. Usan exactamente la misma
 ## grilla XZ que define el suelo caminable y la zona actual del jugador.

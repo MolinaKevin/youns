@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://zone_cliffs"]
+
+[ext_resource type="Script" path="res://features/world/zones/zone_cliffs.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/maps/cliffs/meseta.glb" id="2_meseta"]
+[ext_resource type="Resource" path="res://data/biomes/pradera.tres" id="biome_pradera"]
+
+[node name="ZoneCliffs" type="Node3D"]
+script = ExtResource("1")
+biome = ExtResource("biome_pradera")
+
+[node name="Meseta" parent="." instance=ExtResource("2_meseta")]
+
+[node name="SpawnPoint" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)

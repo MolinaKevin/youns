@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://zone_hills"]
+
+[ext_resource type="Script" path="res://features/world/zones/zone_hills.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/maps/hills/lomas.glb" id="2_map"]
+[ext_resource type="Resource" path="res://data/biomes/pradera.tres" id="biome_pradera"]
+
+[node name="ZoneLomas" type="Node3D"]
+script = ExtResource("1")
+biome = ExtResource("biome_pradera")
+
+[node name="Lomas" parent="." instance=ExtResource("2_map")]
+
+[node name="SpawnPoint" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 1, 13)

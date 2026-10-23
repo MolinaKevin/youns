@@ -117,7 +117,14 @@ func _on_bathroom_accident() -> void:
 	_current_zone_node().add_child(poop)
 	poop.global_position = _ground_below(youn.global_position)
 	poop.rotation.y = randf() * TAU
-	_poops = _poops.filter(func(p: Node3D) -> bool: return is_instance_valid(p))
+	# Array.filter() devuelve un Array sin tipo y su lambda recibe Variant; al
+	# asignarlo a Array[Node3D] falla en tiempo de ejecución. Compactar a mano
+	# conserva el tipo y descarta las cacas de zonas que ya se descargaron.
+	var live_poops: Array[Node3D] = []
+	for old_poop in _poops:
+		if is_instance_valid(old_poop):
+			live_poops.append(old_poop)
+	_poops = live_poops
 	_poops.append(poop)
 	while _poops.size() > MAX_POOPS:
 		_poops.pop_front().queue_free()

@@ -7,12 +7,6 @@
 [ext_resource type="Resource" path="res://data/youns/monzaemon.tres" id="5_monzaemon_data"]
 [ext_resource type="Resource" path="res://data/biomes/pradera.tres" id="biome_pradera"]
 
-[sub_resource type="PlaneMesh" id="1"]
-size = Vector2(240, 240)
-
-[sub_resource type="BoxShape3D" id="2"]
-size = Vector3(240, 0.1, 240)
-
 [sub_resource type="BoxShape3D" id="3"]
 size = Vector3(130, 20, 130)
 
@@ -32,17 +26,8 @@ transform = Transform3D(0.819152, 0, 0.573576, 0, 1, 0, -0.573576, 0, 0.819152, 
 youn_data = ExtResource("5_monzaemon_data")
 world_enemy_id = "pradera_right_monzaemon_01"
 
-[node name="Floor" type="StaticBody3D" parent="." unique_id=1087452089]
-
-[node name="Mesh" type="MeshInstance3D" parent="Floor" unique_id=1756512382]
-visible = false
-mesh = SubResource("1")
-
-[node name="FloorCol" type="CollisionShape3D" parent="Floor" unique_id=701774867]
-shape = SubResource("2")
-
 [node name="SpawnPoint" type="Node3D" parent="." unique_id=1792756140]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 1, -10)
 
 [node name="ZoneTrigger" type="Area3D" parent="." unique_id=1169218804]
 

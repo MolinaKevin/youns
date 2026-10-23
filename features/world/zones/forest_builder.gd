@@ -5,6 +5,10 @@ extends RefCounted
 ## paredes invisibles.
 
 const TREE_SOURCE := "res://assets/maps/gym/gym.glb"
+## Biblioteca de árboles hecha en Blender (blender/arboles.blend). Cada molde es
+## un nodo raíz Arbol_<Grupo>_<Nombre> (p. ej. Arbol_Bosque_Pino) con sus
+## mallas adentro (tronco, copas). La base del tronco es el origen de la raíz.
+const TREE_LIBRARY := "res://assets/maps/world/arboles.glb"
 ## Árboles del gym.glb que se usan de molde (tronco + dos copas).
 const TREE_TEMPLATES := [0, 1, 5, 12]
 
@@ -26,6 +30,33 @@ static func tree_templates(map: Node = null) -> Array:
 		templates.append(parts)
 	if own:
 		map.free()
+	return templates
+
+## Moldes de la biblioteca de árboles para un grupo ("Bosque", "Playa"...):
+## una lista de {mesh, offset} por molde, como tree_templates(). Si no está la
+## biblioteca o el grupo, usa los árboles del gym.glb.
+static func library_templates(group := "Bosque") -> Array:
+	if not ResourceLoader.exists(TREE_LIBRARY):
+		return tree_templates()
+	var lib: Node = (load(TREE_LIBRARY) as PackedScene).instantiate()
+	var templates := []
+	var prefix := "Arbol_%s_" % group
+	for root in lib.find_children(prefix + "*", "Node3D", true, false):
+		if root is MeshInstance3D:
+			continue   # es una pieza (tronco, copa), no la raíz del molde
+		var parts := []
+		for mi in (root as Node3D).find_children("*", "MeshInstance3D", true, false):
+			var t := Transform3D()
+			var node: Node = mi
+			while node != root:
+				t = (node as Node3D).transform * t
+				node = node.get_parent()
+			parts.append({"mesh": (mi as MeshInstance3D).mesh, "offset": t})
+		if not parts.is_empty():
+			templates.append(parts)
+	lib.free()
+	if templates.is_empty():
+		return tree_templates()
 	return templates
 
 ## Transform de un árbol en `pos` con giro y tamaño al azar.

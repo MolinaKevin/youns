@@ -16,6 +16,7 @@ func before_each() -> void:
 		"states": StatsManager.active_states.duplicate(true),
 		"player_pos": PartyManager.player.global_position,
 		"zone": ZoneManager.current_zone,
+		"north_trail_open": ZoneManager.north_trail_open,
 	}
 	GameState.save_path = TEST_PATH
 	if FileAccess.file_exists(TEST_PATH):
@@ -34,6 +35,7 @@ func after_each() -> void:
 	StatsManager.active_states = _backup["states"]
 	StatsManager._emotion_block_count = 0
 	GameState.pending_location = {}
+	ZoneManager.set_north_trail_open(_backup["north_trail_open"])
 	LaboratoryState._pause_current()
 	PartyManager.place_at(_backup["player_pos"])
 
@@ -59,6 +61,7 @@ func test_guardar_y_cargar_conserva_la_partida() -> void:
 	GameState.current_day = 4
 	GameState.time_of_day_hours = 15.5
 	GameState.world_intro_seen = true
+	ZoneManager.set_north_trail_open(true)
 	StatsManager.active_states = {"hungry": {"hour": 99.0, "stat_value": 80.0}}
 	GameState.save_player_save()
 	assert_true(GameState.has_saved_game())
@@ -78,6 +81,8 @@ func test_guardar_y_cargar_conserva_la_partida() -> void:
 	assert_almost_eq(GameState.time_of_day_hours, 15.5, 0.001)
 	assert_true(GameState.world_intro_seen)
 	assert_true("hungry" in StatsManager.active_states)
+	assert_true(GameState.player_save.world_progress.north_trail_open)
+	assert_true(ZoneManager.north_trail_open, "el desbloqueo del sendero también se restaura")
 
 
 func test_partida_nueva_arranca_de_cero() -> void:
@@ -121,8 +126,8 @@ func test_partida_nueva_aparece_al_inicio() -> void:
 func test_restore_location_pone_al_grupo_en_la_zona_y_posicion() -> void:
 	ZoneManager.restore_location("gym", Vector3(10, 1, 60))
 	assert_eq(ZoneManager.current_zone, "gym")
-	assert_true(ZoneManager._loaded.has("gym"))
-	assert_true(ZoneManager._loaded.has("hub"), "las vecinas también quedan cargadas")
+	assert_true(ZoneManager.has_loaded_zone("gym"))
+	assert_true(ZoneManager.has_loaded_zone("hub"), "las vecinas también quedan cargadas")
 	assert_almost_eq(PartyManager.player.global_position.z, 60.0, 0.01)
 	ZoneManager.reset_to_start()
 	assert_eq(ZoneManager.current_zone, "hub")
@@ -142,4 +147,3 @@ func test_la_investigacion_en_curso_sigue_al_cargar() -> void:
 	assert_true(GameState.load_game())
 	assert_eq(LaboratoryState.active_recipe_id, "producir_datos")
 	assert_gt(LaboratoryState.get_current_progress("producir_datos"), 0.45)
-

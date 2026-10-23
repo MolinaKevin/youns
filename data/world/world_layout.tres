@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="WorldLayout" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/world/world_layout.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+world_guides = "res://assets/maps/world/auto_fill.glb"
+gym_map = "res://assets/maps/gym/gym.glb"
+city_map = "res://assets/maps/hub/city_map.glb"
+hub_id = "hub"
+gym_id = "gym"
+hub_ground = Rect2(-30, -30, 60, 60)
+north_trail = Rect2(4.6, -75.5, 3.8, 46)
+hub_north_forest = Rect2(-26, -74, 58, 49)
+hub_bridge = Rect2(-39.5, 8.2, 12, 3.6)
+meadow_maps = {
+"crossroads": "res://assets/maps/crossroads/pradera_norte.glb",
+"left": "res://assets/maps/left/pradera_oeste.glb",
+"right": "res://assets/maps/hub/pradera_derecha.glb",
+"cliffs": "res://assets/maps/cliffs/meseta.glb",
+"elbow": "res://assets/maps/elbow/codo.glb",
+"riverside": "res://assets/maps/riverside/ribera.glb",
+"bend": "res://assets/maps/bend/recodo.glb",
+"beach": "res://assets/maps/beach/playa.glb",
+"pinewood": "res://assets/maps/pinewood/pinar.glb",
+"hills": "res://assets/maps/hills/lomas.glb",
+"overlook": "res://assets/maps/overlook/mirador.glb"
+}
+zone_tag_priority = ["crossroads", "left", "right", "cliffs", "elbow", "riverside", "bend", "beach", "pinewood", "hills", "overlook"]
+mountain_nodes = ["Montana_Norte", "Montana_Sur", "Montana_Cascadas"]

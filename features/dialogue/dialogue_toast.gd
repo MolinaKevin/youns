@@ -14,12 +14,10 @@ func _init(p_host) -> void:
 	host = p_host
 
 func show_text(text: String, duration: float = 2.5) -> void:
-	host._toast_label.text = text
-	host._toast_label.modulate.a = 1.0
-	host._toast.show()
+	host.show_toast_panel(text)
 	if _tween:
 		_tween.kill()
 	_tween = host.create_tween()
 	_tween.tween_interval(duration - 0.6)
-	_tween.tween_property(host._toast_label, "modulate:a", 0.0, 0.6)
-	_tween.tween_callback(host._toast.hide)
+	_tween.tween_method(host.set_toast_alpha, 1.0, 0.0, 0.6)
+	_tween.tween_callback(host.hide_toast_panel)

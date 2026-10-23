@@ -89,7 +89,7 @@ class MockMapArea extends Node:
 	# ── trap / grenade ──
 	var place_trap_calls: Array = []
 	var place_delayed_zone_calls: Array = []
-	func start_trap_placement(_a, _b: float = 0.0) -> void: pass
+	func start_trap_placement(_a, _b: float = 0.0, _previsualize_line_of_sight := true) -> void: pass
 	func clear_trap_placement() -> void: pass
 	func place_trap(pos: Vector2, radius: float, damage: int, card_name: String) -> void:
 		place_trap_calls.append({"pos": pos, "radius": radius, "damage": damage, "name": card_name})

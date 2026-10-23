@@ -15,6 +15,7 @@ extends CharacterBody3D
 
 const GRAVITY := 20.0
 const DROP_SCENE := preload("res://features/world/items/world_drop.tscn")
+const CollisionLayers := preload("res://shared/world_collision_layers.gd")
 
 @export var youn_data: YounData
 @export var world_enemy_id := ""
@@ -51,6 +52,10 @@ var _engaging_combat := false
 
 func _ready() -> void:
 	add_to_group("world_enemy")
+	# Los NPC/Youns salvajes caminan sobre el mismo suelo y obstáculos que el
+	# jugador. Los colliders exclusivos de cámara no deben frenarlos ni servir
+	# como superficie para colocarlos al cargar una zona.
+	collision_mask = CollisionLayers.ACTOR_WORLD_MASK
 	if world_enemy_id == "":
 		world_enemy_id = name
 	_player = PartyManager.player
@@ -109,8 +114,8 @@ func _on_flee_finished() -> void:
 func _snap_to_ground() -> void:
 	var start := global_position + Vector3.UP * 8.0
 	var finish := global_position + Vector3.DOWN * 24.0
-	var query := PhysicsRayQueryParameters3D.create(start, finish)
-	query.exclude = [self]
+	var query := PhysicsRayQueryParameters3D.create(start, finish, CollisionLayers.ACTOR_WORLD_MASK)
+	query.exclude = [get_rid()]
 	var hit := get_world_3d().direct_space_state.intersect_ray(query)
 	if hit.is_empty():
 		return

@@ -157,11 +157,12 @@ Pendientes conocidos, agrupados por sistema. Al resolver uno, borrarlo de acá.
       español hardcodeado (ninguno usa el helper). Falta decidir si se migran
       a claves de `es.json`/`en.json` o si el log de combate queda fuera del
       alcance de traducción a propósito.
-- [ ] **Inteligencias placeholder en cartas base**: al sacar el campo `color`
-      de `CardAction` (ahora se deriva de `intelligence`), las 106 mitades de
-      los 53 `.tres` de `data/cards/` más `wild_attack.tres`/`wild_move.tres`
-      no tenían ninguna asignada, así que quedaron todas en `"linguistica"`
-      como placeholder. Falta curarlas una por una con la inteligencia real
-      de cada mitad (y, en el caso de los wildcards de combate, probablemente
-      convenga que cada uno tenga una distinta para que se distingan a simple
-      vista como antes).
+- [ ] **Inteligencias de cartas base, aproximadas por color viejo**: al sacar
+      el campo `color` de `CardAction` (ahora se deriva de `intelligence`),
+      las 106 mitades de los 53 `.tres` de `data/cards/` más
+      `wild_attack.tres`/`wild_move.tres` no tenían ninguna asignada. Se les
+      puso la inteligencia más cercana por tono al color que tenían antes,
+      pero esos colores seguían el *tipo de mecánica* (mover = verde, charco
+      = violeta sin importar el elemento), no una inteligencia real — por eso
+      más de la mitad quedó en "naturalista" sin que tenga sentido de diseño.
+      Falta curarlas una por una con la inteligencia real de cada mitad.

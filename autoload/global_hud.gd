@@ -21,7 +21,7 @@ var _debug_stats_ui: CanvasLayer
 func _ready() -> void:
 	_ensure_day_clock_ui()
 	_ensure_youns_status_ui()
-	if GameState.test_mode:
+	if DebugSettings.developer_tools_enabled:
 		_ensure_debug_stats_ui()
 	clock_visibility_changed.emit(clock_visible)
 	clock_pause_changed.emit(GameState.clock_paused)
@@ -35,7 +35,7 @@ func set_clock_visible(visible: bool) -> void:
 	clock_visibility_changed.emit(visible)
 
 func set_clock_paused(paused: bool) -> void:
-	GameState.clock_paused = paused
+	GameState.set_clock_paused(paused)
 	clock_pause_changed.emit(paused)
 
 func set_clock_style(style: int) -> void:
@@ -49,7 +49,7 @@ func set_youns_status_visible(visible: bool) -> void:
 	youns_status_visibility_changed.emit(visible)
 
 func has_persistent_clock_ui() -> bool:
-	return GameState.test_mode or (GameState.player_save != null and GameState.player_save.clock_ui_unlocked)
+	return DebugSettings.developer_tools_enabled or (GameState.player_save != null and GameState.player_save.clock_ui_unlocked)
 
 func has_persistent_care_ui() -> bool:
 	return GameState.player_save != null and GameState.player_save.care_ui_unlocked

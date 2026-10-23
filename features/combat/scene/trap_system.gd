@@ -8,7 +8,7 @@ extends Node3D
 ##
 ## Vive como hijo de MapArea, que se asigna a sí mismo en `map` antes de
 ## agregarlo al árbol (ver MapArea._init()) — lo necesita para las mallas
-## compartidas (_make_mat, _build_tile_disc, _show_disc_with_los,
+## compartidas (_make_mat, _build_tile_disc, _show_disc_with_los y _show_simple_disc,
 ## _tile_in_obstacle, movement_distance).
 
 ## Asignado por MapArea antes de add_child(self) — ver MapArea._init().
@@ -35,12 +35,15 @@ func _ready() -> void:
 func is_placing() -> bool:
 	return _disc.visible
 
-func start_trap_placement(trap_range: float, trap_radius: float = 1.0) -> void:
+func start_trap_placement(trap_range: float, trap_radius: float = 1.0, previsualize_line_of_sight := true) -> void:
 	_range            = trap_range
 	_preview_radius   = trap_radius
 	_preview_last_pos = Vector2(-999.0, -999.0)
 	_preview.visible  = false
-	map._show_disc_with_los(_disc, map.player_pos, trap_range, map.player_elevation)
+	if previsualize_line_of_sight:
+		map._show_disc_with_los(_disc, map.player_pos, trap_range, map.player_elevation)
+	else:
+		map._show_simple_disc(_disc, map.player_pos, trap_range)
 
 func clear_trap_placement() -> void:
 	_range            = 0.0

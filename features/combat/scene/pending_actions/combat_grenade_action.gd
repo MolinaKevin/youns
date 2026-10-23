@@ -6,7 +6,9 @@ extends CombatPendingAction
 func start(p_index: int, p_card: CardActionLine) -> void:
 	index = p_index
 	card = p_card
-	host.map_area.start_trap_placement(host._w(card.cast_range_cells()))
+	# El alcance grande se muestra como un círculo simple: calcular visibilidad
+	# para cada celda congelaba el combate. La línea de visión se valida al elegir.
+	host.map_area.start_trap_placement(host._w(card.cast_range_cells()), 1.0, false)
 	host.log_requested.emit("%s seleccionada. Elegí una casilla hasta %s módulos (rebote: %.1f)." % [card.name, card.cast_module_label(), card.bounce])
 
 func on_tile_selected(pos: Vector2) -> void:

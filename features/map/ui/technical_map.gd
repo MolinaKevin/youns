@@ -1,6 +1,6 @@
 extends Control
 
-## Mapa de prueba dibujado desde ZoneManager.ZONES. No depende de arte: toma
+## Mapa de prueba dibujado desde ZoneManager.catalog. No depende de arte: toma
 ## las posiciones reales del mundo y muestra zonas y al jugador.
 
 const GAME_WORLD := "res://features/world/game_world/game_world.tscn"
@@ -93,7 +93,7 @@ func _draw() -> void:
 		var is_current: bool = edge["zone"] == ZoneManager.current_zone
 		var color := Color("#d0e2ca") if is_current else CONNECTION_COLOR
 		draw_line(_world_point_to_map(edge["from"]), _world_point_to_map(edge["to"]), color, 2.0, true)
-	for zone_id in ZoneManager.ZONES:
+	for zone_id in ZoneManager.catalog.ids():
 		_draw_zone_label(zone_id)
 
 	if is_instance_valid(PartyManager.player):
@@ -131,7 +131,7 @@ func _draw_zone_label(zone_id: String) -> void:
 func _zone_center(zone_id: String) -> Vector2:
 	if _zone_centers.has(zone_id):
 		return _world_point_to_map(_zone_centers[zone_id])
-	var world_pos: Vector3 = ZoneManager.ZONES[zone_id]["offset"]
+	var world_pos := ZoneManager.catalog.definition(zone_id).offset
 	return _world_to_map(world_pos)
 
 
@@ -155,9 +155,8 @@ func _world_rect_to_map(world_rect: Rect2) -> Rect2:
 
 func _close() -> void:
 	get_tree().paused = false
-	if GameState.ui_return_scene_path != "":
-		var return_scene: String = GameState.ui_return_scene_path
-		GameState.ui_return_scene_path = ""
+	if GameState.ui_return.has_return():
+		var return_scene: String = GameState.ui_return.take_scene_path()
 		get_tree().change_scene_to_file(return_scene)
 		return
 	get_tree().change_scene_to_file(TITLE_MENU if not GameState.session_active else GAME_WORLD)

@@ -54,11 +54,12 @@ func handle_input(event: InputEvent) -> bool:
 	return true
 
 func _start_transition() -> void:
-	GameState.combat_return_pending = true
-	GameState.combat_return_position = host._player.global_position if host._player else host.global_position
-	GameState.combat_world_enemy_id = host.world_enemy_id
-	GameState.pending_wild_youn_data = host.youn_data
-	GameState.combat_biome = ZoneManager.get_current_biome()
+	GameState.world_combat.begin(
+		host._player.global_position if host._player else host.global_position,
+		host.world_enemy_id,
+		host.youn_data,
+		ZoneManager.get_current_biome(),
+	)
 	if GameState.player_save != null and "bathroom" in StatsManager.active_states:
 		GameState.player_save.bathroom_pending_after_combat = true
 	host.get_tree().change_scene_to_file("res://features/combat/scene/combat.tscn")

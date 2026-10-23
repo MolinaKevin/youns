@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://zone_overlook"]
+
+[ext_resource type="Script" path="res://features/world/zones/zone_overlook.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/maps/overlook/mirador.glb" id="2_map"]
+[ext_resource type="Resource" path="res://data/biomes/pradera.tres" id="biome_pradera"]
+
+[node name="ZoneMirador" type="Node3D"]
+script = ExtResource("1")
+biome = ExtResource("biome_pradera")
+
+[node name="Mirador" parent="." instance=ExtResource("2_map")]
+
+[node name="SpawnPoint" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 7, 1, -11)

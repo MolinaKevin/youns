@@ -50,7 +50,7 @@ intelligence = "linguistica"
 [sub_resource type="Resource" id="Resource_bottom"]
 script = ExtResource("2_action")
 lines = Array[ExtResource("3_line")]([SubResource("Line_bottom")])
-intelligence = "linguistica"
+intelligence = "naturalista"
 
 [resource]
 script = ExtResource("1_card")

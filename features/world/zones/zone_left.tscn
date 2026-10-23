@@ -1,33 +1,14 @@
 [gd_scene format=3 uid="uid://zone_left"]
 
-[ext_resource type="Script" uid="uid://w0vfg42ihqs0" path="res://features/world/zones/zone_base.gd" id="1"]
+[ext_resource type="Script" path="res://features/world/zones/zone_left.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/maps/left/pradera_oeste.glb" id="2_pradera_oeste"]
 [ext_resource type="Resource" path="res://data/biomes/pradera.tres" id="biome_pradera"]
 
-[sub_resource type="PlaneMesh" id="1"]
-size = Vector2(150, 150)
-
-[sub_resource type="BoxShape3D" id="2"]
-size = Vector3(150, 0.1, 150)
-
-[sub_resource type="BoxShape3D" id="3"]
-size = Vector3(130, 20, 130)
-
-[node name="ZoneCrossroads" type="Node3D"]
+[node name="ZoneLeft" type="Node3D"]
 script = ExtResource("1")
 biome = ExtResource("biome_pradera")
 
-[node name="Floor" type="StaticBody3D" parent="."]
-
-[node name="Mesh" type="MeshInstance3D" parent="Floor"]
-mesh = SubResource("1")
-
-[node name="FloorCol" type="CollisionShape3D" parent="Floor"]
-shape = SubResource("2")
+[node name="PraderaOeste" parent="." instance=ExtResource("2_pradera_oeste")]
 
 [node name="SpawnPoint" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.0, 0)
-
-[node name="ZoneTrigger" type="Area3D" parent="."]
-
-[node name="Col" type="CollisionShape3D" parent="ZoneTrigger"]
-shape = SubResource("3")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 1, 4)

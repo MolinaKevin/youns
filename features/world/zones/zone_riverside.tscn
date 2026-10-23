@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://zone_riverside"]
+
+[ext_resource type="Script" path="res://features/world/zones/zone_riverside.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/maps/riverside/ribera.glb" id="2_ribera"]
+[ext_resource type="Resource" path="res://data/biomes/pradera.tres" id="biome_pradera"]
+
+[node name="ZoneRiverside" type="Node3D"]
+script = ExtResource("1")
+biome = ExtResource("biome_pradera")
+
+[node name="Ribera" parent="." instance=ExtResource("2_ribera")]
+
+[node name="SpawnPoint" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, -23, -3)

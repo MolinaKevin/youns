@@ -25,7 +25,7 @@ func _exit_tree() -> void:
 		GlobalHUD.clock_style_changed.disconnect(_on_style_changed)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not GameState.test_mode:
+	if not DebugSettings.developer_tools_enabled:
 		return
 	if event is InputEventKey and event.pressed and not event.echo:
 		if event.keycode == KEY_F2:

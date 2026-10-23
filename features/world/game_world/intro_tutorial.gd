@@ -52,7 +52,7 @@ func is_active() -> bool:
 
 
 func start() -> void:
-	if GameState.combat_return_pending or GameState.world_intro_seen:
+	if GameState.world_combat.active or GameState.world_intro_seen:
 		visible = false
 		return
 	_active = true

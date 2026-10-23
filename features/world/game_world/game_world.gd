@@ -12,6 +12,10 @@ var _sleeping := false
 var _sleep_start_hour := 0.0
 
 func _ready() -> void:
+	# Permite abrir esta escena sola desde el editor; el flujo normal llega desde
+	# WorldLoading y ya tiene ambos autoloads inicializados.
+	PartyManager.initialize_party()
+	ZoneManager.initialize_world()
 	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
 	GlobalHUD.set_clock_paused(false)
 	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
@@ -47,14 +51,13 @@ func _sync_party_youn() -> void:
 ## Después de "Nueva partida" o "Continuar": el jugador aparece al inicio o
 ## donde estaba al guardar.
 func _restore_saved_location() -> void:
-	var loc := GameState.pending_location
-	if loc.is_empty():
+	var entry := GameState.world_entry.take()
+	if not entry.pending:
 		return
-	GameState.pending_location = {}
-	if loc.get("start", false):
+	if entry.starts_new_game:
 		ZoneManager.reset_to_start()
 	else:
-		ZoneManager.restore_location(loc["zone"], loc["position"], loc.get("interior", ""))
+		ZoneManager.restore_location(entry.zone_id, entry.position, entry.interior_path)
 
 func _input(event: InputEvent) -> void:
 	if Dialogue.is_busy():
@@ -85,9 +88,9 @@ func _toggle_menu() -> void:
 	get_tree().paused = showing
 
 func _restore_after_combat() -> void:
-	if not GameState.combat_return_pending:
+	if not GameState.world_combat.active:
 		return
-	var pos := GameState.combat_return_position
+	var pos := GameState.world_combat.return_position
 	PartyManager.player.global_position = pos
 	PartyManager.player.velocity = Vector3.ZERO
 	PartyManager.youn.global_position = pos + Vector3(1.5, 0, 1.5)

@@ -33,7 +33,7 @@ func ask(p_options: Array[String]) -> int:
 	host._root.show()
 	_build_buttons()
 	highlight(0)
-	host._choice_menu.show()
+	host.show_choice_menu()
 	return await host.choice_made
 
 func _build_buttons() -> void:
@@ -50,7 +50,7 @@ func _build_buttons() -> void:
 		btn.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 		btn.mouse_entered.connect(highlight.bind(i))
 		btn.pressed.connect(resolve.bind(i))
-		host._choice_list.add_child(btn)
+		host.add_choice_button(btn)
 		buttons.append(btn)
 
 func _clear_buttons() -> void:
@@ -70,14 +70,14 @@ func resolve(i: int) -> void:
 	if not active:
 		return
 	active = false
-	host._choice_menu.hide()
+	host.hide_choice_menu()
 	_clear_buttons()
 	if not host._tree_was_paused:
 		host.get_tree().paused = false
 		GlobalHUD.set_clock_paused(false)
 	if not host.is_playing():
 		host._root.hide()
-	host.choice_made.emit(i)
+	host.resolve_choice(i)
 
 ## true si consumió el evento.
 func handle_input(event: InputEvent) -> bool:

@@ -100,6 +100,38 @@ func ask(options: Array[String]) -> int:
 	return await _choice_menu_logic.ask(options)
 
 
+## API para los controladores auxiliares del diálogo. Centraliza el acceso a
+## los nodos privados de esta escena, que siguen siendo propiedad de Dialogue.
+func show_choice_menu() -> void:
+	_choice_menu.show()
+
+
+func hide_choice_menu() -> void:
+	_choice_menu.hide()
+
+
+func add_choice_button(button: Button) -> void:
+	_choice_list.add_child(button)
+
+
+func resolve_choice(index: int) -> void:
+	choice_made.emit(index)
+
+
+func show_toast_panel(text: String) -> void:
+	_toast_label.text = text
+	_toast_label.modulate.a = 1.0
+	_toast.show()
+
+
+func set_toast_alpha(alpha: float) -> void:
+	_toast_label.modulate.a = alpha
+
+
+func hide_toast_panel() -> void:
+	_toast.hide()
+
+
 func _process(delta: float) -> void:
 	if not _typing:
 		_continue_hint.modulate.a = 0.72 + 0.28 * (sin(Time.get_ticks_msec() * 0.006) + 1.0) * 0.5

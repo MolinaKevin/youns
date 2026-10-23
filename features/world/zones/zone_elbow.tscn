@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://zone_elbow"]
+
+[ext_resource type="Script" path="res://features/world/zones/zone_elbow.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/maps/elbow/codo.glb" id="2_codo"]
+[ext_resource type="Resource" path="res://data/biomes/pradera.tres" id="biome_pradera"]
+
+[node name="ZoneElbow" type="Node3D"]
+script = ExtResource("1")
+biome = ExtResource("biome_pradera")
+
+[node name="Codo" parent="." instance=ExtResource("2_codo")]
+
+[node name="SpawnPoint" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 1, -20)

@@ -228,6 +228,9 @@ func _make_disc(color: Color) -> MeshInstance3D:
 func _show_disc(mi: MeshInstance3D, center: Vector2, radius: float) -> void:
 	_renderer.show_disc(mi, center, radius)
 
+func _show_simple_disc(mi: MeshInstance3D, center: Vector2, radius: float) -> void:
+	_renderer.show_simple_disc(mi, center, radius)
+
 func _build_tile_disc(mi: MeshInstance3D, center: Vector2, radius: float, inner_radius: float, y: float, exclusions: Array = []) -> void:
 	_renderer.build_tile_disc(mi, center, radius, inner_radius, y, exclusions)
 
@@ -453,8 +456,8 @@ func move_enemy_toward(target: Vector2, move_range: float) -> bool:
 	return true
 
 # ── Traps (estado y lógica en trap_system.gd) ──────────────────────────────────
-func start_trap_placement(trap_range: float, trap_radius: float = 1.0) -> void:
-	_trap_system.start_trap_placement(trap_range, trap_radius)
+func start_trap_placement(trap_range: float, trap_radius: float = 1.0, previsualize_line_of_sight := true) -> void:
+	_trap_system.start_trap_placement(trap_range, trap_radius, previsualize_line_of_sight)
 
 func _show_disc_with_los(mi: MeshInstance3D, origin: Vector2, radius: float, elevation: int = 0, block_rocks: bool = false, block_bridges: bool = true) -> void:
 	_range_overlay.show_disc_with_los(mi, origin, radius, elevation, block_rocks, block_bridges)

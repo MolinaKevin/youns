@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ZoneDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/zones/zone_definition.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "overlook"
+scene_path = "res://features/world/zones/zone_overlook.tscn"
+offset = Vector3(95, 0, -265)
+connections = ["crossroads", "hills"]

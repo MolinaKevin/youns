@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://zone_pinewood"]
+
+[ext_resource type="Script" path="res://features/world/zones/zone_pinewood.gd" id="1"]
+[ext_resource type="PackedScene" path="res://assets/maps/pinewood/pinar.glb" id="2_map"]
+[ext_resource type="Resource" path="res://data/biomes/pradera.tres" id="biome_pradera"]
+
+[node name="ZonePinar" type="Node3D"]
+script = ExtResource("1")
+biome = ExtResource("biome_pradera")
+
+[node name="Pinar" parent="." instance=ExtResource("2_map")]
+
+[node name="SpawnPoint" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 1, 14)

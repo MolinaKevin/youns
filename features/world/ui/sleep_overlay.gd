@@ -108,24 +108,14 @@ func _skip_time() -> void:
 	var youn_node = PartyManager.youn if PartyManager else null
 	if is_instance_valid(youn_node) and youn_node.youn_data != null:
 		wake_h = youn_node.youn_data.wake_hour
-	var hours_slept := _calc_hours_slept(GameState.time_of_day_hours, wake_h)
-	if GameState.time_of_day_hours >= float(wake_h):
-		GameState.current_day += 1
-	GameState.time_of_day_hours = float(wake_h)
+	# Primero se fija la hora sin avisar: las recuperaciones de dormir tienen que
+	# estar aplicadas cuando los listeners del reloj observen la nueva mañana.
+	var hours_slept := GameState.skip_to_next_hour(wake_h, false)
 	# Durmiendo no corre el desgaste ni se tiran los dados de emociones: lo que
 	# pasa en la noche son solo los efectos de acá y de StatsManager.on_wake_up.
-	GameState.discard_pending_ticks()
 	StatsManager.add_energia(_calc_energia_recovery(hours_slept))
 	StatsManager.add_salud(StatsManager.salud_from_sleep(hours_slept))
-	GameState.clock_changed.emit(GameState.time_of_day_hours, GameState.current_day)
-
-
-func _calc_hours_slept(current_hour: float, wake_h: int) -> int:
-	var diff := float(wake_h) - current_hour
-	if diff <= 0.0:
-		diff += 24.0
-	return roundi(diff)
-
+	GameState.notify_clock_changed()
 
 func _calc_energia_recovery(hours: int) -> int:
 	if hours >= 7:

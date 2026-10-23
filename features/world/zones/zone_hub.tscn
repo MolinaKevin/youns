@@ -19,20 +19,14 @@
 [sub_resource type="BoxShape3D" id="1"]
 size = Vector3(130, 20, 130)
 
-[sub_resource type="BoxShape3D" id="16"]
-size = Vector3(200, 0.1, 200)
+[sub_resource type="BoxShape3D" id="bridge_blocker"]
+size = Vector3(12.4, 6, 4)
+
+[sub_resource type="BoxShape3D" id="north_trail_blocker"]
+size = Vector3(4.4, 6, 46)
 
 [sub_resource type="BoxShape3D" id="2"]
 size = Vector3(2.5, 2.5, 1)
-
-[sub_resource type="StandardMaterial3D" id="4"]
-albedo_color = Color(0.486275, 0.388235, 0.27451, 1)
-
-[sub_resource type="BoxMesh" id="3"]
-size = Vector3(10, 1.2, 22)
-
-[sub_resource type="BoxShape3D" id="5"]
-size = Vector3(10, 1.2, 22)
 
 [sub_resource type="CylinderMesh" id="10"]
 top_radius = 1.8
@@ -49,6 +43,9 @@ albedo_color = Color(0.88, 0.86, 0.8, 1)
 [sub_resource type="SphereShape3D" id="13"]
 radius = 9.0
 
+[sub_resource type="BoxShape3D" id="16"]
+size = Vector3(260, 0.1, 200)
+
 [node name="ZoneHub" type="Node3D" unique_id=1690177326]
 process_mode = 3
 script = ExtResource("1_hub")
@@ -59,8 +56,20 @@ biome = ExtResource("biome_pradera")
 [node name="Floor" type="StaticBody3D" parent="."]
 
 [node name="FloorCol" type="CollisionShape3D" parent="Floor"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -30, -0.05, 0)
 shape = SubResource("16")
+
+[node name="NorthTrailBlocker" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6.5, 3, -52.5)
+
+[node name="Col" type="CollisionShape3D" parent="NorthTrailBlocker"]
+shape = SubResource("north_trail_blocker")
+
+[node name="BridgeBlocker" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -33.5, 3, 10)
+
+[node name="Col" type="CollisionShape3D" parent="BridgeBlocker"]
+shape = SubResource("bridge_blocker")
 
 [node name="Lab" parent="." unique_id=496110547 instance=ExtResource("3_lab")]
 transform = Transform3D(0.707, 0, -0.707, 0, 1, 0, 0.707, 0, 0.707, -18, 0, 18)
@@ -82,18 +91,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 1, 16)
 [node name="Col" type="CollisionShape3D" parent="LabWarp" unique_id=1589684410]
 transform = Transform3D(0.7344291, 0, -0.6786854, 0, 1, 0, 0.6786854, 0, 0.7344291, 1.9069614, 1.070667, -1.9470034)
 shape = SubResource("2")
-
-[node name="DemoRamp" type="StaticBody3D" parent="." unique_id=610845647]
-transform = Transform3D(0.891007, 0.45399, 0, -0.45399, 0.891007, 0, 0, 0, 1, -30, 1.8, -3.8979359)
-
-[node name="Mesh" type="MeshInstance3D" parent="DemoRamp" unique_id=1339583340]
-transform = Transform3D(1.0000004, 0, 0, 0, 1.0000004, 0, 0, 0, 1, 5.709568, 2.9091625, -0.994627)
-material_override = SubResource("4")
-mesh = SubResource("3")
-
-[node name="Collision" type="CollisionShape3D" parent="DemoRamp" unique_id=205063394]
-transform = Transform3D(1.0000002, 0, 0, 0, 1.0000002, 0, 0, 0, 1, 5.8880997, 3.0001316, -1.0857487)
-shape = SubResource("5")
 
 [node name="DemoMonzaemon" parent="." unique_id=52817535 instance=ExtResource("6_dialogue_npc")]
 transform = Transform3D(0.766044, 0, -0.642788, 0, 1, 0, 0.642788, 0, 0.766044, -26.05894, 4.6965704, -5.855732)

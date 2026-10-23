@@ -57,12 +57,14 @@ class_name PlayerSaveData
 @export var saved_day: int = 1
 @export var saved_hour: float = 8.0
 @export var world_intro_seen: bool = false
-## Dónde estaba el jugador: zona exterior (ZoneManager.ZONES), interior (ruta de
+## Dónde estaba el jugador: zona exterior (ZoneManager.catalog), interior (ruta de
 ## escena, vacío si estaba afuera) y posición.
 @export var saved_zone: String = "hub"
 @export var saved_interior: String = ""
 @export var saved_position: Vector3 = Vector3.ZERO
 @export var has_saved_position: bool = false
+## Progreso del mundo: rutas, puentes y warps desbloqueados.
+@export var world_progress: WorldProgressData = WorldProgressData.new()
 ## Estados activos del Youn (StatsManager.active_states).
 @export var active_states: Dictionary = {}
 ## Laboratorio: lo producido sin retirar y el avance de cada receta.
