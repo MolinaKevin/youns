@@ -137,20 +137,12 @@ func _finish() -> void:
 
 
 func _freeze_world() -> void:
-	var p = PartyManager.player if PartyManager else null
-	var y = PartyManager.youn if PartyManager else null
-	var c = PartyManager.camera_rig if PartyManager else null
-	if is_instance_valid(p): p.set_physics_process(false)
-	if is_instance_valid(y): y.set_physics_process(false)
-	if is_instance_valid(c): c.enabled = false
+	PartyManager.freeze_actors()
+	PartyManager.freeze_camera()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
 func _unfreeze_world() -> void:
-	var p = PartyManager.player if PartyManager else null
-	var y = PartyManager.youn if PartyManager else null
-	var c = PartyManager.camera_rig if PartyManager else null
-	if is_instance_valid(p): p.set_physics_process(true)
-	if is_instance_valid(y): y.set_physics_process(true)
-	if is_instance_valid(c): c.enabled = true
+	PartyManager.unfreeze_actors()
+	PartyManager.unfreeze_camera()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED

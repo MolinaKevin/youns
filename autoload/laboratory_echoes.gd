@@ -5,7 +5,7 @@ extends RefCounted
 ## por carta jugada, qué Ecos se ganaron (ver CombatState.echoes_earned); acá
 ## solo vive qué Eco le corresponde a cada mitad y cómo se acredita el total
 ## al depósito al terminar la pelea. `host` es LaboratoryState (autoload, sin
-## class_name) — necesita `_add_output_item()` para sumarlos al depósito.
+## class_name) — usa `add_output_item()` para sumarlos al depósito.
 
 var host
 
@@ -32,4 +32,4 @@ func deposit(counts: Dictionary) -> void:
 		var amount: int = counts[echo_id]
 		if amount <= 0:
 			continue
-		host._add_output_item(echo_id, LocalizationState.item_name(echo_id, echo_id), amount, 999)
+		host.add_output_item(echo_id, LocalizationState.item_name(echo_id, echo_id), amount, 999)

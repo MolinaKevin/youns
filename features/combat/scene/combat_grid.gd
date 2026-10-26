@@ -25,6 +25,11 @@ static func to_cell(pos: Vector2) -> Vector2i:
 static func to_world(cell: Vector2i) -> Vector2:
 	return (Vector2(cell) + Vector2(0.5, 0.5)) * CELL
 
+## Casillas de la grilla → unidades de mundo (inversa de steps_for). Antes se
+## repetía como un `w()` idéntico en CombatPlayerActions y CombatEnemyAI.
+static func world_for(cells: int) -> float:
+	return float(cells) * CELL
+
 ## Cantidad de pasos de casilla que entra en una distancia de mundo.
 static func steps_for(distance: float) -> int:
 	return floori(distance / CELL + 0.001)

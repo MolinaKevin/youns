@@ -1,5 +1,7 @@
 extends Control
 
+const ScenePaths := preload("res://shared/scene_paths.gd")
+
 @onready var card_grid = $MarginContainer/MainVBox/Body/LeftPanel/CardGrid
 @onready var preview_panel = $MarginContainer/MainVBox/Body/RightPanel/PreviewPanel
 @onready var deck_list = $MarginContainer/MainVBox/Body/RightPanel/DeckScroll/DeckList
@@ -7,6 +9,7 @@ extends Control
 @onready var deck_count_label = $MarginContainer/MainVBox/Body/RightPanel/DeckHeader/DeckCountLabel
 @onready var deck_title_label = $MarginContainer/MainVBox/Body/RightPanel/DeckHeader/DeckTitleLabel
 @onready var save_button = $MarginContainer/MainVBox/Header/SaveButton
+@onready var back_button = $MarginContainer/MainVBox/Header/BackButton
 @onready var add_button = $MarginContainer/MainVBox/Body/RightPanel/PreviewPanel/VBox/AddButton
 
 var owned_cards: Array[CardData] = []
@@ -15,12 +18,7 @@ var current_deck: Array[CardData] = []
 var selected_card: CardData = null
 
 func _ready() -> void:
-	GlobalHUD.set_clock_visible(false)
-	GlobalHUD.set_clock_paused(true)
-	GlobalHUD.set_youns_status_visible(false)
-	ZoneManager.set_world_visible(false)
-	PartyManager.set_party_visible(false)
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	ModalScreenContext.enter_fullscreen()
 	LocalizationState.language_changed.connect(_apply_localized_text)
 	owned_cards = _get_owned_cards()
 	current_deck = DeckRules.cards(GameState.player_save).duplicate()
@@ -29,6 +27,7 @@ func _ready() -> void:
 	card_grid.card_selected.connect(_on_collection_card_selected)
 	add_button.pressed.connect(_on_add_pressed)
 	save_button.pressed.connect(_on_save_pressed)
+	back_button.pressed.connect(_return_to_origin)
 
 	_refresh_deck_panel()
 
@@ -43,7 +42,7 @@ func _on_collection_card_selected(card_data: CardData) -> void:
 func _on_add_pressed() -> void:
 	if selected_card == null:
 		return
-	current_deck.append(selected_card.clone())
+	DeckRules.clone_into(current_deck, selected_card)
 	_refresh_deck_panel()
 
 func _remove_card_from_deck(index: int) -> void:
@@ -74,7 +73,20 @@ func _refresh_deck_panel() -> void:
 		row.add_child(btn)
 
 func _on_save_pressed() -> void:
+	if GameState.player_save == null:
+		return
 	GameState.player_save.deck = current_deck.duplicate()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+		_return_to_origin()
+
+func _return_to_origin() -> void:
+	if GameState.ui_return.has_return():
+		get_tree().change_scene_to_file(GameState.ui_return.take_scene_path())
+		return
+	get_tree().change_scene_to_file(ScenePaths.GAME_WORLD)
 
 ## Las cartas que se pueden sumar al mazo: primero las guardadas de vidas
 ## anteriores (con sus cambios), después la colección.
@@ -89,6 +101,7 @@ func _get_owned_cards() -> Array[CardData]:
 func _apply_localized_text(_language: String = "") -> void:
 	title_label.text = LocalizationState.t("deck.title")
 	save_button.text = LocalizationState.t("deck.save")
+	back_button.text = LocalizationState.t("deck.back")
 	add_button.text = LocalizationState.t("deck.add")
 	deck_title_label.text = LocalizationState.t("deck.my_deck")
 	deck_count_label.text = LocalizationState.t("deck.count", [current_deck.size()])

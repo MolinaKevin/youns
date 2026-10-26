@@ -83,7 +83,10 @@ func _toggle_menu() -> void:
 	GlobalHUD.set_clock_visible(false if showing else GlobalHUD.has_persistent_clock_ui())
 	GlobalHUD.set_clock_paused(showing)
 	GlobalHUD.set_youns_status_visible(false if showing else GlobalHUD.has_persistent_care_ui())
-	PartyManager.camera_rig.enabled = not showing
+	if showing:
+		PartyManager.freeze_camera()
+	else:
+		PartyManager.unfreeze_camera()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if showing else Input.MOUSE_MODE_CAPTURED
 	get_tree().paused = showing
 
@@ -95,7 +98,7 @@ func _restore_after_combat() -> void:
 	PartyManager.player.velocity = Vector3.ZERO
 	PartyManager.youn.global_position = pos + Vector3(1.5, 0, 1.5)
 	PartyManager.youn.velocity = Vector3.ZERO
-	ZoneManager.resolve_pending_world_combat_victory()
+	GameState.world_combat.resolve_victory(get_tree())
 	StatsManager.add_hambre(30)  # combate ganado: esfuerzo físico
 	if GameState.player_save != null and GameState.player_save.bathroom_pending_after_combat:
 		GameState.player_save.bathroom_pending_after_combat = false
@@ -117,7 +120,7 @@ func _on_sleep_requested() -> void:
 		StatsManager.add_hambre(20)
 		StatsManager.on_wake_up(sleep_duration)
 		if overlay.save_requested:
-			GameState.save_player_save()
-			GlobalHUD.show_toast(LocalizationState.t("game.saved"))
+			var save_error := GameState.save_player_save()
+			GlobalHUD.show_toast(LocalizationState.t("game.saved") if save_error == OK else LocalizationState.t("game.save_failed"))
 	)
 	add_child(overlay)

@@ -2,7 +2,7 @@ class_name WorldYounCombatHandoff
 extends RefCounted
 
 ## El handoff real a la escena de combate: el popup "Enter para pelear" y el
-## cambio de escena. No sabe nada de diálogo — host._begin_encounter() o
+## cambio de escena. No sabe nada de diálogo — host.begin_encounter() o
 ## WorldYounConversation llaman a engage() cuando corresponde pelear.
 ## `host` es el WorldYoun dueño exclusivo de esta instancia.
 
@@ -13,19 +13,8 @@ func _init(p_host: WorldYoun) -> void:
 	host = p_host
 
 func engage() -> void:
-	host._engaging_combat = true
-	host._interaction.update_prompt_visibility()
-	host._ai.start_idle()
-	host.velocity = Vector3.ZERO
-	if host._player:
-		host._player.velocity = Vector3.ZERO
-		host._player.set_physics_process(false)
-		var to_enemy := (host.global_position - host._player.global_position) * Vector3(1, 0, 1)
-		if to_enemy.length() > 0.01:
-			host._player.rotation.y = atan2(to_enemy.x, to_enemy.z)
-		var to_player := ((host._player.global_position - host.global_position) * Vector3(1, 0, 1))
-		if to_player.length() > 0.01:
-			host.rotation.y = atan2(to_player.x, to_player.z)
+	host.prepare_encounter()
+	host.set_player_combat_locked(true)
 	host.set_physics_process(false)
 	var popup_text := host.youn_data.youn_name
 	var biome := ZoneManager.get_current_biome()
@@ -55,7 +44,7 @@ func handle_input(event: InputEvent) -> bool:
 
 func _start_transition() -> void:
 	GameState.world_combat.begin(
-		host._player.global_position if host._player else host.global_position,
+		host.combat_start_position(),
 		host.world_enemy_id,
 		host.youn_data,
 		ZoneManager.get_current_biome(),

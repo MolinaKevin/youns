@@ -5,6 +5,7 @@ const ZoneStreamingController := preload("res://shared/zone_streaming_controller
 const ZonePresenceTracker := preload("res://shared/zone_presence_tracker.gd")
 const WorldLayout := preload("res://data/world/world_layout.gd")
 const WorldGenerationSettings := preload("res://data/world/world_generation_settings.gd")
+const WorldGeometryReader := preload("res://features/world/zones/world_geometry_reader.gd")
 
 
 class FakeBoundary extends Node3D:
@@ -36,6 +37,7 @@ func test_los_parametros_de_generacion_son_editables() -> void:
 
 func test_el_streaming_calcula_la_vecindad_sin_cargar_el_mundo() -> void:
 	var streaming := ZoneStreamingController.new()
+	add_child_autofree(streaming)
 	streaming.configure(ZoneCatalog.new(), func() -> bool: return true)
 	assert_eq(streaming.zones_to_keep("bend"), ["bend", "right", "riverside", "gym", "beach"])
 	assert_eq(streaming.zones_to_keep("inexistente"), [])
@@ -45,6 +47,8 @@ func test_el_streaming_calcula_la_vecindad_sin_cargar_el_mundo() -> void:
 func test_el_tracker_detecta_solo_un_cambio_valido() -> void:
 	var boundary := FakeBoundary.new()
 	var tracker := ZonePresenceTracker.new()
+	add_child_autofree(boundary)
+	add_child_autofree(tracker)
 	var detected: Array[String] = []
 	tracker.configure(boundary, ZoneCatalog.new(), func() -> bool: return false, func() -> Vector3: return Vector3.ZERO)
 	tracker.zone_detected.connect(func(zone_id: String): detected.append(zone_id))
@@ -55,3 +59,14 @@ func test_el_tracker_detecta_solo_un_cambio_valido() -> void:
 	boundary.next_zone = "inexistente"
 	tracker.check_now()
 	assert_eq(detected, ["gym"])
+
+
+func test_lector_de_geometria_devuelve_vacio_si_el_mapa_no_existe() -> void:
+	var reader := WorldGeometryReader.new()
+	var triangles := reader.meadow_triangles("res://assets/maps/no_existe.glb", Vector3.ZERO)
+
+	assert_eq(triangles["meadow"].size(), 0)
+	assert_eq(triangles["floor"].size(), 0)
+	assert_eq(triangles["canyon"].size(), 0)
+	assert_eq(triangles["rock"].size(), 0)
+	assert_push_error("no existe el mapa")

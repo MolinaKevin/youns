@@ -59,4 +59,4 @@ func _spend_card() -> void:
 func _finish() -> void:
 	host.hand_refresh_requested.emit()
 	host.ui_update_requested.emit()
-	host._check_combat_end.call()
+	host.check_combat_end.call()

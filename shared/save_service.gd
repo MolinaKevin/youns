@@ -5,6 +5,8 @@ extends RefCounted
 ## servicios que persisten estado y escribir la partida al disco.
 
 const SAVE_PATH := "user://player_save.tres"
+const CURRENT_SAVE_VERSION := 3
+const WorldConstructionCatalog := preload("res://data/world/world_construction_catalog.gd")
 const STARTING_YOUN_PATH := "res://data/youns/nguruvilu.tres"
 const STARTING_STATS := {
 	"constitucion": 55, "mente": 45, "fuerza": 50, "resistencia": 50,
@@ -19,6 +21,7 @@ var world_intro_seen := false
 
 func make_new_save(total_hours: float) -> PlayerSaveData:
 	var save := PlayerSaveData.new()
+	save.save_version = CURRENT_SAVE_VERSION
 	save.owned_card_ids = ["step", "dash", "strike", "slash", "block", "barrera", "meditar", "golpe_escudo", "represalia", "tiron", "ancla", "demoler", "carga_explosiva", "muro", "golpe_de_roca", "muro_arcano", "derrumbe", "lanzar_roca", "chispa", "escarcha", "descarga", "aliento", "nova", "ceguera", "lentitud", "raices", "curar", "encantar_arma", "parpadeo", "traslado_charco", "granizada", "diluvio", "lluvia_acida", "trepar", "meteor", "arrow", "snipe", "grenade", "salto_rupestre", "envion", "charco", "charco_fuego", "charco_grasa", "enredadera", "charco_sangre", "charco_veneno", "charco_arena", "emboscada"]
 	save.equipped_deck_ids = ["step", "step", "dash", "arrow", "arrow", "snipe", "grenade", "grenade", "charco_fuego", "charco_fuego", "nova", "nova", "aliento", "aliento", "muro", "demoler", "lanzar_roca", "golpe_de_roca", "derrumbe", "trepar"]
 	save.inventory_slots = 20
@@ -52,11 +55,46 @@ func load_from_disk(migrate: bool = true) -> PlayerSaveData:
 	if loaded == null or loaded.current_youn_path.is_empty():
 		return null
 	if migrate:
-		YounStatRules.migrate_keys(loaded)
-		YounStatRules.ensure_initialized(loaded)
-		if loaded.world_progress == null:
-			loaded.world_progress = WorldProgressData.new()
+		migrate_save(loaded)
 	return loaded
+
+
+## Lleva una partida guardada al esquema actual. Cada paso debe poder correrse
+## más de una vez: evita que una carga repetida altere el progreso.
+func migrate_save(save: PlayerSaveData) -> void:
+	if save == null:
+		return
+	var version := maxi(0, save.save_version)
+	while version < CURRENT_SAVE_VERSION:
+		match version:
+			0:
+				_migrate_from_0(save)
+			1:
+				_migrate_from_1(save)
+			2:
+				_migrate_from_2(save)
+		version += 1
+	save.save_version = CURRENT_SAVE_VERSION
+
+
+func _migrate_from_0(save: PlayerSaveData) -> void:
+	YounStatRules.migrate_keys(save)
+	YounStatRules.ensure_initialized(save)
+	if save.world_progress == null:
+		save.world_progress = WorldProgressData.new()
+
+
+func _migrate_from_1(save: PlayerSaveData) -> void:
+	if save.world_progress == null:
+		save.world_progress = WorldProgressData.new()
+	# Antes de que world_bridge persistiera su id, se derivaba de la receta.
+	WorldConstructionCatalog.new().unlock_completed(save.world_progress, save.completed_recipe_ids)
+
+
+func _migrate_from_2(save: PlayerSaveData) -> void:
+	if save.world_progress == null:
+		save.world_progress = WorldProgressData.new()
+	save.world_progress.migrate_legacy_bridges()
 
 
 func activate_loaded_session(loaded: PlayerSaveData) -> void:
@@ -71,13 +109,15 @@ func restore_feature_state() -> void:
 	LaboratoryState.restore_from_save(player_save)
 
 
-func write(day: int, hour: float) -> void:
+## Devuelve OK solo cuando el archivo se escribió correctamente.
+func write(day: int, hour: float) -> Error:
 	if not session_active or player_save == null:
-		return
+		return ERR_UNCONFIGURED
+	migrate_save(player_save)
 	player_save.saved_day = day
 	player_save.saved_hour = hour
 	player_save.world_intro_seen = world_intro_seen
 	StatsManager.write_to_save(player_save)
 	LaboratoryState.write_to_save(player_save)
 	ZoneManager.write_to_save(player_save)
-	ResourceSaver.save(player_save, save_path)
+	return ResourceSaver.save(player_save, save_path)

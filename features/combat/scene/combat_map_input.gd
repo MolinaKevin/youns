@@ -17,15 +17,15 @@ func _process(_delta: float) -> void:
 	if camera == null:
 		return
 	if _hover_locked:
-		map._update_hover_at(_last_click_pos)
+		map.update_hover_at(_last_click_pos)
 		return
 	var screen_pos := map.get_viewport().get_mouse_position()
 	var from := camera.project_ray_origin(screen_pos)
 	var direction := camera.project_ray_normal(screen_pos)
 	if abs(direction.y) < 0.001:
-		map._clear_hover()
+		map.clear_hover()
 		return
-	map._update_hover_at(_ray_to_terrain(from, direction))
+	map.update_hover_at(_ray_to_terrain(from, direction))
 
 func _unhandled_input(event: InputEvent) -> void:
 	if map == null or not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
@@ -46,11 +46,12 @@ func lock_hover_at_last_click() -> void:
 func unlock_hover() -> void:
 	_hover_locked = false
 
+func is_hover_locked() -> bool:
+	return _hover_locked
+
 func _ray_to_terrain(from: Vector3, direction: Vector3) -> Vector2:
 	var best_t := INF
-	for obstacle: Dictionary in map.solid_obstacles:
-		if obstacle.get("type", "solid") != "platform":
-			continue
+	for obstacle: Dictionary in map.terrain.platforms():
 		var center: Vector2 = obstacle["pos"]
 		var half_size: Vector2 = obstacle["box"] * 0.5
 		if abs(direction.y) > 0.0001:
@@ -70,7 +71,7 @@ func _ray_to_terrain(from: Vector3, direction: Vector3) -> Vector2:
 	if best_t == INF:
 		best_t = 1.0
 	var hit := from + direction * best_t
-	return Vector2(clampf(hit.x, 0.0, map.WORLD_W), clampf(hit.z, 0.0, map.WORLD_H))
+	return map.terrain.clamp_to_bounds(Vector2(hit.x, hit.z))
 
 func _ray_to_ramp(from: Vector3, direction: Vector3, center: Vector2, half_size: Vector2, ramp: Dictionary) -> float:
 	var half_width: float = ramp.get("width", 2.0) * 0.5

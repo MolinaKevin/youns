@@ -1,6 +1,8 @@
 class_name CombatResultFlow
 extends RefCounted
 
+const ScenePaths := preload("res://shared/scene_paths.gd")
+
 ## Qué pasa cuando el combate termina: detecta el HP en 0, dispara la
 ## pantalla de fin de lucha (ganaste/perdiste) y, al continuar, vuelve al
 ## mundo con la recompensa si corresponde. `host` es el Combat dueño
@@ -26,7 +28,7 @@ func check_combat_end() -> bool:
 		if not host._combat_finished:
 			host._combat_finished = true
 			host.log_message(LocalizationState.t("combat.lose"))
-			host.map_area.play_player_anim("die")
+			host.map_area.actors.play_player_animation("die")
 			_show_defeat.call_deferred()
 		return true
 	return false
@@ -79,4 +81,4 @@ func _leave_combat() -> void:
 		# Combate abierto directo desde el editor: no hay mundo al que volver.
 		host.get_tree().reload_current_scene()
 		return
-	host.get_tree().change_scene_to_file("res://features/world/game_world/game_world.tscn")
+	host.get_tree().change_scene_to_file(ScenePaths.GAME_WORLD)

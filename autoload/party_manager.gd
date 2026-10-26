@@ -2,7 +2,11 @@ extends Node
 
 const PARTY_SCENE := preload("res://features/world/party/party.tscn")
 const CollisionLayers := preload("res://shared/world_collision_layers.gd")
-const TITLE_MENU_SCENE := "res://features/menus/main_menu/title_menu.tscn"
+const ScenePaths := preload("res://shared/scene_paths.gd")
+const TITLE_MENU_SCENE := ScenePaths.TITLE_MENU
+const PLAYER_PATH := ^"Player"
+const YOUN_PATH := ^"Youn"
+const CAMERA_RIG_PATH := ^"CameraRig"
 
 var player: CharacterBody3D
 var youn: CharacterBody3D
@@ -30,9 +34,14 @@ func initialize_party() -> void:
 		return
 	var party := PARTY_SCENE.instantiate()
 	add_child(party)
-	player = party.get_node("Player")
-	youn   = party.get_node("Youn")
-	camera_rig = party.get_node("CameraRig")
+	var members := resolve_party_members(party)
+	if members.is_empty():
+		push_error("PartyManager: party.tscn debe tener Player (CharacterBody3D), Youn (CharacterBody3D) y CameraRig (Node3D).")
+		party.queue_free()
+		return
+	player = members["player"]
+	youn = members["youn"]
+	camera_rig = members["camera_rig"]
 	# Los actores caminan normalmente sobre suelo y obstáculos. El Youn cambia
 	# temporalmente a sólo suelo cuando necesita recuperar distancia.
 	player.collision_mask = CollisionLayers.ACTOR_WORLD_MASK
@@ -43,6 +52,22 @@ func initialize_party() -> void:
 	player.add_collision_exception_with(youn)
 	youn.add_collision_exception_with(player)
 	_initialized = true
+
+## Resuelve el contrato estructural de party.tscn sin asumir que sus nodos
+## existen. Se mantiene separado para poder validarlo sin instanciar el mundo.
+static func resolve_party_members(party: Node) -> Dictionary:
+	if party == null:
+		return {}
+	var party_player := party.get_node_or_null(PLAYER_PATH) as CharacterBody3D
+	var party_youn := party.get_node_or_null(YOUN_PATH) as CharacterBody3D
+	var party_camera_rig := party.get_node_or_null(CAMERA_RIG_PATH) as Node3D
+	if party_player == null or party_youn == null or party_camera_rig == null:
+		return {}
+	return {
+		"player": party_player,
+		"youn": party_youn,
+		"camera_rig": party_camera_rig,
+	}
 
 func is_initialized() -> bool:
 	return _initialized
@@ -79,3 +104,32 @@ func set_party_visible(visible: bool) -> void:
 		youn.set_physics_process(visible)
 	if is_instance_valid(camera_rig):
 		camera_rig.enabled = visible
+
+## Congela a los dos actores del grupo para cutscenes/menús/overlays: en vez de
+## que cada llamador toque `player`/`youn` directo (set_physics_process,
+## velocity), pasa por acá. Zera la velocidad para no arrastrar impulso
+## residual cuando se descongela.
+func freeze_actors() -> void:
+	if is_instance_valid(player):
+		player.set_physics_process(false)
+		player.velocity = Vector3.ZERO
+	if is_instance_valid(youn):
+		youn.set_physics_process(false)
+		youn.velocity = Vector3.ZERO
+
+func unfreeze_actors() -> void:
+	if is_instance_valid(player):
+		player.set_physics_process(true)
+	if is_instance_valid(youn):
+		youn.set_physics_process(true)
+
+## Apaga/prende la cámara del grupo. Separado de freeze_actors() porque hay
+## llamadores que sólo necesitan cortar la cámara (p. ej. un menú con el mundo
+## de fondo quieto) sin tocar la física de los actores.
+func freeze_camera() -> void:
+	if is_instance_valid(camera_rig):
+		camera_rig.enabled = false
+
+func unfreeze_camera() -> void:
+	if is_instance_valid(camera_rig):
+		camera_rig.enabled = true

@@ -30,6 +30,11 @@ func setup(from_data: YounData, cause := ReincarnationRules.CAUSE_AGE) -> void:
 	_from = from_data
 	_cause = cause
 
+## Inserta un panel de la cutscene y mantiene el fundido por delante de él.
+func add_message_panel(root: Control) -> void:
+	_ui.add_child(root)
+	_ui.move_child(_flash, -1)
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_scene3d = CutsceneScene3D.new(self)
@@ -52,7 +57,7 @@ func _run() -> void:
 	GlobalHUD.set_clock_paused(true)
 	GlobalHUD.set_clock_visible(false)
 	GlobalHUD.set_youns_status_visible(false)
-	PartyManager.camera_rig.enabled = false
+	PartyManager.freeze_camera()
 
 	# 1. Te llama la atención: se acerca y aparece un "!".
 	var toward := player.global_transform.basis.z
@@ -118,9 +123,8 @@ func _run() -> void:
 func _finish() -> void:
 	_scene3d.finish_camera()
 	get_tree().paused = false
-	PartyManager.camera_rig.enabled = true
-	PartyManager.player.set_physics_process(true)
-	PartyManager.youn.set_physics_process(true)
+	PartyManager.unfreeze_camera()
+	PartyManager.unfreeze_actors()
 	GlobalHUD.set_clock_paused(false)
 	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
 	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())

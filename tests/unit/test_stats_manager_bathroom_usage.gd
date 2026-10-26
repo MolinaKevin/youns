@@ -133,6 +133,5 @@ func test_bathroom_vencido_no_vuelve_a_aparecer_enseguida() -> void:
 	# antes: las ganas quedaban en 100 y bathroom reaparecía y vencía en loop
 	GameState.player_save.ganas_bano = 100
 	_vencer_bathroom()
-	StatsManager._evaluate_emotion_rules()
+	StatsManager.evaluate_emotion_rules()
 	assert_false("bathroom" in StatsManager.active_states)
-

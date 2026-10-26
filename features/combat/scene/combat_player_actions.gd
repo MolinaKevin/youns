@@ -12,12 +12,12 @@ const GREASY_MOVE_PENALTY_MODULES := 3
 const BLINDED_RANGE_MODULES := 2  # rango máximo estando cegado
 
 var state: CombatState
-var map_area: Node
+var map_area: MapArea
 var zone_effects := CombatZoneEffectResolver.new()
 
-var _deal_damage_to_enemy: Callable
-var _deal_damage_to_player: Callable
-var _check_combat_end: Callable
+var deal_damage_to_enemy: Callable
+var deal_damage_to_player: Callable
+var check_combat_end: Callable
 
 var move_mode := false
 
@@ -58,7 +58,8 @@ const TREE_BLOCKED_LINES := [CardActionLine.TYPE_MOVE, CardActionLine.TYPE_BLINK
 
 
 ## Qué charcos cambia cada hechizo elemental (element_bolt, según puddle_effect).
-const ELEMENT_CONVERSIONS := {"fire": ["grease", "vine"], "ice": ["wet"]}
+const CombatEffect := preload("res://features/combat/scene/combat_effect.gd")
+const ELEMENT_CONVERSIONS := CombatEffect.ELEMENT_CONVERSIONS
 ## Ancho (medio ángulo) de los hechizos en línea y en cono.
 const BOLT_HALF_ANGLE := 4.0
 const CONE_HALF_ANGLE := 30.0
@@ -81,6 +82,9 @@ signal confirm_popup_hide_requested()
 signal end_move_button_visible_changed(visible: bool)
 signal move_mode_button_reset_requested()
 
+func emit_log(key: String, args: Array = []) -> void:
+	CombatLog.emit_requested(log_requested, key, args)
+
 func _init() -> void:
 	_move_action = CombatMoveAction.new(self)
 	_attack_action = CombatAttackAction.new(self)
@@ -96,16 +100,16 @@ func _init() -> void:
 	_all_actions = [_move_action, _attack_action, _grenade_action, _trap_action, _self_action,
 		_jump_action, _push_action, _module_action, _spell_action, _puddle_action, _overwatch_action]
 
-func setup(p_state: CombatState, p_map_area: Node, p_damage_enemy: Callable, p_damage_player: Callable, p_check_end: Callable) -> void:
+func setup(p_state: CombatState, p_map_area: MapArea, p_damage_enemy: Callable, p_damage_player: Callable, p_check_end: Callable) -> void:
 	state = p_state
 	map_area = p_map_area
-	_deal_damage_to_enemy = p_damage_enemy
-	_deal_damage_to_player = p_damage_player
-	_check_combat_end = p_check_end
+	deal_damage_to_enemy = p_damage_enemy
+	deal_damage_to_player = p_damage_player
+	check_combat_end = p_check_end
 
 ## Casillas de la grilla → unidades de mundo del mapa.
-func _w(cells: int) -> float:
-	return float(cells) * CombatGrid.CELL
+func w(cells: int) -> float:
+	return CombatGrid.world_for(cells)
 
 func _move_penalty() -> int:
 	return (CardActionLine.cells_for_modules(WET_MOVE_PENALTY_MODULES) if state.player_wet_turns > 0 else 0) \
@@ -127,7 +131,8 @@ func start_line(card: CardActionLine) -> void:
 func has_pending_selection() -> bool:
 	return _current_action != null
 
-func _on_move_mode_toggled(pressed: bool) -> void:
+## Activa o desactiva el modo de usar una mitad de carta como movimiento.
+func set_move_mode(pressed: bool) -> void:
 	move_mode = pressed
 	if not pressed:
 		_move_action.clear()
@@ -138,39 +143,39 @@ func play_as_move(index: int) -> void:
 	var card = state.turn_actions[index]
 	if state.player_overwatch_active:
 		state.player_overwatch_active = false
-		map_area.clear_overwatch_zone()
-		log_requested.emit("Vigilancia cancelada.")
+		map_area.interactions.clear_overwatch_zone()
+		emit_log("combat.log.player.overwatch_cancelled")
 	if state.player_entangled_turns > 0:
-		log_requested.emit("¡Estás enredado! No podés moverte (%d turnos)." % state.player_entangled_turns)
+		emit_log("combat.log.player.entangled_cannot_move", [state.player_entangled_turns])
 		card_preview_hide_requested.emit()
 		return
 	if state.player_frozen_turns > 0:
-		log_requested.emit("¡Estás congelado! No podés moverte (%d turnos)." % state.player_frozen_turns)
+		emit_log("combat.log.player.frozen_cannot_move", [state.player_frozen_turns])
 		card_preview_hide_requested.emit()
 		return
 	if state.player_in_tree:
-		log_requested.emit("Estás arriba del árbol: no te podés mover hasta caer.")
+		emit_log("combat.log.player.in_tree_cannot_move")
 		card_preview_hide_requested.emit()
 		return
 	card_preview_show_requested.emit(card)
 	var penalty := _move_penalty()
 	var effective_range := maxi(1, CardActionLine.movement_cells_for_modules(MOVE_MODE_MODULES) - penalty)
 	if penalty > 0:
-		log_requested.emit("Movimiento reducido por estado.")
+		emit_log("combat.log.player.movement_reduced")
 	_move_action.configure(index, effective_range)
 	_current_action = _move_action
-	log_requested.emit("Modo mover: elegí un destino hasta %s módulos." % CardActionLine.movement_modules_label_for_cells(effective_range))
+	emit_log("combat.log.player.move_mode", [CardActionLine.movement_modules_label_for_cells(effective_range)])
 
 func play_card(index: int) -> void:
 	var card = state.turn_actions[index]
 
 	if state.player_overwatch_active and card.card_type != CardActionLine.TYPE_OVERWATCH:
 		state.player_overwatch_active = false
-		map_area.clear_overwatch_zone()
-		log_requested.emit("Vigilancia cancelada.")
+		map_area.interactions.clear_overwatch_zone()
+		emit_log("combat.log.player.overwatch_cancelled")
 	card_preview_show_requested.emit(card)
 	if state.player_in_tree and card.card_type in TREE_BLOCKED_LINES:
-		log_requested.emit("Estás arriba del árbol: no te podés mover hasta caer.")
+		emit_log("combat.log.player.in_tree_cannot_move")
 		card_preview_hide_requested.emit()
 		return
 	match card.card_type:
@@ -207,20 +212,20 @@ func play_card(index: int) -> void:
 
 func start_move_selection(_section_name: String, index: int, move_range_cells: int, card_name: String) -> void:
 	if state.player_entangled_turns > 0:
-		log_requested.emit("¡Estás enredado! No podés moverte (%d turnos)." % state.player_entangled_turns)
+		emit_log("combat.log.player.entangled_cannot_move", [state.player_entangled_turns])
 		card_preview_hide_requested.emit()
 		return
 	if state.player_frozen_turns > 0:
-		log_requested.emit("¡Estás congelado! No podés moverte (%d turnos)." % state.player_frozen_turns)
+		emit_log("combat.log.player.frozen_cannot_move", [state.player_frozen_turns])
 		card_preview_hide_requested.emit()
 		return
 	var penalty := _move_penalty()
 	var effective_range := maxi(1, move_range_cells - penalty)
 	if penalty > 0:
-		log_requested.emit("Movimiento reducido por estado.")
+		emit_log("combat.log.player.movement_reduced")
 	_move_action.configure(index, effective_range)
 	_current_action = _move_action
-	log_requested.emit("%s: elegí un destino hasta %s módulos." % [card_name, CardActionLine.movement_modules_label_for_cells(effective_range)])
+	emit_log("combat.log.player.move_select", [card_name, CardActionLine.movement_modules_label_for_cells(effective_range)])
 
 func start_range_attack_selection(index: int, card: CardActionLine, range_override: int = 0) -> void:
 	_attack_action.start(index, card, range_override)
@@ -260,7 +265,8 @@ func _start_spell_selection(index: int, card: CardActionLine) -> void:
 
 # ── Map tile selected & confirm popup ─────────────────────────────────────────
 
-func _on_position_selected(pos: Vector2) -> void:
+## Entrega una casilla al modo de selección activo.
+func select_position(pos: Vector2) -> void:
 	if _current_action == null:
 		return
 	var action := _current_action
@@ -268,25 +274,26 @@ func _on_position_selected(pos: Vector2) -> void:
 	if not action.is_active():
 		_current_action = null
 
-func _on_confirm_yes() -> void:
+## Confirma la selección pendiente actual.
+func confirm_selection() -> void:
 	confirm_popup_hide_requested.emit()
 	var cell := pending_cell
 	pending_cell = Vector2(-1.0, -1.0)
-	map_area.clear_path_preview()
+	map_area.presentation.clear_path_preview()
 	_execute_tile_action(cell)
 
-func _on_confirm_no() -> void:
+func reject_confirmation() -> void:
 	confirm_popup_hide_requested.emit()
-	map_area.clear_path_preview()
+	map_area.presentation.clear_path_preview()
 	pending_cell = Vector2(-1.0, -1.0)
 
-func _on_confirm_fin() -> void:
+func finish_selection() -> void:
 	confirm_popup_hide_requested.emit()
-	map_area.clear_path_preview()
+	map_area.presentation.clear_path_preview()
 	pending_cell = Vector2(-1.0, -1.0)
 	_finish_movement()
 
-func _on_end_move_pressed() -> void:
+func finish_movement() -> void:
 	_finish_movement()
 
 func _finish_movement() -> void:
@@ -310,35 +317,47 @@ func _execute_tile_action(cell: Vector2) -> void:
 	if not action.is_active():
 		_current_action = null
 
+## Ejecuta inmediatamente la selección activa. Es útil para entradas no-UI y
+## conserva el mismo cierre de estado que una confirmación normal.
+func execute_selection_at(cell: Vector2) -> void:
+	_execute_tile_action(cell)
+
+## Variante esperable para acciones que reproducen una animación antes de
+## terminar (por ejemplo, ataques). La UI puede seguir usando la versión
+## inmediata; las pruebas y flujos secuenciales esperan su finalización.
+func execute_selection_at_async(cell: Vector2) -> void:
+	if _current_action == null:
+		return
+	var action := _current_action
+	await action.execute(cell)
+	if not action.is_active():
+		_current_action = null
+
+func active_selection_index() -> int:
+	return _current_action.index if _current_action != null else -1
+
+func active_selection_range_cells() -> int:
+	if _current_action == null:
+		return -1
+	var range_value: Variant = _current_action.get("range_cells")
+	return int(range_value) if range_value != null else -1
+
 ## Los charcos que pisó el jugador entre `from` y `to` le aplican sus estados
 ## (al moverse, o al caer de un árbol: from == to).
 func apply_player_zone_effects(from: Vector2, to: Vector2) -> void:
-	var contact_margin: float = map_area.player_area_contact_radius()
-	var zone_fx: Dictionary = map_area.get_puddle_effects_along(from, to, contact_margin)
-	var zone_dmg: Dictionary = map_area.get_puddle_damage_along(from, to, contact_margin)
+	var contact_margin: float = map_area.queries.player_area_contact_radius()
+	var zone_fx: Dictionary = map_area.interactions.puddle_effects_along(from, to, contact_margin)
+	var zone_dmg: Dictionary = map_area.interactions.puddle_damage_along(from, to, contact_margin)
 	for event in zone_effects.apply_path_effects(state, zone_fx, zone_dmg, true):
-		_log_player_zone_effect(event)
-
-func _log_player_zone_effect(event: Dictionary) -> void:
-	match event["effect"]:
-		"wet": log_requested.emit("¡Pisaste el charco! Estás mojado por %d turnos." % event["turns"])
-		"fire": log_requested.emit("¡Pisaste fuego! Estás en llamas por %d turnos." % event["turns"])
-		"grease": log_requested.emit("¡Pisaste grasa! Movimiento reducido por %d turnos." % event["turns"])
-		"vine": log_requested.emit("¡Las enredaderas te atraparon! No podés moverte por %d turnos." % event["turns"])
-		"blood": log_requested.emit("¡Pisaste sangre! Estás sangrando por %d turnos." % event["turns"])
-		"poison": log_requested.emit("¡Pisaste veneno! Estás envenenado (%d acumulaciones)." % event["turns"])
-		"sand": log_requested.emit("¡Arena en los ojos! Rango de ataque reducido a 1 por %d turnos." % event["turns"])
-		"ice": log_requested.emit("¡Pisaste hielo! Estás congelado por %d turnos." % event["turns"])
-		"bloody_ice": log_requested.emit("¡Pisaste hielo sangriento! Congelado y sangrando.")
-		"dark_smoke": log_requested.emit("¡Humo oscuro! No podés ver bien por %d turnos." % event["turns"])
+		zone_effects.log_zone_effect(event, "combat.log.player.zone", CombatZoneEffectResolver.PLAYER_LOG_TURNS, emit_log)
 
 ## Talar: el árbol cae alejándose del jugador y queda un tronco tirado.
 func _fell_tree(card: CardActionLine, tree: Dictionary) -> void:
-	var result: Dictionary = map_area.fell_tree(tree, tree["pos"] - map_area.player_pos)
-	log_requested.emit("%s: el árbol cae y queda un tronco tirado." % card.name)
+	var result: Dictionary = map_area.interactions.fell_tree(tree, tree["pos"] - map_area.player_pos)
+	emit_log("combat.log.player.tree_felled", [card.name])
 	if result["enemy_hit"]:
-		log_requested.emit("¡El árbol le cae encima al enemigo — %d de daño!" % TREE_CRUSH_DAMAGE)
-		await _deal_damage_to_enemy.call(TREE_CRUSH_DAMAGE, true, CombatState.FISICO)
+		emit_log("combat.log.player.tree_hits_enemy", [TREE_CRUSH_DAMAGE])
+		await deal_damage_to_enemy.call(TREE_CRUSH_DAMAGE, true, CombatState.FISICO)
 
 ## El jugador se cae del árbol (lo talaron o se prendió fuego): daño de caída
 ## y, si ardía, queda en llamas. map_area ya lo bajó al pie del árbol.
@@ -346,71 +365,58 @@ func player_falls_from_tree(burning: bool) -> void:
 	if not state.player_in_tree:
 		return
 	state.player_in_tree = false
-	log_requested.emit("¡Te caés del árbol — %d de daño!" % TREE_FALL_DAMAGE)
-	await _deal_damage_to_player.call(TREE_FALL_DAMAGE, true, CombatState.FISICO)
+	emit_log("combat.log.player.tree_fall", [TREE_FALL_DAMAGE])
+	await deal_damage_to_player.call(TREE_FALL_DAMAGE, true, CombatState.FISICO)
 	if burning and state.player_hp > 0:
 		var turns: int = state.set_player_status("burn", TREE_FIRE_BURN_TURNS)
-		log_requested.emit("¡El árbol ardía: quedás en llamas por %d turnos!" % turns)
+		emit_log("combat.log.player.burning_tree_fall", [turns])
 	if state.player_hp > 0:
 		apply_player_zone_effects(map_area.player_pos, map_area.player_pos)
 	ui_update_requested.emit()
-	_check_combat_end.call()
+	check_combat_end.call()
 
 ## El enemigo fue movido a la fuerza (empuje, tirón, ancla, nova): se le
 ## aplican los charcos y trampas que cruzó. Devuelve si pasó por alguno.
 func _apply_enemy_forced_move(card_name: String, from: Vector2, landing: Vector2) -> bool:
-	var contact_margin: float = map_area.enemy_area_contact_radius()
-	var fx: Dictionary = map_area.trigger_zone_effects_along(from, landing, contact_margin)
-	var zone_dmg: Dictionary = map_area.get_puddle_damage_along(from, landing, contact_margin)
+	var contact_margin: float = map_area.queries.enemy_area_contact_radius()
+	var fx: Dictionary = map_area.interactions.zone_effects_along(from, landing, contact_margin)
+	var zone_dmg: Dictionary = map_area.interactions.puddle_damage_along(from, landing, contact_margin)
 	var events := zone_effects.apply_path_effects(state, fx, zone_dmg, false)
 	for event in events:
-		_log_enemy_forced_zone_effect(event)
+		zone_effects.log_zone_effect(event, "combat.log.enemy.forced_zone", CombatZoneEffectResolver.ENEMY_LOG_TURNS, emit_log)
 	var any_zone := not events.is_empty()
 	if fx.get("trap_damage", 0) > 0:
-		log_requested.emit("¡%s! El enemigo pasó por una trampa — %d de daño!" % [card_name, fx["trap_damage"]])
-		await _deal_damage_to_enemy.call(fx["trap_damage"])
+		emit_log("combat.log.player.enemy_forced_trap", [card_name, fx["trap_damage"]])
+		await deal_damage_to_enemy.call(fx["trap_damage"])
 		any_zone = true
 	return any_zone
 
-func _log_enemy_forced_zone_effect(event: Dictionary) -> void:
-	match event["effect"]:
-		"wet": log_requested.emit("El enemigo pasó por agua. ¡Está mojado!")
-		"fire": log_requested.emit("El enemigo pasó por el fuego. ¡Está en llamas!")
-		"grease": log_requested.emit("El enemigo pasó por grasa. ¡Movimiento reducido!")
-		"vine": log_requested.emit("¡El enemigo quedó enredado por %d turnos!" % event["turns"])
-		"blood": log_requested.emit("El enemigo pasó por sangre. ¡Está sangrando!")
-		"poison": log_requested.emit("El enemigo pasó por veneno. ¡Está envenenado!")
-		"sand": log_requested.emit("¡El enemigo fue cegado por %d turnos!" % event["turns"])
-		"ice": log_requested.emit("¡El enemigo pisó hielo y quedó congelado por %d turnos!" % event["turns"])
-		"bloody_ice": log_requested.emit("¡El enemigo pisó hielo sangriento! Congelado y sangrando.")
-		"dark_smoke": log_requested.emit("¡El enemigo quedó cegado por el humo oscuro!")
-
 ## Nova: daño mágico alrededor tuyo y empuja al enemigo hacia afuera.
 func _execute_nova(card: CardActionLine) -> void:
-	var radius := _w(card.primary_range_cells())
-	var in_pattern: bool = map_area.is_enemy_in_card_pattern(card.pattern, map_area.player_pos, Vector2(0, 1), radius) if card.pattern != null else map_area.is_enemy_in_area_circle(map_area.player_pos, radius)
+	var radius := w(card.primary_range_cells())
+	var in_pattern: bool = map_area.interactions.is_enemy_in_card_pattern(card.pattern, map_area.player_pos, Vector2(0, 1), radius) if card.pattern != null else map_area.queries.is_enemy_in_area_circle(map_area.player_pos, radius)
 	if not in_pattern:
-		log_requested.emit("%s: no había nadie cerca." % card.name)
+		emit_log("combat.log.player.nova_no_target", [card.name])
 		return
-	log_requested.emit("¡%s! El enemigo sale despedido — %d de daño." % [card.name, card.damage])
-	await _deal_damage_to_enemy.call(card.damage, true, CombatState.MAGICO)
+	emit_log("combat.log.player.nova_hits_enemy", [card.name, card.damage])
+	await deal_damage_to_enemy.call(card.damage, true, CombatState.MAGICO)
 	if state.enemy_hp <= 0:
-		_check_combat_end.call()
+		check_combat_end.call()
 		return
 	var from: Vector2 = map_area.enemy_pos
 	var away: Vector2 = from + (from - map_area.player_pos)
-	var landing: Vector2 = map_area.calculate_push_landing(away, _w(card.cast_range_cells()))
-	map_area.push_enemy_to(landing)
+	var landing: Vector2 = map_area.interactions.calculate_push_landing(away, w(card.cast_range_cells()))
+	map_area.interactions.push_enemy_to(landing)
 	await map_area.enemy_reached_target
 	await _apply_enemy_forced_move(card.name, from, landing)
 	hand_refresh_requested.emit()
 	ui_update_requested.emit()
-	_check_combat_end.call()
+	check_combat_end.call()
 
 func _apply_spell_status(effect: String, base_turns: int) -> void:
 	var turns: int = state.set_enemy_status(effect, base_turns)
 	if turns > 0:
-		log_requested.emit("El enemigo queda %s por %d turnos." % [STATUS_NAMES.get(effect, effect), turns])
+		emit_log("combat.status.enemy_applied", [LocalizationState.t("combat.status_name.%s" % effect), turns])
 
 # ── Clear pending ─────────────────────────────────────────────────────────────
 

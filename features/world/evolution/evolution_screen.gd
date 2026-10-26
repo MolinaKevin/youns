@@ -67,6 +67,54 @@ func _ready() -> void:
 	_show_section(Section.STATS)
 	_refresh_pending()
 
+# ── API de interacción ──────────────────────────────────────────────────────
+
+## Muestra una de las cuatro secciones de la pantalla.
+func show_section(section: Section) -> void:
+	_show_section(section)
+
+## Elige el color que se aplicará al pulsar una mitad de carta.
+func select_color(id: String) -> void:
+	if _section != Section.COLORS or _remaining_colors.get(id, 0) <= 0:
+		return
+	_selected_color = id
+	_rebuild_keeping_selection()
+
+## Elige una línea concedida para agregar al pulsar una mitad de carta.
+func select_line(index: int) -> void:
+	if _section != Section.ACTIONS or index < 0 or index >= _used_lines.size() or _used_lines[index]:
+		return
+	_selected_line = index
+	_rebuild_keeping_selection()
+
+## Aplica la selección actual a la mitad indicada de una carta del mazo.
+func apply_to_half(card: CardData, is_top: bool) -> void:
+	_on_half_pressed(card, is_top)
+
+## Deshace el último cambio de color.
+func undo_color() -> void:
+	_undo("color")
+
+## Deshace la última línea agregada.
+func undo_line() -> void:
+	_undo("line")
+
+## Cartas sobre las que se pueden aplicar los cambios de evolución.
+func deck_cards() -> Array[CardData]:
+	return _deck
+
+## Indica si el botón Terminar está habilitado para el jugador.
+func is_finish_enabled() -> bool:
+	return can_finish()
+
+## Intenta terminar la evolución. Devuelve si la pantalla se pudo cerrar.
+func finish() -> bool:
+	if not can_finish():
+		return false
+	finished.emit()
+	queue_free()
+	return true
+
 # ── Armado ───────────────────────────────────────────────────────────────────
 
 func _build() -> void:
@@ -123,7 +171,7 @@ func _build() -> void:
 		b.custom_minimum_size = Vector2(0, 48)
 		b.add_theme_stylebox_override("pressed", selected_style)
 		b.text = LocalizationState.t(_section_key(section))
-		b.pressed.connect(_show_section.bind(section))
+		b.pressed.connect(show_section.bind(section))
 		menu.add_child(b)
 		_section_buttons[section] = b
 
@@ -149,7 +197,7 @@ func _build() -> void:
 	_finish_button = Button.new()
 	_finish_button.text = LocalizationState.t("evolution.finish")
 	_finish_button.custom_minimum_size = Vector2(200, 48)
-	_finish_button.pressed.connect(_on_finish)
+	_finish_button.pressed.connect(finish)
 	footer.add_child(_finish_button)
 
 func _section_key(section: Section) -> String:
@@ -256,8 +304,11 @@ func _build_colors() -> void:
 		chip.disabled = _remaining_colors[id] <= 0
 		chip.button_pressed = id == _selected_color
 		chip.pressed.connect(func() -> void:
-			_selected_color = id if chip.button_pressed else ""
-			_rebuild_keeping_selection())
+			if chip.button_pressed:
+				select_color(id)
+			else:
+				_selected_color = ""
+				_rebuild_keeping_selection())
 		bar.add_child(chip)
 	bar.add_child(_undo_button("color"))
 	_content.add_child(_deck_grid())
@@ -298,15 +349,18 @@ func _build_actions() -> void:
 		b.disabled = _used_lines[i]
 		b.button_pressed = i == _selected_line
 		b.tooltip_text = line.description
-		var row: HBoxContainer = CardViewScript._line_row(line.resolved(stats), "")
+		var row: HBoxContainer = CardViewScript.line_row(line.resolved(stats), "")
 		row.set_anchors_preset(Control.PRESET_FULL_RECT)
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		if _used_lines[i]:
 			row.modulate.a = 0.35
 		b.add_child(row)
 		b.pressed.connect(func() -> void:
-			_selected_line = i if b.button_pressed else -1
-			_rebuild_keeping_selection())
+			if b.button_pressed:
+				select_line(i)
+			else:
+				_selected_line = -1
+				_rebuild_keeping_selection())
 		bar.add_child(b)
 	bar.add_child(_undo_button("line"))
 	_content.add_child(_deck_grid())
@@ -334,7 +388,7 @@ func _deck_grid() -> ScrollContainer:
 		holder.add_child(view)
 		view.setup(card)
 		view.halves_selectable = true
-		view.half_pressed.connect(_on_half_pressed)
+		view.half_pressed.connect(apply_to_half)
 		_card_views[card] = view
 	return scroll
 
@@ -381,7 +435,7 @@ func _undo(type: String) -> void:
 			action.intelligence = op["prev_intelligence"]
 			_remaining_colors[op["id"]] += 1
 		else:
-			action.lines.pop_back()
+			DeckRules.remove_last_line(action)
 			_used_lines[op["index"]] = false
 		_history.remove_at(i)
 		break
@@ -431,9 +485,3 @@ func _note(text: String) -> Label:
 	label.text = text
 	label.add_theme_font_size_override("font_size", 18)
 	return label
-
-func _on_finish() -> void:
-	if not can_finish():
-		return
-	finished.emit()
-	queue_free()

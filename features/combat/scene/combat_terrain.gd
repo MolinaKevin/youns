@@ -1,6 +1,8 @@
 class_name CombatTerrain
 extends RefCounted
 
+const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
+
 ## Geometría lógica del tablero. Recibe los obstáculos declarados por el bioma
 ## y responde elevación, rampas, altura y ocupación para el combate.
 const PATH_CELL := 0.5
@@ -24,6 +26,7 @@ func clear() -> void:
 	invalidate()
 
 func add(obstacle: Dictionary) -> void:
+	assert(CombatObstacle.is_known(obstacle), "Tipo de obstáculo desconocido: %s" % CombatObstacle.type_of(obstacle))
 	obstacles.append(obstacle)
 	invalidate()
 
@@ -34,7 +37,7 @@ func invalidate() -> void:
 
 func elevation_at(pos: Vector2) -> int:
 	for obstacle in obstacles:
-		if obstacle.get("type", "solid") != "platform":
+		if CombatObstacle.type_of(obstacle) != CombatObstacle.PLATFORM:
 			continue
 		var center: Vector2 = obstacle["pos"]
 		var half: Vector2 = obstacle["box"] * 0.5
@@ -46,7 +49,7 @@ func elevation_at(pos: Vector2) -> int:
 
 func height_at(pos: Vector2) -> float:
 	for obstacle in obstacles:
-		if obstacle.get("type", "solid") != "platform":
+		if CombatObstacle.type_of(obstacle) != CombatObstacle.PLATFORM:
 			continue
 		var center: Vector2 = obstacle["pos"]
 		var half: Vector2 = obstacle["box"] * 0.5
@@ -96,10 +99,10 @@ func pos_in_ramp_exit(pos: Vector2, obstacle: Dictionary) -> bool:
 
 func tile_in_obstacle(pos: Vector2, elevation: int = 0) -> bool:
 	for obstacle in obstacles:
-		var obstacle_type: String = obstacle.get("type", "solid")
-		if obstacle_type == "bridge":
+		var obstacle_type := CombatObstacle.type_of(obstacle)
+		if obstacle_type == CombatObstacle.BRIDGE:
 			continue
-		if obstacle_type == "platform":
+		if obstacle_type == CombatObstacle.PLATFORM:
 			if elevation > 0:
 				continue
 			var center: Vector2 = obstacle["pos"]
@@ -119,7 +122,7 @@ func tile_in_obstacle(pos: Vector2, elevation: int = 0) -> bool:
 func pos_blocked(pos: Vector2, elevation: int = 0, margin: float = PATH_CELL * 0.5) -> bool:
 	if elevation > 0:
 		for obstacle in obstacles:
-			if obstacle.get("type", "solid") != "platform":
+			if CombatObstacle.type_of(obstacle) != CombatObstacle.PLATFORM:
 				continue
 			var center: Vector2 = obstacle["pos"]
 			var half: Vector2 = obstacle["box"] * 0.5
@@ -128,10 +131,10 @@ func pos_blocked(pos: Vector2, elevation: int = 0, margin: float = PATH_CELL * 0
 				return false
 		return true
 	for obstacle in obstacles:
-		var obstacle_type: String = obstacle.get("type", "solid")
-		if obstacle_type == "bridge":
+		var obstacle_type := CombatObstacle.type_of(obstacle)
+		if obstacle_type == CombatObstacle.BRIDGE:
 			continue
-		if obstacle_type == "platform":
+		if obstacle_type == CombatObstacle.PLATFORM:
 			var center: Vector2 = obstacle["pos"]
 			var half: Vector2 = obstacle["box"] * 0.5 + Vector2(margin, margin)
 			if abs(pos.x - center.x) < half.x and abs(pos.y - center.y) < half.y:
@@ -150,7 +153,7 @@ func player_height_at(pos: Vector2, elevation: int) -> float:
 	if elevation <= 0:
 		return 0.0
 	for obstacle in obstacles:
-		if obstacle.get("type", "solid") != "platform":
+		if CombatObstacle.type_of(obstacle) != CombatObstacle.PLATFORM:
 			continue
 		var center: Vector2 = obstacle["pos"]
 		var half: Vector2 = obstacle["box"] * 0.5

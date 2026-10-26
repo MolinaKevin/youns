@@ -94,8 +94,34 @@ func _setup() -> void:
 
 	popup_label.text = LocalizationState.t("world.enemy.intercepted", [youn_data.youn_name])
 
-func _switch_anim(key: String) -> void:
+func switch_anim(key: String) -> void:
 	_appearance.switch_anim(key)
+
+## API de colaboración: los componentes de IA, diálogo e interacción no leen
+## directamente el estado de ensamblado del nodo.
+func player() -> CharacterBody3D:
+	return _player
+
+func is_engaging_combat() -> bool:
+	return _engaging_combat
+
+func is_interaction_near() -> bool:
+	return _interaction != null and _interaction.near
+
+func begin_combat_handoff() -> void:
+	_combat_handoff.engage()
+
+func finish_non_combat_encounter() -> void:
+	_engaging_combat = false
+	_interaction.update_prompt_visibility()
+	_ai.start_idle()
+
+func set_player_combat_locked(locked: bool) -> void:
+	if _player != null:
+		_player.set_physics_process(not locked)
+
+func combat_start_position() -> Vector3:
+	return _player.global_position if _player != null else global_position
 
 # ── Physics ───────────────────────────────────────────────────────────────────
 
@@ -131,13 +157,32 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	_interaction.handle_interact_input(event)
 
-func _begin_encounter() -> void:
+func begin_encounter() -> void:
 	if _engaging_combat:
 		return
 	if conversation != null:
 		_conversation.play()
 	else:
 		_combat_handoff.engage()
+
+## Estado compartido por diálogo y combate antes de un encuentro: inmoviliza al
+## Youn, detiene su IA y deja a ambos personajes mirándose. El handoff agrega
+## encima el popup, la pausa y la transición; la conversación sólo reproduce
+## sus líneas y puede volver a liberar este estado si no hay pelea.
+func prepare_encounter() -> void:
+	_engaging_combat = true
+	_interaction.update_prompt_visibility()
+	_ai.start_idle()
+	velocity = Vector3.ZERO
+	if _player == null:
+		return
+	_player.velocity = Vector3.ZERO
+	var to_youn := (global_position - _player.global_position) * Vector3(1, 0, 1)
+	if to_youn.length() > 0.01:
+		_player.rotation.y = atan2(to_youn.x, to_youn.z)
+	var to_player := -to_youn
+	if to_player.length() > 0.01:
+		rotation.y = atan2(to_player.x, to_player.z)
 
 # ── Combate ───────────────────────────────────────────────────────────────────
 

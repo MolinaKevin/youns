@@ -1,5 +1,7 @@
 extends Node3D
 
+const LabMilestone := preload("res://data/lab_milestone.gd")
+
 @onready var lab_ui: Control     = $LabLayer/Laboratory
 @onready var menu: Control = $MenuLayer/MainMenu
 @onready var prompt: Label3D = $Monzaemon/Prompt
@@ -88,11 +90,11 @@ func _on_exit_warp_entered(body: Node3D) -> void:
 		ZoneManager.exit_interior("SpawnFromLab")
 
 func _on_recipe_completed(recipe: Resource) -> void:
-	if recipe.id == "terminal_de_analisis":
+	if recipe.id == LabMilestone.ANALYSIS_TERMINAL:
 		_refresh_analysis_terminal()
 
 func _refresh_analysis_terminal() -> void:
-	var unlocked := LaboratoryState.is_recipe_completed("terminal_de_analisis")
+	var unlocked := LaboratoryState.is_recipe_completed(LabMilestone.ANALYSIS_TERMINAL)
 	analysis_terminal.visible = unlocked
 	if not unlocked:
 		terminal_prompt.visible = false
@@ -111,7 +113,10 @@ func _toggle_menu() -> void:
 	GlobalHUD.set_clock_visible(false if showing else GlobalHUD.has_persistent_clock_ui())
 	GlobalHUD.set_clock_paused(showing)
 	GlobalHUD.set_youns_status_visible(false if showing else GlobalHUD.has_persistent_care_ui())
-	PartyManager.camera_rig.enabled = not showing
+	if showing:
+		PartyManager.freeze_camera()
+	else:
+		PartyManager.unfreeze_camera()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if showing else Input.MOUSE_MODE_CAPTURED
 
 func _exit_tree() -> void:

@@ -29,44 +29,44 @@ func start(p_index: int, p_card: CardActionLine) -> void:
 	tree = {}
 	match card.card_type:
 		CardActionLine.TYPE_CHAIN_BOLT:
-			host.map_area.start_overwatch_selection(host._w(card.cast_range_cells()), CombatPlayerActions.BOLT_HALF_ANGLE)
-			host.log_requested.emit("Elegí hacia dónde tirar el rayo.")
+			host.map_area.interactions.start_overwatch_selection(host.w(card.cast_range_cells()), CombatPlayerActions.BOLT_HALF_ANGLE)
+			host.emit_log("combat.log.spell.select_bolt_direction")
 		CardActionLine.TYPE_CONE_BLAST:
-			host.map_area.start_overwatch_selection(host._w(card.cast_range_cells()), card.pattern.cone_half_angle if card.pattern != null else CombatPlayerActions.CONE_HALF_ANGLE)
-			host.log_requested.emit("Elegí hacia dónde soplar.")
+			host.map_area.interactions.start_overwatch_selection(host.w(card.cast_range_cells()), card.pattern.cone_half_angle if card.pattern != null else CombatPlayerActions.CONE_HALF_ANGLE)
+			host.emit_log("combat.log.spell.select_cone_direction")
 		CardActionLine.TYPE_CURSE:
-			host.map_area.start_push_enemy_selection(host._w(card.cast_range_cells()))
-			host.log_requested.emit("Elegí al enemigo.")
+			host.map_area.interactions.start_push_enemy_selection(host.w(card.cast_range_cells()))
+			host.emit_log("combat.log.spell.select_enemy")
 		CardActionLine.TYPE_PUDDLE_HOP:
-			host.map_area.start_spell_selection(host._w(card.cast_range_cells()))
-			host.log_requested.emit("Elegí el charco que querés trasladar.")
+			host.map_area.interactions.start_spell_selection(host.w(card.cast_range_cells()))
+			host.emit_log("combat.log.spell.select_puddle")
 		CardActionLine.TYPE_TREE_CLIMB:
-			host.map_area.start_module_selection(host._w(card.primary_range_cells()))
-			host.log_requested.emit("Elegí el árbol al que querés trepar.")
+			host.map_area.interactions.start_module_selection(host.w(card.primary_range_cells()))
+			host.emit_log("combat.log.spell.select_tree")
 		_:
-			host.map_area.start_spell_selection(host._w(card.cast_range_cells()))
-			host.log_requested.emit("Elegí el punto.")
+			host.map_area.interactions.start_spell_selection(host.w(card.cast_range_cells()))
+			host.emit_log("combat.log.spell.select_point")
 
 func on_tile_selected(pos: Vector2) -> void:
 	if card.card_type == CardActionLine.TYPE_TREE_CLIMB:
 		_on_tree_climb_click(pos)
 		return
 	if card.card_type == CardActionLine.TYPE_PUDDLE_HOP and puddle.is_empty():
-		var zone: Dictionary = host.map_area.get_puddle_at(pos)
+		var zone: Dictionary = host.map_area.interactions.puddle_at(pos)
 		if zone.is_empty():
 			return
-		var gap: float = host.map_area.movement_distance(host.map_area.player_pos, zone["pos"]) - float(zone["radius"])
-		if gap > host._w(card.cast_range_cells()):
-			host.log_requested.emit("Ese charco está demasiado lejos.")
+		var gap: float = host.map_area.queries.movement_distance(host.map_area.player_pos, zone["pos"]) - float(zone["radius"])
+		if gap > host.w(card.cast_range_cells()):
+			host.emit_log("combat.log.spell.puddle_too_far")
 			return
 		puddle = zone
-		host.map_area.start_puddle_hop_landing(zone["pos"], host._w(card.primary_range_cells()))
-		host.log_requested.emit("Elegí dónde cae el charco.")
+		host.map_area.interactions.start_puddle_hop_landing(zone["pos"], host.w(card.primary_range_cells()))
+		host.emit_log("combat.log.spell.select_puddle_landing")
 		return
 	match card.card_type:
 		CardActionLine.TYPE_PUDDLE_HOP:
-			if host.map_area.movement_distance(puddle["pos"], pos) > host._w(card.primary_range_cells()):
-				host.log_requested.emit("No llega tan lejos desde ese charco.")
+			if host.map_area.queries.movement_distance(puddle["pos"], pos) > host.w(card.primary_range_cells()):
+				host.emit_log("combat.log.spell.puddle_landing_too_far")
 				return
 			if pos.x < 0.0 or pos.y < 0.0 or pos.x > host.map_area.WORLD_W or pos.y > host.map_area.WORLD_H:
 				return
@@ -76,24 +76,24 @@ func on_tile_selected(pos: Vector2) -> void:
 				return
 			dir = new_dir.normalized()
 		CardActionLine.TYPE_CURSE:
-			if not host.map_area.is_click_on_enemy(pos):
+			if not host.map_area.interactions.is_click_on_enemy(pos):
 				return
-			if not host.map_area.is_enemy_in_attack_range(host._w(card.cast_range_cells())):
-				host.log_requested.emit("El enemigo está demasiado lejos.")
+			if not host.map_area.queries.is_enemy_in_attack_range(host.w(card.cast_range_cells())):
+				host.emit_log("combat.log.spell.enemy_too_far")
 				return
-			if not host.map_area.has_line_of_sight(host.map_area.player_pos, host.map_area.enemy_pos):
-				host.log_requested.emit("No ves al enemigo desde acá.")
+			if not host.map_area.queries.has_line_of_sight(host.map_area.player_pos, host.map_area.enemy_pos):
+				host.emit_log("combat.log.spell.enemy_no_line_of_sight")
 				return
 		_:
-			if host.map_area.movement_distance(host.map_area.player_pos, pos) > host._w(card.cast_range_cells()):
-				host.log_requested.emit("Demasiado lejos.")
+			if host.map_area.queries.movement_distance(host.map_area.player_pos, pos) > host.w(card.cast_range_cells()):
+				host.emit_log("combat.log.spell.point_too_far")
 				return
 			# El meteoro cae del cielo; el resto necesita ver el punto.
-			if card.card_type == CardActionLine.TYPE_ELEMENT_BOLT and not host.map_area.has_line_of_sight(host.map_area.player_pos, pos):
-				host.log_requested.emit("Hay algo en el medio.")
+			if card.card_type == CardActionLine.TYPE_ELEMENT_BOLT and not host.map_area.queries.has_line_of_sight(host.map_area.player_pos, pos):
+				host.emit_log("combat.log.spell.point_blocked")
 				return
-			if card.card_type == CardActionLine.TYPE_BLINK and not host.map_area.can_blink_to(pos):
-				host.log_requested.emit("No podés aparecer ahí.")
+			if card.card_type == CardActionLine.TYPE_BLINK and not host.map_area.terrain.can_blink_to(pos):
+				host.emit_log("combat.log.spell.blink_invalid_destination")
 				return
 	host.pending_cell = pos
 	host.confirm_popup_show_requested.emit(false)
@@ -102,24 +102,24 @@ func on_tile_selected(pos: Vector2) -> void:
 ## del rango alrededor del árbol: un lugar libre o encima del enemigo).
 func _on_tree_climb_click(pos: Vector2) -> void:
 	if tree.is_empty():
-		var found: Dictionary = host.map_area.get_tree_at(pos)
+		var found: Dictionary = host.map_area.interactions.tree_at(pos)
 		if found.is_empty():
 			return
-		if host.map_area.obstacle_gap(found) > host._w(card.primary_range_cells()):
-			host.log_requested.emit("Tenés que estar pegado al árbol para trepar.")
+		if host.map_area.interactions.obstacle_gap(found) > host.w(card.primary_range_cells()):
+			host.emit_log("combat.log.spell.tree_not_near")
 			return
-		if host.map_area.is_tree_burning(found):
-			host.log_requested.emit("Ese árbol está en llamas: no podés trepar.")
+		if host.map_area.interactions.is_tree_burning(found):
+			host.emit_log("combat.log.spell.tree_burning")
 			return
 		tree = found
-		host.map_area.start_puddle_hop_landing(tree["pos"], host._w(card.cast_range_cells()))
-		host.log_requested.emit("Elegí dónde vas a caer al final de la ronda.")
+		host.map_area.interactions.start_puddle_hop_landing(tree["pos"], host.w(card.cast_range_cells()))
+		host.emit_log("combat.log.spell.select_tree_landing")
 		return
-	if host.map_area.movement_distance(tree["pos"], pos) > host._w(card.cast_range_cells()):
-		host.log_requested.emit("No llegás a caer tan lejos.")
+	if host.map_area.queries.movement_distance(tree["pos"], pos) > host.w(card.cast_range_cells()):
+		host.emit_log("combat.log.spell.tree_landing_too_far")
 		return
-	if not host.map_area.can_drop_at(pos):
-		host.log_requested.emit("No podés caer ahí.")
+	if not host.map_area.interactions.can_drop_at(pos):
+		host.emit_log("combat.log.spell.tree_landing_invalid")
 		return
 	host.pending_cell = pos
 	host.confirm_popup_show_requested.emit(false)
@@ -135,9 +135,9 @@ func execute(cell: Vector2) -> void:
 	_spend_card()
 	host.hand_refresh_requested.emit()
 	if not played_card.card_type in [CardActionLine.TYPE_BLINK, CardActionLine.TYPE_DELAYED_AREA, CardActionLine.TYPE_TREE_CLIMB]:
-		host.map_area.play_player_anim("range")
+		host.map_area.actors.play_player_animation("range")
 		await host.map_area.player_anim_finished
-		host.map_area.play_player_anim("idle")
+		host.map_area.actors.play_player_animation("idle")
 	match played_card.card_type:
 		CardActionLine.TYPE_ELEMENT_BOLT:
 			await _casts.cast_element_bolt(played_card, cell)
@@ -156,7 +156,7 @@ func execute(cell: Vector2) -> void:
 		CardActionLine.TYPE_TREE_CLIMB:
 			_casts.cast_tree_climb(played_card, saved_tree, cell)
 	_finish()
-	host.map_area.clear_card_pattern_preview()
+	host.map_area.presentation.clear_card_pattern()
 
 func clear() -> void:
 	index = -1
@@ -164,5 +164,5 @@ func clear() -> void:
 	dir = Vector2.ZERO
 	puddle = {}
 	tree = {}
-	host.map_area.clear_spell_selection()
-	host.map_area.clear_push_selection()
+	host.map_area.interactions.clear_spell_selection()
+	host.map_area.interactions.clear_push_selection()

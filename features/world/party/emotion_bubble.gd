@@ -5,6 +5,9 @@ const FLOAT_AMPLITUDE  := 0.05
 const FLOAT_PERIOD     := 1.6
 const CYCLE_PAUSE      := 5.0
 
+const BUBBLE_FRAMES_PATH := "res://assets/emotions/bubble_frames.tres"
+const ICON_FRAMES_PATH   := "res://assets/emotions/emotion_frames.tres"
+
 @export var debug_emotion      : String = ""
 @export var debug_random       : bool   = false
 
@@ -37,7 +40,8 @@ func _ready() -> void:
 	visible         = false
 	animation_finished.connect(_on_animation_finished)
 	StatsManager.stat_changed.connect(_on_stat_changed)
-	_update_height()
+	update_height()
+	_load_frames()
 
 	if debug_emotion != "":
 		call_deferred("show_emotion", debug_emotion)
@@ -47,12 +51,110 @@ func _ready() -> void:
 		call_deferred("_start_cycle")
 
 
-func setup(bubble_frames: SpriteFrames, icon_frames: SpriteFrames) -> void:
+## Carga los SpriteFrames de la burbuja y de los íconos de emoción desde
+## disco, u los genera y los hornea la primera vez (o si les falta una
+## animación agregada después, como "evolving").
+func _load_frames() -> void:
+	var bubble_frames: SpriteFrames
+	if ResourceLoader.exists(BUBBLE_FRAMES_PATH):
+		bubble_frames = load(BUBBLE_FRAMES_PATH)
+	else:
+		bubble_frames = _build_bubble_frames()
+		ResourceSaver.save(bubble_frames, BUBBLE_FRAMES_PATH)
+
+	var icon_frames: SpriteFrames
+	if ResourceLoader.exists(ICON_FRAMES_PATH):
+		icon_frames = load(ICON_FRAMES_PATH)
+		if not icon_frames.has_animation("evolving"):
+			_patch_emotion_frames(icon_frames)
+			ResourceSaver.save(icon_frames, ICON_FRAMES_PATH)
+	else:
+		icon_frames = _build_emotion_frames()
+		ResourceSaver.save(icon_frames, ICON_FRAMES_PATH)
+
 	sprite_frames       = bubble_frames
 	_icon.sprite_frames = icon_frames
 
 
-func _update_height() -> void:
+# SpriteFrames de la burbuja: "idle" (flota) y "pop" (explosión)
+func _build_bubble_frames() -> SpriteFrames:
+	var sf := SpriteFrames.new()
+
+	sf.add_animation("idle")
+	sf.set_animation_speed("idle", 1.0)
+	sf.set_animation_loop("idle", true)
+	sf.add_frame("idle", load("res://assets/emotions/bubble.png"))
+
+	# pop: frames placeholder — ajustar en el editor con bubble_frames.tres
+	sf.add_animation("pop")
+	sf.set_animation_speed("pop", 10.0)
+	sf.set_animation_loop("pop", false)
+	var tex: Texture2D = load("res://assets/emotions/mixed.png")
+	for region in [Rect2(296, 58, 80, 58), Rect2(385, 58, 62, 58), Rect2(383, 0, 66, 58)]:
+		var atlas := AtlasTexture.new()
+		atlas.atlas = tex
+		atlas.region = region
+		sf.add_frame("pop", atlas)
+
+	return sf
+
+
+func _patch_emotion_frames(sf: SpriteFrames) -> void:
+	const CELL_W   := 40
+	const CELL_H   := 58
+	const OFFSET_X := 15
+	var tex: Texture2D = load("res://assets/emotions/mixed.png")
+	sf.add_animation("evolving")
+	sf.set_animation_speed("evolving", 4.0)
+	sf.set_animation_loop("evolving", true)
+	for cell in [[4, 0], [5, 0], [6, 0]]:
+		var atlas := AtlasTexture.new()
+		atlas.atlas = tex
+		atlas.region = Rect2(OFFSET_X + cell[0] * CELL_W, cell[1] * CELL_H, CELL_W, CELL_H)
+		sf.add_frame("evolving", atlas)
+
+
+# SpriteFrames de los íconos de emoción
+func _build_emotion_frames() -> SpriteFrames:
+	const CELL_W   := 40
+	const CELL_H   := 58
+	const OFFSET_X := 15
+
+	# Fila 0 (y=0):   [0]=burbuja vacía · [1-3]=manzana · [4-6]=swirl · [7-8]=calavera
+	# Fila 1 (y=58):  [0-1]=stress/cura · [2-3]=mariposa · [4-6]=sparkle
+	# Fila 2 (y=116): [0-2]=ciervo · [3-4]=gotas · [5-7]=ZZZ
+
+	# [nombre, fps, loop, [[col, fila], ...]]
+	var defs: Array = [
+		["hungry",   5.0, true, [[1,0],[2,0],[3,0]]],
+		["tired",    4.0, true, [[4,0],[5,0],[6,0]]],
+		["sick",     4.0, true, [[7,0],[8,0]]],
+		["stressed", 3.0, true, [[0,1]]],
+		["bored",    6.0, true, [[2,1],[3,1]]],
+		["sad",      4.0, true, [[3,2],[4,2]]],
+		["sleep",    3.0, true, [[5,2],[6,2],[7,2]]],
+		["evolving", 4.0, true, [[4,0],[5,0],[6,0]]],  # placeholder: mismas frames que tired
+	]
+
+	var tex: Texture2D = load("res://assets/emotions/mixed.png")
+	var sf := SpriteFrames.new()
+	for entry in defs:
+		var anim_name: String = entry[0]
+		var fps: float        = entry[1]
+		var loop: bool        = entry[2]
+		var cells: Array      = entry[3]
+		sf.add_animation(anim_name)
+		sf.set_animation_speed(anim_name, fps)
+		sf.set_animation_loop(anim_name, loop)
+		for cell in cells:
+			var atlas := AtlasTexture.new()
+			atlas.atlas = tex
+			atlas.region = Rect2(OFFSET_X + cell[0] * CELL_W, cell[1] * CELL_H, CELL_W, CELL_H)
+			sf.add_frame(anim_name, atlas)
+	return sf
+
+
+func update_height() -> void:
 	var data: YounData = get_parent().get("youn_data")
 	var h := 1.0
 	if data:

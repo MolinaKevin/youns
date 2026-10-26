@@ -1,6 +1,10 @@
 extends Resource
 class_name PlayerSaveData
 
+## Se asigna al crear o migrar una partida. El valor 0 identifica partidas
+## previas a que existiera el versionado.
+@export var save_version: int = 0
+
 @export var owned_card_ids: Array[String] = []
 ## Ids del mazo equipado. Solo sirven para armar `deck` la primera vez (ver
 ## DeckRules.ensure_deck): el mazo de verdad es `deck`.
@@ -44,6 +48,9 @@ class_name PlayerSaveData
 
 @export var unlocked_recipe_ids: Array[String] = []
 @export var completed_recipe_ids: Array[String] = []
+## Mejoras permanentes obtenidas en el laboratorio.
+@export var lab_youn_growth_bonus: int = 0
+@export var lab_max_hp_bonus: int = 0
 
 # Estadísticas de combate del Youn actual (ver YounStatRules). Distintas de las
 # métricas de cuidado de arriba (p. ej. `energia` de cuidado ≠ "energia" de acá).

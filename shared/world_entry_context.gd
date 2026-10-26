@@ -44,21 +44,3 @@ func clear() -> void:
 	zone_id = ""
 	position = Vector3.ZERO
 	interior_path = ""
-
-
-## Adaptador temporal para tests y consumidores todavía no migrados.
-func to_legacy_dictionary() -> Dictionary:
-	if not pending:
-		return {}
-	if starts_new_game:
-		return {"start": true}
-	return {"zone": zone_id, "position": position, "interior": interior_path}
-
-
-func from_legacy_dictionary(value: Dictionary) -> void:
-	if value.is_empty():
-		clear()
-	elif value.get("start", false):
-		request_start()
-	else:
-		request_restore(value.get("zone", "hub"), value.get("position", Vector3.ZERO), value.get("interior", ""))

@@ -1,16 +1,18 @@
 class_name TreeSystem
 extends Node3D
 
+const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
+
 ## Árboles: se pueden trepar (tree_climb), talar (cae y queda un tronco
 ## tirado) o prender fuego (arde TREE_BURN_ROUNDS y desaparece). Si el
 ## jugador está arriba cuando pasa algo de eso, cae al pie del árbol.
 ##
 ## Vive como hijo de MapArea, que se asigna a sí mismo en `map` antes de
 ## agregarlo al árbol (ver MapArea._init()) — lo necesita para la lista de
-## obstáculos compartida (solid_obstacles), las mallas compartidas (_make_disc,
-## _build_tile_disc), el movimiento del jugador (can_blink_to,
-## blink_player_to, _update_actor_positions), la señal
-## player_knocked_off_tree, y la caché de bloqueos (_obstacles_changed).
+## obstáculos compartida (solid_obstacles), las mallas compartidas (make_disc,
+## build_tile_disc), el movimiento del jugador (can_blink_to,
+## blink_player_to, update_actor_positions), la señal
+## player_knocked_off_tree, y la caché de bloqueos (obstacles_changed).
 ##
 ## ModuleSystem la referencia a su vez (ver ModuleSystem.tree_system): un
 ## módulo que choca contra un árbol al deslizarse (slide_module) tira al
@@ -63,8 +65,8 @@ func build_initial_tree_mesh(mi: MeshInstance3D, obs: Dictionary, pos: Vector2) 
 
 ## El árbol bajo `pos` (o {} si no hay).
 func get_tree_at(pos: Vector2) -> Dictionary:
-	for obs in map.solid_obstacles:
-		if obs.get("type", "solid") == "tree" and CombatMapQueries.obstacle_edge_distance(obs, pos) <= map.CLICK_MARGIN:
+	for obs in map.terrain.obstacles():
+		if CombatObstacle.type_of(obs) == CombatObstacle.TREE and CombatMapQueries.obstacle_edge_distance(obs, pos) <= map.CLICK_MARGIN:
 			return obs
 	return {}
 
@@ -73,46 +75,51 @@ static func is_tree_burning(tree: Dictionary) -> bool:
 
 ## Dónde se puede caer desde el árbol: un lugar libre, o encima del enemigo.
 func can_drop_at(pos: Vector2) -> bool:
-	return map.can_blink_to(pos) or map.is_enemy_in_circle(pos, 0.0)
+	return map.interactions.can_blink_to(pos) or map.interactions.is_enemy_in_circle(pos, 0.0)
 
 ## Sube al árbol y marca dónde va a caer.
 func climb_tree(tree: Dictionary, landing: Vector2) -> void:
 	_climbed_tree = tree
 	if _tree_landing_marker == null:
-		_tree_landing_marker = map._make_disc(Color(0.3, 0.9, 0.4, 0.5))
-	map._build_tile_disc(_tree_landing_marker, landing, 0.6, 0.0, map.HIGHLIGHT_Y)
+		_tree_landing_marker = map.presentation.make_disc(Color(0.3, 0.9, 0.4, 0.5))
+	map.presentation.build_tile_disc(_tree_landing_marker, landing, 0.6, 0.0, map.HIGHLIGHT_Y)
 	_tree_landing_marker.visible = true
-	map._update_actor_positions()
+	map.update_actor_positions()
 
 ## Cae del árbol a `landing` (si cae sobre el enemigo, queda pegado a él).
 ## Devuelve si le cayó encima.
 func drop_from_tree(landing: Vector2) -> bool:
-	var hit := map.is_enemy_in_circle(landing, 0.0)
+	var hit: bool = map.interactions.is_enemy_in_circle(landing, 0.0)
 	var target := landing
 	if hit:
 		var away: Vector2 = landing - map.enemy_pos
 		if away.length() < 0.001:
 			away = map.player_pos - map.enemy_pos
 		target = map.enemy_pos + (away.normalized() if away.length() > 0.001 else Vector2.RIGHT) * map.MIN_SEPARATION
-		if not map.can_blink_to(target):
+		if not map.interactions.can_blink_to(target):
 			target = map.player_pos  # sin lugar al lado del enemigo: cae al pie del árbol
-	elif not map.can_blink_to(target):
+	elif not map.interactions.can_blink_to(target):
 		target = map.player_pos
 	_leave_tree()
-	map.blink_player_to(target)
+	map.interactions.blink_player_to(target)
 	return hit
 
 func is_player_in_tree() -> bool:
 	return not _climbed_tree.is_empty()
 
+func climbed_tree_position() -> Vector2:
+	return _climbed_tree.get("pos", Vector2.ZERO)
+
 func _leave_tree() -> void:
 	_climbed_tree = {}
 	if _tree_landing_marker != null:
 		_tree_landing_marker.visible = false
-	map._update_actor_positions()
+	map.update_actor_positions()
 
-## Si el jugador está en ese árbol, lo baja al pie y avisa (player_knocked_off_tree).
-func _knock_player_off(tree: Dictionary, burning: bool) -> void:
+## Si el jugador está en ese árbol, lo baja al pie y avisa
+## (`player_knocked_off_tree`). Lo usan tanto la tala como otros sistemas que
+## golpean un árbol, por eso es parte de la API pública de TreeSystem.
+func knock_player_off(tree: Dictionary, burning: bool) -> void:
 	if not is_same(_climbed_tree, tree):
 		return
 	_leave_tree()
@@ -122,12 +129,12 @@ func _knock_player_off(tree: Dictionary, burning: bool) -> void:
 ## caerían encima de alguien no se crean; si es el enemigo, le pega.
 ## Devuelve {"enemy_hit": bool}. Si el jugador estaba arriba, se cae.
 func fell_tree(tree: Dictionary, dir: Vector2) -> Dictionary:
-	_knock_player_off(tree, false)
+	knock_player_off(tree, false)
 	var base: Vector2 = tree["pos"]
 	var node = tree.get("node")
 	if is_instance_valid(node):
 		node.queue_free()
-	map.solid_obstacles.erase(tree)
+	map.terrain.remove_obstacle(tree)
 	dir = dir.normalized() if dir.length() > 0.001 else Vector2.RIGHT
 	var log_id := _next_log_id
 	_next_log_id += 1
@@ -135,15 +142,15 @@ func fell_tree(tree: Dictionary, dir: Vector2) -> Dictionary:
 	var step := LOG_SEGMENT_RADIUS * 2.0
 	for i in LOG_SEGMENTS:
 		var p: Vector2 = base + dir * (step * float(i))
-		if map.is_enemy_in_circle(p, LOG_SEGMENT_RADIUS):
+		if map.interactions.is_enemy_in_circle(p, LOG_SEGMENT_RADIUS):
 			enemy_hit = true
 			continue
-		if map.is_player_in_circle(p, LOG_SEGMENT_RADIUS):
+		if map.interactions.is_player_in_circle(p, LOG_SEGMENT_RADIUS):
 			continue
-		if p.x < 0.0 or p.y < 0.0 or p.x > map.WORLD_W or p.y > map.WORLD_H:
+		if not map.terrain.is_inside_bounds(p):
 			continue
 		_add_log_segment(p, dir, log_id)
-	map._obstacles_changed()
+	map.obstacles_changed()
 	return {"enemy_hit": enemy_hit}
 
 func _add_log_segment(p: Vector2, dir: Vector2, log_id: int) -> void:
@@ -159,24 +166,24 @@ func _add_log_segment(p: Vector2, dir: Vector2, log_id: int) -> void:
 	mat.albedo_color = Color(0.36, 0.24, 0.14)
 	mi.material_override = mat
 	map.add_child(mi)
-	map.solid_obstacles.append({
-		"pos": p, "radius": LOG_SEGMENT_RADIUS, "type": "rock", "module": true,
+	map.terrain.add_obstacle({
+		"pos": p, "radius": LOG_SEGMENT_RADIUS, "type": CombatObstacle.ROCK, "module": true,
 		"log_id": log_id, "node": mi,
 	})
 
 ## Prende fuego los árboles que toca el círculo. Devuelve cuántos.
 func ignite_trees_in_circle(center: Vector2, radius: float) -> int:
 	var count := 0
-	for obs in map.solid_obstacles.duplicate():
-		if obs.get("type", "solid") == "tree" and CombatMapQueries.obstacle_edge_distance(obs, center) <= radius:
+	for obs in map.terrain.obstacle_snapshot():
+		if CombatObstacle.type_of(obs) == CombatObstacle.TREE and CombatMapQueries.obstacle_edge_distance(obs, center) <= radius:
 			count += int(_ignite_tree(obs))
 	return count
 
 ## Prende fuego los árboles dentro del cono (Aliento). Devuelve cuántos.
 func ignite_trees_in_cone(origin: Vector2, dir: Vector2, cone_range: float, half_angle_deg: float) -> int:
 	var count := 0
-	for obs in map.solid_obstacles.duplicate():
-		if obs.get("type", "solid") != "tree":
+	for obs in map.terrain.obstacle_snapshot():
+		if CombatObstacle.type_of(obs) != CombatObstacle.TREE:
 			continue
 		var to_tree: Vector2 = obs["pos"] - origin
 		var dist := to_tree.length()
@@ -192,20 +199,20 @@ func _ignite_tree(tree: Dictionary) -> bool:
 		return false
 	tree["burning"] = TREE_BURN_ROUNDS
 	_paint_canopy(tree, true)
-	_knock_player_off(tree, true)
+	knock_player_off(tree, true)
 	_spread_fire_from_tree(tree)
 	return true
 
 ## Un árbol en llamas prende los charcos de grasa y planta que lo tocan (y
 ## esos charcos, a su vez, los árboles que toquen: el fuego se propaga).
 func _spread_fire_from_tree(tree: Dictionary) -> void:
-	map.convert_puddles(tree["pos"], float(tree["radius"]) + TREE_FIRE_SPREAD_MARGIN, ["grease", "vine"], "fire")
+	map.interactions.convert_puddles(tree["pos"], float(tree["radius"]) + TREE_FIRE_SPREAD_MARGIN, ["grease", "vine"], "fire")
 
 ## Apaga los árboles en llamas que toca el círculo (hielo, agua). Devuelve cuántos.
 func extinguish_trees_in_circle(center: Vector2, radius: float) -> int:
 	var count := 0
-	for obs in map.solid_obstacles:
-		if obs.get("type", "solid") == "tree" and is_tree_burning(obs) and CombatMapQueries.obstacle_edge_distance(obs, center) <= radius:
+	for obs in map.terrain.obstacles():
+		if CombatObstacle.type_of(obs) == CombatObstacle.TREE and is_tree_burning(obs) and CombatMapQueries.obstacle_edge_distance(obs, center) <= radius:
 			obs["burning"] = 0
 			_paint_canopy(obs, false)
 			count += 1
@@ -226,8 +233,8 @@ func _paint_canopy(tree: Dictionary, burning: bool) -> void:
 
 ## Hay un árbol (que no arde) a `reach` o menos de `pos` (Raíces, charcos de planta).
 func is_tree_near(pos: Vector2, reach: float) -> bool:
-	for obs in map.solid_obstacles:
-		if obs.get("type", "solid") == "tree" and not is_tree_burning(obs) and CombatMapQueries.obstacle_edge_distance(obs, pos) <= reach:
+	for obs in map.terrain.obstacles():
+		if CombatObstacle.type_of(obs) == CombatObstacle.TREE and not is_tree_burning(obs) and CombatMapQueries.obstacle_edge_distance(obs, pos) <= reach:
 			return true
 	return false
 
@@ -235,8 +242,8 @@ func is_tree_near(pos: Vector2, reach: float) -> bool:
 ## toca: {"tree": Dictionary, "t": float} o {} si no cruza ninguno.
 func first_tree_on_segment(from: Vector2, to: Vector2) -> Dictionary:
 	var best := {}
-	for obs in map.solid_obstacles:
-		if obs.get("type", "solid") != "tree":
+	for obs in map.terrain.obstacles():
+		if CombatObstacle.type_of(obs) != CombatObstacle.TREE:
 			continue
 		var t := CombatMapQueries.first_contact_circle(from, to, obs["pos"], float(obs["radius"]))
 		if t >= 0.0 and (best.is_empty() or t < best["t"]):
@@ -249,7 +256,7 @@ func is_player_in_this_tree(tree: Dictionary) -> bool:
 ## Pasa una ronda: los árboles que arden se consumen y desaparecen.
 func tick_trees() -> void:
 	var changed := false
-	for obs in map.solid_obstacles.duplicate():
+	for obs in map.terrain.obstacle_snapshot():
 		if not is_tree_burning(obs):
 			continue
 		_spread_fire_from_tree(obs)
@@ -258,7 +265,7 @@ func tick_trees() -> void:
 			var node = obs.get("node")
 			if is_instance_valid(node):
 				node.queue_free()
-			map.solid_obstacles.erase(obs)
+			map.terrain.remove_obstacle(obs)
 			changed = true
 	if changed:
-		map._obstacles_changed()
+		map.obstacles_changed()

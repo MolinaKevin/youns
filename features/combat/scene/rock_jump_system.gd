@@ -1,6 +1,8 @@
 class_name RockJumpSystem
 extends Node3D
 
+const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
+
 ## Salto de roca en roca: elegir una piedra al alcance y después dónde cae el
 ## salto desde ahí. Dos pasos, cada uno con su propio disco (alcance de
 ## piedras, alcance de aterrizaje) más los marcadores de las piedras
@@ -9,7 +11,7 @@ extends Node3D
 ## Vive como hijo de MapArea, que se asigna a sí mismo en `map` antes de
 ## agregarlo al árbol (ver MapArea._init()) — lo necesita para la lista de
 ## obstáculos (solid_obstacles, is_module) y las mallas compartidas
-## (_make_disc, _build_tile_disc, _make_mat).
+## (make_disc, build_tile_disc, make_mat).
 
 ## Asignado por MapArea antes de add_child(self) — ver MapArea._init().
 var map: MapArea
@@ -29,24 +31,24 @@ func _ready() -> void:
 	# que un disco normal, para que se note en medio de todo lo demás resaltado.
 	const MARKER_COLOR := Color(0.9, 1.0, 0.2)
 	_selected_marker = PlacementPreview.make_local_disc(self, map, MARKER_COLOR)
-	_selected_marker.set_meta("fill_mat", map._make_mat(Color(MARKER_COLOR, 0.85)))
-	_selected_marker.set_meta("bord_mat", map._make_mat(Color(MARKER_COLOR.lightened(0.45), 1.0)))
+	_selected_marker.set_meta("fill_mat", map.presentation.make_material(Color(MARKER_COLOR, 0.85)))
+	_selected_marker.set_meta("bord_mat", map.presentation.make_material(Color(MARKER_COLOR.lightened(0.45), 1.0)))
 
 func get_rocks_in_range(origin: Vector2, max_range: float) -> Array[Dictionary]:
 	var rocks: Array[Dictionary] = []
-	for obs in map.solid_obstacles:
-		if obs.get("type", "solid") != "rock" and not MapArea.is_module(obs):
+	for obs in map.terrain.obstacles():
+		if CombatObstacle.type_of(obs) != CombatObstacle.ROCK and not MapArea.is_module(obs):
 			continue
 		if origin.distance_to(obs["pos"]) <= max_range:
 			rocks.append(obs)
 	return rocks
 
 func start_rock_jump_selection(jump_range: float) -> void:
-	map._show_disc(_disc, map.player_pos, jump_range)
+	map.presentation.show_disc(_disc, map.player_pos, jump_range)
 	_rocks_in_range = get_rocks_in_range(map.player_pos, jump_range)
 	for obs in _rocks_in_range:
-		var mi := map._make_disc(Color(0.2, 1.0, 0.5, 0.75))
-		map._build_tile_disc(mi, obs["pos"], obs.get("radius", 0.5) * 1.8, 0.0, map.HIGHLIGHT_Y)
+		var mi := map.presentation.make_disc(Color(0.2, 1.0, 0.5, 0.75))
+		map.presentation.build_tile_disc(mi, obs["pos"], obs.get("radius", 0.5) * 1.8, 0.0, map.HIGHLIGHT_Y)
 		_rock_markers.append(mi)
 
 func get_rock_near(pos: Vector2) -> Dictionary:
@@ -61,8 +63,8 @@ func start_jump_landing_selection(rock_pos: Vector2, landing_range: float) -> vo
 	for marker in _rock_markers:
 		marker.queue_free()
 	_rock_markers.clear()
-	map._show_disc(_landing_disc, rock_pos, landing_range)
-	map._build_tile_disc(_selected_marker, rock_pos, 0.7, 0.0, map.HOVER_Y)
+	map.presentation.show_disc(_landing_disc, rock_pos, landing_range)
+	map.presentation.build_tile_disc(_selected_marker, rock_pos, 0.7, 0.0, map.HOVER_Y)
 
 func clear_rock_jump_selection() -> void:
 	_disc.visible            = false

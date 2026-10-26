@@ -4,8 +4,23 @@ extends GutTest
 # ingredientes, rewards tipo "item", output y desbloqueos.
 # Los paths que tocan GlobalHUD (unlock_clock_ui / unlock_care_ui) se omiten.
 
+var _previous_save: PlayerSaveData
+var _previous_pending_output: Dictionary
+var _previous_unlocked_columns: Array
+var _previous_all_recipes: Array[Resource]
+var _previous_recipes_by_ingredient: Dictionary
+var _previous_active_recipe_id := ""
+var _previous_recipe_progress: Dictionary
+
 
 func before_each() -> void:
+	_previous_save = GameState.player_save
+	_previous_pending_output = LaboratoryState.pending_output.duplicate(true)
+	_previous_unlocked_columns = LaboratoryState.unlocked_columns.duplicate(true)
+	_previous_all_recipes = LaboratoryState.all_recipes.duplicate()
+	_previous_recipes_by_ingredient = LaboratoryState.recipes_by_ingredient.duplicate(true)
+	_previous_active_recipe_id = LaboratoryState.active_recipe_id
+	_previous_recipe_progress = LaboratoryState.recipe_progress.duplicate(true)
 	GameState.player_save = PlayerSaveData.new()
 	LaboratoryState.pending_output = {}
 	LaboratoryState.unlocked_columns = []
@@ -13,6 +28,16 @@ func before_each() -> void:
 	LaboratoryState.recipes_by_ingredient = {}
 	LaboratoryState.active_recipe_id = ""
 	LaboratoryState.recipe_progress = {}
+
+
+func after_each() -> void:
+	GameState.player_save = _previous_save
+	LaboratoryState.pending_output = _previous_pending_output.duplicate(true)
+	LaboratoryState.unlocked_columns = _previous_unlocked_columns.duplicate(true)
+	LaboratoryState.all_recipes = _previous_all_recipes.duplicate()
+	LaboratoryState.recipes_by_ingredient = _previous_recipes_by_ingredient.duplicate(true)
+	LaboratoryState.active_recipe_id = _previous_active_recipe_id
+	LaboratoryState.recipe_progress = _previous_recipe_progress.duplicate(true)
 
 
 func _make_recipe(id: String, gold: int, ingredients: Array) -> LabRecipe:
@@ -81,47 +106,73 @@ func test_has_ingredients_gold_suficiente_retorna_true() -> void:
 func test_consume_reduce_count_del_item() -> void:
 	_put_item("wood", 5)
 	var recipe := _make_recipe("r", 0, [{"id": "wood", "amount": 2}])
-	LaboratoryState._consume_ingredients(recipe)
+	LaboratoryState.consume_ingredients(recipe)
 	assert_eq(LaboratoryState.pending_output["wood"]["count"], 3)
 
 
 func test_consume_elimina_entrada_cuando_count_llega_a_cero() -> void:
 	_put_item("wood", 2)
 	var recipe := _make_recipe("r", 0, [{"id": "wood", "amount": 2}])
-	LaboratoryState._consume_ingredients(recipe)
+	LaboratoryState.consume_ingredients(recipe)
 	assert_false(LaboratoryState.pending_output.has("wood"))
 
 
 func test_consume_deduce_gold_del_save() -> void:
 	GameState.player_save.gold = 100
 	var recipe := _make_recipe("r", 30, [])
-	LaboratoryState._consume_ingredients(recipe)
+	LaboratoryState.consume_ingredients(recipe)
 	assert_eq(GameState.player_save.gold, 70)
 
 
 # ── _process_reward — item ────────────────────────────────────────────────────
 
 func test_reward_item_agrega_nuevo_item_a_pending_output() -> void:
-	LaboratoryState._process_reward({"type": "item", "id": "potion", "amount": 3}, "r")
+	LaboratoryState.grant_reward({"type": "item", "id": "potion", "amount": 3}, "r")
 	assert_eq(LaboratoryState.pending_output["potion"]["count"], 3)
 
 
 func test_reward_item_acumula_sobre_item_existente() -> void:
 	_put_item("potion", 5)
-	LaboratoryState._process_reward({"type": "item", "id": "potion", "amount": 4}, "r")
+	LaboratoryState.grant_reward({"type": "item", "id": "potion", "amount": 4}, "r")
 	assert_eq(LaboratoryState.pending_output["potion"]["count"], 9)
 
 
 func test_reward_item_no_supera_99() -> void:
 	_put_item("potion", 97)
-	LaboratoryState._process_reward({"type": "item", "id": "potion", "amount": 5}, "r")
+	LaboratoryState.grant_reward({"type": "item", "id": "potion", "amount": 5}, "r")
 	assert_eq(LaboratoryState.pending_output["potion"]["count"], 99)
 
 
 func test_reward_item_en_99_no_incrementa() -> void:
 	_put_item("potion", 99)
-	LaboratoryState._process_reward({"type": "item", "id": "potion", "amount": 1}, "r")
+	LaboratoryState.grant_reward({"type": "item", "id": "potion", "amount": 1}, "r")
 	assert_eq(LaboratoryState.pending_output["potion"]["count"], 99)
+
+
+func test_reward_world_bridge_guarda_el_puente_en_el_progreso() -> void:
+	LaboratoryState.grant_reward({"type": "world_bridge", "id": "river_bridge"}, "r")
+
+	assert_true(GameState.player_save.world_progress.has_bridge("river_bridge"))
+
+
+func test_reward_youn_growth_bonus_se_acumula() -> void:
+	LaboratoryState.grant_reward({"type": "youn_growth_bonus", "value": 2}, "r")
+	LaboratoryState.grant_reward({"type": "youn_growth_bonus", "value": 1}, "r")
+
+	assert_eq(GameState.player_save.lab_youn_growth_bonus, 3)
+
+
+func test_reward_material_production_agrega_datos_al_deposito() -> void:
+	LaboratoryState.grant_reward({"type": "material_production", "value": 3}, "r")
+
+	assert_eq(LaboratoryState.pending_output["datos"]["count"], 3)
+
+
+func test_reward_max_hp_se_acumula() -> void:
+	LaboratoryState.grant_reward({"type": "max_hp", "value": 25}, "r")
+	LaboratoryState.grant_reward({"type": "max_hp", "value": 10}, "r")
+
+	assert_eq(GameState.player_save.lab_max_hp_bonus, 35)
 
 
 # ── Ecos de cartas ───────────────────────────────────────────────────────────
@@ -159,7 +210,7 @@ func test_deposit_echoes_acredita_lo_juntado_en_el_combate() -> void:
 func test_deposit_echoes_pueden_acumular_mas_de_99() -> void:
 	_put_item("eco_logica", 99)
 	LaboratoryState.deposit_echoes({"eco_logica": 2})
-	assert_eq(LaboratoryState.pending_output["eco_logica"]["count"], 100)
+	assert_eq(LaboratoryState.pending_output["eco_logica"]["count"], 101)
 
 
 # ── take_all_output ───────────────────────────────────────────────────────────
@@ -176,6 +227,12 @@ func test_take_all_output_vacia_el_pending_output() -> void:
 	_put_item("potion", 3)
 	LaboratoryState.take_all_output()
 	assert_true(LaboratoryState.pending_output.is_empty())
+
+
+func test_restore_output_devuelve_al_deposito_lo_que_no_entra_al_inventario() -> void:
+	LaboratoryState.restore_output({"wood": {"id": "wood", "name": "wood", "count": 3}})
+
+	assert_eq(LaboratoryState.pending_output["wood"]["count"], 3)
 
 
 # ── desbloqueo de recetas ─────────────────────────────────────────────────────
@@ -203,7 +260,7 @@ func test_is_recipe_completed_false_inicialmente() -> void:
 
 
 func test_complete_recipe_marca_como_completada() -> void:
-	LaboratoryState._complete_recipe("r")
+	LaboratoryState.complete_recipe("r")
 	assert_true(LaboratoryState.is_recipe_completed("r"))
 
 
@@ -215,7 +272,7 @@ func test_check_indirect_unlocks_desbloquea_cuando_hay_ingredientes() -> void:
 	LaboratoryState.recipes_by_ingredient["wood"] = [recipe]
 	_put_item("wood", 3)
 
-	LaboratoryState._check_indirect_unlocks("wood")
+	LaboratoryState.check_indirect_unlocks("wood")
 
 	assert_true(LaboratoryState.is_recipe_unlocked("advanced"))
 
@@ -226,7 +283,7 @@ func test_check_indirect_unlocks_no_desbloquea_si_faltan_ingredientes() -> void:
 	LaboratoryState.recipes_by_ingredient["wood"] = [recipe]
 	_put_item("wood", 2)
 
-	LaboratoryState._check_indirect_unlocks("wood")
+	LaboratoryState.check_indirect_unlocks("wood")
 
 	assert_false(LaboratoryState.is_recipe_unlocked("advanced"))
 
@@ -238,7 +295,7 @@ func test_check_indirect_unlocks_no_desbloquea_si_needs_research() -> void:
 	LaboratoryState.recipes_by_ingredient["wood"] = [recipe]
 	_put_item("wood", 5)
 
-	LaboratoryState._check_indirect_unlocks("wood")
+	LaboratoryState.check_indirect_unlocks("wood")
 
 	assert_false(LaboratoryState.is_recipe_unlocked("advanced"))
 
@@ -251,7 +308,7 @@ func test_check_indirect_unlocks_no_desbloquea_si_ya_esta_desbloqueada() -> void
 	LaboratoryState.unlock_recipe("advanced")  # ya desbloqueada
 
 	# reset save para que unlock_recipe no duplique pero is_recipe_unlocked siga true
-	LaboratoryState._check_indirect_unlocks("wood")
+	LaboratoryState.check_indirect_unlocks("wood")
 
 	var count := GameState.player_save.unlocked_recipe_ids.filter(func(id): return id == "advanced").size()
 	assert_eq(count, 1)

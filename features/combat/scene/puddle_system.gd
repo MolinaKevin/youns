@@ -1,5 +1,6 @@
 class_name PuddleSystem
 extends Node3D
+const CombatEffect := preload("res://features/combat/scene/combat_effect.gd")
 
 ## Charcos del combate: colocarlos, que se combinen (charco "lente" donde dos
 ## reaccionan entre sí), que se evaporen con las rondas, y las consultas que
@@ -8,11 +9,12 @@ extends Node3D
 ##
 ## Vive como hijo de MapArea, que se asigna a sí mismo en `map` antes de
 ## agregarlo al árbol (ver MapArea._init()) — lo necesita para las mallas
-## compartidas (_make_mat, _build_tile_disc, _show_disc_with_los,
-## _apply_two_surface_mesh, _tile_in_obstacle, la
+## compartidas (make_mat, build_tile_disc, show_disc_with_los,
+## apply_two_surface_mesh, tile_in_obstacle, la
 ## constante CLICK_MARGIN) y para prender/apagar los árboles cercanos
 ## (is_tree_near, ignite_trees_in_circle, extinguish_trees_in_circle,
-## TREE_VINE_REACH, TREE_VINE_RADIUS_MULT), que siguen siendo de MapArea.
+## TREE_VINE_REACH, TREE_VINE_RADIUS_MULT), expuestos por MapArea y sus
+## colaboradores.
 
 ## Asignado por MapArea antes de add_child(self) — ver MapArea._init().
 var map: MapArea
@@ -28,7 +30,7 @@ var visuals: Array[MeshInstance3D]:
 
 var _disc:             MeshInstance3D
 var _preview:          MeshInstance3D
-var _preview_effect:   String  = "wet"
+var _preview_effect:   String  = CombatEffect.WET
 var _preview_radius:   float   = 1.0
 var _throw_range:      float   = 0.0
 var _preview_last_pos: Vector2 = Vector2(-999.0, -999.0)
@@ -48,17 +50,7 @@ func is_placing() -> bool:
 
 
 func _puddle_base_color(effect: String) -> Color:
-	match effect:
-		"fire":   return Color(1.0, 0.35, 0.05)
-		"grease": return Color(0.55, 0.45, 0.05)
-		"vine":   return Color(0.1, 0.70, 0.15)
-		"blood":  return Color(0.70, 0.05, 0.05)
-		"poison": return Color(0.45, 0.0, 0.65)
-		"sand":       return Color(0.85, 0.75, 0.4)
-		"ice":        return Color(0.6,  0.9,  1.0)
-		"bloody_ice": return Color(0.55, 0.65, 0.9)
-		"dark_smoke": return Color(0.2,  0.15, 0.25)
-		_:            return Color(0.1, 0.4, 0.9)
+	return CombatEffect.puddle_color(effect)
 
 func start_puddle_placement(throw_range: float, effect: String = "wet", puddle_radius: float = 1.0) -> void:
 	_throw_range    = throw_range
@@ -67,10 +59,10 @@ func start_puddle_placement(throw_range: float, effect: String = "wet", puddle_r
 	_preview_last_pos = Vector2(-999.0, -999.0)
 	_preview.visible  = false
 	var c := _puddle_base_color(effect)
-	_disc.set_meta("fill_mat", map._make_mat(Color(c.r, c.g, c.b, 0.22)))
-	_disc.set_meta("bord_mat", map._make_mat(Color(
+	_disc.set_meta("fill_mat", map.presentation.make_material(Color(c.r, c.g, c.b, 0.22)))
+	_disc.set_meta("bord_mat", map.presentation.make_material(Color(
 		minf(c.r + 0.3, 1.0), minf(c.g + 0.3, 1.0), minf(c.b + 0.3, 1.0), 0.75)))
-	map._show_disc_with_los(_disc, map.player_pos, throw_range, map.player_elevation)
+	map.presentation.show_disc_with_los(_disc, map.player_pos, throw_range, map.player_elevation)
 
 func clear_puddle_placement() -> void:
 	_disc.visible    = false
@@ -87,16 +79,7 @@ func update_hover_preview(pos: Vector2) -> void:
 		Color(minf(base.r + 0.2, 1.0), minf(base.g + 0.2, 1.0), minf(base.b + 0.2, 1.0), 0.60))
 
 func _puddle_interaction(a: String, b: String) -> String:
-	const TABLE := {
-		"wet+ice":    "ice",
-		"blood+ice":  "bloody_ice",
-		"blood+fire": "dark_smoke",
-	}
-	var k := a + "+" + b
-	if TABLE.has(k): return TABLE[k]
-	k = b + "+" + a
-	if TABLE.has(k): return TABLE[k]
-	return ""
+	return CombatEffect.combined_zone_effect(a, b)
 
 ## Deja un charco. turns: rondas que dura (0 = no se va nunca; ver
 ## tick_puddles). damage: daño por turno del estado que causa (0 = el de
@@ -108,7 +91,7 @@ func _puddle_interaction(a: String, b: String) -> String:
 ## "excl"}; excl son los ids de los charcos cuyo disco se recorta del dibujo.
 func place_puddle(pos: Vector2, radius: float, effect: String = "wet", turns: int = 0, damage: int = 0) -> void:
 	var r2 := float(radius)
-	if effect == "vine" and map.is_tree_near(pos, r2 + map.TREE_VINE_REACH):
+	if effect == CombatEffect.VINE and map.interactions.is_tree_near(pos, r2 + map.TREE_VINE_REACH):
 		r2 *= map.TREE_VINE_RADIUS_MULT  # las plantas crecen más al lado de un árbol
 	var new_id := _next_id
 	_next_id += 1
@@ -151,10 +134,10 @@ func place_puddle(pos: Vector2, radius: float, effect: String = "wet", turns: in
 	_visuals.append(_make_puddle_visual(pos, r2, effect, _puddle_exclusions(zones.back())))
 	for i in to_rebuild:
 		_rebuild_puddle_visual(i)
-	if effect == "fire":
-		map.ignite_trees_in_circle(pos, r2)
-	elif effect in ["ice", "wet"]:
-		map.extinguish_trees_in_circle(pos, r2)
+	if effect == CombatEffect.FIRE:
+		map.interactions.ignite_trees_in_circle(pos, r2)
+	elif effect in [CombatEffect.ICE, CombatEffect.WET]:
+		map.interactions.extinguish_trees_in_circle(pos, r2)
 
 ## Pasa una ronda: los charcos con duración pierden una y los que llegan a 0
 ## desaparecen (con sus lentes). Los que los recortaban se redibujan enteros.
@@ -252,37 +235,37 @@ func _rebuild_puddle_visual(i: int) -> void:
 func _make_puddle_visual(pos: Vector2, radius: float, effect: String = "wet", exclusions: Array = []) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	var base := _puddle_base_color(effect)
-	mi.set_meta("fill_mat", map._make_mat(Color(base.r, base.g, base.b, 0.35)))
-	mi.set_meta("bord_mat", map._make_mat(Color(
+	mi.set_meta("fill_mat", map.presentation.make_material(Color(base.r, base.g, base.b, 0.35)))
+	mi.set_meta("bord_mat", map.presentation.make_material(Color(
 		minf(base.r + 0.2, 1.0), minf(base.g + 0.2, 1.0), minf(base.b + 0.2, 1.0), 0.80)))
 	add_child(mi)
-	map._build_tile_disc(mi, pos, radius, 0.0, 0.013, exclusions)
+	map.presentation.build_tile_disc(mi, pos, radius, 0.0, 0.013, exclusions)
 	return mi
 
 func _add_puddle_visual_lens(c1: Vector2, r1: float, c2: Vector2, r2: float, effect: String) -> void:
 	var mi := MeshInstance3D.new()
 	var base := _puddle_base_color(effect)
-	mi.set_meta("fill_mat", map._make_mat(Color(base.r, base.g, base.b, 1.0)))
-	mi.set_meta("bord_mat", map._make_mat(Color(
+	mi.set_meta("fill_mat", map.presentation.make_material(Color(base.r, base.g, base.b, 1.0)))
+	mi.set_meta("bord_mat", map.presentation.make_material(Color(
 		minf(base.r + 0.15, 1.0), minf(base.g + 0.15, 1.0), minf(base.b + 0.15, 1.0), 1.0)))
 	add_child(mi)
 	_build_lens_disc(mi, c1, r1, c2, r2, 0.016)
 	_visuals.append(mi)
 
 func _build_lens_disc(mi: MeshInstance3D, c1: Vector2, r1: float, c2: Vector2, r2: float, y: float) -> void:
-	const CELL   := 0.08
 	const BORDER := 0.010
-	var half     := CELL * 0.5
+	var cell     := CombatGrid.CELL
+	var half     := cell * 0.5
 	var fill_v   := PackedVector3Array(); var fill_i := PackedInt32Array()
 	var bord_v   := PackedVector3Array(); var bord_i := PackedInt32Array()
 	var min_x := maxf(c1.x - r1, c2.x - r2)
 	var max_x := minf(c1.x + r1, c2.x + r2)
 	var min_y := maxf(c1.y - r1, c2.y - r2)
 	var max_y := minf(c1.y + r1, c2.y + r2)
-	for gx in range(int(floor(min_x / CELL)), int(ceil(max_x / CELL)) + 1):
-		for gy in range(int(floor(min_y / CELL)), int(ceil(max_y / CELL)) + 1):
-			var cx := (gx + 0.5) * CELL
-			var cy := (gy + 0.5) * CELL
+	for gx in range(int(floor(min_x / cell)), int(ceil(max_x / cell)) + 1):
+		for gy in range(int(floor(min_y / cell)), int(ceil(max_y / cell)) + 1):
+			var cx := (gx + 0.5) * cell
+			var cy := (gy + 0.5) * cell
 			if Vector2(cx, cy).distance_to(c1) > r1: continue
 			if Vector2(cx, cy).distance_to(c2) > r2: continue
 			var fi := fill_v.size()
@@ -301,7 +284,7 @@ func _build_lens_disc(mi: MeshInstance3D, c1: Vector2, r1: float, c2: Vector2, r
 				bord_v.append(Vector3(s[0], y+0.001, s[1])); bord_v.append(Vector3(s[2], y+0.001, s[1]))
 				bord_v.append(Vector3(s[2], y+0.001, s[3])); bord_v.append(Vector3(s[0], y+0.001, s[3]))
 				bord_i.append_array([bi, bi+1, bi+2, bi, bi+2, bi+3])
-	map._apply_two_surface_mesh(mi, fill_v, fill_i, bord_v, bord_i)
+	map.apply_two_surface_mesh(mi, fill_v, fill_i, bord_v, bord_i)
 
 func is_segment_in_puddle(from: Vector2, to: Vector2) -> bool:
 	if zones.is_empty():
@@ -341,9 +324,9 @@ func convert_puddles(center: Vector2, radius: float, from_effects: Array, to_eff
 	# El charco nuevo de fuego prende los árboles que toca (y así se propaga).
 	for zone in converted:
 		if to_effect == "fire":
-			map.ignite_trees_in_circle(zone["pos"], zone["radius"])
+			map.interactions.ignite_trees_in_circle(zone["pos"], zone["radius"])
 		elif to_effect in ["ice", "wet"]:
-			map.extinguish_trees_in_circle(zone["pos"], zone["radius"])
+			map.interactions.extinguish_trees_in_circle(zone["pos"], zone["radius"])
 	return converted.size()
 
 ## Charcos de esos efectos que toca el segmento (Descarga se propaga por el agua).

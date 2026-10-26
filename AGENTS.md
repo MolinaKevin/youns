@@ -17,7 +17,8 @@ Lo más importante:
   si no aparece una pared invisible.
 - Cada mapa trae su colisión de piso (`<Mapa>Floor-colonly`) en el `.glb`;
   no agregar cajas `Floor` en los `.tscn` (excepto el hub).
-- Una zona nueva se registra en `ZoneManager.ZONES` (con conexiones en los dos
-  sentidos) y en `MEADOW_MAPS` de `world_boundary.gd`.
+- Una zona nueva se registra con un `ZoneDefinition` en
+  `data/zones/definitions/<id>.tres` (con conexiones en los dos sentidos) y en
+  `meadow_maps` de `data/world/world_layout.tres`.
 
 Otros documentos: `docs/patrones_modulares.md`, `docs/sistema_movimiento.md`, `docs/TODO.md`.

@@ -15,8 +15,8 @@ extends RefCounted
 ## armando sus hijos ("Parent node is busy setting up children").
 static func make_local_disc(owner: Node3D, map: MapArea, color: Color) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
-	mi.set_meta("fill_mat", map._make_mat(Color(color.r, color.g, color.b, color.a * 0.5)))
-	mi.set_meta("bord_mat", map._make_mat(Color(
+	mi.set_meta("fill_mat", map.presentation.make_material(Color(color.r, color.g, color.b, color.a * 0.5)))
+	mi.set_meta("bord_mat", map.presentation.make_material(Color(
 		minf(color.r + 0.3, 1.0), minf(color.g + 0.3, 1.0), minf(color.b + 0.3, 1.0), minf(color.a + 0.3, 1.0))))
 	mi.visible = false
 	owner.add_child(mi)
@@ -33,15 +33,15 @@ static func update_hover_preview(map: MapArea, disc: MeshInstance3D, preview: Me
 		preview.visible = false
 		return last_pos
 	var in_range := pos.distance_to(map.player_pos) <= max_range \
-		and not map._tile_in_obstacle(pos, map.player_elevation)
+		and not map.tile_in_obstacle(pos, map.player_elevation)
 	if not in_range:
 		preview.visible = false
 		return last_pos
 	var snapped_pos := Vector2(round(pos.x * 2.0) / 2.0, round(pos.y * 2.0) / 2.0)
 	if snapped_pos.distance_to(last_pos) > 0.01:
 		last_pos = snapped_pos
-		preview.set_meta("fill_mat", map._make_mat(fill_color))
-		preview.set_meta("bord_mat", map._make_mat(border_color))
-		map._build_tile_disc(preview, snapped_pos, radius, 0.0, 0.015)
+		preview.set_meta("fill_mat", map.presentation.make_material(fill_color))
+		preview.set_meta("bord_mat", map.presentation.make_material(border_color))
+		map.presentation.build_tile_disc(preview, snapped_pos, radius, 0.0, 0.015)
 	preview.visible = true
 	return last_pos

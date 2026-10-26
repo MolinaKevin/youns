@@ -86,7 +86,7 @@ static func add_trees(parent: Node3D, templates: Array, trees: Array) -> void:
 static func add_ground(parent: Node3D, center: Vector3, size: Vector2) -> MeshInstance3D:
 	var plane := PlaneMesh.new()
 	plane.size = size
-	var mat := _ground_material().duplicate() as StandardMaterial3D
+	var mat := ground_material().duplicate() as StandardMaterial3D
 	mat.uv1_scale = Vector3(size.x / 16.0, size.y / 16.0, 1)
 	plane.material = mat
 	var mi := MeshInstance3D.new()
@@ -98,7 +98,7 @@ static func add_ground(parent: Node3D, center: Vector3, size: Vector2) -> MeshIn
 
 static var _ground_mat: StandardMaterial3D = null
 
-static func _ground_material() -> StandardMaterial3D:
+static func ground_material() -> StandardMaterial3D:
 	if _ground_mat:
 		return _ground_mat
 	var noise := FastNoiseLite.new()

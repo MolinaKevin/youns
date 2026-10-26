@@ -28,11 +28,8 @@ Pendientes conocidos, agrupados por sistema. Al resolver uno, borrarlo de acá.
 - [ ] La caca del accidente de baño es un placeholder de primitivas
       (`features/world/items/poop.gd`): falta modelo real, animación y que se
       pueda limpiar.
-- [ ] El desgaste por hora (`apply_stat_decay`) ignora los multiplicadores
-      `mult_<stat>` del Youn; `add_stat` sí los usa.
 - [ ] En las reglas con curva, `threshold` y `comparison` no se usan para
       activar (`comparison` solo decide hacia dónde es "mejorar").
-- [ ] `vaciador_estomago.tres` setea `is_hungry`, que no existe en el save.
 
 ## Gimnasio
 
@@ -59,8 +56,19 @@ Pendientes conocidos, agrupados por sistema. Al resolver uno, borrarlo de acá.
       El Youn todavía no reacciona (no tiene animaciones propias de
       contento/triste). Si el artista manda una exportación nueva, correr
       `tools/import_player_model.gd`.
-- [ ] `WorldBoundary` se calcula al iniciar el juego (~460 ms): precalcularlo
-      y guardarlo en un archivo si molesta.
+- [ ] **Overworld grande: dividir decoración horneada en chunks** (después del
+      demo). Hoy `tools/bake_world_decoration.gd` ejecuta una vez el mismo
+      algoritmo de `AutoDecoration` y guarda suelo, agua y posiciones de
+      árboles en `assets/maps/world/baked_world_decoration.scn`; el juego carga
+      ese asset global, por lo que el demo inicia rápido. Para un mundo final
+      mucho más grande, el baker debe producir chunks espaciales con margen y
+      `ZoneStreamingController` debe mantener cargado el chunk actual, sus
+      vecinos y un anillo visual para no mostrar vacío a distancia. Las guías
+      Blender siguen siendo la fuente: regenerar el horneado cuando cambien
+      mapas, guías `Auto*`/`NoAuto*` o parámetros de generación.
+- [ ] **Paredes globales**: `WorldBoundaryWalls.build()` sigue construyendo
+      todas al iniciar (~2,7 s en el demo). Hornearlas o dividirlas por los
+      mismos chunks de decoración cuando se escale el overworld.
 - [ ] La entrada del sendero norte (hub → crossroads) se ve poco.
 - [ ] Crossroads y left son planos grises de placeholder.
 - [ ] Al agregar una zona nueva (p. ej. en las puntas de la pradera: ExitUp,
@@ -133,8 +141,6 @@ Pendientes conocidos, agrupados por sistema. Al resolver uno, borrarlo de acá.
       muestran dadas vuelta en la revelación.
 - [ ] Nivel Tamer, desbloqueo de zonas con el Youn como llave, 8 zonas por
       inteligencia.
-- [ ] Menú principal: la opción "Mapa" no abre nada.
-
 ## Para el demo
 
 - [ ] **Sonido**: el proyecto no tiene ningún audio.
@@ -147,16 +153,6 @@ Pendientes conocidos, agrupados por sistema. Al resolver uno, borrarlo de acá.
 
 ## Limpieza
 
-- [ ] Código sin uso: `features/world/world_map/world_map.gd`, `enemy_3d.gd`
-      y `world_map.tscn` (de ahí solo se usan `player_3d.gd`, `camera_rig.gd`
-      y los shaders), y `RunStateData` / `current_run` en `GameState`.
-- [ ] **Log de combate sin traducir**: `combat.gd` pasa casi todos sus
-      `log_message(...)` por `LocalizationState.t(...)`, pero
-      `combat_player_actions.gd` y los resolvers de
-      `features/combat/scene/pending_actions/` tienen ~148 mensajes en
-      español hardcodeado (ninguno usa el helper). Falta decidir si se migran
-      a claves de `es.json`/`en.json` o si el log de combate queda fuera del
-      alcance de traducción a propósito.
 - [ ] **Inteligencias de cartas base, aproximadas por color viejo**: al sacar
       el campo `color` de `CardAction` (ahora se deriva de `intelligence`),
       las 106 mitades de los 53 `.tres` de `data/cards/` más

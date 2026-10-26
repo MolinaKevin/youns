@@ -20,6 +20,7 @@ var _labels: Dictionary = {}
 var _selected := "up"
 var _style_normal: StyleBoxFlat
 var _style_selected: StyleBoxFlat
+var _modal := ModalScreenContext.new()
 
 
 func _ready() -> void:
@@ -111,20 +112,29 @@ func _unhandled_input(event: InputEvent) -> void:
 	get_viewport().set_input_as_handled()
 
 	if event.is_action_pressed("ui_up"):
-		_selected = "up"
+		select("up")
 	elif event.is_action_pressed("ui_down"):
-		_selected = "down"
+		select("down")
 	elif event.is_action_pressed("ui_left"):
-		_selected = "left"
+		select("left")
 	elif event.is_action_pressed("ui_right"):
-		_selected = "right"
+		select("right")
 	elif event.is_action_pressed("ui_accept"):
-		_activate()
+		activate_selected()
 		return
 	elif event.is_action_pressed("ui_cancel"):
 		close()
 		return
+
+
+## Selecciona una de las cuatro acciones disponibles. Devuelve false si el
+## identificador no pertenece al menú.
+func select(direction: String) -> bool:
+	if not ITEMS.has(direction):
+		return false
+	_selected = direction
 	_refresh_selection()
+	return true
 
 
 func _refresh_selection() -> void:
@@ -136,58 +146,29 @@ func _refresh_selection() -> void:
 
 
 func open() -> void:
+	if visible:
+		return
+	_modal.enter_overlay(self)
 	_selected = "up"
 	_refresh_selection()
 	show()
-	GlobalHUD.set_clock_paused(true)
-	get_tree().paused = true
 
 
 func close() -> void:
-	GlobalHUD.set_clock_paused(false)
+	if not visible:
+		return
+	_modal.exit_overlay(self)
 	hide()
-	get_tree().paused = false
 
 
 ## Cierra el menú, juega la escena con el Youn y recién al final aplica la acción.
-func _activate() -> void:
+## El efecto de cada acción sobre las stats vive en CareStatsService, no acá.
+func activate_selected() -> void:
 	var dir := _selected
 	close()
 	await YounInteraction.run(ITEMS[dir].anim)
 	match dir:
-		"up":   _cmd_premiar()
-		"down": _cmd_castigar()
-		"left": _cmd_negar()
-		"right": _cmd_jugar()
-
-
-func _cmd_premiar() -> void:
-	StatsManager.add_discipline(-1)
-	StatsManager.add_felicidad(+3)
-	StatsManager.add_confianza(+2)
-	StatsManager.add_estres(-1)
-	StatsManager.add_aburrimiento(-1)
-	StatsManager.add_autocontrol(-1)
-
-
-func _cmd_castigar() -> void:
-	StatsManager.add_felicidad(-4)
-	StatsManager.add_confianza(-3)
-	StatsManager.add_estres(+4)
-	StatsManager.add_autocontrol(-1)
-
-
-func _cmd_negar() -> void:
-	StatsManager.add_felicidad(-2)
-	StatsManager.add_confianza(-1)
-	StatsManager.add_estres(+1)
-	StatsManager.add_autocontrol(+1)
-
-
-func _cmd_jugar() -> void:
-	# Jugar ~4 veces por día (cada 4 h despierto) mantiene estables el
-	# aburrimiento (+3/h) y la felicidad (-1/h).
-	StatsManager.add_felicidad(+4)
-	StatsManager.add_confianza(+2)
-	StatsManager.add_estres(-2)
-	StatsManager.add_aburrimiento(-12)
+		"up":    StatsManager.reward_youn()
+		"down":  StatsManager.punish_youn()
+		"left":  StatsManager.deny_youn()
+		"right": StatsManager.play_with_youn()

@@ -4,6 +4,10 @@ extends RefCounted
 ## Textos de las cartas para la interfaz. Vive acá (y no en los recursos de
 ## datos) porque usa LocalizationState, que es un autoload.
 
+## Arte de reemplazo para una carta sin CardData.image (collection_card.gd,
+## preview_panel.gd). Antes cada vista preloadeaba su propia copia.
+const FALLBACK_IMAGE := preload("res://assets/cards/card_placeholder.png")
+
 const ICONS := {
 	"move": preload("res://assets/icons/card/move.svg"),
 	"sword": preload("res://assets/icons/card/sword.svg"),

@@ -9,7 +9,7 @@ func test_entrada_al_mundo_se_consume_una_sola_vez() -> void:
 	assert_true(entry.pending)
 	assert_eq(entry.zone_id, "gym")
 	assert_eq(entry.position, Vector3(1, 2, 3))
-	assert_true(context.to_legacy_dictionary().is_empty())
+	assert_false(context.pending)
 
 
 func test_retorno_de_ui_se_limpia_al_consumirlo() -> void:

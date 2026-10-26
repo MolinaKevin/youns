@@ -1,6 +1,8 @@
 class_name ModuleSystem
 extends Node3D
 
+const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
+
 ## Los obstáculos que se pueden romper, golpear o crear son módulos: bloques
 ## de MODULE_SIZE × MODULE_SIZE (las piedras chicas del mapa también cuentan
 ## como uno, igual que los troncos que deja un árbol talado — ver
@@ -9,8 +11,8 @@ extends Node3D
 ## Vive como hijo de MapArea, que se asigna a sí mismo en `map` antes de
 ## agregarlo al árbol (ver MapArea._init()) — lo necesita para la lista de
 ## obstáculos compartida (solid_obstacles), las mallas y discos compartidos (_attack_disc,
-## _push_disc, _build_cone_disc), el empujón genérico (start_push_enemy_selection)
-## y la caché de bloqueos (_obstacles_changed).
+## _push_disc, build_cone_disc), el empujón genérico (start_push_enemy_selection)
+## y la caché de bloqueos (obstacles_changed).
 ##
 ## `tree_system` lo asigna también MapArea en _init(): un módulo que choca
 ## contra un árbol al deslizarse (slide_module) tira al jugador si estaba
@@ -52,26 +54,25 @@ static func is_module(obs: Dictionary) -> bool:
 
 ## Muestra el alcance (romper, golpear o crear) alrededor del jugador.
 func start_module_selection(reach: float) -> void:
-	map._show_disc(map._attack_disc, map.player_pos, reach + map._player_shadow_radius)
+	map.presentation.show_player_range(reach + map.actors.player_radius())
 
 func clear_module_selection() -> void:
-	map._attack_disc.visible = false
-	map._push_disc.visible = false
-	map.clear_enemy_highlight()
+	map.presentation.clear_module_selection()
+	map.presentation.clear_enemy_highlight()
 
 ## Derrumbe: resalta al enemigo y el alcance.
 func start_collapse_selection(reach: float) -> void:
-	map.start_push_enemy_selection(reach)
+	map.interactions.start_push_enemy_selection(reach)
 
 ## Lanzar módulo: muestra hasta dónde se puede tirar.
 func start_module_throw_target(throw_range: float) -> void:
-	map._show_disc(map._attack_disc, map.player_pos, throw_range)
+	map.presentation.show_player_range(throw_range)
 
 ## Módulos pegados al enemigo (los que le caen encima con un derrumbe).
 func modules_adjacent_to_enemy() -> Array:
 	var result: Array = []
-	for obs in map.solid_obstacles:
-		if is_module(obs) and CombatMapQueries.obstacle_edge_distance(obs, map.enemy_pos) <= map._enemy_shadow_radius + MODULE_COLLAPSE_MARGIN:
+	for obs in map.terrain.obstacles():
+		if is_module(obs) and CombatMapQueries.obstacle_edge_distance(obs, map.enemy_pos) <= map.actors.enemy_radius() + MODULE_COLLAPSE_MARGIN:
 			result.append(obs)
 	return result
 
@@ -82,7 +83,7 @@ func collapse_modules_on_enemy() -> int:
 	for obs in fallen:
 		_remove_module(obs)
 	if not fallen.is_empty():
-		map._obstacles_changed()
+		map.obstacles_changed()
 	return fallen.size()
 
 ## Lanza el módulo a `target` (vuela por encima de todo): al caer se rompe y le
@@ -90,11 +91,11 @@ func collapse_modules_on_enemy() -> int:
 func throw_module(obs: Dictionary, target: Vector2) -> Dictionary:
 	var reach := MODULE_SIZE * 0.5 + MODULE_ADJACENT_MARGIN
 	var hits := {
-		"enemy": target.distance_to(map.enemy_pos) <= reach + map._enemy_shadow_radius,
-		"player": target.distance_to(map.player_pos) <= reach + map._player_shadow_radius,
+		"enemy": target.distance_to(map.enemy_pos) <= reach + map.actors.enemy_radius(),
+		"player": target.distance_to(map.player_pos) <= reach + map.actors.player_radius(),
 	}
-	map.solid_obstacles.erase(obs)
-	map._obstacles_changed()
+	map.terrain.remove_obstacle(obs)
+	map.obstacles_changed()
 	var node = obs.get("node")
 	if is_instance_valid(node):
 		if node.is_inside_tree():
@@ -111,18 +112,18 @@ func _remove_module(obs: Dictionary) -> void:
 	var node = obs.get("node")
 	if is_instance_valid(node):
 		node.queue_free()
-	map.solid_obstacles.erase(obs)
+	map.terrain.remove_obstacle(obs)
 
 ## El módulo bajo `pos` (o {} si no hay).
 func get_module_at(pos: Vector2) -> Dictionary:
-	for obs in map.solid_obstacles:
+	for obs in map.terrain.obstacles():
 		if is_module(obs) and CombatMapQueries.obstacle_edge_distance(obs, pos) <= map.CLICK_MARGIN:
 			return obs
 	return {}
 
 ## Distancia del jugador al borde del obstáculo, contando desde su huella.
 func obstacle_gap(obs: Dictionary) -> float:
-	return maxf(0.0, CombatMapQueries.obstacle_edge_distance(obs, map.player_pos) - map._player_shadow_radius)
+	return maxf(0.0, CombatMapQueries.obstacle_edge_distance(obs, map.player_pos) - map.actors.player_radius())
 
 ## Levanta hasta `count` módulos en fila, centrada en `center` y perpendicular
 ## a la línea jugador → center (un muro de frente). Los lugares ocupados (por
@@ -138,18 +139,18 @@ func build_modules(center: Vector2, count: int) -> int:
 			_add_module(p)
 			built += 1
 	if built > 0:
-		map._obstacles_changed()
+		map.obstacles_changed()
 	return built
 
 func _module_fits(p: Vector2) -> bool:
 	var half := MODULE_SIZE * 0.5
-	if p.x < half or p.y < half or p.x > map.WORLD_W - half or p.y > map.WORLD_H - half:
+	if not map.terrain.is_inside_bounds(p, half):
 		return false
-	if p.distance_to(map.player_pos) < map._player_shadow_radius + half:
+	if p.distance_to(map.player_pos) < map.actors.player_radius() + half:
 		return false
-	if p.distance_to(map.enemy_pos) < map._enemy_shadow_radius + half:
+	if p.distance_to(map.enemy_pos) < map.actors.enemy_radius() + half:
 		return false
-	for obs in map.solid_obstacles:
+	for obs in map.terrain.obstacles():
 		if CombatMapQueries.obstacle_edge_distance(obs, p) < half * 0.9:
 			return false
 	return true
@@ -166,8 +167,8 @@ func _add_module(p: Vector2) -> Dictionary:
 	mi.position = Vector3(p.x, MODULE_SIZE * 0.5, p.y)
 	mi.material_override = _module_mat
 	map.add_child(mi)
-	var obs := {"pos": p, "box": Vector2(MODULE_SIZE, MODULE_SIZE), "type": "solid", "module": true, "node": mi}
-	map.solid_obstacles.append(obs)
+	var obs := {"pos": p, "box": Vector2(MODULE_SIZE, MODULE_SIZE), "type": CombatObstacle.SOLID, "module": true, "node": mi}
+	map.terrain.add_obstacle(obs)
 	return obs
 
 ## Rompe `first` y los módulos pegados a él (los más cercanos primero), hasta
@@ -176,12 +177,12 @@ func break_modules(first: Dictionary, count: int) -> int:
 	var group: Array = [first]
 	if first.has("log_id"):
 		# Un tronco tirado se rompe entero, con una sola carta.
-		group = map.solid_obstacles.filter(func(o): return o.get("log_id", -1) == first["log_id"])
+		group = map.terrain.obstacles().filter(func(o): return o.get("log_id", -1) == first["log_id"])
 		count = 0
 	while group.size() < count:
 		var best: Dictionary = {}
 		var best_dist := INF
-		for obs in map.solid_obstacles:
+		for obs in map.terrain.obstacles():
 			if not is_module(obs) or group.any(func(g): return is_same(g, obs)):
 				continue
 			var touching: bool = group.any(func(g): return (g["pos"] as Vector2).distance_to(obs["pos"]) <= MODULE_TOUCH_DISTANCE)
@@ -194,7 +195,7 @@ func break_modules(first: Dictionary, count: int) -> int:
 		group.append(best)
 	for obs in group:
 		_remove_module(obs)
-	map._obstacles_changed()
+	map.obstacles_changed()
 	return group.size()
 
 ## Golpe de módulo: lo desliza en `dir` hasta `distance` o hasta chocar con un
@@ -204,7 +205,7 @@ func break_modules(first: Dictionary, count: int) -> int:
 func slide_module(obs: Dictionary, dir: Vector2, distance: float) -> Dictionary:
 	var group: Array = [obs]
 	if obs.has("log_id"):
-		group = map.solid_obstacles.filter(func(o): return o.get("log_id", -1) == obs["log_id"])
+		group = map.terrain.obstacles().filter(func(o): return o.get("log_id", -1) == obs["log_id"])
 	var step: Vector2 = dir.normalized() * distance
 	var best_t := 1.0
 	var hit := ""
@@ -214,14 +215,14 @@ func slide_module(obs: Dictionary, dir: Vector2, distance: float) -> Dictionary:
 		var to: Vector2 = from + step
 		var half := _module_half(member)
 		best_t = minf(best_t, _bounds_t(from, to, half))
-		for actor in [["enemy", map.enemy_pos, map._enemy_shadow_radius], ["player", map.player_pos, map._player_shadow_radius]]:
+		for actor in [["enemy", map.enemy_pos, map.actors.enemy_radius()], ["player", map.player_pos, map.actors.player_radius()]]:
 			var t := CombatMapQueries.first_contact_circle(from, to, actor[1], actor[2] + half)
 			if t >= 0.0 and t < best_t:
 				best_t = t
 				hit = actor[0]
 				hit_tree = {}
-		for other in map.solid_obstacles:
-			if group.any(func(g): return is_same(g, other)) or other.get("type", "solid") == "bridge":
+		for other in map.terrain.obstacles():
+			if group.any(func(g): return is_same(g, other)) or CombatObstacle.type_of(other) == CombatObstacle.BRIDGE:
 				continue
 			var t: float
 			if other.has("box"):
@@ -231,7 +232,7 @@ func slide_module(obs: Dictionary, dir: Vector2, distance: float) -> Dictionary:
 			if t >= 0.0 and t < best_t:
 				best_t = t
 				hit = ""
-				hit_tree = other if other.get("type", "solid") == "tree" else {}
+				hit_tree = other if CombatObstacle.type_of(other) == CombatObstacle.TREE else {}
 	var length := step.length()
 	var travel := maxf(0.0, best_t * length - 0.02) if best_t < 1.0 else length
 	var offset: Vector2 = step.normalized() * travel if length > 0.001 else Vector2.ZERO
@@ -245,21 +246,14 @@ func slide_module(obs: Dictionary, dir: Vector2, distance: float) -> Dictionary:
 				node.create_tween().tween_property(node, "position", target, 0.25)
 			else:
 				node.position = target
-	map._obstacles_changed()
+	map.obstacles_changed()
 	if not hit_tree.is_empty():
-		tree_system._knock_player_off(hit_tree, false)  # el golpe sacude el árbol
+		tree_system.knock_player_off(hit_tree, false)  # el golpe sacude el árbol
 	return {"hit": hit, "pos": obs["pos"], "tree": hit_tree}
 
 ## Hasta qué fracción del segmento se puede mover algo de radio `half` sin salir del mapa.
 func _bounds_t(from: Vector2, to: Vector2, half: float) -> float:
-	var t := 1.0
-	var d := to - from
-	for axis in 2:
-		if absf(d[axis]) < 0.0001:
-			continue
-		var limit: float = (map.WORLD_W if axis == 0 else map.WORLD_H) - half if d[axis] > 0.0 else half
-		t = minf(t, maxf(0.0, (limit - from[axis]) / d[axis]))
-	return t
+	return map.terrain.bounds_travel_fraction(from, to, half)
 
 func _module_half(obs: Dictionary) -> float:
 	if obs.has("box"):

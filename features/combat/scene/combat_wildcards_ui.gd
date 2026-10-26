@@ -75,12 +75,12 @@ func apply_localization(wild_attack: CardAction, wild_move: CardAction) -> void:
 	if _item_picker.visible:
 		_refresh_item_picker()
 
-func update_state(is_acting: bool, armed: int, usable: Dictionary, playing: Dictionary, both_used: bool) -> bool:
+func update_state(is_acting: bool, armed: int, usable: Dictionary, playing: CombatPlayingHalf, both_used: bool) -> bool:
 	panel.visible = is_acting
 	for wild in _buttons: _buttons[wild].disabled = not usable[wild]
-	_skip.disabled = playing.is_empty() or not playing["active"]
-	_lines.visible = not playing.is_empty() and not playing["wild"]
-	if _lines.visible: _lines.text = LocalizationState.t("combat.lines_used", [playing["used"], playing["cap"]])
+	_skip.disabled = playing == null or not playing.active
+	_lines.visible = playing != null and not playing.wild
+	if _lines.visible: _lines.text = LocalizationState.t("combat.lines_used", [playing.used, playing.cap])
 	_end.modulate = Color(1.0, 0.85, 0.35) if both_used else Color.WHITE
 	return armed != _wilds["none"] and not usable[armed]
 

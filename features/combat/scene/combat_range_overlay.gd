@@ -3,7 +3,7 @@ extends RefCounted
 
 ## Compone previews que necesitan reglas espaciales (terreno y línea de visión)
 ## y delega la malla resultante al renderer. No modifica el estado del combate.
-const VISUAL_CELL := 0.08
+const VISUAL_CELL := CombatGrid.CELL
 
 var terrain: CombatTerrain
 var queries: CombatMapQueries

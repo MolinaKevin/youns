@@ -1,7 +1,5 @@
 extends Button
 
-const FALLBACK_IMAGE = preload("res://assets/cards/test.png")
-
 var card_data: CardData
 
 @onready var art = $MarginContainer/VBoxContainer/TextureRect
@@ -11,11 +9,11 @@ var card_data: CardData
 func set_card(data: CardData) -> void:
 	card_data = data
 	if card_data == null:
-		art.texture = FALLBACK_IMAGE
+		art.texture = CardText.FALLBACK_IMAGE
 		name_label.text = ""
 		desc_label.text = ""
 		return
 
-	art.texture = card_data.image if card_data.image != null else FALLBACK_IMAGE
+	art.texture = card_data.image if card_data.image != null else CardText.FALLBACK_IMAGE
 	name_label.text = LocalizationState.card_name(card_data.id, card_data.name)
 	desc_label.text = "▲ %s\n▼ %s" % [CardText.half_summary(card_data.top, " / "), CardText.half_summary(card_data.bottom, " / ")]

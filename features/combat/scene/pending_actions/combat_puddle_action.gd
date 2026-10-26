@@ -6,8 +6,8 @@ extends CombatPendingAction
 func start(p_index: int, p_card: CardActionLine) -> void:
 	index = p_index
 	card = p_card
-	host.map_area.start_puddle_placement(host._w(card.cast_range_cells()), card.puddle_effect, host._w(card.primary_range_cells()))
-	host.log_requested.emit("Elegí dónde lanzar el charco (rango %s módulos)." % card.cast_module_label())
+	host.map_area.interactions.start_puddle_placement(host.w(card.cast_range_cells()), card.puddle_effect, host.w(card.primary_range_cells()))
+	host.emit_log("combat.log.puddle.select", [card.cast_module_label()])
 
 func on_tile_selected(pos: Vector2) -> void:
 	host.pending_cell = pos
@@ -18,14 +18,14 @@ func execute(cell: Vector2) -> void:
 		clear()
 		return
 	var played_card: CardActionLine = host.state.turn_actions[index]
-	host.map_area.clear_puddle_placement()
-	host.map_area.place_puddle(cell, host._w(played_card.primary_range_cells()), played_card.puddle_effect, played_card.duration, played_card.damage)
+	host.map_area.interactions.clear_puddle_placement()
+	host.map_area.interactions.place_puddle(cell, host.w(played_card.primary_range_cells()), played_card.puddle_effect, played_card.duration, played_card.damage)
 	_spend_card()
-	host.log_requested.emit("%s: colocado." % played_card.name)
+	host.emit_log("combat.log.puddle.placed", [played_card.name])
 	host.hand_refresh_requested.emit()
 	host.ui_update_requested.emit()
 
 func clear() -> void:
 	index = -1
 	card = null
-	host.map_area.clear_puddle_placement()
+	host.map_area.interactions.clear_puddle_placement()

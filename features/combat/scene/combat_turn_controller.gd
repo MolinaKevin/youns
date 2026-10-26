@@ -14,7 +14,7 @@ var hand_view_indices: Array[int] = []
 var turn_cards: Array[CardData] = []
 var used_top := -1
 var used_bottom := -1
-var playing: Dictionary = {}
+var playing: CombatPlayingHalf = null
 var starting_line := false
 var turn_hand_indices: Array[int] = []
 var armed_wild: Wild = Wild.NONE
@@ -29,7 +29,7 @@ func begin_planning() -> void:
 	plan_slots = [-1, -1]
 	initiative_shift = 0
 	turn_cards.clear()
-	playing = {}
+	playing = null
 	armed_wild = Wild.NONE
 
 func try_plan_card(hand_index: int) -> bool:
@@ -63,11 +63,11 @@ func commit_plan(hand: Array[CardData], lead_index: int, second_index: int) -> v
 	turn_hand_indices.assign([lead_index, second_index])
 	used_top = -1
 	used_bottom = -1
-	playing = {}
+	playing = null
 
 func clear_action_state() -> void:
 	turn_cards.clear()
-	playing = {}
+	playing = null
 	keep_half = {}
 	item_half = {}
 	armed_wild = Wild.NONE
@@ -75,7 +75,7 @@ func clear_action_state() -> void:
 ## Indica si una mitad puede seleccionarse en el estado actual. Los comodines
 ## no consumen MP; para las cartas normales basta que una línea sea jugable.
 func is_half_available(card_index: int, is_top: bool, player_mp: int) -> bool:
-	if not playing.is_empty() and playing["started"]:
+	if playing != null and playing.started:
 		return false
 	if card_index == used_top or card_index == used_bottom:
 		return false
@@ -106,49 +106,51 @@ func select_half(card_index: int, is_top: bool, player_mp: int, line_cap: int, w
 	var lines := CardScaling.resolve_lines(half.enabled_lines(), CardScaling.player_stats())
 	if lines.is_empty():
 		return {"kind": "no_lines"}
-	playing = {
-		"card": card_index, "is_top": is_top, "lines": lines, "index": 0,
-		"started": false, "active": false, "wild": is_wild, "source": half,
-		"used": 0, "cap": line_cap,
-	}
+	playing = CombatPlayingHalf.new()
+	playing.card = card_index
+	playing.is_top = is_top
+	playing.lines = lines
+	playing.wild = is_wild
+	playing.source = half
+	playing.cap = line_cap
 	return {"kind": "playing", "is_wild": is_wild}
 
 ## Busca la próxima línea que el jugador pueda pagar y la marca como activa.
 ## Combat muestra los avisos y entrega la línea a CombatPlayerActions.
 func start_current_line(player_mp: int) -> Dictionary:
-	if playing.is_empty() or phase != Phase.ACTING:
+	if playing == null or phase != Phase.ACTING:
 		return {"kind": "idle"}
 	var skipped_for_mp := 0
-	var lines: Array = playing["lines"]
-	while playing["index"] < lines.size() and lines[playing["index"]].mp_cost > player_mp:
-		playing["index"] += 1
+	var lines: Array = playing.lines
+	while playing.index < lines.size() and lines[playing.index].mp_cost > player_mp:
+		playing.index += 1
 		skipped_for_mp += 1
-	if playing["index"] >= lines.size():
+	if playing.index >= lines.size():
 		end_playing()
 		return {"kind": "finished", "skipped_for_mp": skipped_for_mp}
 	starting_line = true
-	playing["active"] = true
-	return {"kind": "line", "line": lines[playing["index"]], "skipped_for_mp": skipped_for_mp}
+	playing.active = true
+	return {"kind": "line", "line": lines[playing.index], "skipped_for_mp": skipped_for_mp}
 
 func finish_starting_line() -> void:
 	starting_line = false
 
 func end_playing() -> void:
-	playing = {}
+	playing = null
 
 ## Marca la mitad como gastada y devuelve la carta que debe acreditar ecos.
 func mark_playing_started() -> Dictionary:
-	if playing.is_empty() or playing["started"]:
+	if playing == null or playing.started:
 		return {}
-	playing["started"] = true
-	if playing["is_top"]:
-		used_top = playing["card"]
+	playing.started = true
+	if playing.is_top:
+		used_top = playing.card
 	else:
-		used_bottom = playing["card"]
-	return {"echo_card": turn_cards[playing["card"]] if not playing["wild"] else null}
+		used_bottom = playing.card
+	return {"echo_card": turn_cards[playing.card] if not playing.wild else null}
 
 func skip_active_line() -> Dictionary:
-	if phase != Phase.ACTING or playing.is_empty() or not playing["active"]:
+	if phase != Phase.ACTING or playing == null or not playing.active:
 		return {"skipped": false}
 	var started := mark_playing_started()
 	return {"skipped": true, "echo_card": started.get("echo_card")}
@@ -156,32 +158,32 @@ func skip_active_line() -> Dictionary:
 ## Avanza o termina la mitad según si CombatPlayerActions todavía conserva la
 ## línea activa. El resultado describe los efectos que debe aplicar Combat.
 func resolve_playing(line_still_active: bool, selection_pending: bool) -> Dictionary:
-	if playing.is_empty() or starting_line or not playing["active"]:
+	if playing == null or starting_line or not playing.active:
 		return {"kind": "idle"}
-	var line: CardActionLine = playing["lines"][playing["index"]]
+	var line: CardActionLine = playing.lines[playing.index]
 	var result := {"kind": "pending", "mp_cost": 0, "echo_card": null, "cap": -1}
 	if not line_still_active:
 		var started := mark_playing_started()
 		result["echo_card"] = started.get("echo_card")
-		if playing.get("counted", -1) != playing["index"]:
-			playing["counted"] = playing["index"]
-			playing["used"] += 1
+		if playing.counted != playing.index:
+			playing.counted = playing.index
+			playing.used += 1
 			result["mp_cost"] = line.mp_cost
 	if selection_pending:
 		return result
 	if line_still_active:
-		if not playing["started"]:
+		if not playing.started:
 			end_playing()
 			return {"kind": "abandoned"}
 		result["kind"] = "line_skipped"
-	playing["index"] += 1
-	playing["active"] = false
-	if not line_still_active and playing["used"] >= playing["cap"] and playing["index"] < playing["lines"].size():
+	playing.index += 1
+	playing.active = false
+	if not line_still_active and playing.used >= playing.cap and playing.index < playing.lines.size():
 		result["kind"] = "cap_reached"
-		result["cap"] = playing["cap"]
+		result["cap"] = playing.cap
 		end_playing()
 		return result
-	if playing["index"] >= playing["lines"].size():
+	if playing.index >= playing.lines.size():
 		end_playing()
 		result["kind"] = "finished"
 		return result

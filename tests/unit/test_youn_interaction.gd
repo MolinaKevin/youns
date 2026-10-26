@@ -56,9 +56,9 @@ func test_el_jugador_hace_la_animacion() -> void:
 func test_los_stats_cambian_al_terminar_la_escena() -> void:
 	var save := GameState.player_save
 	save.felicidad = 50
-	QuickMenu._selected = "left"
-	QuickMenu._activate()
+	assert_true(QuickMenu.select("left"))
+	QuickMenu.activate_selected()
 	assert_eq(save.felicidad, 50, "todavía no")
 	await wait_until(func() -> bool: return not YounInteraction.running, 10.0)
-	await wait_frames(1)
+	await wait_process_frames(1)
 	assert_eq(save.felicidad, 48)

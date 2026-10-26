@@ -3,6 +3,16 @@ extends GutTest
 # EmotionRuleTimeWindow: retorna 1.0 si la hora actual cae dentro de la ventana
 # de sueño del Youn, 0.0 si está fuera.
 
+var _previous_time_of_day_hours := 0.0
+
+
+func before_each() -> void:
+	_previous_time_of_day_hours = GameState.time_of_day_hours
+
+
+func after_each() -> void:
+	GameState.time_of_day_hours = _previous_time_of_day_hours
+
 
 func _make_youn(sleep: int, wake: int) -> YounData:
 	var y := YounData.new()

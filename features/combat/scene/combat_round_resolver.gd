@@ -7,59 +7,75 @@ var zone_effects := CombatZoneEffectResolver.new()
 ## Combat consume estos eventos, localiza sus mensajes y aplica el daño para
 ## poder detener la secuencia inmediatamente cuando termina el combate.
 
-func build_events(state: CombatState, map_area: MapArea) -> Array[Dictionary]:
-	var events: Array[Dictionary] = []
+func build_events(state: CombatState, map_area: MapArea) -> Array[CombatRoundEvent]:
+	var events: Array[CombatRoundEvent] = []
 	if state.player_in_tree:
 		state.player_in_tree = false
-		events.append({
-			"kind": "tree_drop",
-			"hit": map_area.drop_from_tree(state.player_tree_landing),
-			"damage": state.player_tree_drop_damage,
-		})
-	for hit: Dictionary in map_area.resolve_delayed_zones():
+		var tree_drop := CombatRoundEvent.new()
+		tree_drop.kind = "tree_drop"
+		tree_drop.hit = map_area.interactions.drop_from_tree(state.player_tree_landing)
+		tree_drop.damage = state.player_tree_drop_damage
+		events.append(tree_drop)
+	for hit: Dictionary in map_area.interactions.resolve_delayed_zones():
 		if hit["enemy"]:
-			events.append({"kind": "delayed_zone", "target": "enemy", "hit": hit})
+			events.append(_delayed_zone_event("enemy", hit))
 		if hit["player"]:
-			events.append({"kind": "delayed_zone", "target": "player", "hit": hit})
+			events.append(_delayed_zone_event("player", hit))
 		if not hit["enemy"] and not hit["player"]:
-			events.append({"kind": "delayed_zone", "target": "none", "hit": hit})
-	events.append({"kind": "tick_map_effects"})
+			events.append(_delayed_zone_event("none", hit))
+	var tick := CombatRoundEvent.new()
+	tick.kind = "tick_map_effects"
+	events.append(tick)
 	events.append_array(_status_events(state))
 	return events
 
-func apply_delayed_zone_impact(state: CombatState, event: Dictionary) -> Array:
-	var hit: Dictionary = event["hit"]
-	return zone_effects.apply_direct_impact(state, hit["effect"], hit["tick_damage"], event["target"] != "enemy")
+func _delayed_zone_event(target: String, hit: Dictionary) -> CombatRoundEvent:
+	var event := CombatRoundEvent.new()
+	event.kind = "delayed_zone"
+	event.target = target
+	event.zone_hit = hit
+	return event
 
-func finish_status_event(state: CombatState, event: Dictionary) -> String:
-	var field: String = event["field"]
-	state.set(field, maxi(0, int(state.get(field)) - 1))
-	return event["expired_log_key"] if state.get(field) == 0 else ""
+func apply_delayed_zone_impact(state: CombatState, event: CombatRoundEvent) -> Array:
+	return zone_effects.apply_direct_impact(state, event.zone_hit["effect"], event.zone_hit["tick_damage"], event.target != "enemy")
 
-func _status_events(state: CombatState) -> Array[Dictionary]:
-	var events: Array[Dictionary] = []
+func finish_status_event(state: CombatState, event: CombatRoundEvent) -> String:
+	var remaining := maxi(0, state.status_value(event.effect, true) - 1)
+	state.set_status_value(event.effect, true, remaining)
+	return event.expired_log_key if remaining == 0 else ""
+
+func _status_events(state: CombatState) -> Array[CombatRoundEvent]:
+	var events: Array[CombatRoundEvent] = []
 	if state.player_burning_turns > 0:
-		events.append(_damage_status("player_burning_turns", state.player_burn_damage, CombatState.BURN_DAMAGE_TYPE,
+		events.append(_damage_status(CombatEffect.BURN, state.player_burn_damage, CombatState.BURN_DAMAGE_TYPE,
 			"combat.status.player_burning_damage", "combat.status.player_burning_expired"))
 	if state.player_bleeding_turns > 0:
-		events.append(_damage_status("player_bleeding_turns", state.player_bleed_damage, CombatState.BLEED_DAMAGE_TYPE,
+		events.append(_damage_status(CombatEffect.BLEED, state.player_bleed_damage, CombatState.BLEED_DAMAGE_TYPE,
 			"combat.status.player_bleeding_damage", "combat.status.player_bleeding_expired"))
 	if state.player_poison_stacks > 0:
-		events.append(_damage_status("player_poison_stacks", state.player_poison_stacks * state.player_poison_damage,
+		events.append(_damage_status(CombatEffect.POISON, state.player_poison_stacks * state.player_poison_damage,
 			CombatState.POISON_DAMAGE_TYPE, "combat.status.player_poison_damage", "combat.status.player_poison_expired"))
 	for status in [
-		["player_wet_turns", "combat.status.player_wet_expired"],
-		["player_greasy_turns", "combat.status.player_greasy_expired"],
-		["player_entangled_turns", "combat.status.player_entangled_expired"],
-		["player_blinded_turns", "combat.status.player_blinded_expired"],
-		["player_frozen_turns", "combat.status.player_frozen_expired"],
+		[CombatEffect.WET, "combat.status.player_wet_expired"],
+		[CombatEffect.SLOW, "combat.status.player_greasy_expired"],
+		[CombatEffect.ENTANGLE, "combat.status.player_entangled_expired"],
+		[CombatEffect.BLIND, "combat.status.player_blinded_expired"],
+		[CombatEffect.FREEZE, "combat.status.player_frozen_expired"],
 	]:
-		if state.get(status[0]) > 0:
-			events.append({"kind": "status_duration", "field": status[0], "expired_log_key": status[1]})
+		if state.status_value(status[0], true) > 0:
+			var event := CombatRoundEvent.new()
+			event.kind = "status_duration"
+			event.effect = status[0]
+			event.expired_log_key = status[1]
+			events.append(event)
 	return events
 
-func _damage_status(field: String, damage: int, damage_type: String, damage_log_key: String, expired_log_key: String) -> Dictionary:
-	return {
-		"kind": "status_damage", "field": field, "damage": damage, "damage_type": damage_type,
-		"damage_log_key": damage_log_key, "expired_log_key": expired_log_key,
-	}
+func _damage_status(effect: String, damage: int, damage_type: String, damage_log_key: String, expired_log_key: String) -> CombatRoundEvent:
+	var event := CombatRoundEvent.new()
+	event.kind = "status_damage"
+	event.effect = effect
+	event.damage = damage
+	event.damage_type = damage_type
+	event.damage_log_key = damage_log_key
+	event.expired_log_key = expired_log_key
+	return event

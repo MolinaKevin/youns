@@ -73,13 +73,13 @@ func show_for(data: YounData) -> void:
 	_portrait.visible = data.portrait != null
 	overlay.visible = true
 	var close := Button.new()
-	close.text = "Volver al árbol"
+	close.text = LocalizationState.t("tree.back")
 	close.custom_minimum_size = Vector2(0, 44)
 	close.pressed.connect(close_overlay)
 	_info.add_child(close)
 	_info.add_child(_text(data.youn_name, 32, Color.WHITE))
 	_info.add_child(_text(LocalizationState.youn_stage_name(data.stage), 18, Color(0.7, 0.75, 0.8)))
-	if data.resource_path == host._current_path:
+	if host.is_current_youn(data):
 		_info.add_child(_text(LocalizationState.t("tree.current"), 15, host.CURRENT))
 	if not data.intelligences.is_empty():
 		var names: PackedStringArray = []
@@ -103,8 +103,7 @@ func show_for(data: YounData) -> void:
 
 func close_overlay() -> void:
 	overlay.visible = false
-	if host._focus_nav.focused != null:
-		host._focus_nav.focused.call_deferred("grab_focus")
+	host.restore_tree_focus()
 
 func _text(value: String, font_size: int, color: Color) -> Label:
 	var label := Label.new()

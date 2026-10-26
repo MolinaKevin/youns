@@ -16,7 +16,10 @@ func meadow_triangles(map_path: String, offset: Vector3) -> Dictionary:
 	var cache_key := map_path + "@" + str(offset)
 	if _meadow_cache.has(cache_key): return _meadow_cache[cache_key]
 	var out := {"meadow": PackedVector2Array(), "floor": PackedVector2Array(), "canyon": PackedVector2Array(), "rock": PackedVector2Array()}
-	var map: Node3D = (load(map_path) as PackedScene).instantiate()
+	var map := _instantiate_map(map_path)
+	if map == null:
+		_meadow_cache[cache_key] = out
+		return out
 	_decoration.collect_map_node(map, offset)
 	var patterns := {"meadow": ["*Meadow"], "floor": ["*" + _layout.forest_floor_suffix], "canyon": ["*" + _layout.canyon_suffix], "rock": ["*" + _layout.rock_suffix]}
 	for key in out:
@@ -37,7 +40,10 @@ func city_triangles(offset: Vector3) -> Dictionary:
 	var cache_key := str(offset)
 	if _city_cache.has(cache_key): return _city_cache[cache_key]
 	var out := {"west": PackedVector2Array(), "water": PackedVector2Array(), "mountain": PackedVector2Array()}
-	var map: Node3D = (load(_layout.city_map) as PackedScene).instantiate()
+	var map := _instantiate_map(_layout.city_map)
+	if map == null:
+		_city_cache[cache_key] = out
+		return out
 	_decoration.collect_map_node(map, offset)
 	for node in map.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D
@@ -59,6 +65,19 @@ func city_triangles(offset: Vector3) -> Dictionary:
 	map.free()
 	_city_cache[cache_key] = out
 	return out
+
+func _instantiate_map(map_path: String) -> Node3D:
+	if not ResourceLoader.exists(map_path):
+		push_error("WorldGeometryReader: no existe el mapa '%s'." % map_path)
+		return null
+	var scene := load(map_path) as PackedScene
+	if scene == null:
+		push_error("WorldGeometryReader: no se pudo cargar el mapa '%s'." % map_path)
+		return null
+	var map := scene.instantiate() as Node3D
+	if map == null:
+		push_error("WorldGeometryReader: '%s' no instancia un Node3D." % map_path)
+	return map
 
 func _transform_in(node: Node, root: Node) -> Transform3D:
 	var transform := Transform3D()

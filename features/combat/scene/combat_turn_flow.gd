@@ -26,10 +26,10 @@ func setup_draw_pile() -> void:
 func refresh_hand() -> void:
 	if host.turn.phase != CombatTurnController.Phase.PLANNING:
 		_sync_playing_resolution()
-	_refresh_hand_view()
+	refresh_hand_view()
 
 ## Refresco puramente visual: no avanza ni resuelve líneas en juego.
-func _refresh_hand_view() -> void:
+func refresh_hand_view() -> void:
 	var turn := host.turn
 	var state = host.state
 	if turn.phase == CombatTurnController.Phase.PLANNING:
@@ -98,7 +98,7 @@ func on_hand_half_selected(index: int, is_top: bool) -> void:
 			return
 	var is_wild: bool = selection["is_wild"]
 	if is_wild:
-		for line: CardActionLine in turn.playing["lines"]:
+		for line: CardActionLine in turn.playing.lines:
 			line.name = LocalizationState.t("wildcard.name")
 	host._wildcards.disarm()
 	# Cambiar de mitad antes de hacer la primera línea no gasta nada.
@@ -128,18 +128,18 @@ func _begin_current_line() -> void:
 ## reemplazan la mitad, así que no marcan nada en la carta.
 func _show_active_line() -> void:
 	var turn := host.turn
-	if turn.playing.is_empty() or turn.playing["wild"]:
+	if turn.playing == null or turn.playing.wild:
 		return
 	# Las líneas en juego son solo las activas: se busca su índice en la mitad.
-	var source: CardAction = turn.playing["source"]
+	var source: CardAction = turn.playing.source
 	var enabled_seen := -1
 	for i in source.lines.size():
 		var line: CardActionLine = source.lines[i]
 		if line == null or not line.enabled:
 			continue
 		enabled_seen += 1
-		if enabled_seen == turn.playing["index"]:
-			host.hand_section.set_active_line(turn.playing["card"], turn.playing["is_top"], i)
+		if enabled_seen == turn.playing.index:
+			host.hand_section.set_active_line(turn.playing.card, turn.playing.is_top, i)
 			return
 
 ## Tope de líneas por mitad para la etapa del Youn (DeckRules.line_cap).
@@ -159,9 +159,9 @@ func on_skip_line_pressed() -> void:
 ## controlador: puntos de movimiento, ecos, mensajes y la siguiente selección.
 func _sync_playing_resolution() -> void:
 	var turn := host.turn
-	if turn.playing.is_empty():
+	if turn.playing == null:
 		return
-	var line: CardActionLine = turn.playing["lines"][turn.playing["index"]]
+	var line: CardActionLine = turn.playing.lines[turn.playing.index]
 	var result := turn.resolve_playing(host.state.turn_actions.has(line), host.player_actions.has_pending_selection())
 	_add_echoes(result.get("echo_card"))
 	host.state.player_mp -= result.get("mp_cost", 0)
@@ -302,12 +302,12 @@ func _reset_turn() -> void:
 
 ## Aplica la parte visible de un evento de fin de ronda. Devuelve true si el
 ## combate terminó y la secuencia no debe continuar.
-func _resolve_round_event(event: Dictionary) -> bool:
-	match event["kind"]:
+func _resolve_round_event(event: CombatRoundEvent) -> bool:
+	match event.kind:
 		"tree_drop":
-			if event["hit"]:
-				host.log_message(LocalizationState.t("combat.tree_drop.enemy_hit", [event["damage"]]))
-				await host._damage.deal_to_enemy(event["damage"], false, CombatState.FISICO)
+			if event.hit:
+				host.log_message(LocalizationState.t("combat.tree_drop.enemy_hit", [event.damage]))
+				await host._damage.deal_to_enemy(event.damage, false, CombatState.FISICO)
 				if host._result_flow.check_combat_end():
 					return true
 			else:
@@ -317,11 +317,11 @@ func _resolve_round_event(event: Dictionary) -> bool:
 			if await _resolve_delayed_zone_event(event):
 				return true
 		"tick_map_effects":
-			host.map_area.tick_puddles()
-			host.map_area.tick_trees()
+			host.map_area.interactions.tick_puddles()
+			host.map_area.interactions.tick_trees()
 		"status_damage":
-			host.log_message(LocalizationState.t(event["damage_log_key"], [event["damage"]]))
-			await host._damage.deal_to_player(event["damage"], true, event["damage_type"])
+			host.log_message(LocalizationState.t(event.damage_log_key, [event.damage]))
+			await host._damage.deal_to_player(event.damage, true, event.damage_type)
 			if host._result_flow.check_combat_end():
 				return true
 			_log_expired_status(host.round_resolver.finish_status_event(host.state, event))
@@ -329,9 +329,9 @@ func _resolve_round_event(event: Dictionary) -> bool:
 			_log_expired_status(host.round_resolver.finish_status_event(host.state, event))
 	return false
 
-func _resolve_delayed_zone_event(event: Dictionary) -> bool:
-	var hit: Dictionary = event["hit"]
-	match event["target"]:
+func _resolve_delayed_zone_event(event: CombatRoundEvent) -> bool:
+	var hit: Dictionary = event.zone_hit
+	match event.target:
 		"enemy":
 			host.log_message(LocalizationState.t("combat.delayed_zone.enemy_hit", [hit["name"], hit["damage"]]))
 			await host._damage.deal_to_enemy(hit["damage"], true, CombatState.MAGICO)

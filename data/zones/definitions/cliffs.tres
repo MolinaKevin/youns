@@ -7,4 +7,4 @@ script = ExtResource("1")
 id = "cliffs"
 scene_path = "res://features/world/zones/zone_cliffs.tscn"
 offset = Vector3(-290, 0, -150)
-connections = ["left", "hub"]
+connections = ["left", "hub", "pinewood"]

@@ -1,5 +1,7 @@
 class_name MapArea
-extends Node3D
+extends CombatMapArea
+
+const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
 
 ## Charcos, trampas, granadas, salto de roca, árboles y módulos: estado y
 ## lógica en su propio componente (ver puddle_system.gd/trap_system.gd/
@@ -15,7 +17,6 @@ var _module_system     := ModuleSystem.new()
 var _overlay           := CombatMapOverlay.new()
 var _input_controller  := CombatMapInput.new()
 var _navigation         := CombatNavigation.new()
-var _queries            := CombatMapQueries.new()
 var _actor_mover        := CombatActorMover.new()
 var _spell_system       := CombatSpellSystem.new()
 var _terrain            := CombatTerrain.new()
@@ -25,27 +26,69 @@ var _overwatch_system   := CombatOverwatchSystem.new()
 var _renderer           := CombatMapRenderer.new()
 var _range_overlay      := CombatRangeOverlay.new()
 var _actor_presentation := CombatActorPresentation.new()
+## API que reúne los modos de colocación y sus previews de hover. El gameplay
+## nuevo debe depender de esta fachada, `queries`, `movement`, `presentation`
+## o `actors`, no de métodos sueltos de MapArea.
+## API de presentación para sistemas que muestran selección/previsualizaciones.
+var presentation := CombatMapPresentation.new()
+## API de actores (radios y sincronización visual de posiciones).
+var actors := CombatMapActors.new()
+## API de consultas espaciales y navegación.
+var terrain := CombatMapTerrain.new()
 
 ## Alias para que `map.LOG_SEGMENTS` (lo usan los tests) siga andando con el
 ## dueño real del dato movido a TreeSystem.
 const LOG_SEGMENTS := TreeSystem.LOG_SEGMENTS
+## Las plantas consultan estos valores a través de MapArea. TreeSystem es el
+## dueño de la regla, pero esta fachada evita que PuddleSystem dependa de la
+## estructura interna de MapArea.
+const TREE_VINE_RADIUS_MULT := TreeSystem.TREE_VINE_RADIUS_MULT
+const TREE_VINE_REACH := TreeSystem.TREE_VINE_REACH
 
 func _init() -> void:
+	player_pos = Vector2(3.0, 27.0)
+	enemy_pos = Vector2(27.0, 3.0)
+	queries = CombatMapQueries.new()
+	movement = CombatMapMovement.new()
+	interactions = CombatMapInteractions.new()
 	add_child(_overlay)
 	_input_controller.map = self
 	_input_controller.position_selected.connect(func(pos): position_selected.emit(pos))
 	add_child(_input_controller)
 	_terrain.configure(WORLD_W, WORLD_H)
 	_navigation.configure(_terrain, WORLD_W, WORLD_H)
-	_queries.map = self
+	queries.map = self
 	_actor_mover.map = self
 	_actor_mover.enemy_reached_target.connect(func(): enemy_reached_target.emit())
 	_spell_system.map = self
 	_targeting.map = self
+	presentation.map = self
+	presentation.overlay = _overlay
+	actors.map = self
+	actors.overlay = _overlay
+	actors.terrain = terrain
+	actors.mover = _actor_mover
+	actors.trees = _tree_system
+	terrain.map = self
+	terrain.logic = _terrain
+	terrain.navigation = _navigation
+	movement.map = self
+	interactions.map = self
+	interactions.trap_system = _trap_system
+	interactions.grenade_system = _grenade_system
+	interactions.rock_jump_system = _rock_jump_system
+	interactions.puddle_system = _puddle_system
+	interactions.overwatch_system = _overwatch_system
+	interactions.push_system = _push_system
+	interactions.module_system = _module_system
+	interactions.spell_system = _spell_system
+	interactions.tree_system = _tree_system
+	interactions.targeting = _targeting
+	interactions.presentation = presentation
 	_push_system.map = self
 	_overwatch_system.map = self
 	_range_overlay.terrain = _terrain
-	_range_overlay.queries = _queries
+	_range_overlay.queries = queries
 	_range_overlay.renderer = _renderer
 	_actor_presentation.map = self
 	_puddle_system.map = self
@@ -71,9 +114,6 @@ signal enemy_reached_target
 signal player_knocked_off_tree(burning: bool)
 
 # ── World bounds ──────────────────────────────────────────────────────────────
-const WORLD_W := 30.0
-const WORLD_H := 30.0
-
 const DEFAULT_BIOME: BiomeData = preload("res://data/biomes/pradera.tres")
 
 ## Bioma que suministra el layout del combate actual.
@@ -83,16 +123,10 @@ func setup_biome(value: BiomeData) -> void:
 	biome = value if value != null else DEFAULT_BIOME
 	biome.setup_combat_map(self)
 
-# ── Positions (XZ world space) ────────────────────────────────────────────────
-var player_pos := Vector2(3.0, 27.0)
-var enemy_pos  := Vector2(27.0, 3.0)
-
 # ── Shared combat state ───────────────────────────────────────────────────────
 var _enemy_move_pending:
 	get: return _actor_mover.enemy_move_pending
 	set(value): _actor_mover.enemy_move_pending = value
-var _enemy_waypoints: Array[Vector3]:
-	get: return _actor_mover.enemy_waypoints
 ## Reenvío a PuddleSystem (compat con combat_player_actions.gd/combat_enemy_ai.gd/tests).
 
 # ── Elevation ─────────────────────────────────────────────────────────────────
@@ -101,18 +135,20 @@ var player_elevation: int = 0
 var enemy_elevation:  int = 0
 
 # ── Pathfinding ───────────────────────────────────────────────────────────────
-var _last_path: Array[Vector2]:
-	get: return _navigation.last_path
-var _player_waypoints: Array[Vector3]:
-	get: return _actor_mover.player_waypoints
 # ── Obstacles ─────────────────────────────────────────────────────────────────
-# type "solid"  → bloquea movimiento Y línea de visión
-# type "rock"   → bloquea movimiento, LOS pasa a través (piedra pequeña)
-# type "bridge" → movimiento permitido por debajo, LOS bloqueada (puente)
+# type CombatObstacle.SOLID  → bloquea movimiento Y línea de visión
+# type CombatObstacle.ROCK   → bloquea movimiento, LOS pasa a través (piedra pequeña)
+# type CombatObstacle.BRIDGE → movimiento permitido por debajo, LOS bloqueada (puente)
 # "module": true → es un módulo: se puede romper, golpear y saltar desde él
 #                  (las piedras chicas; las cartas crean más, ver build_modules)
 ## Lo provee el CombatBiomeLayout; CombatTerrain conserva e interpreta esa
-## geometría durante el combate.
+## geometría durante el combate. Devuelve el array real (no una copia): lo
+## usan los tests para armar tableros a mano y CombatBiomeLayout para leerlo
+## una vez al construir los visuales. El código de juego que agrega, saca o
+## mueve obstáculos durante el combate no debe usar esto — tiene que pasar
+## por `terrain.add_obstacle()`/`terrain.remove_obstacle()` (o mutar en el
+## lugar, como slide_module), que son los que saben invalidar los cachés de
+## CombatTerrain.
 var solid_obstacles: Array[Dictionary]:
 	get: return _terrain.obstacles
 
@@ -124,22 +160,22 @@ func clear_biome_obstacles() -> void:
 	_terrain.clear()
 
 func add_solid(pos: Vector2, radius: float) -> void:
-	_terrain.add({"pos": pos, "radius": radius, "type": "solid"})
+	_terrain.add({"pos": pos, "radius": radius, "type": CombatObstacle.SOLID})
 
 func add_solid_box(pos: Vector2, size: Vector2) -> void:
-	_terrain.add({"pos": pos, "box": size, "type": "solid"})
+	_terrain.add({"pos": pos, "box": size, "type": CombatObstacle.SOLID})
 
 func add_rock(pos: Vector2, radius: float, module: bool = true) -> void:
-	_terrain.add({"pos": pos, "radius": radius, "type": "rock", "module": module})
+	_terrain.add({"pos": pos, "radius": radius, "type": CombatObstacle.ROCK, "module": module})
 
 func add_bridge(pos: Vector2, size: Vector2) -> void:
-	_terrain.add({"pos": pos, "box": size, "type": "bridge"})
+	_terrain.add({"pos": pos, "box": size, "type": CombatObstacle.BRIDGE})
 
 func add_tree(pos: Vector2, radius: float = 0.6) -> void:
-	_terrain.add({"pos": pos, "radius": radius, "type": "tree"})
+	_terrain.add({"pos": pos, "radius": radius, "type": CombatObstacle.TREE})
 
 func add_platform(pos: Vector2, size: Vector2, ramps: Array[Dictionary] = []) -> void:
-	_terrain.add({"pos": pos, "box": size, "type": "platform", "ramps": ramps.duplicate(true)})
+	_terrain.add({"pos": pos, "box": size, "type": CombatObstacle.PLATFORM, "ramps": ramps.duplicate(true)})
 
 const PLATFORM_HEIGHT := 1.5
 const TREE_HEIGHT     := 2.4
@@ -155,58 +191,9 @@ const AREA_CONTACT_FRACTION := 1.0 / 3.0
 ## Cuánto más allá de la huella un clic sigue contando como "sobre el personaje".
 const CLICK_MARGIN := 0.6
 
-var _move_disc: MeshInstance3D:
-	get: return _overlay.move_disc
-var _player_circle: MeshInstance3D:
-	get: return _overlay.player_circle
-var _attack_disc: MeshInstance3D:
-	get: return _overlay.attack_disc
-var _dest_marker: MeshInstance3D:
-	get: return _overlay.dest_marker
-var _path_highlight: MeshInstance3D:
-	get: return _overlay.path_highlight
-var _hover_cell: MeshInstance3D:
-	get: return _overlay.hover_cell
-var _player_shadow: MeshInstance3D:
-	get: return _overlay.player_shadow
-var _enemy_shadow: MeshInstance3D:
-	get: return _overlay.enemy_shadow
-var _player_shadow_radius: float = 0.4
-var _enemy_shadow_radius:  float = 0.4
-## Vista 3D + nodo de posición/rotación de cada personaje (ver combat_actor_view.gd).
-var _player_view: CombatActorView
-var _enemy_view:  CombatActorView
-var _player_rotate_speed: float = 8.0
-var _enemy_rotate_speed:  float = 8.0
-
-const _PRIORITY_ANIMS: Array[String]       = ["attack", "range", "damage", "die"]
-const _ENEMY_PRIORITY_ANIMS: Array[String] = ["attack", "damage"]
-
 # ── Movement animation ────────────────────────────────────────────────────────
 const ACTOR_MOVE_SPEED  := 12.0
 const MIN_SEPARATION    := 0.8
-
-var _player_target: Vector3
-var _enemy_target:  Vector3
-
-var _enemy_highlight: MeshInstance3D:
-	get: return _overlay.enemy_highlight
-var _self_highlight: MeshInstance3D:
-	get: return _overlay.self_highlight
-var _enemy_hover: MeshInstance3D:
-	get: return _overlay.enemy_hover
-var _self_hover: MeshInstance3D:
-	get: return _overlay.self_hover
-var _push_disc: MeshInstance3D:
-	get: return _overlay.push_disc
-var _push_enemy_disc: MeshInstance3D:
-	get: return _overlay.push_enemy_disc
-var _card_pattern_preview: MeshInstance3D:
-	get: return _overlay.card_pattern_preview
-var _overwatch_zone: MeshInstance3D:
-	get: return _overlay.overwatch_zone
-var _overwatch_preview_disc: MeshInstance3D:
-	get: return _overlay.overwatch_preview_disc
 
 # ── Init ──────────────────────────────────────────────────────────────────────
 func _ready() -> void:
@@ -219,23 +206,23 @@ func _ready() -> void:
 func _setup_ground() -> void:
 	add_child(_renderer.make_ground(WORLD_W, WORLD_H))
 
-func _make_mat(color: Color) -> StandardMaterial3D:
+func make_mat(color: Color) -> StandardMaterial3D:
 	return _overlay.make_material(color)
 
-func _make_disc(color: Color) -> MeshInstance3D:
+func make_disc(color: Color) -> MeshInstance3D:
 	return _overlay.make_disc(color)
 
-func _show_disc(mi: MeshInstance3D, center: Vector2, radius: float) -> void:
+func show_disc(mi: MeshInstance3D, center: Vector2, radius: float) -> void:
 	_renderer.show_disc(mi, center, radius)
 
-func _show_simple_disc(mi: MeshInstance3D, center: Vector2, radius: float) -> void:
+func show_simple_disc(mi: MeshInstance3D, center: Vector2, radius: float) -> void:
 	_renderer.show_simple_disc(mi, center, radius)
 
-func _build_tile_disc(mi: MeshInstance3D, center: Vector2, radius: float, inner_radius: float, y: float, exclusions: Array = []) -> void:
+func build_tile_disc(mi: MeshInstance3D, center: Vector2, radius: float, inner_radius: float, y: float, exclusions: Array = []) -> void:
 	_renderer.build_tile_disc(mi, center, radius, inner_radius, y, exclusions)
 
 ## Pinta las casillas de la huella de un personaje (las mismas de su sombra).
-func _show_footprint(mi: MeshInstance3D, center: Vector2, radius: float, y := HIGHLIGHT_Y) -> void:
+func show_footprint(mi: MeshInstance3D, center: Vector2, radius: float, y := HIGHLIGHT_Y) -> void:
 	_renderer.show_footprint(mi, center, radius, y)
 
 
@@ -246,23 +233,16 @@ func setup_player(data: YounData) -> void:
 	_actor_presentation.setup_player(data)
 
 func play_player_anim(anim_key: String) -> void:
-	_player_view.play(anim_key)
+	actors.play_player_animation(anim_key)
 
 func setup_enemy_youn(data: YounData) -> void:
 	_actor_presentation.setup_enemy(data)
 
 func play_enemy_anim(anim_key: String) -> void:
-	_enemy_view.play(anim_key)
+	actors.play_enemy_animation(anim_key)
 
-func _update_actor_positions() -> void:
-	var player_y: float = _terrain.player_height_at(player_pos, player_elevation)
-	_player_target = Vector3(player_pos.x, player_y, player_pos.y)
-	if not _tree_system._climbed_tree.is_empty():
-		# Arriba del árbol: solo cambia lo que se ve; la posición lógica queda al pie.
-		var t: Vector2 = _tree_system._climbed_tree["pos"]
-		_player_target = Vector3(t.x, TREE_HEIGHT, t.y)
-	var enemy_y: float = float(enemy_elevation) * PLATFORM_HEIGHT
-	_enemy_target  = Vector3(enemy_pos.x, enemy_y, enemy_pos.y)
+func update_actor_positions() -> void:
+	actors.sync_targets()
 
 func _process(delta: float) -> void:
 	_warm_grid_caches()
@@ -274,19 +254,22 @@ func lock_hover_at_last_click() -> void:
 func unlock_hover() -> void:
 	_input_controller.unlock_hover()
 
+func is_hover_locked() -> bool:
+	return _input_controller.is_hover_locked()
+
 func set_status_texts(player_text: String, enemy_text: String) -> void:
 	_actor_presentation.set_status_texts(player_text, enemy_text)
 
-func _place_status_labels() -> void:
+func place_status_labels() -> void:
 	_actor_presentation.place_status_labels()
 
-func _update_hover_at(pos: Vector2) -> void:
+func update_hover_at(pos: Vector2) -> void:
 	_targeting.update_hover(pos)
 
-func _clear_hover() -> void:
+func clear_hover() -> void:
 	_targeting.clear_hover()
 
-func _show_single_cell(mi: MeshInstance3D, world_pos: Vector2) -> void:
+func show_single_cell(mi: MeshInstance3D, world_pos: Vector2) -> void:
 	var center := _renderer.visual_cell_center(world_pos)
 	_renderer.show_single_cell(mi, center, _terrain.height_at(center))
 
@@ -295,7 +278,7 @@ func movement_distance(a: Vector2, b: Vector2) -> float:
 	return a.distance_to(b)
 
 # ── Terrain (fachada de CombatTerrain) ─────────────────────────────────────────
-func _elevation_at(pos: Vector2) -> int:
+func elevation_at(pos: Vector2) -> int:
 	return _terrain.elevation_at(pos)
 
 # ── Move ──────────────────────────────────────────────────────────────────────
@@ -303,10 +286,10 @@ func start_move_selection(move_range: float) -> void:
 	_targeting.start_move_selection(move_range)
 
 
-func _tile_in_obstacle(pos: Vector2, elevation: int = 0) -> bool:
+func tile_in_obstacle(pos: Vector2, elevation: int = 0) -> bool:
 	return _terrain.tile_in_obstacle(pos, elevation)
 
-func _apply_two_surface_mesh(mi: MeshInstance3D,
+func apply_two_surface_mesh(mi: MeshInstance3D,
 		fv: PackedVector3Array, fi: PackedInt32Array,
 		bv: PackedVector3Array, bi: PackedInt32Array) -> void:
 	_renderer.apply_two_surface_mesh(mi, fv, fi, bv, bi)
@@ -323,49 +306,32 @@ func clear_move_preview() -> void:
 func show_path_preview() -> void:
 	_targeting.show_path_preview()
 
-func _render_path_preview() -> void:
-	_range_overlay.render_path_preview(_path_highlight, _last_path)
+func render_path_preview() -> void:
+	_range_overlay.render_path_preview(_overlay.path_highlight, terrain.planned_path())
 
 func clear_path_preview() -> void:
 	_targeting.clear_path_preview()
 
 func try_move_player_to(pos: Vector2) -> bool:
-	var goal := CombatGrid.to_cell(pos)
-	var path := _navigation.path_for_move(pos)
-	if path.size() < 2:
-		return false
-	var from_elevation := player_elevation
-	player_pos       = CombatGrid.to_world(goal)
-	player_elevation = _elevation_at(player_pos)
-	# El personaje recorre el camino esquina por esquina.
-	_player_waypoints.clear()
-	for cell in CombatGrid.corners(path).slice(1):
-		var w := CombatGrid.to_world(cell)
-		_player_waypoints.append(Vector3(w.x, _terrain.player_height_at(w, maxi(from_elevation, _elevation_at(w))), w.y))
-	_navigation.clear_planned_path()
-	clear_move_selection()
-	_update_actor_positions()
-	if not _player_waypoints.is_empty():
-		_player_waypoints[-1] = _player_target
-	return true
+	return movement.try_move_player_to(pos)
 
 func get_path_cost() -> float:
-	return _navigation.last_path_cost
+	return movement.path_cost()
 
 ## Prepara el movimiento del jugador hacia pos dentro de la selección actual.
 ## Devuelve "" si se puede (y deja el camino listo para show_path_preview),
 ## o el motivo: "range", "blocked" o "no_path".
 func plan_player_move(pos: Vector2) -> String:
-	return _navigation.plan_move(pos, player_elevation, _player_shadow_radius, enemy_pos, _enemy_shadow_radius)
+	return movement.plan_player_move(pos)
 
 ## Llena de a poco los cachés de altura y de obstáculos (con las huellas de
 ## ambos personajes) para que el primer movimiento no tenga un tirón.
 func _warm_grid_caches() -> void:
-	_terrain.warm_caches(_player_shadow_radius, _enemy_shadow_radius)
+	terrain.warm_caches(actors.player_radius(), actors.enemy_radius())
 
 ## Dibuja las casillas dadas apoyadas sobre el terreno (cada una a su altura).
 ## Arreglos pre-dimensionados: con alcances grandes son decenas de miles de casillas.
-func _build_cells_on_terrain(mi: MeshInstance3D, cells: Array) -> void:
+func build_cells_on_terrain(mi: MeshInstance3D, cells: Array) -> void:
 	_range_overlay.build_cells_on_terrain(mi, cells)
 
 ## true si un círculo de radio `margin` en wp choca con obstáculos al nivel `elevation`.
@@ -391,34 +357,30 @@ func clear_card_pattern_preview() -> void:
 	_targeting.clear_card_pattern_preview()
 
 
-func is_enemy_in_card_pattern(pattern: CardPattern, origin: Vector2, direction: Vector2, primary: float) -> bool:
-	return _targeting.is_enemy_in_card_pattern(pattern, origin, direction, primary)
-
-
-func _build_line_pattern(mi: MeshInstance3D, origin: Vector2, direction: Vector2, length: float, width: float, start_offset: float) -> void:
+func build_line_pattern(mi: MeshInstance3D, origin: Vector2, direction: Vector2, length: float, width: float, start_offset: float) -> void:
 	_renderer.build_line_pattern(mi, origin, direction, length, width, start_offset,
-		_make_mat(Color(0.95, 0.65, 0.15, 0.35)))
+		make_mat(Color(0.95, 0.65, 0.15, 0.35)))
 
 ## Distancia entre los bordes de las huellas del jugador y del enemigo.
 func actors_gap() -> float:
-	return _queries.actors_gap()
+	return queries.actors_gap()
 
 ## El alcance se mide entre los bordes de las huellas: con huellas circulares
 ## los centros nunca quedan a menos de la suma de los radios. Media casilla de
 ## tolerancia porque las posiciones caen en centros de casilla.
 func is_enemy_in_attack_range(attack_range: float) -> bool:
-	return _queries.is_enemy_in_attack_range(attack_range)
+	return queries.is_enemy_in_attack_range(attack_range)
 
 func is_enemy_in_melee_range() -> bool:
-	return _queries.is_enemy_in_melee_range()
+	return queries.is_enemy_in_melee_range()
 
 func is_player_in_melee_range() -> bool:
-	return _queries.is_player_in_melee_range()
+	return queries.is_player_in_melee_range()
 
 # ── LOS ───────────────────────────────────────────────────────────────────────
 # LOS para ataques de rango: rocas transparentes, puentes opacos.
 func has_line_of_sight(from: Vector2, to: Vector2) -> bool:
-	return _queries.has_line_of_sight(from, to)
+	return queries.has_line_of_sight(from, to)
 
 # ── Target highlights ─────────────────────────────────────────────────────────
 func start_enemy_highlight() -> void:
@@ -440,26 +402,16 @@ func is_click_on_enemy(pos: Vector2) -> bool:
 func is_click_on_player(pos: Vector2) -> bool:
 	return _targeting.is_click_on_player(pos)
 
-## Mueve al enemigo hasta la casilla alcanzable más cercana a target.
-func move_enemy_toward(target: Vector2, move_range: float) -> bool:
-	var route := _navigation.find_toward(enemy_pos, target, move_range, enemy_elevation,
-		_enemy_shadow_radius, player_pos, _player_shadow_radius)
-	if route.is_empty():
-		return false
-	_enemy_waypoints.clear()
-	for cell in CombatGrid.corners(route["path"]).slice(1):
-		var w := CombatGrid.to_world(cell)
-		_enemy_waypoints.append(Vector3(w.x, float(_elevation_at(w)) * PLATFORM_HEIGHT, w.y))
-	enemy_pos       = route["destination"]
-	enemy_elevation = _elevation_at(enemy_pos)
-	_update_actor_positions()
-	return true
-
+# ── API heredada de MapArea ───────────────────────────────────────────────────
+## Los métodos que siguen se conservan para escenas y tests previos. El código
+## de gameplay nuevo usa las cinco fachadas públicas de arriba; así MapArea
+## queda como dueño del ciclo de vida y del nodo 3D, no como dependencia de
+## reglas de combate.
 # ── Traps (estado y lógica en trap_system.gd) ──────────────────────────────────
 func start_trap_placement(trap_range: float, trap_radius: float = 1.0, previsualize_line_of_sight := true) -> void:
 	_trap_system.start_trap_placement(trap_range, trap_radius, previsualize_line_of_sight)
 
-func _show_disc_with_los(mi: MeshInstance3D, origin: Vector2, radius: float, elevation: int = 0, block_rocks: bool = false, block_bridges: bool = true) -> void:
+func show_disc_with_los(mi: MeshInstance3D, origin: Vector2, radius: float, elevation: int = 0, block_rocks: bool = false, block_bridges: bool = true) -> void:
 	_range_overlay.show_disc_with_los(mi, origin, radius, elevation, block_rocks, block_bridges)
 
 func clear_trap_placement() -> void:
@@ -479,8 +431,8 @@ func calculate_grenade_landing(from: Vector2, target: Vector2, bounce: float) ->
 	return _grenade_system.calculate_landing(from, target, bounce)
 
 # Returns the point where the segment from→to first hits an obstacle, or to if clear.
-func _clip_path_at_obstacle(from: Vector2, to: Vector2) -> Vector2:
-	return _queries.clip_path_at_obstacle(from, to)
+func clip_path_at_obstacle(from: Vector2, to: Vector2) -> Vector2:
+	return queries.clip_path_at_obstacle(from, to)
 
 func show_grenade_preview(landing: Vector2, aoe_radius: float) -> void:
 	_grenade_system.show_preview(landing, aoe_radius)
@@ -513,7 +465,7 @@ func can_jump_land_at(pos: Vector2) -> bool:
 func land_player_from_jump(pos: Vector2) -> void:
 	player_pos = pos
 	player_elevation = _terrain.elevation_at(pos)
-	_update_actor_positions()
+	update_actor_positions()
 
 func clear_rock_jump_selection() -> void:
 	_rock_jump_system.clear_rock_jump_selection()
@@ -531,10 +483,7 @@ func start_push_cone(push_range: float) -> void:
 func clear_push_selection() -> void:
 	_push_system.clear_selection()
 
-func is_pos_in_push_cone(pos: Vector2, push_range: float) -> bool:
-	return _push_system.is_pos_in_enemy_cone(pos, push_range)
-
-func _build_cone_disc(mi: MeshInstance3D, origin: Vector2, direction: Vector2, max_range: float, half_angle_deg: float) -> void:
+func build_cone_disc(mi: MeshInstance3D, origin: Vector2, direction: Vector2, max_range: float, half_angle_deg: float) -> void:
 	_renderer.build_cone_disc(mi, origin, direction, max_range, half_angle_deg)
 
 func calculate_push_landing(direction_target: Vector2, push_range: float) -> Vector2:
@@ -618,7 +567,7 @@ func is_pos_in_module_cone(module_pos: Vector2, pos: Vector2, push_range: float,
 	return _push_system.is_pos_in_module_cone(module_pos, pos, push_range, half_angle)
 
 ## Los obstáculos cambiaron: se recalculan los bloqueos (caminos y selección).
-func _obstacles_changed() -> void:
+func obstacles_changed() -> void:
 	_terrain.invalidate()
 
 # ── Hechizos ──────────────────────────────────────────────────────────────────
@@ -638,39 +587,36 @@ static func is_pos_in_zones(pos: Vector2, zones: Array) -> bool:
 	return CombatMapQueries.is_pos_in_zones(pos, zones)
 
 func is_enemy_in_zones(zones: Array) -> bool:
-	return _queries.is_enemy_in_zones(zones)
-
-func is_player_in_zones(zones: Array) -> bool:
-	return _queries.is_player_in_zones(zones)
+	return queries.is_enemy_in_zones(zones)
 
 ## El segmento pasa por la huella del enemigo (rayos en línea).
 func segment_hits_enemy(from: Vector2, to: Vector2) -> bool:
-	return _queries.segment_hits_enemy(from, to)
+	return queries.segment_hits_enemy(from, to)
 
 ## El enemigo está dentro del cono (se cuenta su huella).
 func is_enemy_in_cone(origin: Vector2, dir: Vector2, cone_range: float, half_angle_deg: float) -> bool:
-	return _queries.is_enemy_in_cone(origin, dir, cone_range, half_angle_deg)
+	return queries.is_enemy_in_cone(origin, dir, cone_range, half_angle_deg)
 
 ## Contacto mínimo de un área: un tercio del radio de la huella. No se usa
 ## para choques físicos, sólo para charcos, explosiones, líneas y conos.
 func player_area_contact_radius() -> float:
-	return _queries.player_area_contact_radius()
+	return queries.player_area_contact_radius()
 
 func enemy_area_contact_radius() -> float:
-	return _queries.enemy_area_contact_radius()
+	return queries.enemy_area_contact_radius()
 
 func is_enemy_in_area_circle(center: Vector2, radius: float) -> bool:
-	return _queries.is_enemy_in_area_circle(center, radius)
+	return queries.is_enemy_in_area_circle(center, radius)
 
 func is_player_in_area_circle(center: Vector2, radius: float) -> bool:
-	return _queries.is_player_in_area_circle(center, radius)
+	return queries.is_player_in_area_circle(center, radius)
 
 ## El enemigo queda dentro del círculo físico completo (movimiento/choques).
 func is_enemy_in_circle(center: Vector2, radius: float) -> bool:
-	return _queries.is_enemy_in_circle(center, radius)
+	return queries.is_enemy_in_circle(center, radius)
 
 func is_player_in_circle(center: Vector2, radius: float) -> bool:
-	return _queries.is_player_in_circle(center, radius)
+	return queries.is_player_in_circle(center, radius)
 
 ## Meteoro y compañía: marca la zona. Cae en resolve_delayed_zones cuando
 ## pasan `rounds` rondas; si effect no es "", deja ese charco.
@@ -691,12 +637,12 @@ func can_blink_to(pos: Vector2) -> bool:
 		return false
 	if pos.distance_to(enemy_pos) < MIN_SEPARATION:
 		return false
-	return not _pos_blocked(pos, _elevation_at(pos), _player_shadow_radius)
+	return not _pos_blocked(pos, elevation_at(pos), actors.player_radius())
 
 func blink_player_to(pos: Vector2) -> void:
 	player_pos = pos
-	player_elevation = _elevation_at(pos)
-	_update_actor_positions()
+	player_elevation = elevation_at(pos)
+	update_actor_positions()
 
 # ── Árboles (estado y lógica en tree_system.gd) ────────────────────────────────
 ## El árbol bajo `pos` (o {} si no hay).
@@ -740,17 +686,10 @@ func ignite_trees_in_cone(origin: Vector2, dir: Vector2, cone_range: float, half
 func extinguish_trees_in_circle(center: Vector2, radius: float) -> int:
 	return _tree_system.extinguish_trees_in_circle(center, radius)
 
-## Hay un árbol (que no arde) a `reach` o menos de `pos` (Raíces, charcos de planta).
-func is_tree_near(pos: Vector2, reach: float) -> bool:
-	return _tree_system.is_tree_near(pos, reach)
-
 ## Pararrayos: el primer árbol que cruza el segmento, con la fracción donde lo
 ## toca: {"tree": Dictionary, "t": float} o {} si no cruza ninguno.
 func first_tree_on_segment(from: Vector2, to: Vector2) -> Dictionary:
 	return _tree_system.first_tree_on_segment(from, to)
-
-func is_player_in_this_tree(tree: Dictionary) -> bool:
-	return _tree_system.is_player_in_this_tree(tree)
 
 ## Pasa una ronda: los árboles que arden se consumen y desaparecen.
 func tick_trees() -> void:
@@ -763,7 +702,7 @@ func build_initial_tree_mesh(mi: MeshInstance3D, obs: Dictionary, pos: Vector2) 
 
 ## Ancla: muestra el alcance del disparo alrededor del jugador.
 func start_anchor_selection(shot_range: float) -> void:
-	_show_disc(_attack_disc, player_pos, shot_range)
+	presentation.show_range_at(player_pos, shot_range)
 
 func push_enemy_to(landing: Vector2) -> void:
 	_push_system.push_enemy_to(landing)
@@ -774,7 +713,7 @@ func check_traps_along_segment(from: Vector2, to: Vector2, contact_margin: float
 # Devuelve {"trap_damage": int, "wet": bool} para un segmento de movimiento forzado.
 # Agregar nuevas zonas acá para que cualquier movimiento forzado las active automáticamente.
 func trigger_zone_effects_along(from: Vector2, to: Vector2, contact_margin: float = 0.0) -> Dictionary:
-	var fx := get_puddle_effects_along(from, to, contact_margin)
+	var fx := _puddle_system.get_puddle_effects_along(from, to, contact_margin)
 	fx["trap_damage"] = check_traps_along_segment(from, to, contact_margin)
 	return fx
 
@@ -797,22 +736,13 @@ func get_puddle_at(pos: Vector2) -> Dictionary:
 func remove_puddle(zone: Dictionary) -> void:
 	_puddle_system.remove_puddle(zone)
 
-func move_puddle(zone: Dictionary, to: Vector2) -> Dictionary:
-	return _puddle_system.move_puddle(zone, to)
-
 ## Traslado de charco, paso 2: dónde puede caer (alrededor del charco elegido).
 ## Reusa el disco genérico de ataque, no es estado propio de los charcos.
 func start_puddle_hop_landing(puddle_pos: Vector2, hop_range: float) -> void:
-	_show_disc(_attack_disc, puddle_pos, hop_range)
-
-func get_puddle_damage_along(from: Vector2, to: Vector2, contact_margin: float = 0.0) -> Dictionary:
-	return _puddle_system.get_puddle_damage_along(from, to, contact_margin)
+	presentation.show_range_at(puddle_pos, hop_range)
 
 func is_segment_in_puddle(from: Vector2, to: Vector2) -> bool:
 	return _puddle_system.is_segment_in_puddle(from, to)
-
-func get_puddle_effects_along(from: Vector2, to: Vector2, contact_margin: float = 0.0) -> Dictionary:
-	return _puddle_system.get_puddle_effects_along(from, to, contact_margin)
 
 ## Cambia el efecto de los charcos que toca el círculo (Chispa: grasa → fuego;
 ## Escarcha: agua → hielo). Devuelve cuántos cambió.
@@ -832,9 +762,3 @@ func clear_overwatch_selection() -> void:
 
 func place_overwatch(origin: Vector2, dir: Vector2, cone_range: float, half_angle: float) -> void:
 	_overwatch_system.place(origin, dir, cone_range, half_angle)
-
-func clear_overwatch_zone() -> void:
-	_overwatch_system.clear_zone()
-
-func is_segment_in_overwatch_cone(from: Vector2, to: Vector2, origin: Vector2, dir: Vector2, cone_range: float, half_angle_deg: float) -> bool:
-	return _overwatch_system.segment_crosses_cone(from, to, origin, dir, cone_range, half_angle_deg)

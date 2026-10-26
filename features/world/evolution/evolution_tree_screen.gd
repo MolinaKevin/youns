@@ -7,9 +7,10 @@ extends Control
 ## Se abre desde el menú del juego.
 
 const Intelligences := preload("res://data/youns/intelligences.gd")
+const ScenePaths := preload("res://shared/scene_paths.gd")
 const YOUNS_DIR := "res://data/youns/"
 const STAGES := ["bebe", "nino", "adolescente", "campeon", "ultimate"]
-const GAME_WORLD := "res://features/world/game_world/game_world.tscn"
+const GAME_WORLD := ScenePaths.GAME_WORLD
 const NODE_SIZE := Vector2(150, 54)
 const BG := Color(0.03, 0.06, 0.09)
 const PANEL_BG := Color(0.05, 0.1, 0.15)
@@ -28,12 +29,7 @@ var _detail: EvolutionDetailOverlay
 var _focus_nav: EvolutionFocusNav
 
 func _ready() -> void:
-	GlobalHUD.set_clock_visible(false)
-	GlobalHUD.set_clock_paused(true)
-	GlobalHUD.set_youns_status_visible(false)
-	ZoneManager.set_world_visible(false)
-	PartyManager.set_party_visible(false)
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	ModalScreenContext.enter_fullscreen()
 	_detail = EvolutionDetailOverlay.new(self)
 	_focus_nav = EvolutionFocusNav.new(self)
 	_load_youns()
@@ -62,6 +58,24 @@ func _load_youns() -> void:
 
 func _is_discovered(data: YounData) -> bool:
 	return data.resource_path == _current_path or _discovered.has(EvolutionDiscovery.youn_key(data))
+
+## API para los helpers del árbol: evita exponer su almacenamiento interno.
+func current_evolution_node() -> Button:
+	return _nodes.get(_current_path) as Button
+
+func evolution_node_buttons() -> Array[Button]:
+	var buttons: Array[Button] = []
+	for node in _nodes.values():
+		var button := node as Button
+		if button != null:
+			buttons.append(button)
+	return buttons
+
+func is_current_youn(data: YounData) -> bool:
+	return data.resource_path == _current_path
+
+func restore_tree_focus() -> void:
+	_focus_nav.restore_focus()
 
 # ── Armado ───────────────────────────────────────────────────────────────────
 
@@ -203,4 +217,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			_on_back()
 
 func _on_back() -> void:
+	if GameState.ui_return.has_return():
+		get_tree().change_scene_to_file(GameState.ui_return.take_scene_path())
+		return
 	get_tree().change_scene_to_file(GAME_WORLD)

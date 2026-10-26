@@ -1,12 +1,11 @@
 extends ZoneBase
 
-## Receta del lab que construye el puente al oeste del río. El puente no es
-## parte del mapa: se agrega al completarla. Hasta entonces BridgeBlocker tapa
-## el paso (la grilla de WorldBoundary ya lo deja caminable, ver HUB_BRIDGE).
-const RIVER_BRIDGE_RECIPE := "construccion_de_puente"
-const RIVER_BRIDGE_SCENE := "res://assets/maps/hub/river_bridge.glb"
-const RIVER_BRIDGE_POSITION := Vector3(-33.5, 0, 10)
 const CollisionLayers := preload("res://shared/world_collision_layers.gd")
+const LabMilestone := preload("res://data/lab_milestone.gd")
+const WorldConstruction := preload("res://data/world/world_construction.gd")
+const WorldConstructionCatalog := preload("res://data/world/world_construction_catalog.gd")
+
+var _construction_catalog := WorldConstructionCatalog.new()
 
 func _ready() -> void:
 	super._ready()
@@ -15,7 +14,7 @@ func _ready() -> void:
 	LaboratoryState.recipes_loaded.connect(_refresh_river_bridge)
 	_fix_map_vertex_colors("CityMap")
 	_refresh_demo_bridge_visibility()
-	_refresh_river_bridge()
+	_refresh_constructions()
 	refresh_north_trail()
 
 ## Sendero norte al crossroads (ver ZoneManager.north_trail_open): cerrado,
@@ -38,28 +37,44 @@ func _on_lab_warp_entered(body: Node3D) -> void:
 		ZoneManager.enter_interior("res://features/world/lab_interior/lab_interior.tscn")
 
 func _on_recipe_completed(recipe: Resource) -> void:
-	if recipe.id == "estudio_de_puente_ligero" or recipe.id == "construccion_de_puente":
+	if recipe.id == LabMilestone.BRIDGE_STUDY or recipe.id == LabMilestone.RIVER_BRIDGE:
 		_refresh_demo_bridge_visibility()
-	if recipe.id == RIVER_BRIDGE_RECIPE:
-		_refresh_river_bridge()
+	_refresh_constructions()
 
-## Puente del río: se agrega cuando el lab lo construyó; si no, la pared de
-## BridgeBlocker impide pasar por donde va a ir.
+## Aplica las estructuras declaradas para esta zona. Cada construcción puede
+## aportar escena, posición y un collider que se desactiva al desbloquearse.
+func _refresh_constructions() -> void:
+	for construction in _construction_catalog.for_zone(zone_id):
+		_refresh_construction(construction)
+
+
 func _refresh_river_bridge() -> void:
-	var built := LaboratoryState.is_recipe_completed(RIVER_BRIDGE_RECIPE)
-	$BridgeBlocker/Col.disabled = built
-	var bridge := get_node_or_null("RiverBridge")
-	if built and bridge == null:
-		bridge = (load(RIVER_BRIDGE_SCENE) as PackedScene).instantiate()
-		bridge.name = "RiverBridge"
-		bridge.position = RIVER_BRIDGE_POSITION
-		add_child(bridge)
-		CollisionLayers.configure_ground_colliders(bridge)
-	elif not built and bridge != null:
-		bridge.queue_free()
+	# Compatibilidad con la señal de recetas ya conectada en esta escena.
+	_refresh_constructions()
+
+
+func _refresh_construction(construction: WorldConstruction) -> void:
+	var progress := GameState.player_save.world_progress if GameState.player_save else null
+	var built := progress != null and progress.has_construction(construction.id)
+	var blocker := get_node_or_null(construction.blocker_path) as CollisionShape3D
+	if blocker != null:
+		blocker.disabled = built
+	var node := get_node_or_null(construction.node_name)
+	if built and node == null:
+		var scene := load(construction.scene_path) as PackedScene
+		if scene == null:
+			push_error("ZoneHub: no se pudo cargar construcción '%s'." % construction.id)
+			return
+		node = scene.instantiate()
+		node.name = construction.node_name
+		(node as Node3D).position = construction.position
+		add_child(node)
+		CollisionLayers.configure_ground_colliders(node)
+	elif not built and node != null:
+		node.queue_free()
 
 func _refresh_demo_bridge_visibility() -> void:
-	var bridge_researched := LaboratoryState.is_recipe_completed("estudio_de_puente_ligero") \
-		or LaboratoryState.is_recipe_completed("construccion_de_puente")
+	var bridge_researched := LaboratoryState.is_recipe_completed(LabMilestone.BRIDGE_STUDY) \
+		or LaboratoryState.is_recipe_completed(LabMilestone.RIVER_BRIDGE)
 	$DemoMonzaemon.visible = bridge_researched
 	$DemoMonzaemon.set_active(bridge_researched)

@@ -30,6 +30,7 @@ func load_now(zone_id: String) -> void:
 		push_error("ZoneStreamingController: zona inexistente '%s'." % zone_id)
 		return
 	_loading.erase(zone_id)
+	_log_streaming("Cargando", zone_id)
 	var scene := load(definition.scene_path) as PackedScene
 	if scene == null:
 		push_error("ZoneStreamingController: no se pudo cargar '%s'." % definition.scene_path)
@@ -113,6 +114,7 @@ func _request_zones(ids: Array[String]) -> void:
 			push_error("ZoneStreamingController: zona inexistente '%s'." % id)
 			continue
 		var path := definition.scene_path
+		_log_streaming("Cargando", id)
 		ResourceLoader.load_threaded_request(path)
 		_loading[id] = path
 
@@ -130,6 +132,7 @@ func _add_zone(id: String, scene: PackedScene) -> void:
 	inst.visible = _show_exterior.call()
 	get_parent().add_child(inst)
 	_loaded[id] = inst
+	_log_streaming("Cargado", id)
 	zone_loaded.emit(id)
 
 
@@ -139,4 +142,13 @@ func _unload_zone(id: String) -> void:
 		return
 	zone.queue_free()
 	_loaded.erase(id)
+	_log_streaming("Descargado", id)
 	zone_unloaded.emit(id)
+
+
+func _log_streaming(action: String, zone_id: String) -> void:
+	if not DebugSettings.verbose_logging_enabled:
+		return
+	var loaded_ids := loaded_zone_ids()
+	loaded_ids.sort()
+	print("[ZoneStreaming] %s: %s | Cargadas: [%s]" % [action, zone_id, ", ".join(loaded_ids)])

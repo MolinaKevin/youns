@@ -43,11 +43,11 @@ func choose_card(options: Array[MonsterCard]) -> MonsterCard:
 	return options.pick_random()
 
 func execute_card(card: MonsterCard) -> void:
-	host.log_requested.emit("%s juega «%s»." % [LocalizationState.t("combat.enemy"), card.card_name])
+	CombatLog.emit_requested(host.log_requested, "combat.log.enemy_card.played", [LocalizationState.t("combat.enemy"), card.card_name])
 	for i in card.actions.size():
 		host.card_action_started.emit(i)
 		await _execute_card_action(card, i)
-		if host._check_combat_end.call():
+		if host.check_combat_end.call():
 			return
 		host.ui_update_requested.emit()
 		if host.action_delay > 0.0:
@@ -61,39 +61,39 @@ func _execute_card_action(card: MonsterCard, index: int) -> void:
 			# Si ya está al alcance del próximo ataque de la carta, no se mueve.
 			var next_attack := _next_attack(card, index)
 			if next_attack != null and host._player_in_reach(host.monster_deck.reach_for(next_attack)):
-				host.log_requested.emit("El enemigo se queda en posición.")
+				CombatLog.emit_requested(host.log_requested, "combat.log.enemy_card.holds_position")
 				return
 			var amount := host.monster_deck.move_for(action)
 			if amount > 0:
-				await host._move_enemy(host.map_area.player_pos, host._w(amount), "El enemigo avanza %d." % amount)
+				await host._move_enemy(host.map_area.player_pos, host.w(amount), "combat.log.enemy_card.moves_forward", [amount])
 		"retreat":
 			var amount := host.monster_deck.move_for(action)
 			if amount > 0:
-				await host._move_enemy(host._retreat_target(host._w(amount)), host._w(amount), "El enemigo retrocede %d." % amount)
+				await host._move_enemy(host._retreat_target(host.w(amount)), host.w(amount), "combat.log.enemy_card.retreats", [amount])
 		"attack":
 			var reach := host.monster_deck.reach_for(action)
 			if host.state.enemy_blinded_turns > 0:
 				reach = mini(reach, MonsterDeck.MELEE_REACH_CELLS)
 			if not host._player_in_reach(reach):
-				host.log_requested.emit("El ataque del enemigo no alcanza.")
+				CombatLog.emit_requested(host.log_requested, "combat.log.enemy_card.attack_out_of_range")
 				return
 			if host.state.player_in_tree:
-				host.log_requested.emit("El enemigo no te alcanza: estás arriba del árbol.")
+				CombatLog.emit_requested(host.log_requested, "combat.log.enemy.cannot_reach_tree")
 				return
 			var dmg := host.monster_deck.attack_for(action)
-			host.log_requested.emit("¡El enemigo ataca por %d!" % dmg)
-			await host._deal_damage_to_player.call(dmg, false, action.damage_type)
+			CombatLog.emit_requested(host.log_requested, "combat.log.enemy_card.attacks", [dmg])
+			await host.deal_damage_to_player.call(dmg, false, action.damage_type)
 			await host._try_player_counter()
 		"block":
 			host.state.enemy_block += action.value
-			host.log_requested.emit("El enemigo se cubre (%d de bloqueo)." % action.value)
+			CombatLog.emit_requested(host.log_requested, "combat.log.enemy_card.blocks", [action.value])
 		"ward":
 			host.state.enemy_ward += action.value
-			host.log_requested.emit("El enemigo levanta un escudo mágico (%d)." % action.value)
+			CombatLog.emit_requested(host.log_requested, "combat.log.enemy.ward", [action.value])
 		"heal":
 			var before: int = host.state.enemy_hp
 			host.state.enemy_hp = mini(host.state.enemy_max_hp, host.state.enemy_hp + action.value)
-			host.log_requested.emit("El enemigo se cura %d." % (host.state.enemy_hp - before))
+			CombatLog.emit_requested(host.log_requested, "combat.log.enemy_card.heals", [host.state.enemy_hp - before])
 		_:
 			push_warning("CombatEnemyAI: acción de carta desconocida '%s'" % action.type)
 

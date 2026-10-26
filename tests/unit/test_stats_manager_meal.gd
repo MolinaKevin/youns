@@ -3,6 +3,7 @@ extends GutTest
 # StatsManager.calc_hambre_delta(delta, mult, weight, base_weight) -> int
 # aun no existe — estos tests definen el comportamiento esperado antes de implementarlo
 
+const CareStats := preload("res://shared/care_stats_service.gd")
 
 var _youn_backup: Node
 
@@ -242,6 +243,6 @@ func test_efecto_meal_con_salud_propia_en_0_no_la_cambia() -> void:
 
 func test_dormir_recupera_salud_por_hora_con_tope() -> void:
 	assert_eq(StatsManager.salud_from_sleep(0), 0)
-	assert_eq(StatsManager.salud_from_sleep(3), 3 * StatsManager.SLEEP_HEALTH_PER_HOUR)
+	assert_eq(StatsManager.salud_from_sleep(3), 3 * CareStats.SLEEP_HEALTH_PER_HOUR)
 	assert_eq(StatsManager.salud_from_sleep(12),
-		StatsManager.SLEEP_HEALTH_MAX_HOURS * StatsManager.SLEEP_HEALTH_PER_HOUR)
+		CareStats.SLEEP_HEALTH_MAX_HOURS * CareStats.SLEEP_HEALTH_PER_HOUR)

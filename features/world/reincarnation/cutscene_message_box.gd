@@ -3,9 +3,9 @@ extends RefCounted
 
 ## Caja de mensaje modal con "Continuar" (y el panel genérico que la
 ## contiene), reusable por cualquier pantalla de una cutscene. `host` es el
-## Node dueño exclusivo de esta instancia — necesita `_ui` (el CanvasLayer
-## donde se agregan los paneles) y `_flash` (el ColorRect de fundido, que
-## debe quedar siempre al frente).
+## Node dueño exclusivo de esta instancia — necesita exponer
+## `add_message_panel(root)`, que inserta el panel y conserva el fundido al
+## frente.
 
 const PANEL_BG := Color(0.04, 0.09, 0.14, 0.97)
 const BORDER := Color(0.35, 0.85, 1.0)
@@ -19,8 +19,7 @@ func panel(min_width: float) -> Array:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var root := Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	host._ui.add_child(root)
-	host._ui.move_child(host._flash, -1)
+	host.add_message_panel(root)
 	var backdrop := ColorRect.new()
 	backdrop.color = Color(0, 0, 0, 0.55)
 	backdrop.set_anchors_preset(Control.PRESET_FULL_RECT)

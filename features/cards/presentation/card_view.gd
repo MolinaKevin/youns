@@ -172,7 +172,7 @@ func _fill_half(half: Button, action: CardAction, marker: String) -> void:
 		var line: CardActionLine = lines[i]
 		if line == null:
 			continue
-		var row := _line_row(line.resolved(stats), marker if i == 0 else "")
+		var row := line_row(line.resolved(stats), marker if i == 0 else "")
 		if not line.enabled:
 			row.modulate.a = 0.35
 		var panel := PanelContainer.new()
@@ -185,7 +185,7 @@ func _fill_half(half: Button, action: CardAction, marker: String) -> void:
 const ICON_SIZE := 22.0
 const PART_GAP := 12
 
-static func _line_row(line: CardActionLine, marker: String) -> HBoxContainer:
+static func line_row(line: CardActionLine, marker: String) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", PART_GAP)

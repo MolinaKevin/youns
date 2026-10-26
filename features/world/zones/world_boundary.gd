@@ -58,8 +58,14 @@ var _geometry := WorldGeometryReader.new()
 var _layout: WorldLayout = preload("res://data/world/world_layout.tres")
 var _settings: WorldGenerationSettings = preload("res://data/world/world_generation_settings.tres")
 
-func build(catalog: ZoneCatalog) -> void:
+func build(catalog: ZoneCatalog, force_procedural_decoration := false) -> void:
+	var started_at := Time.get_ticks_msec()
+	var checkpoint := started_at
+	if DebugSettings.verbose_logging_enabled:
+		print("[WorldBoundary] Construyendo límites y decoración global…")
 	for error_text in _layout.validate(catalog): push_error("WorldLayout: " + error_text)
+	checkpoint = _log_build_step("Validación de configuración", started_at, checkpoint)
+	_decoration.prepare(force_procedural_decoration)
 	_geometry.configure(_layout, _decoration)
 	var hub_offset := catalog.definition(_layout.hub_id).offset
 	var walkable_rects: Array[Rect2] = []
@@ -80,10 +86,12 @@ func build(catalog: ZoneCatalog) -> void:
 		floor_tris.append_array(found["floor"])
 		floor_tris.append_array(found["canyon"])
 		rock_tris.append_array(found["rock"])
+		checkpoint = _log_build_step("Lectura del mapa " + id, started_at, checkpoint)
 	var meadow_tris := PackedVector2Array()
 	for id in meadows:
 		meadow_tris.append_array(meadows[id])
 	var city := _geometry.city_triangles(hub_offset)
+	checkpoint = _log_build_step("Lectura de city_map", started_at, checkpoint)
 	var west_tris: PackedVector2Array = city["west"]
 	var water_tris: PackedVector2Array = city["water"]
 	var mountain_tris: PackedVector2Array = city["mountain"]
@@ -91,13 +99,24 @@ func build(catalog: ZoneCatalog) -> void:
 	var gym_forest: Node = GymForest.new()
 	var gym_rect: Rect2 = _offset_rect(gym_forest.covered_rect(), catalog.definition(_layout.gym_id).offset)
 	gym_forest.free()
+	checkpoint = _log_build_step("Preparación del bosque del gym", started_at, checkpoint)
 
 	_grid = _walkability.build(_layout, hub_offset, gym_rect, walkable_rects, placeholder_rects, hub_bridge, meadows, meadow_tris, floor_tris, rock_tris, west_tris, water_tris, mountain_tris, _settings.forest_depth + 4)
+	checkpoint = _log_build_step("Construcción de la grilla caminable", started_at, checkpoint)
 	_walls.build(self, _grid, _layout, _settings.wall_height)
+	checkpoint = _log_build_step("Construcción de paredes", started_at, checkpoint)
 	_decoration.build(self, _grid, _layout, catalog, _settings.tree_clearance, _settings.tree_spacing, _settings.tree_seed)
+	_log_build_step("Decoración y árboles", started_at, checkpoint)
 
 func _offset_rect(r: Rect2, offset: Vector3) -> Rect2:
 	return Rect2(r.position + Vector2(offset.x, offset.z), r.size)
+
+
+func _log_build_step(step: String, started_at: int, previous_at: int) -> int:
+	var now := Time.get_ticks_msec()
+	if DebugSettings.verbose_logging_enabled:
+		print("[WorldBoundary] %s: +%d ms (total: %d ms)" % [step, now - previous_at, now - started_at])
+	return now
 
 ## Tipo de celda de la grilla en ese punto (WorldBoundaryGrid.EMPTY, WALKABLE...).
 func cell_type_at(pos: Vector3) -> int:

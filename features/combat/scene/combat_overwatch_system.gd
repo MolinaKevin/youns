@@ -2,7 +2,7 @@ class_name CombatOverwatchSystem
 extends RefCounted
 
 ## Estado, previsualización y zona activa de overwatch.
-var map: Node
+var map: MapArea
 var selection_active := false
 var selection_range := 0.0
 var selection_angle := 10.0
@@ -16,32 +16,27 @@ func start_selection(cone_range: float, half_angle: float) -> void:
 
 func clear_selection() -> void:
 	selection_active = false
-	map._overwatch_preview_disc.visible = false
+	map.presentation.hide_overwatch_preview()
 	preview_last_direction = Vector2.ZERO
 
 func update_hover(pos: Vector2) -> void:
 	if not selection_active:
-		map._overwatch_preview_disc.visible = false
+		map.presentation.hide_overwatch_preview()
 		return
 	var to_mouse: Vector2 = pos - map.player_pos
 	if to_mouse.length() <= 0.2:
-		map._overwatch_preview_disc.visible = false
+		map.presentation.hide_overwatch_preview()
 		return
 	var direction := to_mouse.normalized()
 	if direction.distance_to(preview_last_direction) > 0.015:
 		preview_last_direction = direction
-		map._overwatch_preview_disc.set_meta("fill_mat", map._make_mat(Color(1.0, 0.85, 0.1, 0.20)))
-		map._overwatch_preview_disc.set_meta("bord_mat", map._make_mat(Color(1.0, 1.0, 0.35, 0.55)))
-		map._build_cone_disc(map._overwatch_preview_disc, map.player_pos, direction, selection_range, selection_angle)
-	map._overwatch_preview_disc.visible = true
+		map.presentation.show_overwatch_preview(map.player_pos, direction, selection_range, selection_angle)
 
 func place(origin: Vector2, direction: Vector2, cone_range: float, half_angle: float) -> void:
-	map._overwatch_zone.set_meta("fill_mat", map._make_mat(Color(1.0, 0.85, 0.1, 0.22)))
-	map._overwatch_zone.set_meta("bord_mat", map._make_mat(Color(1.0, 1.0, 0.35, 0.70)))
-	map._build_cone_disc(map._overwatch_zone, origin, direction, cone_range, half_angle)
+	map.presentation.show_overwatch_zone(origin, direction, cone_range, half_angle)
 
 func clear_zone() -> void:
-	map._overwatch_zone.visible = false
+	map.presentation.clear_overwatch_zone()
 
 func segment_crosses_cone(from: Vector2, to: Vector2, origin: Vector2, direction: Vector2, cone_range: float, half_angle_deg: float) -> bool:
 	var half_angle := deg_to_rad(half_angle_deg)

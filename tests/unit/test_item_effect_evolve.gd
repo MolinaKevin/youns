@@ -1,13 +1,29 @@
 extends GutTest
 
 var save: PlayerSaveData
+var _previous_save: PlayerSaveData
+var _previous_active_states: Dictionary
+var _previous_emotions_blocked := false
 
 
 func before_each() -> void:
+	_previous_save = GameState.player_save
+	_previous_active_states = StatsManager.active_states.duplicate(true)
+	_previous_emotions_blocked = StatsManager.emotions_blocked
 	save = PlayerSaveData.new()
 	GameState.player_save = save
 	StatsManager.active_states.clear()
-	StatsManager._emotion_block_count = 0
+	while StatsManager.emotions_blocked:
+		StatsManager.unblock_emotions()
+
+
+func after_each() -> void:
+	GameState.player_save = _previous_save
+	StatsManager.active_states = _previous_active_states.duplicate(true)
+	while StatsManager.emotions_blocked:
+		StatsManager.unblock_emotions()
+	if _previous_emotions_blocked:
+		StatsManager.block_emotions()
 
 
 # ── ItemEffectEvolve — pending_evolution_path ─────────────────────────────────

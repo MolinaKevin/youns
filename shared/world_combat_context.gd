@@ -31,6 +31,19 @@ func set_preview_youn(data: YounData) -> void:
 	wild_youn_data = data
 
 
+## Al volver de un combate que arrancó un enemigo salvaje del mundo: lo busca
+## por el grupo "world_enemy" + world_enemy_id y le avisa que el jugador
+## ganó (para que se vaya con su loot). Limpia el contexto al terminar.
+func resolve_victory(tree: SceneTree) -> void:
+	if not active or world_enemy_id == "":
+		return
+	for enemy in tree.get_nodes_in_group("world_enemy"):
+		if enemy.has_method("handle_player_victory") and enemy.get("world_enemy_id") == world_enemy_id:
+			enemy.handle_player_victory(return_position)
+			break
+	clear()
+
+
 func clear() -> void:
 	active = false
 	return_position = Vector3.ZERO

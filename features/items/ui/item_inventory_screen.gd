@@ -1,6 +1,8 @@
 extends Control
 
 const ENTRY_SCENE: PackedScene = preload("res://features/items/ui/inventory_item_entry.tscn")
+const ScenePaths := preload("res://shared/scene_paths.gd")
+const InventoryService := preload("res://shared/inventory_service.gd")
 const COLUMNS: int = 2
 const ENTRY_HEIGHT: float = 68.0
 const ROW_GAP: float = 8.0
@@ -25,12 +27,7 @@ var _entry_nodes: Array = []
 var _popup_open := false
 
 func _ready() -> void:
-	GlobalHUD.set_clock_visible(false)
-	GlobalHUD.set_clock_paused(true)
-	GlobalHUD.set_youns_status_visible(false)
-	ZoneManager.set_world_visible(false)
-	PartyManager.set_party_visible(false)
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	ModalScreenContext.enter_fullscreen()
 	LocalizationState.language_changed.connect(_apply_localized_text)
 	close_button.pressed.connect(_on_close_pressed)
 	use_button.pressed.connect(_on_use_pressed)
@@ -111,9 +108,9 @@ func _update_selection() -> void:
 		scroll.ensure_control_visible(_entry_nodes[_selected_index])
 
 func _open_popup() -> void:
-	if _selected_index < 0 or _selected_index >= GameState.player_save.inventory_items.size():
+	var item := InventoryService.item_at(GameState.player_save, _selected_index)
+	if item.is_empty():
 		return
-	var item: Dictionary = GameState.player_save.inventory_items[_selected_index]
 	popup_title.text = LocalizationState.item_name(
 		str(item.get("id", "")),
 		str(item.get("name", LocalizationState.t("inventory.item_default")))
@@ -127,44 +124,46 @@ func _close_popup() -> void:
 	_popup_open = false
 
 func _on_use_pressed() -> void:
-	if _selected_index < 0 or _selected_index >= GameState.player_save.inventory_items.size():
+	use_selected_item()
+
+## Intenta usar el ítem seleccionado. Una entrada de guardado inválida se
+## conserva: no debe desaparecer sin haber aplicado efecto alguno.
+func use_selected_item() -> bool:
+	var item := InventoryService.item_at(GameState.player_save, _selected_index)
+	if item.is_empty():
 		_close_popup()
-		return
-	var item: Dictionary = GameState.player_save.inventory_items[_selected_index]
-	var data_path: String = item.get("data_path", "")
-	if not data_path.is_empty():
-		var data := load(data_path) as ItemData
-		if data and data.is_combat_only():
-			# Se usa con el comodín "Ítem" del combate: acá no se gasta.
-			GlobalHUD.show_toast(LocalizationState.t("inventory.combat_only"))
-			_close_popup()
-			return
-		if data:
-			data.apply_effects(GameState.player_save)
-			GlobalHUD.notify_youns_status_changed()
+		return false
+	var data := InventoryService.resolve_item_data(item)
+	if data == null:
+		GlobalHUD.show_toast(LocalizationState.t("inventory.invalid_item"))
+		_close_popup()
+		return false
+	if data.is_combat_only():
+		# Se usa con el comodín "Ítem" del combate: acá no se gasta.
+		GlobalHUD.show_toast(LocalizationState.t("inventory.combat_only"))
+		_close_popup()
+		return false
+	data.apply_effects(GameState.player_save)
+	GlobalHUD.notify_youns_status_changed()
 	_consume_selected_item()
+	return true
 
 func _on_drop_pressed() -> void:
 	_consume_selected_item()
 
 func _consume_selected_item() -> void:
-	if _selected_index < 0 or _selected_index >= GameState.player_save.inventory_items.size():
-		_close_popup()
-		return
-	var items: Array = GameState.player_save.inventory_items
-	var item: Dictionary = items[_selected_index]
-	var count: int = int(item.get("count", 1))
-	if count > 1:
-		item["count"] = count - 1
-		items[_selected_index] = item
-	else:
-		items.remove_at(_selected_index)
-	GameState.player_save.inventory_items = items
+	InventoryService.consume_from_save(GameState.player_save, _selected_index)
 	_close_popup()
 	_refresh_inventory()
 
 func _on_close_pressed() -> void:
-	get_tree().change_scene_to_file("res://features/world/game_world/game_world.tscn")
+	_return_to_origin()
+
+func _return_to_origin() -> void:
+	if GameState.ui_return.has_return():
+		get_tree().change_scene_to_file(GameState.ui_return.take_scene_path())
+		return
+	get_tree().change_scene_to_file(ScenePaths.GAME_WORLD)
 
 func _apply_localized_text(_language: String = "") -> void:
 	title_label.text = LocalizationState.t("inventory.title")

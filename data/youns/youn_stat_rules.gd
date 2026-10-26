@@ -35,10 +35,10 @@ const RESISTENCIA_PER_STATUS_TURN := 25
 const RENAMED_KEYS := {"vitalidad": "constitucion", "energia": "mente"}
 
 ## Vida máxima para esas estadísticas ({"constitucion": 50, ...}).
-static func max_hp(stats: Dictionary) -> int:
+static func max_hp(stats: Dictionary, bonus: int = 0) -> int:
 	if not stats.has("constitucion"):
-		return DEFAULT_MAX_HP
-	return maxi(1, int(stats["constitucion"]) * HP_PER_CONSTITUCION)
+		return maxi(1, DEFAULT_MAX_HP + bonus)
+	return maxi(1, int(stats["constitucion"]) * HP_PER_CONSTITUCION + bonus)
 
 ## MP máximo para esas estadísticas ({"mente": 50, ...}).
 static func max_mp(stats: Dictionary) -> int:
@@ -122,7 +122,11 @@ static func reward(save: PlayerSaveData, amounts: Dictionary, fallback: YounData
 	if save == null:
 		return
 	ensure_initialized(save, fallback)
-	gain_many(save, amounts)
+	for key in amounts:
+		var amount := int(amounts[key])
+		if amount > 0:
+			amount += save.lab_youn_growth_bonus
+		gain(save, key, amount)
 
 static func _base_of(youn: YounData) -> Dictionary:
 	if youn == null or youn.base_stats == null:

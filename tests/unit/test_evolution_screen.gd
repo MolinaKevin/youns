@@ -17,6 +17,9 @@ func before_each() -> void:
 
 func after_each() -> void:
 	GameState.player_save = _save_before
+	# _show_section() reemplaza controles con queue_free(); dar un frame a Godot
+	# para vaciar esa cola evita que GUT los reporte como huérfanos.
+	await get_tree().process_frame
 
 
 func _line() -> CardActionLine:
@@ -41,7 +44,7 @@ func _screen(colors: Dictionary, lines: int) -> CanvasLayer:
 func test_sin_nada_para_poner_se_puede_terminar() -> void:
 	var screen := _screen({}, 0)
 	assert_true(screen.can_finish())
-	assert_false(screen._finish_button.disabled)
+	assert_true(screen.is_finish_enabled())
 
 
 func test_con_colores_y_acciones_pendientes_no_se_puede_terminar() -> void:
@@ -49,44 +52,51 @@ func test_con_colores_y_acciones_pendientes_no_se_puede_terminar() -> void:
 	assert_eq(screen.pending_colors(), 1)
 	assert_eq(screen.pending_lines(), 1)
 	assert_false(screen.can_finish())
-	assert_true(screen._finish_button.disabled)
+	assert_false(screen.is_finish_enabled())
 
 
 func test_terminar_no_cierra_con_pendientes() -> void:
 	var screen := _screen({"logica": 1}, 0)
 	watch_signals(screen)
-	screen._on_finish()
+	assert_false(screen.finish())
 	assert_signal_not_emitted(screen, "finished")
+
+
+func test_terminar_cierra_cuando_no_hay_pendientes() -> void:
+	var screen := _screen({}, 0)
+	watch_signals(screen)
+	assert_true(screen.finish())
+	assert_signal_emitted(screen, "finished")
 
 
 func test_al_poner_todo_se_habilita_terminar() -> void:
 	var screen := _screen({"logica": 1}, 1)
-	var card: CardData = screen._deck[0]
-	screen._show_section(screen.Section.COLORS)
-	screen._selected_color = "logica"
-	screen._on_half_pressed(card, true)
-	assert_true(screen._finish_button.disabled, "falta la acción")
-	screen._show_section(screen.Section.ACTIONS)
-	screen._selected_line = 0
-	screen._on_half_pressed(card, true)
+	var card: CardData = screen.deck_cards()[0]
+	screen.show_section(screen.Section.COLORS)
+	screen.select_color("logica")
+	screen.apply_to_half(card, true)
+	assert_false(screen.is_finish_enabled(), "falta la acción")
+	screen.show_section(screen.Section.ACTIONS)
+	screen.select_line(0)
+	screen.apply_to_half(card, true)
 	assert_true(screen.can_finish())
-	assert_false(screen._finish_button.disabled)
+	assert_true(screen.is_finish_enabled())
 
 
 func test_deshacer_vuelve_a_bloquear() -> void:
 	var screen := _screen({"logica": 1}, 0)
-	screen._show_section(screen.Section.COLORS)
-	screen._selected_color = "logica"
-	screen._on_half_pressed(screen._deck[0], true)
+	screen.show_section(screen.Section.COLORS)
+	screen.select_color("logica")
+	screen.apply_to_half(screen.deck_cards()[0], true)
 	assert_true(screen.can_finish())
-	screen._undo("color")
+	screen.undo_color()
 	assert_false(screen.can_finish())
-	assert_true(screen._finish_button.disabled)
+	assert_false(screen.is_finish_enabled())
 
 
 func test_si_no_hay_lugar_las_acciones_no_traban() -> void:
 	var screen := _screen({}, 1)
-	for card in screen._deck:
+	for card in screen.deck_cards():
 		for action in [card.top, card.bottom]:
 			if action == null:
 				continue

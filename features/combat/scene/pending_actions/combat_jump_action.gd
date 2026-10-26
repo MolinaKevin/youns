@@ -8,31 +8,31 @@ var phase: int = 0
 var rock_pos: Vector2 = Vector2(-1.0, -1.0)
 
 func start(p_index: int, p_card: CardActionLine) -> bool:
-	var rocks: Array[Dictionary] = host.map_area.get_rocks_in_range(host.map_area.player_pos, host._w(p_card.primary_range_cells()))
+	var rocks: Array[Dictionary] = host.map_area.interactions.rocks_in_range(host.map_area.player_pos, host.w(p_card.primary_range_cells()))
 	if rocks.is_empty():
-		host.log_requested.emit("%s: no hay piedras al alcance." % p_card.name)
+		host.emit_log("combat.log.jump.no_rocks", [p_card.name])
 		host.card_preview_hide_requested.emit()
 		return false
 	index = p_index
 	phase = 0
 	card = p_card
-	host.map_area.start_rock_jump_selection(host._w(p_card.primary_range_cells()))
-	host.log_requested.emit("Seleccioná una piedra dentro de %s módulos." % p_card.primary_module_label())
+	host.map_area.interactions.start_rock_jump_selection(host.w(p_card.primary_range_cells()))
+	host.emit_log("combat.log.jump.select_rock", [p_card.primary_module_label()])
 	return true
 
 func on_tile_selected(pos: Vector2) -> void:
 	if phase == 0:
-		var rock: Dictionary = host.map_area.get_rock_near(pos)
+		var rock: Dictionary = host.map_area.interactions.rock_near(pos)
 		if rock.is_empty():
 			return
 		rock_pos = rock["pos"]
 		phase = 1
-		host.map_area.start_jump_landing_selection(rock_pos, host._w(card.cast_range_cells()))
-		host.log_requested.emit("Piedra en (%.1f, %.1f). Elegí dónde aterrizar." % [rock_pos.x, rock_pos.y])
+		host.map_area.interactions.start_jump_landing_selection(rock_pos, host.w(card.cast_range_cells()))
+		host.emit_log("combat.log.jump.select_landing", [rock_pos.x, rock_pos.y])
 		return
-	if rock_pos.distance_to(pos) > host._w(card.cast_range_cells()):
+	if rock_pos.distance_to(pos) > host.w(card.cast_range_cells()):
 		return
-	if not host.map_area.can_jump_land_at(pos):
+	if not host.map_area.interactions.can_jump_land_at(pos):
 		return
 	host.pending_cell = pos
 	host.confirm_popup_show_requested.emit(false)
@@ -47,17 +47,17 @@ func execute(landing_pos: Vector2) -> void:
 	if sep.length() < host.map_area.MIN_SEPARATION:
 		landing_pos = host.map_area.enemy_pos + (sep.normalized() if sep.length() > 0.001 else Vector2(host.map_area.MIN_SEPARATION, 0.0)) * host.map_area.MIN_SEPARATION
 
-	host.map_area.land_player_from_jump(landing_pos)
+	host.map_area.interactions.land_player_from_jump(landing_pos)
 
-	var hit_enemy: bool = host.map_area.is_enemy_near_pos(landing_pos, 1.5)
+	var hit_enemy: bool = host.map_area.interactions.is_enemy_near(landing_pos, 1.5)
 
 	_spend_card()
 
 	if hit_enemy:
-		host.log_requested.emit("¡%s! Caíste sobre el enemigo — %d de daño!" % [played_card.name, played_card.damage])
-		await host._deal_damage_to_enemy.call(played_card.damage, false, played_card.damage_type)
+		host.emit_log("combat.log.jump.hits_enemy", [played_card.name, played_card.damage])
+		await host.deal_damage_to_enemy.call(played_card.damage, false, played_card.damage_type)
 	else:
-		host.log_requested.emit("%s: aterrizaste en (%.1f, %.1f)." % [played_card.name, landing_pos.x, landing_pos.y])
+		host.emit_log("combat.log.jump.landed", [played_card.name, landing_pos.x, landing_pos.y])
 
 	_finish()
 
@@ -66,4 +66,4 @@ func clear() -> void:
 	phase = 0
 	rock_pos = Vector2(-1.0, -1.0)
 	card = null
-	host.map_area.clear_rock_jump_selection()
+	host.map_area.interactions.clear_rock_jump_selection()

@@ -160,7 +160,8 @@ func _ready() -> void:
 		map_area.setup_player(_youn.youn_data)
 		_player_name = _youn.youn_data.youn_name
 	var player_stat_values := CardScaling.player_stats()
-	state.player_hp = YounStatRules.max_hp(player_stat_values)
+	var lab_hp_bonus := GameState.player_save.lab_max_hp_bonus if GameState.player_save else 0
+	state.player_hp = YounStatRules.max_hp(player_stat_values, lab_hp_bonus)
 	state.player_max_hp = state.player_hp
 	state.player_max_mp = YounStatRules.max_mp(player_stat_values)
 	state.player_mp = state.player_max_mp
@@ -170,17 +171,17 @@ func _ready() -> void:
 	_enemy_name = enemy_name_str
 
 	end_turn_button.pressed.connect(_turn_flow.on_end_turn_pressed)
-	move_mode_button.toggled.connect(player_actions._on_move_mode_toggled)
+	move_mode_button.toggled.connect(player_actions.set_move_mode)
 	draw_pile_button.pressed.connect(_pile_popup.show_draw_pile)
 	discard_pile_button.pressed.connect(_pile_popup.show_discard_pile)
 	pile_close_button.pressed.connect(_pile_popup.close)
-	confirm_yes_button.pressed.connect(player_actions._on_confirm_yes)
-	confirm_no_button.pressed.connect(player_actions._on_confirm_no)
-	confirm_fin_button.pressed.connect(player_actions._on_confirm_fin)
-	end_move_button.pressed.connect(player_actions._on_end_move_pressed)
+	confirm_yes_button.pressed.connect(player_actions.confirm_selection)
+	confirm_no_button.pressed.connect(player_actions.reject_confirmation)
+	confirm_fin_button.pressed.connect(player_actions.finish_selection)
+	end_move_button.pressed.connect(player_actions.finish_movement)
 
 	if map_area.has_signal("position_selected"):
-		map_area.position_selected.connect(player_actions._on_position_selected)
+		map_area.position_selected.connect(player_actions.select_position)
 
 	hand_section.set_title(LocalizationState.t("combat.hand"))
 	hand_section.card_index_selected.connect(_turn_flow.on_hand_card_selected)
@@ -242,7 +243,7 @@ func show_card_preview(action: CardActionLine) -> void:
 	if _preview_tween and _preview_tween.is_valid():
 		_preview_tween.kill()
 	hand_section.show_all_cards()
-	var index: int = turn.playing.get("card", -1)
+	var index: int = turn.playing.card if turn.playing != null else -1
 	if index >= 0:
 		hand_section.set_card_visible_at(index, false)
 		card_preview.set_card(turn.turn_cards[index])
@@ -288,5 +289,5 @@ func _apply_localized_text(_language: String = "") -> void:
 	_wildcards.apply_localization()
 	enemy_reveal.apply_localization()
 	_pile_popup.refresh_title_if_visible()
-	_turn_flow._refresh_hand_view()
+	_turn_flow.refresh_hand_view()
 	update_ui()

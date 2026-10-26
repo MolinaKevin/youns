@@ -22,6 +22,12 @@ func test_key_vacio_no_muta_el_save() -> void:
 	assert_eq(save.clock_ui_unlocked, before_unlocked)
 
 
+func test_key_inexistente_no_muta_el_save() -> void:
+	var before_unlocked := save.clock_ui_unlocked
+	_make_effect("is_hungry", true).apply(save)
+	assert_eq(save.clock_ui_unlocked, before_unlocked)
+
+
 # ── path genérico (save.set) ──────────────────────────────────────────────────
 
 func test_setea_clock_ui_unlocked_en_true() -> void:

@@ -155,10 +155,17 @@ func apply_decay() -> void:
 	var save := GameState.player_save
 	if save == null:
 		return
+	var youn = PartyManager.youn
+	var data: YounData = youn.get("youn_data") if youn else null
 	for cfg in _configs:
 		if cfg.stat_key.is_empty() or cfg.rate_per_hour == 0.0:
 			continue
-		var acc: float = _accumulators.get(cfg.stat_key, 0.0) + cfg.rate_per_hour / TICKS_PER_HOUR
+		var multiplier := 1.0
+		if data and data.get("mult_" + cfg.stat_key) != null:
+			multiplier = data.get("mult_" + cfg.stat_key)
+		# El multiplicador va antes del acumulador para conservar los decimales
+		# entre ticks y aplicar exactamente la tasa horaria del Youn.
+		var acc: float = _accumulators.get(cfg.stat_key, 0.0) + cfg.rate_per_hour * multiplier / TICKS_PER_HOUR
 		var to_apply := int(acc + signf(acc) * 0.000001)
 		_accumulators[cfg.stat_key] = acc - float(to_apply)
 		if to_apply != 0 and save.get(cfg.stat_key) != null:
@@ -167,6 +174,53 @@ func apply_decay() -> void:
 
 func health_from_sleep(hours: int) -> int:
 	return clampi(hours, 0, SLEEP_HEALTH_MAX_HOURS) * SLEEP_HEALTH_PER_HOUR
+
+
+# ── Interacciones del menú rápido (premiar/castigar/negar/jugar) ────────────
+
+## Premiar: sube el vínculo (felicidad, confianza) y relaja (menos
+## estrés/aburrimiento), pero baja un poco la disciplina y le cuesta algo de
+## autocontrol acostumbrarse a que lo mimen.
+func reward() -> void:
+	_add_discipline(-1)
+	add_stat("felicidad", 3)
+	add_stat("confianza", 2)
+	add_stat("estres", -1)
+	add_stat("aburrimiento", -1)
+	add_stat("autocontrol", -1)
+
+
+## Castigar: pega fuerte a felicidad/confianza y sube el estrés; también le
+## cuesta autocontrol.
+func punish() -> void:
+	add_stat("felicidad", -4)
+	add_stat("confianza", -3)
+	add_stat("estres", 4)
+	add_stat("autocontrol", -1)
+
+
+## Negarle algo: un golpe chico a felicidad/confianza y algo de estrés, pero
+## le suma autocontrol (aprende a esperar).
+func deny() -> void:
+	add_stat("felicidad", -2)
+	add_stat("confianza", -1)
+	add_stat("estres", 1)
+	add_stat("autocontrol", 1)
+
+
+## Jugar: ~4 veces por día (cada 4 h despierto) mantiene estables el
+## aburrimiento (+3/h) y la felicidad (-1/h).
+func play() -> void:
+	add_stat("felicidad", 4)
+	add_stat("confianza", 2)
+	add_stat("estres", -2)
+	add_stat("aburrimiento", -12)
+
+
+func _add_discipline(delta: int) -> void:
+	if GameState.player_save == null:
+		return
+	set_discipline(GameState.player_save.discipline + delta)
 
 
 func _check_sick_chance() -> void:

@@ -79,17 +79,17 @@ func _set_state(s: State) -> void:
 	state = s
 	match s:
 		State.IDLE, State.NOTICE:
-			host._switch_anim("idle")
+			host.switch_anim("idle")
 		State.WANDER, State.RETURN:
-			host._switch_anim("walk")
+			host.switch_anim("walk")
 		State.CHASE, State.FLEE:
-			host._switch_anim("run")
+			host.switch_anim("run")
 
 func _tick_idle(delta: float) -> void:
 	host.velocity.x = 0.0
 	host.velocity.z = 0.0
-	if host.requires_interact and host._interaction.near and host._player:
-		var to_player := host._player.global_position - host.global_position
+	if host.requires_interact and host.is_interaction_near() and host.player() != null:
+		var to_player := host.player().global_position - host.global_position
 		to_player.y = 0.0
 		if to_player.length() > 0.01:
 			host.rotation.y = lerp_angle(host.rotation.y, atan2(to_player.x, to_player.z), host.youn_data.rotate_speed * delta)
@@ -127,8 +127,8 @@ func _tick_notice(delta: float) -> void:
 	if _is_outside_leash():
 		_start_return()
 		return
-	if host._player:
-		var to_player := host._player.global_position - host.global_position
+	if host.player() != null:
+		var to_player := host.player().global_position - host.global_position
 		to_player.y = 0.0
 		if to_player.length() > 0.01:
 			_face_dir(to_player.normalized(), delta * 3.0)
@@ -140,13 +140,13 @@ func _tick_notice(delta: float) -> void:
 		_set_state(State.CHASE)
 
 func _tick_chase(delta: float) -> void:
-	if not host._player:
+	if host.player() == null:
 		start_idle()
 		return
 	if _is_outside_leash():
 		_start_return()
 		return
-	var to_player := host._player.global_position - host.global_position
+	var to_player := host.player().global_position - host.global_position
 	to_player.y = 0.0
 	var dist := to_player.length()
 	if dist > host.youn_data.lose_range:
@@ -185,10 +185,10 @@ func _tick_flee(delta: float) -> void:
 		flee_finished.emit()
 
 func _can_see_player(range_override := -1.0) -> bool:
-	if host._player == null:
+	if host.player() == null:
 		return false
 	var dist := _detect_range() if range_override < 0.0 else range_override
-	return host._player.global_position.distance_to(host.global_position) <= dist
+	return host.player().global_position.distance_to(host.global_position) <= dist
 
 func _is_outside_leash(buffer := 1.0) -> bool:
 	return host.global_position.distance_to(origin) > host.youn_data.leash_range * buffer

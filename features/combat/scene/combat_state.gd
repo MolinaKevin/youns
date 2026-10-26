@@ -1,5 +1,6 @@
 class_name CombatState
 extends RefCounted
+const CombatEffect := preload("res://features/combat/scene/combat_effect.gd")
 
 ## Vida, daño, bloqueo y curación usan números grandes (x10 respecto de la
 ## primera versión) para que después puedan escalar con estadísticas.
@@ -98,44 +99,77 @@ func status_turns(base: int, on_player: bool) -> int:
 	var reduction := player_status_reduction if on_player else enemy_status_reduction
 	return maxi(1, base - reduction)
 
-## Compatibilidad temporal para tests y llamados externos antiguos. Las reglas
-## reales de zonas viven en CombatZoneEffectResolver.
-func puddle_impact_on_enemy(effect: String, tick_damage: int) -> Array:
-	return CombatZoneEffectResolver.new().apply_direct_impact(self, effect, tick_damage, false)
-
-func puddle_impact_on_player(effect: String, tick_damage: int) -> Array:
-	return CombatZoneEffectResolver.new().apply_direct_impact(self, effect, tick_damage, true)
-
 ## Aplica un estado al jugador por `base` turnos (menos su resistencia).
 func set_player_status(effect: String, base: int) -> int:
 	var turns := status_turns(base, true)
-	match effect:
-		"blind": player_blinded_turns = maxi(player_blinded_turns, turns)
-		"slow": player_greasy_turns = maxi(player_greasy_turns, turns)
-		"entangle": player_entangled_turns = maxi(player_entangled_turns, turns)
-		"burn": player_burning_turns = maxi(player_burning_turns, turns)
-		"bleed": player_bleeding_turns = maxi(player_bleeding_turns, turns)
-		"poison": player_poison_stacks = maxi(player_poison_stacks, turns)
-		"freeze": player_frozen_turns = maxi(player_frozen_turns, turns)
-		"wet": player_wet_turns = maxi(player_wet_turns, turns)
-		_: return 0
+	if CombatEffect.status_field(effect).is_empty(): return 0
+	set_status_value(effect, true, maxi(status_value(effect, true), turns))
 	return turns
 
 ## Aplica un estado al enemigo por `base` turnos (menos su resistencia).
 ## Devuelve los turnos que quedó (0 si el estado no existe).
 func set_enemy_status(effect: String, base: int) -> int:
 	var turns := status_turns(base, false)
-	match effect:
-		"blind": enemy_blinded_turns = maxi(enemy_blinded_turns, turns)
-		"slow": enemy_greasy_turns = maxi(enemy_greasy_turns, turns)
-		"entangle": enemy_entangled_turns = maxi(enemy_entangled_turns, turns)
-		"burn": enemy_burning_turns = maxi(enemy_burning_turns, turns)
-		"bleed": enemy_bleeding_turns = maxi(enemy_bleeding_turns, turns)
-		"poison": enemy_poison_stacks = maxi(enemy_poison_stacks, turns)
-		"freeze": enemy_frozen_turns = maxi(enemy_frozen_turns, turns)
-		"wet": enemy_wet_turns = maxi(enemy_wet_turns, turns)
-		_: return 0
+	if CombatEffect.status_field(effect).is_empty(): return 0
+	set_status_value(effect, false, maxi(status_value(effect, false), turns))
 	return turns
+
+## Turnos/stacks actuales de un estado, sin pasar por reflexión de string.
+func status_value(effect: String, on_player: bool) -> int:
+	match CombatEffect.status_field(effect):
+		"wet_turns": return player_wet_turns if on_player else enemy_wet_turns
+		"burning_turns": return player_burning_turns if on_player else enemy_burning_turns
+		"greasy_turns": return player_greasy_turns if on_player else enemy_greasy_turns
+		"entangled_turns": return player_entangled_turns if on_player else enemy_entangled_turns
+		"bleeding_turns": return player_bleeding_turns if on_player else enemy_bleeding_turns
+		"poison_stacks": return player_poison_stacks if on_player else enemy_poison_stacks
+		"blinded_turns": return player_blinded_turns if on_player else enemy_blinded_turns
+		"frozen_turns": return player_frozen_turns if on_player else enemy_frozen_turns
+		_: return 0
+
+## Fija los turnos/stacks de un estado directo (sin el máximo de
+## set_player_status/set_enemy_status). Lo usa CombatRoundResolver para
+## descontar un turno al expirar.
+func set_status_value(effect: String, on_player: bool, value: int) -> void:
+	match CombatEffect.status_field(effect):
+		"wet_turns":
+			if on_player: player_wet_turns = value
+			else: enemy_wet_turns = value
+		"burning_turns":
+			if on_player: player_burning_turns = value
+			else: enemy_burning_turns = value
+		"greasy_turns":
+			if on_player: player_greasy_turns = value
+			else: enemy_greasy_turns = value
+		"entangled_turns":
+			if on_player: player_entangled_turns = value
+			else: enemy_entangled_turns = value
+		"bleeding_turns":
+			if on_player: player_bleeding_turns = value
+			else: enemy_bleeding_turns = value
+		"poison_stacks":
+			if on_player: player_poison_stacks = value
+			else: enemy_poison_stacks = value
+		"blinded_turns":
+			if on_player: player_blinded_turns = value
+			else: enemy_blinded_turns = value
+		"frozen_turns":
+			if on_player: player_frozen_turns = value
+			else: enemy_frozen_turns = value
+
+## Daño por turno de un estado para quien lo recibe (lo fija el charco que lo
+## causó). Sin efecto para estados que no dañan por turno.
+func set_status_damage(effect: String, on_player: bool, value: int) -> void:
+	match effect:
+		CombatEffect.BURN:
+			if on_player: player_burn_damage = value
+			else: enemy_burn_damage = value
+		CombatEffect.BLEED:
+			if on_player: player_bleed_damage = value
+			else: enemy_bleed_damage = value
+		CombatEffect.POISON:
+			if on_player: player_poison_damage = value
+			else: enemy_poison_damage = value
 
 ## Cura al jugador sin pasar su máximo. Devuelve lo curado.
 func heal_player(amount: int) -> int:
@@ -167,29 +201,25 @@ func restore_mp(amount: int) -> int:
 
 ## Resumen de estados para mostrar sobre cada personaje: "Fuego 2 · Bloqueo 30".
 func status_summary(for_player: bool) -> String:
-	var p := "player_" if for_player else "enemy_"
 	var parts: PackedStringArray = []
-	for entry in [
-		["burning_turns", "Fuego"], ["bleeding_turns", "Sangra"], ["poison_stacks", "Veneno"],
-		["wet_turns", "Mojado"], ["greasy_turns", "Lento"], ["entangled_turns", "Enredado"],
-		["frozen_turns", "Congelado"], ["blinded_turns", "Ciego"],
-	]:
-		var value: int = get(p + entry[0])
+	for status in CombatEffect.STATUS_SUMMARY_ORDER:
+		var value := status_value(status, for_player)
 		if value > 0:
-			parts.append("%s %d" % [entry[1], value])
-	var block: int = get(p + "block")
+			var key: String = "burning" if status == CombatEffect.BURN else ("bleeding" if status == CombatEffect.BLEED else ("greasy" if status == CombatEffect.SLOW else ("entangled" if status == CombatEffect.ENTANGLE else ("frozen" if status == CombatEffect.FREEZE else ("blinded" if status == CombatEffect.BLIND else status)))))
+			parts.append(LocalizationState.t("combat.status_summary.%s" % key, [value]))
+	var block := player_block if for_player else enemy_block
 	if block > 0:
-		parts.append("Bloqueo %d" % block)
-	var ward: int = get(p + "ward")
+		parts.append(LocalizationState.t("combat.status_summary.block", [block]))
+	var ward := player_ward if for_player else enemy_ward
 	if ward > 0:
-		parts.append("Escudo mágico %d" % ward)
+		parts.append(LocalizationState.t("combat.status_summary.ward", [ward]))
 	if for_player:
 		if player_counter_damage > 0:
-			parts.append("Contraataque %d" % player_counter_damage)
+			parts.append(LocalizationState.t("combat.status_summary.counterattack", [player_counter_damage]))
 		if player_enchant_damage > 0:
-			parts.append("Arma encantada")
+			parts.append(LocalizationState.t("combat.status_summary.enchanted_weapon"))
 		if player_in_tree:
-			parts.append("En el árbol")
+			parts.append(LocalizationState.t("combat.status_summary.in_tree"))
 	return " · ".join(parts)
 
 ## Aplica daño al jugador: primero lo absorbe el escudo de su tipo (bloqueo o

@@ -21,20 +21,20 @@ func deal_to_player(amount: int, skip_attack_anim: bool = false, damage_type: St
 	var dmg: int = host.state.damage_player(amount, damage_type)
 	if dmg > 0 and host.state.player_overwatch_active:
 		host.state.player_overwatch_active = false
-		host.map_area.clear_overwatch_zone()
+		host.map_area.interactions.clear_overwatch_zone()
 		host.log_message(LocalizationState.t("combat.overwatch.cancelled_by_damage"))
 	if not skip_attack_anim:
 		await _play_enemy_anim_timed("attack")
 	await _play_player_anim_timed("damage")
 
 func _play_player_anim_timed(anim_key: String) -> void:
-	host.map_area.play_player_anim(anim_key)
+	host.map_area.actors.play_player_animation(anim_key)
 	await host.map_area.player_anim_finished
 	if not host._combat_finished and host.state.player_hp > 0:
-		host.map_area.play_player_anim("idle")
+		host.map_area.actors.play_player_animation("idle")
 
 func _play_enemy_anim_timed(anim_key: String) -> void:
-	host.map_area.play_enemy_anim(anim_key)
+	host.map_area.actors.play_enemy_animation(anim_key)
 	await host.map_area.enemy_anim_finished
 	if not host._combat_finished and host.state.enemy_hp > 0:
-		host.map_area.play_enemy_anim("idle")
+		host.map_area.actors.play_enemy_animation("idle")

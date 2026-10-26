@@ -8,27 +8,15 @@ const HOURS_PER_DAY := 24.0
 const DAY_DURATION_MINUTES := 24.0
 const DAY_DURATION_SECONDS := DAY_DURATION_MINUTES * 60.0
 
-## Dueño del reloj. GameState conserva las propiedades de abajo como fachada
-## temporal para no romper a los consumidores durante la migración.
+## Dueño del reloj y punto de acceso de transición durante la migración.
 var clock: GameClock = GameClock.new()
 var save_service: SaveService = SaveService.new()
 
-## Fachadas temporales mientras los consumidores migran a save_service.
-var save_path: String:
-	get: return save_service.save_path
-	set(value): save_service.save_path = value
-
+## Compatibilidad temporal: todavía hay consumidores de alto nivel que leen la
+## partida desde GameState. Los accesos puntuales nuevos van a SaveService.
 var player_save: PlayerSaveData:
 	get: return save_service.player_save
 	set(value): save_service.player_save = value
-
-var session_active: bool:
-	get: return save_service.session_active
-	set(value): save_service.session_active = value
-
-var world_intro_seen: bool:
-	get: return save_service.world_intro_seen
-	set(value): save_service.world_intro_seen = value
 
 var current_day: int:
 	get: return clock.current_day
@@ -47,15 +35,6 @@ var world_combat: WorldCombatContext = WorldCombatContext.new()
 var world_entry: WorldEntryContext = WorldEntryContext.new()
 var ui_return: UiReturnContext = UiReturnContext.new()
 
-## Fachadas temporales de los contextos de navegación.
-var pending_location: Dictionary:
-	get: return world_entry.to_legacy_dictionary()
-	set(value): world_entry.from_legacy_dictionary(value)
-
-var ui_return_scene_path: String:
-	get: return ui_return.scene_path
-	set(value): ui_return.set_return(value)
-
 ## Fachada de los datos iniciales: su dueño es SaveService.
 const STARTING_YOUN_PATH := SaveService.STARTING_YOUN_PATH
 const STARTING_STATS := SaveService.STARTING_STATS
@@ -66,11 +45,12 @@ func _ready() -> void:
 	player_save = save_service.make_new_save(get_total_hours())
 	# Permite abrir la escena de combate directamente durante desarrollo.
 	world_combat.set_preview_youn(load("res://data/youns/pombero.tres") as YounData)
-	print("GameState loaded")
+	if DebugSettings.verbose_logging_enabled:
+		print("GameState loaded")
 	clock_changed.emit(time_of_day_hours, current_day)
 
 func _process(delta: float) -> void:
-	clock.advance_real_seconds(delta, DAY_DURATION_SECONDS)
+	advance_real_seconds(delta)
 
 ## Registra el Youn inicial (así corre su evolución) y le pone sus stats.
 func setup_starting_youn(save: PlayerSaveData) -> void:
@@ -87,6 +67,11 @@ func get_time_ratio() -> float:
 
 func get_total_hours() -> float:
 	return clock.get_total_hours()
+
+## Avanza el reloj usando segundos reales y aplica sus ticks pendientes.
+## La usa el loop del juego y permite probar el reloj sin llamar a `_process`.
+func advance_real_seconds(seconds: float) -> void:
+	clock.advance_real_seconds(seconds, DAY_DURATION_SECONDS)
 
 ## Descarta los twenty_min_ticked pendientes: el tiempo que se salteó (p. ej.
 ## durmiendo) no aplica desgaste de stats ni chequeos de emociones.
@@ -150,8 +135,8 @@ func load_game() -> bool:
 ## Guarda la partida con el estado del momento (reloj, estados, laboratorio).
 ## Solo se llama al dormir (si el jugador elige guardar) y en las estaciones de
 ## guardado. No hace nada hasta que se empieza o carga una partida desde el menú.
-func save_player_save() -> void:
-	save_service.write(current_day, time_of_day_hours)
+func save_player_save() -> Error:
+	return save_service.write(current_day, time_of_day_hours)
 
 func _reset_session() -> void:
 	world_combat.clear()

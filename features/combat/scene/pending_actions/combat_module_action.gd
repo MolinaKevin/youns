@@ -22,37 +22,37 @@ func start(p_index: int, p_card: CardActionLine) -> void:
 	card = p_card
 	target = {}
 	if card.card_type == CardActionLine.TYPE_COLLAPSE:
-		host.map_area.start_collapse_selection(host._w(card.primary_range_cells()))
+		host.map_area.interactions.start_collapse_selection(host.w(card.primary_range_cells()))
 	else:
-		host.map_area.start_module_selection(host._w(card.primary_range_cells()))
+		host.map_area.interactions.start_module_selection(host.w(card.primary_range_cells()))
 	match card.card_type:
-		CardActionLine.TYPE_BREAK: host.log_requested.emit("Elegí el módulo que querés romper.")
-		CardActionLine.TYPE_MODULE_PUSH: host.log_requested.emit("Elegí el módulo que querés golpear.")
-		CardActionLine.TYPE_BUILD: host.log_requested.emit("Elegí dónde levantar el muro.")
-		CardActionLine.TYPE_MODULE_THROW: host.log_requested.emit("Elegí el módulo que querés levantar.")
-		CardActionLine.TYPE_COLLAPSE: host.log_requested.emit("Elegí al enemigo: los módulos pegados a él se le caen encima.")
+		CardActionLine.TYPE_BREAK: host.emit_log("combat.log.module.select_break")
+		CardActionLine.TYPE_MODULE_PUSH: host.emit_log("combat.log.module.select_push")
+		CardActionLine.TYPE_BUILD: host.emit_log("combat.log.module.select_build")
+		CardActionLine.TYPE_MODULE_THROW: host.emit_log("combat.log.module.select_throw")
+		CardActionLine.TYPE_COLLAPSE: host.emit_log("combat.log.module.select_collapse")
 
 func on_tile_selected(pos: Vector2) -> void:
 	if card.card_type == CardActionLine.TYPE_BUILD:
-		if host.map_area.movement_distance(host.map_area.player_pos, pos) > host._w(card.primary_range_cells()):
-			host.log_requested.emit("Demasiado lejos para levantar el muro ahí.")
+		if host.map_area.queries.movement_distance(host.map_area.player_pos, pos) > host.w(card.primary_range_cells()):
+			host.emit_log("combat.log.module.build_too_far")
 			return
 		host.pending_cell = pos
 		host.confirm_popup_show_requested.emit(false)
 		return
 	if card.card_type == CardActionLine.TYPE_COLLAPSE:
-		if not host.map_area.is_click_on_enemy(pos):
+		if not host.map_area.interactions.is_click_on_enemy(pos):
 			return
-		if not host.map_area.is_enemy_in_attack_range(host._w(card.primary_range_cells())):
-			host.log_requested.emit("El enemigo está demasiado lejos.")
+		if not host.map_area.queries.is_enemy_in_attack_range(host.w(card.primary_range_cells())):
+			host.emit_log("combat.log.module.enemy_too_far")
 			return
 		host.pending_cell = pos
 		host.confirm_popup_show_requested.emit(false)
 		return
 	if phase == 1 and card.card_type == CardActionLine.TYPE_MODULE_THROW:
 		# Lanzar: elegir dónde cae.
-		if host.map_area.movement_distance(host.map_area.player_pos, pos) > host._w(card.cast_range_cells()):
-			host.log_requested.emit("No llegás a tirarlo tan lejos.")
+		if host.map_area.queries.movement_distance(host.map_area.player_pos, pos) > host.w(card.cast_range_cells()):
+			host.emit_log("combat.log.module.throw_too_far")
 			return
 		host.pending_cell = pos
 		host.confirm_popup_show_requested.emit(false)
@@ -60,30 +60,30 @@ func on_tile_selected(pos: Vector2) -> void:
 	if phase == 1:
 		# Golpe: elegir la dirección dentro del cono.
 		var module_cone_angle := card.pattern.cone_half_angle if card.pattern != null else 55.0
-		if not host.map_area.is_pos_in_module_cone(target["pos"], pos, host._w(card.cast_range_cells()), module_cone_angle):
+		if not host.map_area.interactions.is_pos_in_module_cone(target["pos"], pos, host.w(card.cast_range_cells()), module_cone_angle):
 			return
 		host.pending_cell = pos
 		host.confirm_popup_show_requested.emit(false)
 		return
-	var obs: Dictionary = host.map_area.get_module_at(pos)
+	var obs: Dictionary = host.map_area.interactions.module_at(pos)
 	if obs.is_empty() and card.card_type == CardActionLine.TYPE_BREAK:
-		obs = host.map_area.get_tree_at(pos)  # romper también tala árboles
+		obs = host.map_area.interactions.tree_at(pos)  # romper también tala árboles
 	if obs.is_empty():
 		return
-	if host.map_area.obstacle_gap(obs) > host._w(card.primary_range_cells()):
-		host.log_requested.emit("Demasiado lejos para alcanzar eso.")
+	if host.map_area.interactions.obstacle_gap(obs) > host.w(card.primary_range_cells()):
+		host.emit_log("combat.log.module.target_too_far")
 		return
 	target = obs
 	if card.card_type == CardActionLine.TYPE_MODULE_THROW:
 		phase = 1
-		host.map_area.start_module_throw_target(host._w(card.cast_range_cells()))
-		host.log_requested.emit("Elegí dónde tirarlo.")
+		host.map_area.interactions.start_module_throw_target(host.w(card.cast_range_cells()))
+		host.emit_log("combat.log.module.select_throw_landing")
 		return
 	if card.card_type == CardActionLine.TYPE_MODULE_PUSH:
 		phase = 1
 		var module_preview_angle := card.pattern.cone_half_angle if card.pattern != null else 55.0
-		host.map_area.start_module_push_cone(obs["pos"], host._w(card.cast_range_cells()), module_preview_angle)
-		host.log_requested.emit("Elegí hacia dónde mandar el módulo.")
+		host.map_area.interactions.start_module_push_cone(obs["pos"], host.w(card.cast_range_cells()), module_preview_angle)
+		host.emit_log("combat.log.module.select_push_direction")
 		return
 	host.pending_cell = pos
 	host.confirm_popup_show_requested.emit(false)
@@ -96,9 +96,9 @@ func execute(cell: Vector2) -> void:
 	var obs := target
 	_spend_card()
 	host.hand_refresh_requested.emit()
-	host.map_area.play_player_anim("attack")
+	host.map_area.actors.play_player_animation("attack")
 	await host.map_area.player_anim_finished
-	host.map_area.play_player_anim("idle")
+	host.map_area.actors.play_player_animation("idle")
 	match played_card.card_type:
 		CardActionLine.TYPE_BREAK:
 			await _casts.cast_break(played_card, obs)
@@ -117,4 +117,4 @@ func clear() -> void:
 	phase = 0
 	card = null
 	target = {}
-	host.map_area.clear_module_selection()
+	host.map_area.interactions.clear_module_selection()

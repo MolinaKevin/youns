@@ -1,7 +1,8 @@
 extends Node
 
 const WorldBoundary := preload("res://features/world/zones/world_boundary.gd")
-const TITLE_MENU_SCENE := "res://features/menus/main_menu/title_menu.tscn"
+const ScenePaths := preload("res://shared/scene_paths.gd")
+const TITLE_MENU_SCENE := ScenePaths.TITLE_MENU
 
 signal zone_changed(previous_zone: String, current_zone: String)
 signal zone_loaded(zone_id: String)
@@ -31,10 +32,23 @@ func _ready() -> void:
 ## Ver PartyManager: fuera del menú principal se conserva la inicialización
 ## automática para tests y escenas de mundo abiertas directamente.
 func _initialize_outside_title_menu() -> void:
+	# GUT ejecuta los unit tests dentro del proyecto, por lo que los autoloads
+	# también reciben _ready(). No cargar el mundo 3D (mapas, modelos y
+	# streaming) para pruebas lógicas; los tests que sí lo necesitan viven en
+	# tests/integration y lo inicializan de forma explícita.
+	if _is_gut_unit_test_run():
+		return
 	var current_scene := get_tree().current_scene
 	if current_scene != null and current_scene.scene_file_path == TITLE_MENU_SCENE:
 		return
 	initialize_world()
+
+
+func _is_gut_unit_test_run() -> bool:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("-g"):
+			return true
+	return false
 
 ## Construye el exterior recién al entrar a una partida. El menú inicial no
 ## necesita la grilla, los .glb ni la decoración automática.
@@ -98,12 +112,43 @@ func set_north_trail_open(open: bool) -> void:
 func enter_zone(zone_id: String) -> void:
 	if zone_id == current_zone or not catalog.has(zone_id):
 		return
+	# Los unit tests pueden evaluar reglas dependientes de zona sin construir el
+	# exterior. La zona inicial actúa como estado liviano hasta que se inicialice
+	# el mundo real.
+	if not _world_initialized:
+		var previous_zone := _initial_zone
+		_initial_zone = zone_id
+		zone_changed.emit(previous_zone, zone_id)
+		return
 	_activate_zone(zone_id)
 
 ## La zona actual es la del suelo donde está parado el jugador (el mapa de
 ## zonas de WorldBoundary). Antes salía de triggers que se superponían.
-func _update_current_zone() -> void:
-	_presence.check_now()
+func refresh_current_zone() -> void:
+	if _world_initialized:
+		_presence.check_now()
+
+
+## Consulta la zona técnica bajo una posición del exterior. También la usan
+## las verificaciones de mapas; no exponen la implementación de WorldBoundary.
+func world_zone_at(position: Vector3) -> String:
+	return _boundary.zone_at(position) if _world_initialized else ""
+
+
+## Tipo de celda técnica del exterior (WALKABLE, CLEAR, etc.).
+func world_cell_type_at(position: Vector3) -> int:
+	return _boundary.cell_type_at(position) if _world_initialized else WorldBoundaryGrid.EMPTY
+
+
+## Nodo de decoración global por nombre (AutoGround, AutoWater, etc.).
+func get_world_decoration_node(node_name: String) -> Node:
+	if not _world_initialized:
+		return null
+	return _boundary.get_node_or_null("AutoDecoration/" + node_name)
+
+
+func world_decoration_tree_positions() -> Array[Vector3]:
+	return _boundary.decoration_tree_positions() if _world_initialized else []
 
 
 func _on_zone_detected(zone_id: String) -> void:
@@ -237,13 +282,3 @@ func exit_interior(return_spawn := "SpawnPoint") -> void:
 func set_world_visible(visible: bool) -> void:
 	if _world_initialized:
 		_interiors.set_world_visible(visible)
-
-func resolve_pending_world_combat_victory() -> void:
-	var context := GameState.world_combat
-	if not context.active or context.world_enemy_id == "":
-		return
-	for enemy in get_tree().get_nodes_in_group("world_enemy"):
-		if enemy.has_method("handle_player_victory") and enemy.get("world_enemy_id") == context.world_enemy_id:
-			enemy.handle_player_victory(context.return_position)
-			break
-	context.clear()

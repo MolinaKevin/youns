@@ -21,19 +21,15 @@ func _init(p_host) -> void:
 
 ## Muestra `p_options` como menú vertical navegable y devuelve el índice
 ## elegido (-1 si se cancela). Reusa el mismo panel/borde que la caja de
-## diálogo, y comparte con ella el estado de pausa (host._tree_was_paused).
+## diálogo. El host conserva el estado de pausa y sus nodos privados.
 func ask(p_options: Array[String]) -> int:
 	if p_options.is_empty() or active:
 		return -1
 	options = p_options.duplicate()
 	active = true
-	host._tree_was_paused = host.get_tree().paused
-	host.get_tree().paused = true
-	GlobalHUD.set_clock_paused(true)
-	host._root.show()
+	host.open_choice_menu()
 	_build_buttons()
 	highlight(0)
-	host.show_choice_menu()
 	return await host.choice_made
 
 func _build_buttons() -> void:
@@ -70,13 +66,8 @@ func resolve(i: int) -> void:
 	if not active:
 		return
 	active = false
-	host.hide_choice_menu()
+	host.close_choice_menu()
 	_clear_buttons()
-	if not host._tree_was_paused:
-		host.get_tree().paused = false
-		GlobalHUD.set_clock_paused(false)
-	if not host.is_playing():
-		host._root.hide()
 	host.resolve_choice(i)
 
 ## true si consumió el evento.

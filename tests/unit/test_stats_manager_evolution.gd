@@ -19,7 +19,8 @@ func before_each() -> void:
 	GameState.time_of_day_hours = 0.0
 	GameState.player_save = PlayerSaveData.new()
 	StatsManager.active_states.clear()
-	StatsManager._emotion_block_count = 0
+	while StatsManager.emotions_blocked:
+		StatsManager.unblock_emotions()
 
 
 func after_each() -> void:
@@ -28,7 +29,8 @@ func after_each() -> void:
 	GameState.time_of_day_hours = _save_hour
 	GameState.player_save = null
 	StatsManager.active_states.clear()
-	StatsManager._emotion_block_count = 0
+	while StatsManager.emotions_blocked:
+		StatsManager.unblock_emotions()
 
 
 func _make_rookie_save(days_in_stage: float) -> PlayerSaveData:

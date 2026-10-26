@@ -33,6 +33,9 @@ var _line_index := -1
 var _visible_characters := 0.0
 var _typing := false
 var _tree_was_paused := false
+## La elección puede abrirse dentro de un diálogo ya pausado o sola. Conserva
+## su propia pausa para no sobrescribir la que pertenece al diálogo.
+var _choice_tree_was_paused := false
 
 var _choice_menu_logic: DialogueChoiceMenu
 var _toast_notifier: DialogueToast
@@ -100,14 +103,24 @@ func ask(options: Array[String]) -> int:
 	return await _choice_menu_logic.ask(options)
 
 
-## API para los controladores auxiliares del diálogo. Centraliza el acceso a
-## los nodos privados de esta escena, que siguen siendo propiedad de Dialogue.
-func show_choice_menu() -> void:
+## Abre el menú de elección y toma la pausa temporal que le corresponde. La
+## lógica de botones no manipula nodos ni estado de pausa privados.
+func open_choice_menu() -> void:
+	_choice_tree_was_paused = get_tree().paused
+	get_tree().paused = true
+	GlobalHUD.set_clock_paused(true)
+	_root.show()
 	_choice_menu.show()
 
 
-func hide_choice_menu() -> void:
+## Cierra el menú de elección y restaura sólo la pausa que abrió él mismo.
+func close_choice_menu() -> void:
 	_choice_menu.hide()
+	if not _choice_tree_was_paused:
+		get_tree().paused = false
+		GlobalHUD.set_clock_paused(false)
+	if not is_playing():
+		_root.hide()
 
 
 func add_choice_button(button: Button) -> void:
@@ -142,7 +155,7 @@ func _process(delta: float) -> void:
 	_text_label.visible_characters = floori(_visible_characters)
 	if _text_label.visible_characters >= _text_label.text.length():
 		_typing = false
-		_continue_hint.text = "▶ Continuar"
+		_continue_hint.text = LocalizationState.t("dialogue.continue")
 		_continue_hint.show()
 
 
@@ -169,7 +182,7 @@ func advance() -> void:
 		_visible_characters = _text_label.text.length()
 		_text_label.visible_characters = -1
 		_typing = false
-		_continue_hint.text = "▶ Continuar"
+		_continue_hint.text = LocalizationState.t("dialogue.continue")
 		_continue_hint.show()
 		return
 
@@ -206,12 +219,13 @@ func _show_current_line() -> void:
 	_portrait.position = portrait_position
 	_portrait.scale = portrait_scale
 	if DEBUG_LAYOUT and _line_index == 0:
-		call_deferred("_log_layout", _speaker_label.text, mirrored, portrait_position)
+		if DebugSettings.verbose_logging_enabled:
+			call_deferred("_log_layout", _speaker_label.text, mirrored, portrait_position)
 
 	_visible_characters = 0.0
 	_text_label.visible_characters = 0
 	_typing = not _text_label.text.is_empty()
-	_continue_hint.text = "Aceptar: acelerar" if _typing else "▶ Continuar"
+	_continue_hint.text = LocalizationState.t("dialogue.accept_to_speed_up") if _typing else LocalizationState.t("dialogue.continue")
 	_continue_hint.show()
 	if not _typing:
 		_continue_hint.modulate.a = 1.0

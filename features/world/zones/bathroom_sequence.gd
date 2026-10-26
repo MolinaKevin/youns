@@ -8,11 +8,13 @@ extends Node
 
 var _running := false
 var _youn_inside := false
+var _scene3d: CutsceneScene3D
 
 @onready var _area: Area3D = $ToiletArea
 
 
 func _ready() -> void:
+	_scene3d = CutsceneScene3D.new(self)
 	_area.body_entered.connect(_on_area_entered)
 	_area.body_exited.connect(_on_area_exited)
 
@@ -50,11 +52,8 @@ func _run() -> void:
 	StatsManager.attend_bathroom()
 
 	# Freezar controles y reloj
-	player.set_physics_process(false)
-	player.velocity = Vector3.ZERO
-	youn.set_physics_process(false)
-	youn.velocity = Vector3.ZERO
-	cam.enabled = false
+	PartyManager.freeze_actors()
+	PartyManager.freeze_camera()
 	GlobalHUD.set_clock_paused(true)
 
 	var player_original_rot_y := player.rotation.y
@@ -146,7 +145,7 @@ func _run() -> void:
 	tw = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tw.tween_property(youn, "global_position", entrance_pos, 1.0)
 	var rot_start  := player.rotation.y
-	var rot_target := _angle_toward(start_pos, toilet_pos)
+	var rot_target := _scene3d.yaw_toward(start_pos, toilet_pos)
 	tw.parallel().tween_method(
 		func(t: float): player.rotation.y = lerp_angle(rot_start, rot_target, t),
 		0.0, 1.0, 0.8)
@@ -195,24 +194,20 @@ func _run() -> void:
 
 	# Restaurar todo
 	GlobalHUD.set_clock_paused(false)
-	cam.enabled = true
-	player.set_physics_process(true)
-	youn.set_physics_process(true)
+	PartyManager.unfreeze_camera()
+	PartyManager.unfreeze_actors()
 	cam_pivot.queue_free()
 	_running = false
 
 
+## Igual que CutsceneScene3D.face(), pero sin tocar la rotación si ya está
+## pegado al target (CutsceneScene3D.yaw_toward() devolvería 0 y lo haría
+## mirar al frente del mundo en vez de dejarlo como está).
 func _face_toward(node: Node3D, target: Vector3) -> void:
 	var d: Vector3 = target - node.global_position
 	d.y = 0.0
 	if d.length() > 0.05:
-		node.rotation.y = atan2(d.x, d.z)
-
-
-func _angle_toward(from: Vector3, to: Vector3) -> float:
-	var d: Vector3 = to - from
-	d.y = 0.0
-	return atan2(d.x, d.z) if d.length() > 0.05 else 0.0
+		node.rotation.y = _scene3d.yaw_toward(node.global_position, target)
 
 
 func _path_passes_near(from: Vector3, to: Vector3, obstacle: Vector3, radius: float) -> bool:

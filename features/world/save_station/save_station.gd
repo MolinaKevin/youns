@@ -12,6 +12,8 @@ var _crystal: MeshInstance3D
 var _near := false
 var _dialog: CanvasLayer = null
 var _time := 0.0
+var _tree_was_paused := false
+var _clock_was_paused := false
 
 func _ready() -> void:
 	_build_model()
@@ -101,11 +103,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if InputPresses.is_interact_pressed(event):
 		get_viewport().set_input_as_handled()
-		_open_dialog()
+		open_dialog()
 
 # ── Diálogo "¿Guardar la partida?" ──────────────────────────────────────────
 
-func _open_dialog() -> void:
+func open_dialog() -> void:
+	if _dialog != null:
+		return
+	_tree_was_paused = get_tree().paused
+	_clock_was_paused = GameState.clock_paused
 	_prompt.visible = false
 	_dialog = CanvasLayer.new()
 	_dialog.layer = 80
@@ -140,11 +146,11 @@ func _open_dialog() -> void:
 	buttons.add_child(yes)
 	var no := Button.new()
 	no.text = LocalizationState.t("sleep.no")
-	no.pressed.connect(_close_dialog)
+	no.pressed.connect(close_dialog)
 	buttons.add_child(no)
 	# Esc también cierra.
 	var cancel_catcher := _CancelCatcher.new()
-	cancel_catcher.cancelled.connect(_close_dialog)
+	cancel_catcher.cancelled.connect(close_dialog)
 	_dialog.add_child(cancel_catcher)
 	get_tree().root.add_child(_dialog)
 	get_tree().paused = true
@@ -153,17 +159,17 @@ func _open_dialog() -> void:
 	yes.grab_focus()
 
 func _on_save() -> void:
-	GameState.save_player_save()
-	GlobalHUD.show_toast(LocalizationState.t("game.saved"))
-	_close_dialog()
+	var save_error := GameState.save_player_save()
+	GlobalHUD.show_toast(LocalizationState.t("game.saved") if save_error == OK else LocalizationState.t("game.save_failed"))
+	close_dialog()
 
-func _close_dialog() -> void:
+func close_dialog() -> void:
 	if _dialog == null:
 		return
 	_dialog.queue_free()
 	_dialog = null
-	get_tree().paused = false
-	GlobalHUD.set_clock_paused(false)
+	get_tree().paused = _tree_was_paused
+	GlobalHUD.set_clock_paused(_clock_was_paused)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_prompt.visible = _near
 

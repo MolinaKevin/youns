@@ -37,17 +37,17 @@ func show_footprint(mesh_instance: MeshInstance3D, center: Vector2, radius: floa
 	build_tile_disc(mesh_instance, center, radius, 0.0, height)
 
 func build_tile_disc(mesh_instance: MeshInstance3D, center: Vector2, radius: float, inner_radius: float, height: float, exclusions: Array = []) -> void:
-	const CELL := 0.08
 	const BORDER := 0.010
-	var half := CELL * 0.5
+	var cell := CombatGrid.CELL
+	var half := cell * 0.5
 	var fill_vertices := PackedVector3Array()
 	var fill_indices := PackedInt32Array()
 	var border_vertices := PackedVector3Array()
 	var border_indices := PackedInt32Array()
-	for grid_x in range(int(floor((center.x - radius) / CELL)), int(ceil((center.x + radius) / CELL)) + 1):
-		for grid_y in range(int(floor((center.y - radius) / CELL)), int(ceil((center.y + radius) / CELL)) + 1):
-			var x := (grid_x + 0.5) * CELL
-			var z := (grid_y + 0.5) * CELL
+	for grid_x in range(int(floor((center.x - radius) / cell)), int(ceil((center.x + radius) / cell)) + 1):
+		for grid_y in range(int(floor((center.y - radius) / cell)), int(ceil((center.y + radius) / cell)) + 1):
+			var x := (grid_x + 0.5) * cell
+			var z := (grid_y + 0.5) * cell
 			var closest := Vector2(clampf(center.x, x - half, x + half), clampf(center.y, z - half, z + half))
 			if closest.distance_to(center) > radius or (inner_radius > 0.0 and Vector2(x, z).distance_to(center) < inner_radius):
 				continue
@@ -64,16 +64,16 @@ func build_tile_disc(mesh_instance: MeshInstance3D, center: Vector2, radius: flo
 ## TODO: reutilizar desde un preview que necesite casillas planas. Los previews
 ## actuales se apoyan sobre el terreno con `build_cells_on_terrain`.
 func build_flat_cells(mesh_instance: MeshInstance3D, cells: Array[Vector2i], height: float) -> void:
-	const CELL := 0.08
 	const BORDER := 0.010
-	var half := CELL * 0.5
+	var cell_size := CombatGrid.CELL
+	var half := cell_size * 0.5
 	var fill_vertices := PackedVector3Array()
 	var fill_indices := PackedInt32Array()
 	var border_vertices := PackedVector3Array()
 	var border_indices := PackedInt32Array()
 	for cell in cells:
-		var x: float = (cell.x + 0.5) * CELL
-		var z: float = (cell.y + 0.5) * CELL
+		var x: float = (cell.x + 0.5) * cell_size
+		var z: float = (cell.y + 0.5) * cell_size
 		_append_cell(fill_vertices, fill_indices, border_vertices, border_indices, x, z, half, BORDER, height)
 	apply_two_surface_mesh(mesh_instance, fill_vertices, fill_indices, border_vertices, border_indices)
 
@@ -109,20 +109,20 @@ func build_cells_at_heights(mesh_instance: MeshInstance3D, centers: PackedVector
 	apply_two_surface_mesh(mesh_instance, fill_vertices, fill_indices, border_vertices, border_indices)
 
 func build_cone_disc(mesh_instance: MeshInstance3D, origin: Vector2, direction: Vector2, max_range: float, half_angle_deg: float) -> void:
-	const CELL := 0.08
 	const BORDER := 0.010
 	const HEIGHT := 0.02
-	var half := CELL * 0.5
+	var cell := CombatGrid.CELL
+	var half := cell * 0.5
 	var half_angle := deg_to_rad(half_angle_deg)
 	var normalized_direction := direction.normalized()
 	var fill_vertices := PackedVector3Array()
 	var fill_indices := PackedInt32Array()
 	var border_vertices := PackedVector3Array()
 	var border_indices := PackedInt32Array()
-	for grid_x in range(int(floor((origin.x - max_range) / CELL)), int(ceil((origin.x + max_range) / CELL)) + 1):
-		for grid_y in range(int(floor((origin.y - max_range) / CELL)), int(ceil((origin.y + max_range) / CELL)) + 1):
-			var x := (grid_x + 0.5) * CELL
-			var z := (grid_y + 0.5) * CELL
+	for grid_x in range(int(floor((origin.x - max_range) / cell)), int(ceil((origin.x + max_range) / cell)) + 1):
+		for grid_y in range(int(floor((origin.y - max_range) / cell)), int(ceil((origin.y + max_range) / cell)) + 1):
+			var x := (grid_x + 0.5) * cell
+			var z := (grid_y + 0.5) * cell
 			var closest := Vector2(clampf(origin.x, x - half, x + half), clampf(origin.y, z - half, z + half))
 			var to_cell := Vector2(x, z) - origin
 			if closest.distance_to(origin) > max_range or to_cell.length() < 0.001 or absf(normalized_direction.angle_to(to_cell.normalized())) > half_angle:
@@ -147,7 +147,9 @@ func apply_two_surface_mesh(mesh_instance: MeshInstance3D, fill_vertices: Packed
 	mesh_instance.visible = true
 
 func visual_cell_center(world_pos: Vector2) -> Vector2:
-	return Vector2(floor(world_pos.x / 0.08) * 0.08 + 0.04, floor(world_pos.y / 0.08) * 0.08 + 0.04)
+	var cell := CombatGrid.CELL
+	var half := cell * 0.5
+	return Vector2(floor(world_pos.x / cell) * cell + half, floor(world_pos.y / cell) * cell + half)
 
 func show_single_cell(mesh_instance: MeshInstance3D, center: Vector2, terrain_height: float) -> void:
 	build_tile_disc(mesh_instance, center, 0.04, 0.0, terrain_height + 0.03)

@@ -7,4 +7,4 @@ script = ExtResource("1")
 id = "hub"
 scene_path = "res://features/world/zones/zone_hub.tscn"
 offset = Vector3(0, 0, 0)
-connections = ["crossroads", "right", "gym"]
+connections = ["crossroads", "right", "gym", "left", "elbow", "cliffs"]

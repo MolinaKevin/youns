@@ -3,8 +3,9 @@ extends Control
 ## Mapa de prueba dibujado desde ZoneManager.catalog. No depende de arte: toma
 ## las posiciones reales del mundo y muestra zonas y al jugador.
 
-const GAME_WORLD := "res://features/world/game_world/game_world.tscn"
-const TITLE_MENU := "res://features/menus/main_menu/title_menu.tscn"
+const ScenePaths := preload("res://shared/scene_paths.gd")
+const GAME_WORLD := ScenePaths.GAME_WORLD
+const TITLE_MENU := ScenePaths.TITLE_MENU
 
 const MAP_MARGIN := 80.0
 const PANEL_COLOR := Color("#10191b")
@@ -32,12 +33,7 @@ var _close_button: Button
 
 
 func _ready() -> void:
-	ZoneManager.set_world_visible(false)
-	PartyManager.set_party_visible(false)
-	GlobalHUD.set_clock_visible(false)
-	GlobalHUD.set_clock_paused(true)
-	GlobalHUD.set_youns_status_visible(false)
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	ModalScreenContext.enter_fullscreen()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_ui()
 	resized.connect(_refresh_layout)
@@ -159,4 +155,4 @@ func _close() -> void:
 		var return_scene: String = GameState.ui_return.take_scene_path()
 		get_tree().change_scene_to_file(return_scene)
 		return
-	get_tree().change_scene_to_file(TITLE_MENU if not GameState.session_active else GAME_WORLD)
+	get_tree().change_scene_to_file(TITLE_MENU if not GameState.save_service.session_active else GAME_WORLD)

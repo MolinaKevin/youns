@@ -1,6 +1,7 @@
 extends Control
 
 const MenuItem := preload("res://features/menus/main_menu/menu_item.tscn")
+const ScenePaths := preload("res://shared/scene_paths.gd")
 const COLUMNS := 3
 
 const MENU_ITEMS := [
@@ -8,13 +9,11 @@ const MENU_ITEMS := [
 	{name_key = "main_menu.deck",      icon = "res://assets/icons/icon_3.png", scene = "res://features/deck_builder/ui/deck_builder_screen.tscn"},
 	{name_key = "main_menu.map",       icon = "res://assets/icons/icon_4.png", scene = "res://features/map/ui/technical_map.tscn"},
 	{name_key = "main_menu.inventory", icon = "res://assets/icons/icon_5.png", scene = "res://features/items/ui/item_inventory_screen.tscn"},
-	{name_key = "main_menu.sleep",     icon = "res://assets/icons/icon_6.png", scene = ""},
+	{name_key = "main_menu.sleep",     icon = "res://assets/icons/icon_6.png", action = "sleep"},
 	{name_key = "main_menu.evolutions", icon = "res://assets/icons/icon_4.png", scene = "res://features/world/evolution/evolution_tree_screen.tscn"},
 	# Solo después de la primera reencarnación (ver _is_item_unlocked).
 	{name_key = "main_menu.reincarnated_cards", icon = "res://assets/icons/icon_3.png", scene = "res://features/cards/ui/reincarnated_cards_screen.tscn", unlock = "reincarnated_cards"},
 ]
-
-const SLEEP_ITEM_INDEX := 4
 
 signal sleep_requested
 
@@ -30,6 +29,7 @@ signal sleep_requested
 
 var _selected := 0
 var _items: Array = []
+var _visible_menu_items: Array[Dictionary] = []
 var _item_textures: Array[Texture2D] = []
 
 func _ready() -> void:
@@ -57,6 +57,7 @@ func _build_items() -> void:
 		grid.remove_child(item)
 		item.queue_free()
 	_items.clear()
+	_visible_menu_items.clear()
 	_item_textures.clear()
 	for data in MENU_ITEMS:
 		# Los ítems bloqueados van al final de la lista: saltearlos no corre los índices.
@@ -67,6 +68,7 @@ func _build_items() -> void:
 		var tex := load(data.icon) as Texture2D if data.icon != "" else null
 		item.setup(LocalizationState.t(data.name_key), tex)
 		_items.append(item)
+		_visible_menu_items.append(data)
 		_item_textures.append(tex)
 	_selected = mini(_selected, _items.size() - 1)
 	_apply_localized_text()
@@ -112,7 +114,7 @@ func _refresh_gold() -> void:
 
 func _apply_localized_text(_language: String = "") -> void:
 	for index in _items.size():
-		_items[index].setup(LocalizationState.t(MENU_ITEMS[index].name_key), _item_textures[index])
+		_items[index].setup(LocalizationState.t(_visible_menu_items[index].name_key), _item_textures[index])
 	var current_day := maxi(GameState.current_day, 1)
 	var current_year := floori(float(current_day - 1) / 365.0) + 1
 	var day_of_year := ((current_day - 1) % 365) + 1
@@ -121,13 +123,14 @@ func _apply_localized_text(_language: String = "") -> void:
 	_refresh_gold()
 
 func _activate() -> void:
-	if _selected == SLEEP_ITEM_INDEX:
+	var data: Dictionary = _visible_menu_items[_selected]
+	if data.get("action", "") == "sleep":
 		if _is_sleep_time():
 			sleep_requested.emit()
 		return
-	var scene: String = MENU_ITEMS[_selected].scene
+	var scene: String = data.get("scene", "")
 	if scene != "":
-		GameState.ui_return.set_return("res://features/world/game_world/game_world.tscn" if overlay_mode else "")
+		GameState.ui_return.set_return(get_tree().current_scene.scene_file_path if overlay_mode else "")
 		get_tree().paused = false
 		get_tree().change_scene_to_file(scene)
 
@@ -142,8 +145,10 @@ func _is_sleep_time() -> bool:
 	return hour >= data.sleep_hour and hour < data.wake_hour
 
 func _update_sleep_state() -> void:
-	if _items.size() > SLEEP_ITEM_INDEX:
-		_items[SLEEP_ITEM_INDEX].set_disabled(not _is_sleep_time())
+	for index in _visible_menu_items.size():
+		if _visible_menu_items[index].get("action", "") == "sleep":
+			_items[index].set_disabled(not _is_sleep_time())
+			return
 
 func _on_clock_changed(_hour: float, _day: int) -> void:
 	_update_sleep_state()

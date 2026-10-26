@@ -1,5 +1,7 @@
 extends Node
 
+const LabReward := preload("res://data/lab_reward.gd")
+const LabRecipeAction := preload("res://data/lab_recipe_action.gd")
 const RECIPES_PATH := "res://data/lab_recipes/"
 
 signal recipe_completed(recipe: Resource)
@@ -97,14 +99,16 @@ func get_recipe_by_id(id: String) -> Resource:
 # ── Activar / pausar ──────────────────────────────────────────────────────────
 
 func activate_recipe(recipe: Resource) -> void:
-	if recipe.action_type == "instant":
+	if recipe.action_type == LabRecipeAction.UPGRADE and is_recipe_completed(recipe.id):
+		return
+	if recipe.action_type == LabRecipeAction.INSTANT:
 		if not has_ingredients(recipe):
 			return
 		_pause_current()
-		_consume_ingredients(recipe)
-		_process_reward(recipe.reward, recipe.recipe_name)
+		consume_ingredients(recipe)
+		grant_reward(recipe.reward, recipe.recipe_name)
 		for r in recipe.extra_rewards:
-			_process_reward(r, recipe.recipe_name)
+			grant_reward(r, recipe.recipe_name)
 		recipe_completed.emit(recipe)
 		return
 	if recipe.id == active_recipe_id:
@@ -113,19 +117,22 @@ func activate_recipe(recipe: Resource) -> void:
 	if not is_resuming:
 		if not has_ingredients(recipe):
 			return
-		_consume_ingredients(recipe)
+		consume_ingredients(recipe)
 	_pause_current()
 	_start_recipe(recipe)
 
 func has_ingredients(recipe: Resource) -> bool:
 	if GameState.player_save != null and GameState.player_save.gold < recipe.gold_cost:
 		return false
-	for ing in recipe.ingredients:
+	return _has_enough_ingredients(recipe.ingredients)
+
+func _has_enough_ingredients(ingredients: Array) -> bool:
+	for ing in ingredients:
 		if pending_output.get(ing["id"], {}).get("count", 0) < ing["amount"]:
 			return false
 	return true
 
-func _consume_ingredients(recipe: Resource) -> void:
+func consume_ingredients(recipe: Resource) -> void:
 	if recipe.gold_cost > 0 and GameState.player_save != null:
 		GameState.player_save.gold = max(0, GameState.player_save.gold - recipe.gold_cost)
 	for ing in recipe.ingredients:
@@ -136,6 +143,12 @@ func _consume_ingredients(recipe: Resource) -> void:
 		else:
 			pending_output[item_id]["count"] = new_count
 	pending_output_changed.emit()
+
+## Pausa la receta activa y guarda su avance en memoria. La UI y los cambios
+## de partida pueden usarlo sin depender del temporizador interno.
+func pause_active_recipe() -> void:
+	_pause_current()
+
 
 func _pause_current() -> void:
 	if active_recipe_id == "" or active_timer == null:
@@ -165,39 +178,74 @@ func _start_recipe(recipe: Resource) -> void:
 	add_child(active_timer)
 
 func _on_recipe_complete(recipe: Resource) -> void:
-	_process_reward(recipe.reward, recipe.recipe_name)
+	grant_reward(recipe.reward, recipe.recipe_name)
 	for r in recipe.extra_rewards:
-		_process_reward(r, recipe.recipe_name)
+		grant_reward(r, recipe.recipe_name)
 	recipe_progress.erase(recipe.id)
-	if recipe.action_type != "upgrade":
+	if recipe.action_type != LabRecipeAction.UPGRADE:
 		if has_ingredients(recipe):
-			_consume_ingredients(recipe)
+			consume_ingredients(recipe)
 			_start_recipe(recipe)
 		else:
 			active_recipe_id = ""
 	else:
 		active_recipe_id = ""
-		_complete_recipe(recipe.id)
+		complete_recipe(recipe.id)
 	recipe_completed.emit(recipe)
 
-func _process_reward(reward: Dictionary, _recipe_name: String) -> void:
-	match reward.get("type", ""):
-		"unlock_recipe":
-			unlock_recipe(reward["id"])
-		"unlock_clock_ui":
-			GameState.player_save.clock_ui_unlocked = true
-			GlobalHUD.sync_overworld_ui_visibility()
-		"unlock_care_ui":
-			GameState.player_save.care_ui_unlocked = true
-			GlobalHUD.sync_overworld_ui_visibility()
-		"item":
-			var item_id: String = reward["id"]
-			var item_recipe := get_recipe_by_id(item_id)
-			var item_name: String = item_recipe.item_name if item_recipe and item_recipe.item_name != "" else item_id
-			if item_recipe and item_name == item_id:
-				item_name = item_recipe.recipe_name
-			_add_output_item(item_id, item_name, reward.get("amount", 1), 99)
-			_check_indirect_unlocks(item_id)
+func grant_reward(reward: Dictionary, _recipe_name: String) -> void:
+	if GameState.player_save == null:
+		return
+	match LabReward.type_of(reward):
+		LabReward.UNLOCK_RECIPE:
+			_grant_unlock_recipe(reward)
+		LabReward.UNLOCK_CLOCK_UI:
+			_grant_unlock_clock_ui()
+		LabReward.UNLOCK_CARE_UI:
+			_grant_unlock_care_ui()
+		LabReward.ITEM:
+			_grant_item(reward)
+		LabReward.WORLD_BRIDGE:
+			_grant_world_bridge(reward)
+		LabReward.YOUN_GROWTH_BONUS:
+			_grant_youn_growth_bonus(reward)
+		LabReward.MATERIAL_PRODUCTION:
+			_grant_material_production(reward)
+		LabReward.MAX_HP:
+			_grant_max_hp(reward)
+
+func _grant_unlock_recipe(reward: Dictionary) -> void:
+	unlock_recipe(reward["id"])
+
+func _grant_unlock_clock_ui() -> void:
+	GameState.player_save.clock_ui_unlocked = true
+	GlobalHUD.sync_overworld_ui_visibility()
+
+func _grant_unlock_care_ui() -> void:
+	GameState.player_save.care_ui_unlocked = true
+	GlobalHUD.sync_overworld_ui_visibility()
+
+func _grant_item(reward: Dictionary) -> void:
+	var item_id: String = reward["id"]
+	var item_recipe := get_recipe_by_id(item_id)
+	var item_name: String = item_recipe.item_name if item_recipe and item_recipe.item_name != "" else item_id
+	if item_recipe and item_name == item_id:
+		item_name = item_recipe.recipe_name
+	add_output_item(item_id, item_name, reward.get("amount", 1), 99)
+	check_indirect_unlocks(item_id)
+
+func _grant_world_bridge(reward: Dictionary) -> void:
+	GameState.player_save.world_progress.unlock_construction(str(reward.get("id", "")))
+
+func _grant_youn_growth_bonus(reward: Dictionary) -> void:
+	GameState.player_save.lab_youn_growth_bonus += maxi(0, int(reward.get("value", 0)))
+
+func _grant_material_production(reward: Dictionary) -> void:
+	add_output_item("datos", LocalizationState.item_name("datos", "datos"), reward.get("value", 1), 99)
+	check_indirect_unlocks("datos")
+
+func _grant_max_hp(reward: Dictionary) -> void:
+	GameState.player_save.lab_max_hp_bonus += maxi(0, int(reward.get("value", 0)))
 
 
 ## Acredita al depósito los Ecos juntados en un combate (ver CombatState.echoes_earned).
@@ -205,7 +253,7 @@ func deposit_echoes(counts: Dictionary) -> void:
 	_echoes.deposit(counts)
 
 
-func _add_output_item(item_id: String, item_name: String, amount: int, limit: int) -> void:
+func add_output_item(item_id: String, item_name: String, amount: int, limit: int) -> void:
 	var current_count: int = pending_output.get(item_id, {}).get("count", 0)
 	if current_count >= limit or amount <= 0:
 		return
@@ -233,6 +281,11 @@ func take_all_output() -> Dictionary:
 	pending_output.clear()
 	pending_output_changed.emit()
 	return result
+
+## Devuelve al depósito lo que no pudo entrar al inventario del jugador.
+func restore_output(entries: Dictionary) -> void:
+	pending_output = entries.duplicate(true)
+	pending_output_changed.emit()
 
 # ── Columnas desbloqueadas ────────────────────────────────────────────────────
 
@@ -263,22 +316,17 @@ func is_recipe_unlocked(recipe_id: String) -> bool:
 func is_recipe_completed(recipe_id: String) -> bool:
 	return GameState.player_save.completed_recipe_ids.has(recipe_id)
 
-func _complete_recipe(recipe_id: String) -> void:
+func complete_recipe(recipe_id: String) -> void:
 	if GameState.player_save.completed_recipe_ids.has(recipe_id):
 		return
 	GameState.player_save.completed_recipe_ids.append(recipe_id)
 
 # ── Desbloqueo indirecto ──────────────────────────────────────────────────────
 
-func _check_indirect_unlocks(produced_item_id: String) -> void:
+func check_indirect_unlocks(produced_item_id: String) -> void:
 	var candidates: Array = recipes_by_ingredient.get(produced_item_id, [])
 	for recipe in candidates:
 		if recipe.needs_research or is_recipe_unlocked(recipe.id) or is_recipe_completed(recipe.id):
 			continue
-		var satisfied := true
-		for ing in recipe.ingredients:
-			if pending_output.get(ing["id"], {}).get("count", 0) < ing["amount"]:
-				satisfied = false
-				break
-		if satisfied:
+		if _has_enough_ingredients(recipe.ingredients):
 			unlock_recipe(recipe.id)

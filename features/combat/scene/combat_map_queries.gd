@@ -1,21 +1,26 @@
 class_name CombatMapQueries
 extends RefCounted
 
+const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
+
 ## Consultas geométricas puras del tablero. Lee el estado espacial de MapArea,
 ## pero no lo modifica: LOS, intersecciones y distancias a obstáculos.
-var map: Node
+var map: MapArea
 
 func has_line_of_sight(from: Vector2, to: Vector2) -> bool:
-	return line_of_sight_clear(from, to, false, true, map._elevation_at(from), map._elevation_at(to))
+	return line_of_sight_clear(from, to, false, true, map.elevation_at(from), map.elevation_at(to))
+
+func movement_distance(from: Vector2, to: Vector2) -> float:
+	return from.distance_to(to)
 
 func line_of_sight_clear(from: Vector2, to: Vector2, block_rocks: bool, block_bridges: bool, from_elevation: int, to_elevation: int) -> bool:
-	for obstacle: Dictionary in map.solid_obstacles:
-		var obstacle_type: String = obstacle.get("type", "solid")
-		if obstacle_type == "rock" and not block_rocks:
+	for obstacle: Dictionary in map.terrain.obstacles():
+		var obstacle_type := CombatObstacle.type_of(obstacle)
+		if obstacle_type == CombatObstacle.ROCK and not block_rocks:
 			continue
-		if obstacle_type == "bridge" and not block_bridges:
+		if obstacle_type == CombatObstacle.BRIDGE and not block_bridges:
 			continue
-		if obstacle_type == "platform":
+		if obstacle_type == CombatObstacle.PLATFORM:
 			if from_elevation > 0 or to_elevation > 0:
 				continue
 			if segment_hits_box(from, to, obstacle["pos"], obstacle["box"] * 0.5):
@@ -30,8 +35,8 @@ func line_of_sight_clear(from: Vector2, to: Vector2, block_rocks: bool, block_br
 
 func clip_path_at_obstacle(from: Vector2, to: Vector2) -> Vector2:
 	var closest_time := 1.0
-	for obstacle: Dictionary in map.solid_obstacles:
-		if obstacle.get("type", "solid") == "rock":
+	for obstacle: Dictionary in map.terrain.obstacles():
+		if CombatObstacle.type_of(obstacle) == CombatObstacle.ROCK:
 			continue
 		var hit_time := segment_hit_time_box(from, to, obstacle["pos"], obstacle["box"] * 0.5) if obstacle.has("box") else segment_hit_time_circle(from, to, obstacle["pos"], obstacle["radius"])
 		if hit_time >= 0.0 and hit_time < closest_time:
@@ -46,7 +51,7 @@ static func is_pos_in_zones(pos: Vector2, zones: Array) -> bool:
 	return false
 
 func actors_gap() -> float:
-	return map.player_pos.distance_to(map.enemy_pos) - map._player_shadow_radius - map._enemy_shadow_radius
+	return map.player_pos.distance_to(map.enemy_pos) - map.actors.player_radius() - map.actors.enemy_radius()
 
 func is_enemy_in_attack_range(attack_range: float) -> bool:
 	return actors_gap() <= attack_range + CombatGrid.CELL * 0.5 and has_line_of_sight(map.player_pos, map.enemy_pos)
@@ -58,10 +63,10 @@ func is_player_in_melee_range() -> bool:
 	return map.enemy_pos.distance_to(map.player_pos) <= 1.5
 
 func player_area_contact_radius() -> float:
-	return map._player_shadow_radius * map.AREA_CONTACT_FRACTION
+	return map.actors.player_radius() * map.AREA_CONTACT_FRACTION
 
 func enemy_area_contact_radius() -> float:
-	return map._enemy_shadow_radius * map.AREA_CONTACT_FRACTION
+	return map.actors.enemy_radius() * map.AREA_CONTACT_FRACTION
 
 func is_enemy_in_zones(zones: Array) -> bool:
 	for zone in zones:
@@ -96,10 +101,10 @@ func is_player_in_area_circle(center: Vector2, radius: float) -> bool:
 	return center.distance_to(map.player_pos) <= radius + player_area_contact_radius()
 
 func is_enemy_in_circle(center: Vector2, radius: float) -> bool:
-	return center.distance_to(map.enemy_pos) <= radius + map._enemy_shadow_radius
+	return center.distance_to(map.enemy_pos) <= radius + map.actors.enemy_radius()
 
 func is_player_in_circle(center: Vector2, radius: float) -> bool:
-	return center.distance_to(map.player_pos) <= radius + map._player_shadow_radius
+	return center.distance_to(map.player_pos) <= radius + map.actors.player_radius()
 
 static func obstacle_edge_distance(obstacle: Dictionary, pos: Vector2) -> float:
 	var center: Vector2 = obstacle["pos"]

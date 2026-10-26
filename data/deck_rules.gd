@@ -34,8 +34,16 @@ static func add_card(save: PlayerSaveData, card: CardData) -> CardData:
 	if save == null or card == null:
 		return null
 	ensure_deck(save)
+	return clone_into(save.deck, card)
+
+## Agrega una copia de la carta a un mazo cualquiera. Lo usa add_card() con el
+## mazo real de la partida, y el editor de mazo con su borrador local (todavía
+## no es save.deck hasta que el jugador confirma "Guardar").
+static func clone_into(deck: Array[CardData], card: CardData) -> CardData:
+	if card == null:
+		return null
 	var copy := card.clone()
-	save.deck.append(copy)
+	deck.append(copy)
 	return copy
 
 ## Cambia la mitad a una inteligencia: su color pasa a ser el de esa inteligencia.
@@ -52,4 +60,11 @@ static func add_line(action: CardAction, line: CardActionLine) -> bool:
 	if not can_add_line(action) or line == null:
 		return false
 	action.lines.append(line.duplicate())
+	return true
+
+## Deshace add_line(): saca la última línea de la mitad. false si no tenía.
+static func remove_last_line(action: CardAction) -> bool:
+	if action == null or action.lines.is_empty():
+		return false
+	action.lines.pop_back()
 	return true

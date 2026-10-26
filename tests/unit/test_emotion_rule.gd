@@ -1,10 +1,16 @@
 extends GutTest
 
 var save: PlayerSaveData
+var _previous_time_of_day_hours := 0.0
 
 
 func before_each() -> void:
+	_previous_time_of_day_hours = GameState.time_of_day_hours
 	save = PlayerSaveData.new()
+
+
+func after_each() -> void:
+	GameState.time_of_day_hours = _previous_time_of_day_hours
 
 
 # ── sick ──────────────────────────────────────────────────────────────────────

@@ -3,7 +3,8 @@ extends Control
 ## Escena puente entre el menú y el exterior. Se muestra un frame antes de
 ## construir el mundo para que el usuario vea que la partida está cargando.
 
-const GAME_WORLD := "res://features/world/game_world/game_world.tscn"
+const ScenePaths := preload("res://shared/scene_paths.gd")
+const GAME_WORLD := ScenePaths.GAME_WORLD
 
 @onready var status_label: Label = $Center/Panel/Margin/VBox/Status
 
@@ -18,9 +19,9 @@ func _ready() -> void:
 func _load_world() -> void:
 	# Deja que la pantalla se dibuje antes del trabajo pesado síncrono.
 	await get_tree().process_frame
-	status_label.text = "Preparando compañero…"
+	status_label.text = LocalizationState.t("world.loading.prepare_companion")
 	PartyManager.initialize_party()
-	status_label.text = "Construyendo el mundo…"
+	status_label.text = LocalizationState.t("world.loading.build_world")
 	ZoneManager.initialize_world()
 	# También deja correr el spawn diferido del hub antes de restaurar ubicación.
 	await get_tree().process_frame

@@ -47,7 +47,7 @@ const TREE_EDGE_MARGIN := 1.5
 const TREE_EDGE_HEIGHT := 1.0
 ## Donde un NoAutoFill toca el suelo, sus triángulos se cortan hasta este largo
 ## de arista para que el recorte siga la forma de la exclusión.
-const MAX_EDGE := 2.0
+const MAX_EDGE := 4.0
 const WATER_MATERIAL := "res://features/world/water/water.tres"
 ## El agua se corta en triángulos de hasta este largo para que el shader pueda
 ## mover los vértices (las olas).
@@ -130,16 +130,26 @@ func has_guides() -> bool:
 ## WorldBoundary: sólo se consulta para no plantar árboles sobre lo caminable
 ## ni a menos de `clearance` celdas de su borde.
 func build(parent: Node3D, grid: WorldBoundaryGrid, clearance: int, spacing: float, tree_seed: int) -> void:
+	var started_at := Time.get_ticks_msec()
+	var checkpoint := started_at
+	if DebugSettings.verbose_logging_enabled:
+		print("[AutoDecoration] Construyendo decoración global…")
 	var ground := ground_triangles()
+	checkpoint = _log_build_step("Preparación de suelo (%d triángulos)" % (ground.size() / 3), started_at, checkpoint)
 	if not ground.is_empty():
 		parent.add_child(_ground_mesh(ground))
+	checkpoint = _log_build_step("Creación de malla de suelo", started_at, checkpoint)
 	var water := water_triangles()
+	checkpoint = _log_build_step("Preparación de agua (%d triángulos)" % (water.size() / 3), started_at, checkpoint)
 	if not water.is_empty():
 		parent.add_child(_water_mesh(water))
+	checkpoint = _log_build_step("Creación de malla de agua", started_at, checkpoint)
 	_tree_positions = tree_positions(grid, clearance, spacing, tree_seed)
+	checkpoint = _log_build_step("Cálculo de %d posiciones de árboles" % _tree_positions.size(), started_at, checkpoint)
 	if _tree_positions.is_empty():
 		return
 	var templates := ForestBuilder.library_templates(TREE_GROUP)
+	checkpoint = _log_build_step("Carga de %d plantillas de árbol" % templates.size(), started_at, checkpoint)
 	if templates.is_empty():
 		return
 	var rng := RandomNumberGenerator.new()
@@ -147,7 +157,16 @@ func build(parent: Node3D, grid: WorldBoundaryGrid, clearance: int, spacing: flo
 	var trees: Array = []
 	for p in _tree_positions:
 		trees.append([rng.randi() % templates.size(), ForestBuilder.random_tree_transform(rng, p)])
+	checkpoint = _log_build_step("Preparación de transformaciones", started_at, checkpoint)
 	ForestBuilder.add_trees(parent, templates, trees)
+	_log_build_step("Instanciación de árboles", started_at, checkpoint)
+
+
+func _log_build_step(step: String, started_at: int, previous_at: int) -> int:
+	var now := Time.get_ticks_msec()
+	if DebugSettings.verbose_logging_enabled:
+		print("[AutoDecoration] %s: +%d ms (total: %d ms)" % [step, now - previous_at, now - started_at])
+	return now
 
 ## Dónde quedaron los árboles del último build() (para tests y depuración).
 func built_tree_positions() -> Array[Vector3]:
@@ -219,7 +238,7 @@ func _ground_mesh(tris: PackedVector3Array) -> MeshInstance3D:
 			st.set_normal(n)
 			st.set_uv(Vector2(v.x, v.z) / GROUND_UV_SIZE)
 			st.add_vertex(v)
-	var mat := ForestBuilder._ground_material().duplicate() as StandardMaterial3D
+	var mat := ForestBuilder.ground_material().duplicate() as StandardMaterial3D
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	var mi := MeshInstance3D.new()
 	mi.name = "AutoGround"

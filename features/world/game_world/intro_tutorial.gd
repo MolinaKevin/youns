@@ -52,7 +52,7 @@ func is_active() -> bool:
 
 
 func start() -> void:
-	if GameState.world_combat.active or GameState.world_intro_seen:
+	if GameState.world_combat.active or GameState.save_service.world_intro_seen:
 		visible = false
 		return
 	_active = true
@@ -61,7 +61,7 @@ func start() -> void:
 	GlobalHUD.set_clock_visible(false)
 	GlobalHUD.set_clock_paused(true)
 	GlobalHUD.set_youns_status_visible(false)
-	PartyManager.camera_rig.enabled = false
+	PartyManager.freeze_camera()
 	PartyManager.player.movement_locked = true
 	PartyManager.youn.movement_locked = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -93,12 +93,12 @@ func handle_input(event: InputEvent) -> bool:
 
 func _close() -> void:
 	_active = false
-	GameState.world_intro_seen = true
+	GameState.save_service.world_intro_seen = true
 	visible = false
 	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
 	GlobalHUD.set_clock_paused(false)
 	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
-	PartyManager.camera_rig.enabled = true
+	PartyManager.unfreeze_camera()
 	PartyManager.player.movement_locked = false
 	PartyManager.youn.movement_locked = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED

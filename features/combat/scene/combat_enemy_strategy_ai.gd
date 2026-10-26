@@ -50,7 +50,7 @@ func _pick_best_from(actions: Array) -> AiAction:
 	for action in actions:
 		if not _conditions_met(action):
 			continue
-		var score := _compute_score(action)
+		var score := score_action(action)
 		if score > best_score:
 			best_score = score
 			best = action
@@ -66,7 +66,7 @@ func _conditions_met_list(conditions: Array) -> bool:
 	return true
 
 func _eval_condition(cond: AiCondition) -> bool:
-	var dist: float = host.map_area.movement_distance(host.map_area.enemy_pos, host.map_area.player_pos)
+	var dist: float = host.map_area.queries.movement_distance(host.map_area.enemy_pos, host.map_area.player_pos)
 	match cond.type:
 		"always":
 			return true
@@ -74,10 +74,10 @@ func _eval_condition(cond: AiCondition) -> bool:
 			return dist <= cond.check_range
 		"player_in_range":
 			return dist <= cond.check_range \
-				and host.map_area.has_line_of_sight(host.map_area.enemy_pos, host.map_area.player_pos)
+				and host.map_area.queries.has_line_of_sight(host.map_area.enemy_pos, host.map_area.player_pos)
 		"player_out_of_range":
 			return dist > cond.check_range \
-				or not host.map_area.has_line_of_sight(host.map_area.enemy_pos, host.map_area.player_pos)
+				or not host.map_area.queries.has_line_of_sight(host.map_area.enemy_pos, host.map_area.player_pos)
 		"player_far":
 			return dist > 15.0
 		"self_hp_low":
@@ -85,14 +85,14 @@ func _eval_condition(cond: AiCondition) -> bool:
 		"self_hp_critical":
 			return float(host.state.enemy_hp) / float(host.state.enemy_max_hp) < 0.15
 		"has_los":
-			return host.map_area.has_line_of_sight(host.map_area.enemy_pos, host.map_area.player_pos)
+			return host.map_area.queries.has_line_of_sight(host.map_area.enemy_pos, host.map_area.player_pos)
 		"player_hidden":
 			return host._had_los \
-				and not host.map_area.has_line_of_sight(host.map_area.enemy_pos, host.map_area.player_pos)
+				and not host.map_area.queries.has_line_of_sight(host.map_area.enemy_pos, host.map_area.player_pos)
 	push_warning("CombatEnemyAI: condición desconocida '%s'" % cond.type)
 	return false
 
-func _compute_score(action: AiAction) -> float:
+func score_action(action: AiAction) -> float:
 	var score := action.base_score
 	if float(host.state.enemy_hp) / float(host.state.enemy_max_hp) < 0.3:
 		score *= action.score_multiplier_low_hp
@@ -102,31 +102,31 @@ func execute_action(action: AiAction) -> void:
 	match action.action_type:
 		"melee_attack":
 			if host.state.player_in_tree:
-				host.log_requested.emit("El enemigo no te alcanza: estás arriba del árbol.")
+				CombatLog.emit_requested(host.log_requested, "combat.log.enemy.cannot_reach_tree")
 				return
-			host.log_requested.emit("Enemy strikes for %d!" % action.damage)
-			await host._deal_damage_to_player.call(action.damage, false, action.damage_type)
+			CombatLog.emit_requested(host.log_requested, "combat.log.enemy.strikes", [action.damage])
+			await host.deal_damage_to_player.call(action.damage, false, action.damage_type)
 			await host._try_player_counter()
 		"range_attack":
-			if host.state.enemy_blinded_turns > 0 and host.map_area.movement_distance(host.map_area.enemy_pos, host.map_area.player_pos) > 2.0:
-				host.log_requested.emit("El enemigo está cegado y no puede atacar a distancia.")
+			if host.state.enemy_blinded_turns > 0 and host.map_area.queries.movement_distance(host.map_area.enemy_pos, host.map_area.player_pos) > 2.0:
+				CombatLog.emit_requested(host.log_requested, "combat.log.enemy.blinded_no_ranged")
 				return
 			if host.state.player_in_tree:
-				host.log_requested.emit("El enemigo no te alcanza: estás arriba del árbol.")
+				CombatLog.emit_requested(host.log_requested, "combat.log.enemy.cannot_reach_tree")
 				return
-			host.log_requested.emit("Enemy shoots for %d!" % action.damage)
-			await host._deal_damage_to_player.call(action.damage, false, action.damage_type)
+			CombatLog.emit_requested(host.log_requested, "combat.log.enemy.shoots", [action.damage])
+			await host.deal_damage_to_player.call(action.damage, false, action.damage_type)
 		"move_toward":
-			await host._move_enemy(host.map_area.player_pos, action.move_range, "Enemy moves closer.")
+			await host._move_enemy(host.map_area.player_pos, action.move_range, "combat.log.enemy.moves_closer")
 		"move_away":
-			await host._move_enemy(host._retreat_target(action.move_range), action.move_range, "Enemy retreats!")
+			await host._move_enemy(host._retreat_target(action.move_range), action.move_range, "combat.log.enemy.retreats")
 		"move_to_last_known":
-			await host._move_enemy(host.last_known_player_pos, action.move_range, "Enemy searches last known position.")
+			await host._move_enemy(host.last_known_player_pos, action.move_range, "combat.log.enemy.searches")
 		"block":
 			host.state.enemy_block += action.block_amount
-			host.log_requested.emit("Enemy braces! (%d block)" % action.block_amount)
+			CombatLog.emit_requested(host.log_requested, "combat.log.enemy.braces", [action.block_amount])
 		"ward":
 			host.state.enemy_ward += action.block_amount
-			host.log_requested.emit("El enemigo levanta un escudo mágico (%d)." % action.block_amount)
+			CombatLog.emit_requested(host.log_requested, "combat.log.enemy.ward", [action.block_amount])
 		_:
 			push_warning("CombatEnemyAI: tipo de acción desconocido '%s'" % action.action_type)

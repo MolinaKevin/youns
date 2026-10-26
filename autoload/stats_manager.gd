@@ -121,6 +121,13 @@ func apply_bathroom_accident() -> void:
 func on_meal_eaten() -> void:
 	care_service.on_meal_eaten()
 
+## Las cuatro interacciones del menú rápido (quick_menu.gd): efecto de
+## premiar, castigar, negarle algo o jugar con el Youn.
+func reward_youn() -> void: care_service.reward()
+func punish_youn() -> void: care_service.punish()
+func deny_youn() -> void:   care_service.deny()
+func play_with_youn() -> void: care_service.play()
+
 func apply_stat_decay() -> void:
 	care_service.apply_decay()
 
@@ -160,7 +167,7 @@ func check_status() -> void:
 	if _life_stage.check_health_death():
 		return
 	check_emotions()
-	_evaluate_emotion_rules()
+	evaluate_emotion_rules()
 	check_evolution()
 
 func check_evolution() -> void:
@@ -191,7 +198,7 @@ func complete_evolution() -> Dictionary:
 func check_emotions() -> void:
 	emotion_service.check_expirations()
 
-func _evaluate_emotion_rules() -> void:
+func evaluate_emotion_rules() -> void:
 	emotion_service.evaluate_rules()
 
 # El flag enfermo se guarda en la partida pero las emociones no: si el Youn

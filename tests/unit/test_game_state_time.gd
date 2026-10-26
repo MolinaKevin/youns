@@ -2,10 +2,25 @@ extends GutTest
 
 # GameState es un autoload — está disponible globalmente en los tests
 
+var _previous_day := 1
+var _previous_time_of_day_hours := 8.0
+var _previous_clock_paused := false
+var _previous_save: PlayerSaveData
 
 func before_each() -> void:
+	_previous_day = GameState.current_day
+	_previous_time_of_day_hours = GameState.time_of_day_hours
+	_previous_clock_paused = GameState.clock_paused
+	_previous_save = GameState.player_save
 	GameState.current_day = 1
 	GameState.time_of_day_hours = 8.0
+
+
+func after_each() -> void:
+	GameState.current_day = _previous_day
+	GameState.time_of_day_hours = _previous_time_of_day_hours
+	GameState.clock_paused = _previous_clock_paused
+	GameState.player_save = _previous_save
 
 
 # ── get_time_string ───────────────────────────────────────────────────────────
@@ -83,7 +98,7 @@ func test_discard_pending_ticks_no_emite_los_ticks_salteados() -> void:
 	GameState.twenty_min_ticked.connect(count)
 	GameState.time_of_day_hours = 17.0  # 9 h de salto
 	GameState.discard_pending_ticks()
-	GameState._process(0.0)
+	GameState.advance_real_seconds(0.0)
 	GameState.twenty_min_ticked.disconnect(count)
 	GameState.clock_paused = was_paused
 	GameState.player_save = save_backup
@@ -100,7 +115,7 @@ func test_sin_discard_los_ticks_salteados_se_emiten() -> void:
 	var count := func() -> void: ticks[0] += 1
 	GameState.twenty_min_ticked.connect(count)
 	GameState.time_of_day_hours = 9.0  # 1 h de salto: 3 ticks
-	GameState._process(0.0)
+	GameState.advance_real_seconds(0.0)
 	GameState.twenty_min_ticked.disconnect(count)
 	GameState.clock_paused = was_paused
 	GameState.player_save = save_backup

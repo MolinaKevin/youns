@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="WorldConstruction" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/world/world_construction.gd" id="1_construction"]
+
+[resource]
+script = ExtResource("1_construction")
+id = "river_bridge"
+unlock_recipe_id = "construccion_de_puente"
+zone_id = "hub"
+scene_path = "res://assets/maps/hub/river_bridge.glb"
+node_name = "RiverBridge"
+position = Vector3(-33.5, 0, 10)
+blocker_path = NodePath("BridgeBlocker/Col")

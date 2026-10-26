@@ -21,10 +21,7 @@ static func run(action_anim: String) -> void:
 	if running or not is_instance_valid(player) or not is_instance_valid(youn):
 		return
 	running = true
-	player.set_physics_process(false)
-	player.velocity = Vector3.ZERO
-	youn.set_physics_process(false)
-	youn.velocity = Vector3.ZERO
+	PartyManager.freeze_actors()
 	player.set_anim_base("idle")
 
 	# 1. El jugador se da vuelta hacia el Youn.
@@ -58,8 +55,7 @@ static func run(action_anim: String) -> void:
 	await player.get_tree().create_timer(length, false).timeout
 	player.stop_action()
 
-	player.set_physics_process(true)
-	youn.set_physics_process(true)
+	PartyManager.unfreeze_actors()
 	running = false
 
 

@@ -49,6 +49,10 @@ text = "Deck Builder"
 layout_mode = 2
 text = "Guardar"
 
+[node name="BackButton" type="Button" parent="MarginContainer/MainVBox/Header"]
+layout_mode = 2
+text = "Volver"
+
 [node name="Body" type="HBoxContainer" parent="MarginContainer/MainVBox" unique_id=1786760382]
 layout_mode = 2
 size_flags_vertical = 3

@@ -1,8 +1,7 @@
 extends CanvasLayer
 
 var enabled := false
-var _clock_was_visible := true
-var _status_was_visible := false
+var _modal := ModalScreenContext.new()
 
 @onready var title_label = $Panel/VBox/Title
 @onready var continue_button = $Panel/VBox/ContinueButton
@@ -27,20 +26,12 @@ func _unhandled_input(event: InputEvent) -> void:
 			open()
 
 func open() -> void:
-	_clock_was_visible = GlobalHUD.clock_visible
-	_status_was_visible = GlobalHUD.youns_status_visible
-	GlobalHUD.set_clock_visible(false)
-	GlobalHUD.set_clock_paused(true)
-	GlobalHUD.set_youns_status_visible(false)
+	_modal.enter_overlay(self, true, true)
 	show()
-	get_tree().paused = true
 
 func close() -> void:
-	GlobalHUD.set_clock_paused(false)
-	GlobalHUD.set_clock_visible(_clock_was_visible)
-	GlobalHUD.set_youns_status_visible(_status_was_visible)
+	_modal.exit_overlay(self)
 	hide()
-	get_tree().paused = false
 
 func _on_deck() -> void:
 	close()

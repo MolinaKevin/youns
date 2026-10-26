@@ -177,11 +177,15 @@ func restore_pending_evolution() -> void:
 	call_deferred("_on_evolution_triggered", from_data, to_data)
 
 func _on_evolution_triggered(from_data: YounData, to_data: YounData) -> void:
+	# StatsManager también emite esta señal durante tests y fuera del mundo 3D.
+	# En ese caso la evolución queda pendiente en el save y game_world la retoma
+	# con restore_pending_evolution() cuando ya existen cámara, party e iluminación.
+	if not ZoneManager.is_world_initialized() or not is_instance_valid(world_lighting):
+		return
 	await get_tree().create_timer(4.0).timeout
 	var cam_transform := get_viewport().get_camera_3d().global_transform
-	PartyManager.camera_rig.enabled = false
-	PartyManager.player.set_physics_process(false)
-	PartyManager.youn.set_physics_process(false)
+	PartyManager.freeze_camera()
+	PartyManager.freeze_actors()
 	GlobalHUD.set_clock_paused(true)
 
 	var evo := EVOLUTION_SCENE.instantiate()
@@ -244,9 +248,8 @@ func _show_evolution_discovery(result: Dictionary) -> void:
 ## Devuelve el control al jugador después de las pantallas de evolución.
 func _end_evolution() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	PartyManager.camera_rig.enabled = true
-	PartyManager.player.set_physics_process(true)
-	PartyManager.youn.set_physics_process(true)
+	PartyManager.unfreeze_camera()
+	PartyManager.unfreeze_actors()
 	GlobalHUD.set_clock_paused(false)
 	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
 	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())

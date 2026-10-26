@@ -1,7 +1,8 @@
 extends ItemEffect
 class_name ItemEffectGive
 
-const MAX_STACK := 20
+const InventoryService := preload("res://shared/inventory_service.gd")
+const MAX_STACK := InventoryService.MAX_STACK
 
 enum GiveType { GOLD, CARD, ITEM }
 
@@ -25,17 +26,13 @@ func apply(save: PlayerSaveData) -> void:
 			var data := load(item_data_path) as ItemData
 			if data == null:
 				return
-			apply_item(save.inventory_items, data)
+			apply_item(save.inventory_items, data, save.inventory_slots)
 
-func apply_item(items: Array, data: ItemData) -> void:
-	for entry in items:
-		if entry.get("id", "") == data.id:
-			entry["count"] = mini(int(entry.get("count", 1)) + amount, MAX_STACK)
-			return
-	items.append({
+func apply_item(items: Array[Dictionary], data: ItemData, capacity := 999999) -> Dictionary:
+	return InventoryService.add_entry(items, {
 		"id": data.id,
 		"name": data.name,
 		"icon": data.icon.resource_path if data.icon else "",
 		"data_path": item_data_path,
-		"count": mini(amount, MAX_STACK),
-	})
+		"count": amount,
+	}, capacity, MAX_STACK)

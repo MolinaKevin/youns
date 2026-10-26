@@ -8,8 +8,8 @@ extends Node3D
 ##
 ## Vive como hijo de MapArea, que se asigna a sí mismo en `map` antes de
 ## agregarlo al árbol (ver MapArea._init()) — lo necesita para la malla
-## compartida (_show_disc), el límite del mapa (WORLD_W/WORLD_H), el frenado
-## en obstáculos (_clip_path_at_obstacle, compartido con Push) y el chequeo de
+## compartida (show_disc), el límite del mapa (WORLD_W/WORLD_H), el frenado
+## en obstáculos (clip_path_at_obstacle, compartido con Push) y el chequeo de
 ## si el enemigo queda en el área (is_enemy_in_area_circle).
 
 ## Asignado por MapArea antes de add_child(self) — ver MapArea._init().
@@ -33,13 +33,13 @@ func calculate_landing(from: Vector2, target: Vector2, bounce: float) -> Vector2
 	else:
 		var dir := (target - from).normalized()
 		result  = target + dir.rotated(randf_range(-PI / 5.0, PI / 5.0)) * bounce * 10.0
-		result  = Vector2(clampf(result.x, 0.0, map.WORLD_W), clampf(result.y, 0.0, map.WORLD_H))
-	return map._clip_path_at_obstacle(from, result)
+		result = map.terrain.clamp_to_bounds(result)
+	return map.terrain.clip_path_at_obstacle(from, result)
 
 func show_preview(new_landing: Vector2, radius: float) -> void:
 	landing    = new_landing
 	aoe_radius = float(radius)
-	map._show_disc(_disc, landing, aoe_radius)
+	map.presentation.show_disc(_disc, landing, aoe_radius)
 
 func clear_preview() -> void:
 	landing       = Vector2(-1.0, -1.0)
@@ -47,7 +47,7 @@ func clear_preview() -> void:
 	_disc.visible = false
 
 func is_enemy_in_explosion(center: Vector2, radius: float) -> bool:
-	return map.is_enemy_in_area_circle(center, radius)
+	return map.queries.is_enemy_in_area_circle(center, radius)
 
 ## true mientras se ve el disco de la explosión (para el "any_disc" de
 ## MapArea._update_hover()).

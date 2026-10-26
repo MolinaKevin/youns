@@ -7,6 +7,25 @@ extends GutTest
 const POMBERO := "res://data/youns/pombero.tres"
 const CAMPEON := "res://data/youns/mboi_tui.tres"
 
+var _previous_save: PlayerSaveData
+var _previous_active_states: Dictionary
+var _previous_emotions_blocked := false
+
+
+func before_each() -> void:
+	_previous_save = GameState.player_save
+	_previous_active_states = StatsManager.active_states.duplicate(true)
+	_previous_emotions_blocked = StatsManager.emotions_blocked
+
+
+func after_each() -> void:
+	GameState.player_save = _previous_save
+	StatsManager.active_states = _previous_active_states.duplicate(true)
+	while StatsManager.emotions_blocked:
+		StatsManager.unblock_emotions()
+	if _previous_emotions_blocked:
+		StatsManager.block_emotions()
+
 
 func _youn(base: Dictionary) -> YounData:
 	var y := YounData.new()
@@ -215,10 +234,24 @@ func test_max_hp_sale_de_la_constitucion() -> void:
 	assert_eq(YounStatRules.max_hp({}), YounStatRules.DEFAULT_MAX_HP)
 
 
+func test_max_hp_admite_bonus_del_laboratorio() -> void:
+	assert_eq(YounStatRules.max_hp({"constitucion": 50}, 25), 50 * YounStatRules.HP_PER_CONSTITUCION + 25)
+
+
+func test_reward_aplica_el_bonus_de_crecimiento_a_las_ganancias_positivas() -> void:
+	var save := PlayerSaveData.new()
+	save.youn_stats = {"fuerza": 10}
+	save.lab_youn_growth_bonus = 2
+
+	YounStatRules.reward(save, {"fuerza": 5})
+
+	assert_eq(YounStatRules.current(save, "fuerza"), 17)
+	assert_eq(save.youn_stat_gains["fuerza"], 7)
+
+
 # ── Integración con la evolución de StatsManager ──────────────────────────────
 
 func test_complete_evolution_aplica_la_evolucion_sobre_las_actuales() -> void:
-	var previous := GameState.player_save
 	var save := PlayerSaveData.new()
 	save.current_youn_path = POMBERO
 	YounStatRules.start_life(save, load(POMBERO) as YounData)
@@ -233,6 +266,3 @@ func test_complete_evolution_aplica_la_evolucion_sobre_las_actuales() -> void:
 		{"fuerza": pombero_base.fuerza + 12, "espiritu": pombero_base.espiritu})
 	assert_eq(YounStatRules.current(save, "fuerza"), expected["fuerza"])
 	assert_eq(YounStatRules.current(save, "espiritu"), expected["espiritu"])
-	GameState.player_save = previous
-	StatsManager.active_states.clear()
-	StatsManager._emotion_block_count = 0

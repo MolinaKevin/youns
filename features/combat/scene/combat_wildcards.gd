@@ -1,6 +1,8 @@
 class_name CombatWildcards
 extends RefCounted
 
+const InventoryService := preload("res://shared/inventory_service.gd")
+
 ## Qué hace cada comodín (Ataque/Mover/Mantener/Ítem) cuando se arma o se
 ## usa. `combat_wildcards_ui.gd` es la contraparte visual del widget; esta
 ## clase es la lógica de juego. `host` es el Combat dueño exclusivo de esta
@@ -29,7 +31,7 @@ func disarm() -> void:
 ## Cada comodín se habilita solo si queda una mitad del tipo que reemplaza.
 func update_buttons() -> void:
 	var turn := host.turn
-	var busy: bool = not turn.playing.is_empty() and turn.playing["started"]
+	var busy: bool = turn.playing != null and turn.playing.started
 	var usable := {
 		CombatTurnController.Wild.ATTACK: turn.used_top == -1 and not busy,
 		CombatTurnController.Wild.MOVE: turn.used_bottom == -1 and not busy,
@@ -126,13 +128,5 @@ func use_item(inventory_index: int, data: ItemData) -> void:
 
 func _consume_inventory_item(index: int) -> void:
 	var items: Array = GameState.player_save.inventory_items
-	if index < 0 or index >= items.size():
-		return
-	var entry: Dictionary = items[index]
-	var count := int(entry.get("count", 1))
-	if count > 1:
-		entry["count"] = count - 1
-		items[index] = entry
-	else:
-		items.remove_at(index)
+	InventoryService.consume_at(items, index)
 	GameState.player_save.inventory_items = items

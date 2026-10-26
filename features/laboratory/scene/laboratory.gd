@@ -1,9 +1,12 @@
 extends Control
 
+const InventoryService := preload("res://shared/inventory_service.gd")
+const LabRecipeAction := preload("res://data/lab_recipe_action.gd")
+
 signal close_requested
 
 const RecipeEntry := preload("res://features/laboratory/scene/recipe_entry.tscn")
-const ACTION_TYPES := ["instant", "loop", "upgrade", "next", "dungeon"]
+const ACTION_TYPES := LabRecipeAction.TYPES
 
 @export var standalone_mode := true
 @export var interaction_enabled := true
@@ -17,11 +20,11 @@ const ACTION_TYPES := ["instant", "loop", "upgrade", "next", "dungeon"]
 @onready var columns_container = $RootVBox/ContentHBox/MainArea/Columns
 @onready var tech_tree_view = $RootVBox/ContentHBox/MainArea/TechTreeView
 @onready var columns := {
-	"instant": $RootVBox/ContentHBox/MainArea/Columns/InstantColumn,
-	"loop":    $RootVBox/ContentHBox/MainArea/Columns/LoopColumn,
-	"upgrade": $RootVBox/ContentHBox/MainArea/Columns/UpgradeColumn,
-	"next":    $RootVBox/ContentHBox/MainArea/Columns/NextColumn,
-	"dungeon": $RootVBox/ContentHBox/MainArea/Columns/DungeonColumn,
+	LabRecipeAction.INSTANT: $RootVBox/ContentHBox/MainArea/Columns/InstantColumn,
+	LabRecipeAction.LOOP:    $RootVBox/ContentHBox/MainArea/Columns/LoopColumn,
+	LabRecipeAction.UPGRADE: $RootVBox/ContentHBox/MainArea/Columns/UpgradeColumn,
+	LabRecipeAction.NEXT:    $RootVBox/ContentHBox/MainArea/Columns/NextColumn,
+	LabRecipeAction.DUNGEON: $RootVBox/ContentHBox/MainArea/Columns/DungeonColumn,
 }
 
 var selected_location := ""
@@ -29,14 +32,13 @@ var location_buttons: Dictionary = {}  # location -> Button
 var notified_locations: Array = []
 
 func _ready() -> void:
-	GlobalHUD.set_clock_visible(false if standalone_mode else true)
-	GlobalHUD.set_clock_paused(true)
-	GlobalHUD.set_youns_status_visible(false)
 	if standalone_mode:
-		ZoneManager.set_world_visible(false)
-		PartyManager.set_party_visible(false)
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		ModalScreenContext.enter_fullscreen()
 		interaction_enabled = false
+	else:
+		GlobalHUD.set_clock_visible(true)
+		GlobalHUD.set_clock_paused(true)
+		GlobalHUD.set_youns_status_visible(false)
 	take_all_button.pressed.connect(_on_take_all)
 	recipes_button.pressed.connect(func(): _set_view("recipes"))
 	tech_tree_button.pressed.connect(func(): _set_view("tech_tree"))
@@ -189,20 +191,15 @@ func _on_take_all() -> void:
 		return
 	var taken := LaboratoryState.take_all_output()
 	var save := GameState.player_save
+	var remaining := {}
 	for item_id in taken:
 		var entry: Dictionary = taken[item_id]
-		var added := false
-		for i in save.inventory_items.size():
-			var existing: Dictionary = save.inventory_items[i]
-			if existing.get("id") == item_id:
-				existing["count"] = existing.get("count", 0) + entry["count"]
-				save.inventory_items[i] = existing
-				added = true
-				break
-		if not added and save.inventory_items.size() < save.inventory_slots:
-			save.inventory_items.append(entry.duplicate())
-	for child in output_list.get_children():
-		child.queue_free()
+		var result := InventoryService.add_entry(save.inventory_items, entry, save.inventory_slots)
+		if result["remaining"] > 0:
+			var leftover := entry.duplicate()
+			leftover["count"] = result["remaining"]
+			remaining[item_id] = leftover
+	LaboratoryState.restore_output(remaining)
 
 func _close_or_return() -> void:
 	if standalone_mode and GameState.ui_return.has_return():
@@ -217,11 +214,8 @@ func _apply_localized_text(_language: String = "") -> void:
 	close_button.text = LocalizationState.t("lab.close")
 	$RootVBox/ContentHBox/OutputPanel/VBox/Header.text = LocalizationState.t("lab.generated")
 	_apply_mode_state()
-	columns["instant"].title = LocalizationState.action_type_name("instant")
-	columns["loop"].title = LocalizationState.action_type_name("loop")
-	columns["upgrade"].title = LocalizationState.action_type_name("upgrade")
-	columns["next"].title = LocalizationState.action_type_name("next")
-	columns["dungeon"].title = LocalizationState.action_type_name("dungeon")
+	for action_type in ACTION_TYPES:
+		columns[action_type].title = LocalizationState.action_type_name(action_type)
 	for location in location_buttons:
 		location_buttons[location].text = LocalizationState.location_name(location)
 	_sync_pending_output()
