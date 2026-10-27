@@ -1,0 +1,72 @@
+[gd_resource type="Resource" script_class="YounData" format=3]
+
+[ext_resource type="Script" path="res://data/youns/youn_data.gd" id="script"]
+[ext_resource type="Texture2D" path="res://assets/youns/Shamana.png" id="portrait"]
+[ext_resource type="Texture2D" uid="uid://b63i01qwdnlhg" path="res://assets/youns/pombero/texture.png" id="newen_texture"]
+[ext_resource type="PackedScene" uid="uid://cwduflo7tikx6" path="res://assets/youns/pombero/idle.fbx" id="idle"]
+[ext_resource type="PackedScene" uid="uid://d2ip2vgeao42i" path="res://assets/youns/pombero/walk.fbx" id="walk"]
+[ext_resource type="PackedScene" uid="uid://cxamcaaq168ko" path="res://assets/youns/pombero/run.fbx" id="run"]
+[ext_resource type="PackedScene" uid="uid://bm2gtctft65a4" path="res://assets/youns/pombero/punch.fbx" id="attack"]
+[ext_resource type="PackedScene" uid="uid://db5u2tfq1cebc" path="res://assets/youns/pombero/range.fbx" id="range"]
+[ext_resource type="PackedScene" uid="uid://c8ihbe1o2ajra" path="res://assets/youns/pombero/damage.fbx" id="damage"]
+[ext_resource type="Script" path="res://data/youns/youn_stats.gd" id="stats"]
+[ext_resource type="Script" path="res://data/youns/youn_evolution_stats.gd" id="evolution_stats"]
+[ext_resource type="Resource" path="res://data/enemies/strategies/aggressive.tres" id="strategy"]
+[ext_resource type="Resource" path="res://data/enemies/monster_decks/bruto.tres" id="monster_deck"]
+
+[sub_resource type="Resource" id="BaseStats"]
+script = ExtResource("stats")
+constitucion = 70
+mente = 75
+fuerza = 45
+resistencia = 65
+agilidad = 50
+tecnica = 70
+inteligencia = 80
+espiritu = 90
+
+[sub_resource type="Resource" id="EvolutionStats"]
+script = ExtResource("evolution_stats")
+constitucion = 20.0
+mente = 25.0
+fuerza = 10.0
+resistencia = 20.0
+agilidad = 15.0
+tecnica = 25.0
+inteligencia = 30.0
+espiritu = 35.0
+
+[resource]
+script = ExtResource("script")
+id = "pachamama"
+youn_name = "Pachamama"
+stage = "campeon"
+is_wildcard = true
+intelligences = PackedStringArray("naturalista", "espiritual")
+portrait = ExtResource("portrait")
+dialogue_portrait_position = Vector2(-175, -190)
+portrait_scale = Vector2(0.36, 0.36)
+texture = ExtResource("newen_texture")
+mesh_scale = 0.2
+mesh_y_offset = -0.8
+scene_idle = ExtResource("idle")
+scene_walk = ExtResource("walk")
+scene_run = ExtResource("run")
+scene_attack = ExtResource("attack")
+scene_range = ExtResource("range")
+scene_damage = ExtResource("damage")
+chase_speed = 4.5
+body_height = 4.6
+base_stats = SubResource("BaseStats")
+evolution_stats = SubResource("EvolutionStats")
+strategy = ExtResource("strategy")
+monster_deck = ExtResource("monster_deck")
+loot_item_name = "Pachamama Charm"
+loot_gold = 8
+sleep_hour = 21
+wake_hour = 5
+base_weight = 12.0
+base_felicidad = 90
+base_confianza = 75
+base_aburrimiento = 0
+mult_hambre = 2.0

@@ -118,7 +118,7 @@ func _ready() -> void:
 	_name_labels["_day_duration"] = [day_lbl, "debug.day_duration"]
 
 	var day_val := Label.new()
-	day_val.text = "%.1f min" % GameState.DAY_DURATION_MINUTES
+	day_val.text = "%.1f min" % (GameState.DAY_DURATION_MINUTES if GameState else 0.0)
 	day_val.custom_minimum_size.x = 48
 	day_val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	day_val.add_theme_font_size_override("font_size", 11)
@@ -185,8 +185,13 @@ func _process(_delta: float) -> void:
 
 
 func _refresh() -> void:
+	# GlobalHUD vive durante toda la aplicación, incluso durante los frames en
+	# que los autoloads todavía no entraron al árbol o ya se están liberando.
+	# El panel es sólo diagnóstico: en ese lapso muestra valores vacíos en vez
+	# de generar un error por frame.
+	var game_state = GameState if GameState else null
 	if _clock_val:
-		_clock_val.text = GameState.get_time_string()
+		_clock_val.text = game_state.get_time_string() if game_state else "--:--"
 	if _states_val:
 		var states := _get_current_states()
 		_states_val.text = "\n".join(states) if not states.is_empty() else "-"
@@ -201,7 +206,7 @@ func _refresh() -> void:
 		else:
 			_anim_player_val.text = "-"
 	_refresh_position()
-	var ps := GameState.player_save
+	var ps: PlayerSaveData = game_state.player_save if game_state else null
 	if ps == null:
 		return
 	for key in _value_labels:
@@ -228,13 +233,16 @@ func _refresh_position() -> void:
 
 func _get_current_states() -> Array[String]:
 	var result: Array[String] = []
+	if StatsManager == null:
+		return result
+	var game_state = GameState if GameState else null
 	for emotion_name in StatsManager.active_states:
-
-
-
 		var since_hour: float = StatsManager.active_states[emotion_name].get("hour", 0.0)
-		var elapsed := GameState.get_total_hours() - since_hour
-		result.append("%s (%.1fh)" % [emotion_name, elapsed])
+		if game_state:
+			var elapsed := game_state.get_total_hours() - since_hour
+			result.append("%s (%.1fh)" % [emotion_name, elapsed])
+		else:
+			result.append(emotion_name)
 	return result
 
 

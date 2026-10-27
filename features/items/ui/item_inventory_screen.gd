@@ -1,8 +1,6 @@
 extends Control
 
 const ENTRY_SCENE: PackedScene = preload("res://features/items/ui/inventory_item_entry.tscn")
-const ScenePaths := preload("res://shared/scene_paths.gd")
-const InventoryService := preload("res://shared/inventory_service.gd")
 const COLUMNS: int = 2
 const ENTRY_HEIGHT: float = 68.0
 const ROW_GAP: float = 8.0
@@ -25,9 +23,11 @@ const MAX_VISIBLE_ROWS: int = 6
 var _selected_index := 0
 var _entry_nodes: Array = []
 var _popup_open := false
+var _session: PlayerSessionService
 
 func _ready() -> void:
-	ModalScreenContext.enter_fullscreen()
+	_session = GameState.player_session
+	ModalScreenContext.enter_fullscreen(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
 	LocalizationState.language_changed.connect(_apply_localized_text)
 	close_button.pressed.connect(_on_close_pressed)
 	use_button.pressed.connect(_on_use_pressed)
@@ -67,8 +67,8 @@ func _refresh_inventory() -> void:
 		child.queue_free()
 	_entry_nodes.clear()
 
-	var capacity: int = maxi(20, GameState.player_save.inventory_slots)
-	var items: Array = GameState.player_save.inventory_items
+	var capacity := _session.inventory_capacity()
+	var items := _session.inventory_items()
 
 	for item in items:
 		var entry = ENTRY_SCENE.instantiate()
@@ -108,7 +108,7 @@ func _update_selection() -> void:
 		scroll.ensure_control_visible(_entry_nodes[_selected_index])
 
 func _open_popup() -> void:
-	var item := InventoryService.item_at(GameState.player_save, _selected_index)
+	var item := _session.inventory_item_at(_selected_index)
 	if item.is_empty():
 		return
 	popup_title.text = LocalizationState.item_name(
@@ -129,30 +129,28 @@ func _on_use_pressed() -> void:
 ## Intenta usar el ítem seleccionado. Una entrada de guardado inválida se
 ## conserva: no debe desaparecer sin haber aplicado efecto alguno.
 func use_selected_item() -> bool:
-	var item := InventoryService.item_at(GameState.player_save, _selected_index)
-	if item.is_empty():
-		_close_popup()
-		return false
-	var data := InventoryService.resolve_item_data(item)
-	if data == null:
-		GlobalHUD.show_toast(LocalizationState.t("inventory.invalid_item"))
-		_close_popup()
-		return false
-	if data.is_combat_only():
-		# Se usa con el comodín "Ítem" del combate: acá no se gasta.
-		GlobalHUD.show_toast(LocalizationState.t("inventory.combat_only"))
-		_close_popup()
-		return false
-	data.apply_effects(GameState.player_save)
-	GlobalHUD.notify_youns_status_changed()
-	_consume_selected_item()
+	match _session.use_inventory_item(_selected_index):
+		"missing":
+			_close_popup()
+			return false
+		"invalid":
+			GlobalHUD.show_toast(LocalizationState.t("inventory.invalid_item"))
+			_close_popup()
+			return false
+		"combat_only":
+			# Se usa con el comodín "Ítem" del combate: acá no se gasta.
+			GlobalHUD.show_toast(LocalizationState.t("inventory.combat_only"))
+			_close_popup()
+			return false
+	_refresh_inventory()
+	_close_popup()
 	return true
 
 func _on_drop_pressed() -> void:
 	_consume_selected_item()
 
 func _consume_selected_item() -> void:
-	InventoryService.consume_from_save(GameState.player_save, _selected_index)
+	_session.discard_inventory_item(_selected_index)
 	_close_popup()
 	_refresh_inventory()
 
@@ -160,10 +158,7 @@ func _on_close_pressed() -> void:
 	_return_to_origin()
 
 func _return_to_origin() -> void:
-	if GameState.ui_return.has_return():
-		get_tree().change_scene_to_file(GameState.ui_return.take_scene_path())
-		return
-	get_tree().change_scene_to_file(ScenePaths.GAME_WORLD)
+	SceneNavigator.return_to_origin(get_tree())
 
 func _apply_localized_text(_language: String = "") -> void:
 	title_label.text = LocalizationState.t("inventory.title")

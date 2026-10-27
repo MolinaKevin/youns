@@ -89,6 +89,9 @@ func on_tile_selected(pos: Vector2) -> void:
 	host.confirm_popup_show_requested.emit(false)
 
 func execute(cell: Vector2) -> void:
+	var flow := _flow()
+	if not _flow_is_active(flow):
+		return
 	if not _index_valid():
 		clear()
 		return
@@ -98,18 +101,22 @@ func execute(cell: Vector2) -> void:
 	host.hand_refresh_requested.emit()
 	host.map_area.actors.play_player_animation("attack")
 	await host.map_area.player_anim_finished
+	if not _flow_is_active(flow):
+		return
 	host.map_area.actors.play_player_animation("idle")
 	match played_card.card_type:
 		CardActionLine.TYPE_BREAK:
-			await _casts.cast_break(played_card, obs)
+			await _casts.cast_break(played_card, obs, flow)
 		CardActionLine.TYPE_BUILD:
 			_casts.cast_build(played_card, cell)
 		CardActionLine.TYPE_MODULE_PUSH:
-			await _casts.cast_module_push(played_card, obs, cell)
+			await _casts.cast_module_push(played_card, obs, cell, flow)
 		CardActionLine.TYPE_MODULE_THROW:
-			await _casts.cast_module_throw(played_card, obs, cell)
+			await _casts.cast_module_throw(played_card, obs, cell, flow)
 		CardActionLine.TYPE_COLLAPSE:
-			await _casts.cast_collapse(played_card)
+			await _casts.cast_collapse(played_card, flow)
+	if not _flow_is_active(flow):
+		return
 	_finish()
 
 func clear() -> void:

@@ -4,7 +4,7 @@ extends GutTest
 # cada Youn, ganancias y la regla al evolucionar (el nuevo Youn suma o
 # multiplica las actuales).
 
-const POMBERO := "res://data/youns/pombero.tres"
+const NEWEN := "res://data/youns/newen.tres"
 const CAMPEON := "res://data/youns/mboi_tui.tres"
 
 var _previous_save: PlayerSaveData
@@ -135,51 +135,51 @@ func test_apply_evolution_sin_evolution_stats_no_cambia_nada() -> void:
 
 func test_ensure_initialized_usa_el_youn_actual_si_no_hay_stats() -> void:
 	var save := PlayerSaveData.new()
-	save.current_youn_path = POMBERO
+	save.current_youn_path = NEWEN
 	YounStatRules.ensure_initialized(save)
-	var base: YounStats = (load(POMBERO) as YounData).base_stats
+	var base: YounStats = (load(NEWEN) as YounData).base_stats
 	assert_eq(YounStatRules.current(save, "agilidad"), base.agilidad)
 
 
 func test_ensure_initialized_sin_youn_actual_usa_el_fallback() -> void:
 	var save := PlayerSaveData.new()
-	var pombero: YounData = load(POMBERO)
-	YounStatRules.ensure_initialized(save, pombero)
+	var newen: YounData = load(NEWEN)
+	YounStatRules.ensure_initialized(save, newen)
 	assert_eq(save.youn_stats.size(), YounStats.KEYS.size())
-	assert_eq(YounStatRules.current(save, "agilidad"), pombero.base_stats.agilidad)
+	assert_eq(YounStatRules.current(save, "agilidad"), newen.base_stats.agilidad)
 
 
 func test_reward_sobre_stats_vacias_arranca_de_la_base() -> void:
 	# antes: sumar sobre stats vacías dejaba solo esa stat y el resto en 0
 	var save := PlayerSaveData.new()
-	var pombero: YounData = load(POMBERO)
-	YounStatRules.reward(save, {"fuerza": 10}, pombero)
-	assert_eq(YounStatRules.current(save, "fuerza"), pombero.base_stats.fuerza + 10)
-	assert_eq(YounStatRules.current(save, "constitucion"), pombero.base_stats.constitucion)
+	var newen: YounData = load(NEWEN)
+	YounStatRules.reward(save, {"fuerza": 10}, newen)
+	assert_eq(YounStatRules.current(save, "fuerza"), newen.base_stats.fuerza + 10)
+	assert_eq(YounStatRules.current(save, "constitucion"), newen.base_stats.constitucion)
 
 
 func test_reward_de_combate_suma_1_a_cada_stat() -> void:
 	var save := PlayerSaveData.new()
-	var pombero: YounData = load(POMBERO)
-	YounStatRules.start_life(save, pombero)
+	var newen: YounData = load(NEWEN)
+	YounStatRules.start_life(save, newen)
 	var gains := {}
 	for key in YounStats.KEYS:
 		gains[key] = 1
-	YounStatRules.reward(save, gains, pombero)
+	YounStatRules.reward(save, gains, newen)
 	for key in YounStats.KEYS:
-		assert_eq(YounStatRules.current(save, key), int(pombero.base_stats.get(key)) + 1, key)
+		assert_eq(YounStatRules.current(save, key), int(newen.base_stats.get(key)) + 1, key)
 
 
 func test_ensure_initialized_no_pisa_stats_existentes() -> void:
 	var save := PlayerSaveData.new()
-	save.current_youn_path = POMBERO
+	save.current_youn_path = NEWEN
 	save.youn_stats = {"fuerza": 999}
 	YounStatRules.ensure_initialized(save)
 	assert_eq(YounStatRules.current(save, "fuerza"), 999)
 
 
 func test_youns_con_etapa_tienen_estadisticas_base_y_de_evolucion() -> void:
-	for path in [POMBERO, "res://data/youns/nguruvilu.tres", CAMPEON]:
+	for path in [NEWEN, "res://data/youns/nguruvilu.tres", CAMPEON]:
 		var youn := load(path) as YounData
 		assert_not_null(youn.base_stats, path)
 		assert_not_null(youn.evolution_stats, path)
@@ -253,16 +253,16 @@ func test_reward_aplica_el_bonus_de_crecimiento_a_las_ganancias_positivas() -> v
 
 func test_complete_evolution_aplica_la_evolucion_sobre_las_actuales() -> void:
 	var save := PlayerSaveData.new()
-	save.current_youn_path = POMBERO
-	YounStatRules.start_life(save, load(POMBERO) as YounData)
+	save.current_youn_path = NEWEN
+	YounStatRules.start_life(save, load(NEWEN) as YounData)
 	YounStatRules.gain(save, "fuerza", 12)
 	save.pending_evolution_path = CAMPEON
 	GameState.player_save = save
 
 	StatsManager.complete_evolution()
 
-	var pombero_base: YounStats = (load(POMBERO) as YounData).base_stats
+	var newen_base: YounStats = (load(NEWEN) as YounData).base_stats
 	var expected := (load(CAMPEON) as YounData).evolution_stats.apply_to(
-		{"fuerza": pombero_base.fuerza + 12, "espiritu": pombero_base.espiritu})
+		{"fuerza": newen_base.fuerza + 12, "espiritu": newen_base.espiritu})
 	assert_eq(YounStatRules.current(save, "fuerza"), expected["fuerza"])
 	assert_eq(YounStatRules.current(save, "espiritu"), expected["espiritu"])

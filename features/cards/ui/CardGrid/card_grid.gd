@@ -1,5 +1,7 @@
 extends HBoxContainer
 
+const DebugLogging := preload("res://shared/debug_logging.gd")
+
 signal card_selected(card_data: CardData)
 
 @export var card_scene: PackedScene = preload("res://features/cards/presentation/card_view.tscn")
@@ -9,7 +11,7 @@ func set_cards(cards: Array[CardData]) -> void:
 	for child in grid.get_children():
 		child.queue_free()
 
-	if DebugSettings.verbose_logging_enabled:
+	if DebugLogging.verbose_enabled():
 		print("set_cards: ", cards.size())
 
 	for card_data in cards:

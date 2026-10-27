@@ -31,6 +31,9 @@ var _was_in_sleep_range := false
 var _slept_this_cycle := false
 var _sleep_tracking_initialized := false
 var _sick_sleep_count := 0
+## Solo una espera de evolución puede llegar a iniciar una cinemática. El token
+## evita que una espera vieja continúe después de restaurar/cambiar de mundo.
+var _evolution_delay: AsyncFlowToken
 
 ## Máximo de cacas en el suelo: al pasarlo se borra la más vieja.
 const MAX_POOPS := 10
@@ -182,7 +185,21 @@ func _on_evolution_triggered(from_data: YounData, to_data: YounData) -> void:
 	# con restore_pending_evolution() cuando ya existen cámara, party e iluminación.
 	if not ZoneManager.is_world_initialized() or not is_instance_valid(world_lighting):
 		return
+	if _evolution_delay:
+		_evolution_delay.cancel()
+	# world_lighting pertenece a game_world: si esa escena se descarga durante
+	# la espera, el token se invalida antes de que la continuación toque nodos
+	# viejos.
+	var flow := AsyncFlowToken.new(world_lighting)
+	_evolution_delay = flow
 	await get_tree().create_timer(4.0).timeout
+	if not flow.is_active() or _evolution_delay != flow:
+		return
+	_evolution_delay = null
+	if not ZoneManager.is_world_initialized() or not is_instance_valid(world_lighting):
+		return
+	if not is_instance_valid(PartyManager.youn) or get_viewport().get_camera_3d() == null:
+		return
 	var cam_transform := get_viewport().get_camera_3d().global_transform
 	PartyManager.freeze_camera()
 	PartyManager.freeze_actors()
@@ -194,6 +211,8 @@ func _on_evolution_triggered(from_data: YounData, to_data: YounData) -> void:
 
 	var saved_env := world_lighting.world_env.environment
 	evo.approach_finished.connect(func():
+		if not flow.is_active() or not is_instance_valid(world_lighting):
+			return
 		world_lighting.freeze_transition()
 		ZoneManager.set_world_visible(false)
 		PartyManager.player.visible = false
@@ -219,6 +238,8 @@ func _on_evolution_triggered(from_data: YounData, to_data: YounData) -> void:
 		bg_tw.tween_property(black_env, "background_color", Color.BLACK, 0.5)
 	)
 	evo.finished.connect(func() -> void:
+		if not flow.is_active() or not is_instance_valid(world_lighting):
+			return
 		world_lighting.world_env.environment = saved_env
 		world_lighting.reapply_current_period()
 		var result := StatsManager.complete_evolution()
@@ -232,21 +253,26 @@ func _on_evolution_triggered(from_data: YounData, to_data: YounData) -> void:
 		# que toca "Terminar".
 		var screen := EvolutionScreen.new()
 		screen.setup(result)
-		screen.finished.connect(_show_evolution_discovery.bind(result))
+		screen.finished.connect(_show_evolution_discovery.bind(result, flow))
 		add_child(screen)
 	)
 	evo.start(from_data, to_data, cam_transform)
 
 ## "¡Evolución desbloqueada!" y la condición descubierta, después de la
 ## pantalla de evolución.
-func _show_evolution_discovery(result: Dictionary) -> void:
+func _show_evolution_discovery(result: Dictionary, flow: AsyncFlowToken) -> void:
+	if not flow.is_active():
+		return
 	var screen := EvolutionDiscoveryScreen.new()
 	screen.setup(result)
-	screen.finished.connect(_end_evolution)
+	screen.finished.connect(_end_evolution.bind(flow))
 	add_child(screen)
 
 ## Devuelve el control al jugador después de las pantallas de evolución.
-func _end_evolution() -> void:
+func _end_evolution(flow: AsyncFlowToken) -> void:
+	if not flow.is_active():
+		return
+	flow.cancel()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	PartyManager.unfreeze_camera()
 	PartyManager.unfreeze_actors()

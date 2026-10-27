@@ -22,6 +22,7 @@ var _normal_btn: Button
 var _bonus_btn: Button
 var _cancel_btn: Button
 var _busy := false
+var _world_lease: WorldTransitionLease
 
 
 func _ready() -> void:
@@ -30,8 +31,7 @@ func _ready() -> void:
 	_build_ui()
 	_apply_text()
 	LocalizationState.language_changed.connect(_apply_text)
-	GlobalHUD.set_clock_paused(true)
-	_freeze_world()
+	_world_lease = WorldTransitionLease.new(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager), PartyManager)
 	_normal_btn.grab_focus()
 
 
@@ -127,28 +127,11 @@ func _party_youn_data() -> YounData:
 
 
 func _close() -> void:
-	GlobalHUD.set_clock_paused(false)
-	_unfreeze_world()
+	if _world_lease:
+		_world_lease.release()
 	queue_free()
 
 
-func _freeze_world() -> void:
-	var p = PartyManager.player if PartyManager else null
-	var y = PartyManager.youn if PartyManager else null
-	var c = PartyManager.camera_rig if PartyManager else null
-	if is_instance_valid(p):
-		p.set_physics_process(false)
-		p.velocity = Vector3.ZERO
-	if is_instance_valid(y): y.set_physics_process(false)
-	if is_instance_valid(c): c.enabled = false
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-
-
-func _unfreeze_world() -> void:
-	var p = PartyManager.player if PartyManager else null
-	var y = PartyManager.youn if PartyManager else null
-	var c = PartyManager.camera_rig if PartyManager else null
-	if is_instance_valid(p): p.set_physics_process(true)
-	if is_instance_valid(y): y.set_physics_process(true)
-	if is_instance_valid(c): c.enabled = true
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+func _exit_tree() -> void:
+	if _world_lease:
+		_world_lease.release()

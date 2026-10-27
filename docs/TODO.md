@@ -115,7 +115,7 @@ Pendientes conocidos, agrupados por sistema. Al resolver uno, borrarlo de acá.
       cualquier enemigo (`VICTORY_STAT_GAINS` y `VICTORY_GOLD` en `combat.gd`).
 - [ ] **Balancear lo que agrega cada evolución** (pantalla de evolución ya
       implementada): las cartas características, los colores (`color_changes`)
-      y sobre todo las acciones (`granted_lines`) de nino_1, Pombero, Nguruvilu
+      y sobre todo las acciones (`granted_lines`) de nino_1, Newen, Nguruvilu
       y Nguruvilu campeón son de relleno; las características son cartas que ya
       existían. Los colores de las inteligencias también son de ejemplo
       (`data/youns/intelligences.gd`).

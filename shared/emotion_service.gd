@@ -9,12 +9,14 @@ const RULES_DIR := "res://data/emotions/rules/"
 var active_states: Dictionary = {}
 var _rules: Array[EmotionRule] = []
 var _block_count := 0
+var _session: CareSessionContext
 var _apply_expire_penalty: Callable
 var _apply_bathroom_accident: Callable
 var _queue_stat_changed: Callable
 
 
-func _init(expire_penalty: Callable, bathroom_accident: Callable, stat_changed: Callable) -> void:
+func _init(session: CareSessionContext, expire_penalty: Callable, bathroom_accident: Callable, stat_changed: Callable) -> void:
+	_session = session
 	_apply_expire_penalty = expire_penalty
 	_apply_bathroom_accident = bathroom_accident
 	_queue_stat_changed = stat_changed
@@ -45,18 +47,19 @@ func restore_from_save(save: PlayerSaveData) -> void:
 func show(emotion_name: String) -> void:
 	if is_blocked() or emotion_name.is_empty():
 		return
-	if emotion_name == "sick" and GameState.player_save and not GameState.player_save.enfermo:
-		GameState.player_save.enfermo = true
+	var save := _session.player_save()
+	if emotion_name == "sick" and save and not save.enfermo:
+		save.enfermo = true
 		_queue_stat_changed.call()
 	if emotion_name in active_states:
 		return
 	var rule := find_rule(emotion_name)
 	var stat_value := 100.0
-	if rule and not rule.stat_key.is_empty() and GameState.player_save:
-		var raw = GameState.player_save.get(rule.stat_key)
+	if rule and not rule.stat_key.is_empty() and save:
+		var raw = save.get(rule.stat_key)
 		if raw != null:
 			stat_value = float(raw)
-	active_states[emotion_name] = {"hour": GameState.get_total_hours(), "stat_value": stat_value}
+	active_states[emotion_name] = {"hour": _session.total_hours(), "stat_value": stat_value}
 
 
 func clear(emotion_name: String) -> void:
@@ -64,7 +67,7 @@ func clear(emotion_name: String) -> void:
 
 
 func check_expirations() -> void:
-	var total_h := GameState.get_total_hours()
+	var total_h := _session.total_hours()
 	for emotion_name in active_states.keys():
 		var rule := find_rule(emotion_name)
 		if rule == null or rule.max_duration_hours <= 0.0:
@@ -80,11 +83,10 @@ func check_expirations() -> void:
 
 
 func evaluate_rules() -> void:
-	var ps := GameState.player_save
+	var ps := _session.player_save()
 	if ps == null or _rules.is_empty() or is_blocked():
 		return
-	var youn = PartyManager.youn
-	var ctx := {"save": ps, "youn_data": youn.get("youn_data") if youn else null, "active": active_states.keys()}
+	var ctx := {"save": ps, "youn_data": _session.youn_data(), "active": active_states.keys()}
 	for emotion_name in EmotionEngine.evaluate(_rules, ctx):
 		show(emotion_name)
 	for emotion_name in active_states.keys():
@@ -105,7 +107,7 @@ func evaluate_rules() -> void:
 
 
 func sync_sick() -> void:
-	var ps := GameState.player_save
+	var ps := _session.player_save()
 	if ps != null and ps.enfermo and "sick" not in active_states:
 		show("sick")
 
@@ -115,7 +117,7 @@ func on_wake_up(sleep_duration_hours: float) -> void:
 	clear("sleep")
 	var bathroom_rule := find_rule("bathroom")
 	if "bathroom" in active_states and bathroom_rule:
-		var elapsed := GameState.get_total_hours() - float(active_states["bathroom"].get("hour", 0.0))
+		var elapsed := _session.total_hours() - float(active_states["bathroom"].get("hour", 0.0))
 		if elapsed >= bathroom_rule.max_duration_hours * 0.5:
 			_apply_bathroom_accident.call()
 		else:

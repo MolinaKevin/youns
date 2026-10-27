@@ -75,7 +75,7 @@ zone_id = "right"
 
 [sub_resource type="Resource" id="Cond4"]
 script = ExtResource("c_from")
-youn_path = "res://data/youns/pombero.tres"
+youn_path = "res://data/youns/newen.tres"
 
 [sub_resource type="Resource" id="Line0"]
 script = ExtResource("line")

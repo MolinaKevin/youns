@@ -17,9 +17,9 @@ func test_youn_data_stage_se_puede_setear() -> void:
 	assert_eq(y.stage, "campeon")
 
 
-func test_pombero_es_adolescente() -> void:
-	var pombero := load("res://data/youns/pombero.tres") as YounData
-	assert_eq(pombero.stage, "adolescente")
+func test_newen_es_adolescente() -> void:
+	var newen := load("res://data/youns/newen.tres") as YounData
+	assert_eq(newen.stage, "adolescente")
 
 
 func test_nguruvilu_es_adolescente() -> void:
@@ -34,9 +34,9 @@ func test_get_active_stage_sin_youn_activo_retorna_bebe() -> void:
 	assert_eq(YounData.get_active_stage(save), "bebe")
 
 
-func test_get_active_stage_con_pombero_retorna_adolescente() -> void:
+func test_get_active_stage_con_newen_retorna_adolescente() -> void:
 	var save := PlayerSaveData.new()
-	save.current_youn_path = "res://data/youns/pombero.tres"
+	save.current_youn_path = "res://data/youns/newen.tres"
 	assert_eq(YounData.get_active_stage(save), "adolescente")
 
 

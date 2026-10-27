@@ -15,6 +15,7 @@ extends Node3D
 
 const GymForest := preload("res://features/world/zones/gym_forest.gd")
 const AutoDecorationScript := preload("res://features/world/zones/auto_decoration.gd")
+const DebugLogging := preload("res://shared/debug_logging.gd")
 
 ## Margen de la grilla alrededor de lo caminable (en metros, más 4).
 ## Zonas de pradera: lo caminable son sus meshes *Meadow (zona -> .glb).
@@ -58,14 +59,14 @@ var _geometry := WorldGeometryReader.new()
 var _layout: WorldLayout = preload("res://data/world/world_layout.tres")
 var _settings: WorldGenerationSettings = preload("res://data/world/world_generation_settings.tres")
 
-func build(catalog: ZoneCatalog, force_procedural_decoration := false) -> void:
+func build(catalog: ZoneCatalog, force_procedural_decoration := false, build_walls := true, build_tree_meshes := true) -> void:
 	var started_at := Time.get_ticks_msec()
 	var checkpoint := started_at
-	if DebugSettings.verbose_logging_enabled:
+	if DebugLogging.verbose_enabled():
 		print("[WorldBoundary] Construyendo límites y decoración global…")
 	for error_text in _layout.validate(catalog): push_error("WorldLayout: " + error_text)
 	checkpoint = _log_build_step("Validación de configuración", started_at, checkpoint)
-	_decoration.prepare(force_procedural_decoration)
+	_decoration.prepare(force_procedural_decoration, build_tree_meshes)
 	_geometry.configure(_layout, _decoration)
 	var hub_offset := catalog.definition(_layout.hub_id).offset
 	var walkable_rects: Array[Rect2] = []
@@ -103,8 +104,9 @@ func build(catalog: ZoneCatalog, force_procedural_decoration := false) -> void:
 
 	_grid = _walkability.build(_layout, hub_offset, gym_rect, walkable_rects, placeholder_rects, hub_bridge, meadows, meadow_tris, floor_tris, rock_tris, west_tris, water_tris, mountain_tris, _settings.forest_depth + 4)
 	checkpoint = _log_build_step("Construcción de la grilla caminable", started_at, checkpoint)
-	_walls.build(self, _grid, _layout, _settings.wall_height)
-	checkpoint = _log_build_step("Construcción de paredes", started_at, checkpoint)
+	if build_walls:
+		_walls.build(self, _grid, _layout, _settings.wall_height)
+		checkpoint = _log_build_step("Construcción de paredes", started_at, checkpoint)
 	_decoration.build(self, _grid, _layout, catalog, _settings.tree_clearance, _settings.tree_spacing, _settings.tree_seed)
 	_log_build_step("Decoración y árboles", started_at, checkpoint)
 
@@ -114,7 +116,7 @@ func _offset_rect(r: Rect2, offset: Vector3) -> Rect2:
 
 func _log_build_step(step: String, started_at: int, previous_at: int) -> int:
 	var now := Time.get_ticks_msec()
-	if DebugSettings.verbose_logging_enabled:
+	if DebugLogging.verbose_enabled():
 		print("[WorldBoundary] %s: +%d ms (total: %d ms)" % [step, now - previous_at, now - started_at])
 	return now
 

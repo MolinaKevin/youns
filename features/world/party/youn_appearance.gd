@@ -7,6 +7,7 @@ extends RefCounted
 ## de emociones — host es el Youn3D dueño exclusivo de esta instancia.
 
 const PlaceholderModel := preload("res://features/world/party/placeholder_model.gd")
+const DebugLogging := preload("res://shared/debug_logging.gd")
 
 var host: Youn3D
 var _anim_bodies: Dictionary = {}   # "idle" -> Node3D, "walk" -> Node3D, etc.
@@ -58,7 +59,7 @@ func load_model(data: YounData) -> void:
 		_anim_bodies["idle"] = PlaceholderModel.build(data)
 		_anim_bodies["idle"].visible = false
 		host.add_child(_anim_bodies["idle"])
-	if DebugSettings.verbose_logging_enabled:
+	if DebugLogging.verbose_enabled():
 		print("YounAppearance loaded bodies: ", _anim_bodies.keys())
 	switch_anim("idle")
 

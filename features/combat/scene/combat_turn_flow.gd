@@ -223,6 +223,7 @@ func commit_plan(lead_index: int, second_index: int) -> void:
 		return
 	if lead_index >= state.hand.size() or second_index >= state.hand.size():
 		return
+	var flow := host.begin_flow()
 	turn.commit_plan(state.hand, lead_index, second_index)
 	state.turn_actions.clear()
 
@@ -241,11 +242,15 @@ func commit_plan(lead_index: int, second_index: int) -> void:
 	refresh_hand()
 	host.turn_order_bar.show_order(turn.turn_order, -1)
 	await _reveal_and_wait(monster_card)
+	if not host.is_flow_active(flow):
+		return
 
 	if enemy_first:
 		turn.phase = CombatTurnController.Phase.ENEMY
 		host.turn_order_bar.show_order(turn.turn_order, 0)
 		await host.enemy_ai.take_turn()
+		if not host.is_flow_active(flow):
+			return
 		if host._result_flow.check_combat_end():
 			return
 
@@ -267,6 +272,9 @@ func on_end_turn_pressed() -> void:
 	var turn := host.turn
 	if turn.phase != CombatTurnController.Phase.ACTING:
 		return
+	var flow := host.current_flow()
+	if not host.is_flow_active(flow):
+		return
 	turn.phase = CombatTurnController.Phase.ENEMY
 	host.end_turn_button.disabled = true
 	host.move_mode_button.disabled = true
@@ -280,17 +288,25 @@ func on_end_turn_pressed() -> void:
 	if turn.enemy_pending:
 		host.turn_order_bar.show_order(turn.turn_order, turn.turn_order.find_custom(func(e): return not e["is_player"]))
 		await host.get_tree().create_timer(Combat.TURN_ORDER_PAUSE).timeout
+		if not host.is_flow_active(flow):
+			return
 		await host.enemy_ai.take_turn()
+		if not host.is_flow_active(flow):
+			return
 		if host._result_flow.check_combat_end():
 			return
-	await _reset_turn()
+	await _reset_turn(flow)
+	if not host.is_flow_active(flow):
+		return
 	if host.state.player_hp <= 0 or host.state.enemy_hp <= 0:
 		return
 	start_planning()
 
-func _reset_turn() -> void:
+func _reset_turn(flow: AsyncFlowToken) -> void:
 	for event in host.round_resolver.build_events(host.state, host.map_area):
-		if await _resolve_round_event(event):
+		if await _resolve_round_event(event, flow):
+			return
+		if not host.is_flow_active(flow):
 			return
 
 	host.player_actions.reset()
@@ -302,19 +318,21 @@ func _reset_turn() -> void:
 
 ## Aplica la parte visible de un evento de fin de ronda. Devuelve true si el
 ## combate terminó y la secuencia no debe continuar.
-func _resolve_round_event(event: CombatRoundEvent) -> bool:
+func _resolve_round_event(event: CombatRoundEvent, flow: AsyncFlowToken) -> bool:
 	match event.kind:
 		"tree_drop":
 			if event.hit:
 				host.log_message(LocalizationState.t("combat.tree_drop.enemy_hit", [event.damage]))
 				await host._damage.deal_to_enemy(event.damage, false, CombatState.FISICO)
+				if not host.is_flow_active(flow):
+					return true
 				if host._result_flow.check_combat_end():
 					return true
 			else:
 				host.log_message(LocalizationState.t("combat.tree_drop.descend"))
 			host.player_actions.apply_player_zone_effects(host.map_area.player_pos, host.map_area.player_pos)
 		"delayed_zone":
-			if await _resolve_delayed_zone_event(event):
+			if await _resolve_delayed_zone_event(event, flow):
 				return true
 		"tick_map_effects":
 			host.map_area.interactions.tick_puddles()
@@ -322,6 +340,8 @@ func _resolve_round_event(event: CombatRoundEvent) -> bool:
 		"status_damage":
 			host.log_message(LocalizationState.t(event.damage_log_key, [event.damage]))
 			await host._damage.deal_to_player(event.damage, true, event.damage_type)
+			if not host.is_flow_active(flow):
+				return true
 			if host._result_flow.check_combat_end():
 				return true
 			_log_expired_status(host.round_resolver.finish_status_event(host.state, event))
@@ -329,18 +349,22 @@ func _resolve_round_event(event: CombatRoundEvent) -> bool:
 			_log_expired_status(host.round_resolver.finish_status_event(host.state, event))
 	return false
 
-func _resolve_delayed_zone_event(event: CombatRoundEvent) -> bool:
+func _resolve_delayed_zone_event(event: CombatRoundEvent, flow: AsyncFlowToken) -> bool:
 	var hit: Dictionary = event.zone_hit
 	match event.target:
 		"enemy":
 			host.log_message(LocalizationState.t("combat.delayed_zone.enemy_hit", [hit["name"], hit["damage"]]))
 			await host._damage.deal_to_enemy(hit["damage"], true, CombatState.MAGICO)
+			if not host.is_flow_active(flow):
+				return true
 			if host._result_flow.check_combat_end():
 				return true
 			_log_delayed_zone_impact(host.round_resolver.apply_delayed_zone_impact(host.state, event), true)
 		"player":
 			host.log_message(LocalizationState.t("combat.delayed_zone.player_hit", [hit["name"], hit["damage"]]))
 			await host._damage.deal_to_player(hit["damage"], true, CombatState.MAGICO)
+			if not host.is_flow_active(flow):
+				return true
 			if host._result_flow.check_combat_end():
 				return true
 			_log_delayed_zone_impact(host.round_resolver.apply_delayed_zone_impact(host.state, event), false)

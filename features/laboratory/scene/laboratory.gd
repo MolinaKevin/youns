@@ -33,7 +33,7 @@ var notified_locations: Array = []
 
 func _ready() -> void:
 	if standalone_mode:
-		ModalScreenContext.enter_fullscreen()
+		ModalScreenContext.enter_fullscreen(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
 		interaction_enabled = false
 	else:
 		GlobalHUD.set_clock_visible(true)
@@ -203,8 +203,7 @@ func _on_take_all() -> void:
 
 func _close_or_return() -> void:
 	if standalone_mode and GameState.ui_return.has_return():
-		var return_scene := GameState.ui_return.take_scene_path()
-		get_tree().change_scene_to_file(return_scene)
+		SceneNavigator.return_to_origin(get_tree())
 		return
 	close_requested.emit()
 

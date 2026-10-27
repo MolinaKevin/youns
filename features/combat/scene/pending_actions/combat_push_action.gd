@@ -54,6 +54,9 @@ func on_tile_selected(pos: Vector2) -> void:
 	host.confirm_popup_show_requested.emit(false)
 
 func execute(direction_target: Vector2) -> void:
+	var flow := _flow()
+	if not _flow_is_active(flow):
+		return
 	if not _index_valid():
 		clear()
 		return
@@ -77,19 +80,27 @@ func execute(direction_target: Vector2) -> void:
 	# 1. Animación de ataque del jugador
 	host.map_area.actors.play_player_animation("attack")
 	await host.map_area.player_anim_finished
+	if not _flow_is_active(flow):
+		return
 	host.map_area.actors.play_player_animation("idle")
 
 	# 2. El enemigo vuela
 	host.map_area.interactions.push_enemy_to(landing)
 	await host.map_area.enemy_reached_target
+	if not _flow_is_active(flow):
+		return
 
 	# 3. Animación de daño del enemigo
 	host.map_area.actors.play_enemy_animation("damage")
 	await host.map_area.enemy_anim_finished
+	if not _flow_is_active(flow):
+		return
 	if host.state.enemy_hp > 0:
 		host.map_area.actors.play_enemy_animation("idle")
 
-	var any_zone: bool = await host._apply_enemy_forced_move(played_card.name, push_from, landing)
+	var any_zone: bool = await host._apply_enemy_forced_move(played_card.name, push_from, landing, flow)
+	if not _flow_is_active(flow):
+		return
 	if not any_zone:
 		match played_card.card_type:
 			CardActionLine.TYPE_PULL: host.emit_log("combat.log.push.pulled", [played_card.name])

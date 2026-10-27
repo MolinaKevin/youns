@@ -29,6 +29,7 @@ extends RefCounted
 ## tienen colisión.
 
 const ForestBuilder := preload("res://features/world/zones/forest_builder.gd")
+const DebugLogging := preload("res://shared/debug_logging.gd")
 
 enum Kind { FOREST, GROUND, NO_FILL, NO_TREES, WATER }
 const PREFIXES := {
@@ -129,10 +130,10 @@ func has_guides() -> bool:
 ## Agrega a `parent` el suelo y los árboles. `grid` es la grilla de
 ## WorldBoundary: sólo se consulta para no plantar árboles sobre lo caminable
 ## ni a menos de `clearance` celdas de su borde.
-func build(parent: Node3D, grid: WorldBoundaryGrid, clearance: int, spacing: float, tree_seed: int) -> void:
+func build(parent: Node3D, grid: WorldBoundaryGrid, clearance: int, spacing: float, tree_seed: int, build_tree_meshes := true) -> void:
 	var started_at := Time.get_ticks_msec()
 	var checkpoint := started_at
-	if DebugSettings.verbose_logging_enabled:
+	if DebugLogging.verbose_enabled():
 		print("[AutoDecoration] Construyendo decoración global…")
 	var ground := ground_triangles()
 	checkpoint = _log_build_step("Preparación de suelo (%d triángulos)" % (ground.size() / 3), started_at, checkpoint)
@@ -146,7 +147,7 @@ func build(parent: Node3D, grid: WorldBoundaryGrid, clearance: int, spacing: flo
 	checkpoint = _log_build_step("Creación de malla de agua", started_at, checkpoint)
 	_tree_positions = tree_positions(grid, clearance, spacing, tree_seed)
 	checkpoint = _log_build_step("Cálculo de %d posiciones de árboles" % _tree_positions.size(), started_at, checkpoint)
-	if _tree_positions.is_empty():
+	if not build_tree_meshes or _tree_positions.is_empty():
 		return
 	var templates := ForestBuilder.library_templates(TREE_GROUP)
 	checkpoint = _log_build_step("Carga de %d plantillas de árbol" % templates.size(), started_at, checkpoint)
@@ -164,7 +165,7 @@ func build(parent: Node3D, grid: WorldBoundaryGrid, clearance: int, spacing: flo
 
 func _log_build_step(step: String, started_at: int, previous_at: int) -> int:
 	var now := Time.get_ticks_msec()
-	if DebugSettings.verbose_logging_enabled:
+	if DebugLogging.verbose_enabled():
 		print("[AutoDecoration] %s: +%d ms (total: %d ms)" % [step, now - previous_at, now - started_at])
 	return now
 

@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" uid="uid://bm2gtctft65a4" path="res://assets/youns/pombero/punch.fbx" id="1_x0k2r"]
 [ext_resource type="PackedScene" uid="uid://c8ihbe1o2ajra" path="res://assets/youns/pombero/damage.fbx" id="2_aoj80"]
 [ext_resource type="Texture2D" uid="uid://b63i01qwdnlhg" path="res://assets/youns/pombero/texture.png" id="3_texture"]
+[ext_resource type="Texture2D" path="res://assets/youns/newen/portraits/newen_tierra.png" id="portrait"]
 [ext_resource type="PackedScene" uid="uid://db5u2tfq1cebc" path="res://assets/youns/pombero/range.fbx" id="4_jx040"]
 [ext_resource type="PackedScene" uid="uid://d2ip2vgeao42i" path="res://assets/youns/pombero/run.fbx" id="5_3312o"]
 [ext_resource type="PackedScene" uid="uid://cxamcaaq168ko" path="res://assets/youns/pombero/walk.fbx" id="6_ytd22"]
@@ -73,13 +74,14 @@ stat = "mente"
 
 [resource]
 script = ExtResource("1_script")
-id = "pombero"
-youn_name = "Pombero"
+id = "newen"
+youn_name = "Newen"
 stage = "adolescente"
 signature_card = ExtResource("evo_signature")
 color_changes = Dictionary[String, int]({"corporal": 4})
 granted_lines = Array[ExtResource("evo_line_script")]([SubResource("EvoLine0"), SubResource("EvoLine1")])
 texture = ExtResource("3_texture")
+portrait = ExtResource("portrait")
 mesh_scale = 0.2
 mesh_y_offset = -0.8
 scene_idle = ExtResource("1_e7jbd")
@@ -97,7 +99,7 @@ evolution_conditions = Array[ExtResource("evo_condition_script")]([SubResource("
 intelligences = PackedStringArray("corporal")
 strategy = ExtResource("strategy")
 monster_deck = ExtResource("monster_deck")
-loot_item_name = "Pombero Claw"
+loot_item_name = "Newen Claw"
 loot_gold = 4
 sleep_hour = 20
 wake_hour = 4

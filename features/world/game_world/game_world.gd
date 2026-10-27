@@ -64,7 +64,6 @@ func _input(event: InputEvent) -> void:
 		if Dialogue.handle_input(event):
 			get_viewport().set_input_as_handled()
 		return
-
 	if _sleeping or intro.handle_input(event):
 		return
 	# El menú rápido (G) usa Enter para elegir, que también abre este menú.
@@ -107,6 +106,7 @@ func _restore_after_combat() -> void:
 
 func _exit_tree() -> void:
 	PauseMenu.enabled = false
+
 
 func _on_sleep_requested() -> void:
 	YounLifeEvents.mark_player_slept()

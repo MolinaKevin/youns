@@ -3,9 +3,6 @@ extends Control
 ## Mapa de prueba dibujado desde ZoneManager.catalog. No depende de arte: toma
 ## las posiciones reales del mundo y muestra zonas y al jugador.
 
-const ScenePaths := preload("res://shared/scene_paths.gd")
-const GAME_WORLD := ScenePaths.GAME_WORLD
-const TITLE_MENU := ScenePaths.TITLE_MENU
 
 const MAP_MARGIN := 80.0
 const PANEL_COLOR := Color("#10191b")
@@ -33,7 +30,7 @@ var _close_button: Button
 
 
 func _ready() -> void:
-	ModalScreenContext.enter_fullscreen()
+	ModalScreenContext.enter_fullscreen(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_ui()
 	resized.connect(_refresh_layout)
@@ -151,8 +148,4 @@ func _world_rect_to_map(world_rect: Rect2) -> Rect2:
 
 func _close() -> void:
 	get_tree().paused = false
-	if GameState.ui_return.has_return():
-		var return_scene: String = GameState.ui_return.take_scene_path()
-		get_tree().change_scene_to_file(return_scene)
-		return
-	get_tree().change_scene_to_file(TITLE_MENU if not GameState.save_service.session_active else GAME_WORLD)
+	SceneNavigator.return_to_session_origin(get_tree())

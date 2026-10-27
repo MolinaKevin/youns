@@ -4,6 +4,7 @@ extends RefCounted
 const AutoDecorationScript := preload("res://features/world/zones/auto_decoration.gd")
 const ForestBuilder := preload("res://features/world/zones/forest_builder.gd")
 const BakeSignature := preload("res://features/world/zones/world_decoration_bake_signature.gd")
+const DebugLogging := preload("res://shared/debug_logging.gd")
 
 ## La decoración se hornea con tools/bake_world_decoration.gd. El editor usa
 ## el mismo algoritmo procedural una vez; el juego sólo carga la escena lista.
@@ -12,11 +13,13 @@ const BAKED_WORLD_DECORATION := "res://assets/maps/world/baked_world_decoration.
 
 var _decoration := AutoDecorationScript.new()
 var _force_procedural := false
+var _build_tree_meshes := true
 var _baked_tree_positions: Array[Vector3] = []
 
 
-func prepare(force_procedural: bool) -> void:
+func prepare(force_procedural: bool, build_tree_meshes := true) -> void:
 	_force_procedural = force_procedural
+	_build_tree_meshes = build_tree_meshes
 
 
 func collect_map_node(map: Node, offset: Vector3) -> void:
@@ -37,7 +40,7 @@ func build(parent: Node3D, grid: WorldBoundaryGrid, layout: WorldLayout, catalog
 		_decoration.add_map(layout.world_guides, Vector3.ZERO)
 	else:
 		push_warning("WorldDecorationBuilder: no está %s" % layout.world_guides)
-	_decoration.build(node, grid, clearance, spacing, tree_seed)
+	_decoration.build(node, grid, clearance, spacing, tree_seed, _build_tree_meshes)
 
 
 func tree_positions() -> Array[Vector3]:
@@ -62,7 +65,7 @@ func _add_baked_world_decoration(parent: Node3D, layout: WorldLayout, tree_seed:
 			_baked_tree_positions.append(position)
 	parent.add_child(baked)
 	_add_baked_trees(baked, tree_seed)
-	if DebugSettings.verbose_logging_enabled:
+	if DebugLogging.verbose_enabled():
 		print("[WorldDecorationBuilder] Decoración global horneada cargada (%d árboles)." % _baked_tree_positions.size())
 
 

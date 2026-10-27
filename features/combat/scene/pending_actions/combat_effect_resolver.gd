@@ -11,3 +11,7 @@ var host: CombatPlayerActions
 
 func _init(p_host: CombatPlayerActions) -> void:
 	host = p_host
+
+
+func _flow_is_active(flow: AsyncFlowToken) -> bool:
+	return host.is_flow_active(flow)

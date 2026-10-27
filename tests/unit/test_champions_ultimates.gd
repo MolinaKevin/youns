@@ -54,17 +54,17 @@ func test_cada_campeon_y_ultimate_tiene_5_condiciones() -> void:
 	assert_eq(_youn("mboi_tui").evolution_conditions.size(), 0, "el comodín no tiene")
 
 
-func test_pombero_bien_cuidado_va_a_yaguarete_aba() -> void:
-	# Inteligencia corporal + viene de Pombero + pocos errores de cuidado = 3.
-	var save := _save("pombero", 3.1)
+func test_newen_bien_cuidado_va_a_yaguarete_aba() -> void:
+	# Inteligencia corporal + viene de Newen + pocos errores de cuidado = 3.
+	var save := _save("newen", 3.1)
 	save.care_mistakes = 0
-	assert_eq(EvolutionChecker.try_evolve(save, _youn("pombero")), D + "yaguarete_aba.tres")
+	assert_eq(EvolutionChecker.try_evolve(save, _youn("newen")), D + "yaguarete_aba.tres")
 
 
 func test_sin_3_condiciones_va_al_comodin() -> void:
-	var save := _save("pombero", 3.1)
+	var save := _save("newen", 3.1)
 	save.care_mistakes = 5
-	assert_eq(EvolutionChecker.try_evolve(save, _youn("pombero")), D + "mboi_tui.tres")
+	assert_eq(EvolutionChecker.try_evolve(save, _youn("newen")), D + "mboi_tui.tres")
 
 
 func test_el_campeon_pasa_a_ultimate_en_cuanto_cumple_3() -> void:

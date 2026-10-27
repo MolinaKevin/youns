@@ -63,3 +63,18 @@ func test_migrar_v2_con_puente_guardado_lo_pasa_a_construcciones() -> void:
 
 	assert_true(save.world_progress.has_construction("river_bridge"))
 	assert_true(save.world_progress.unlocked_bridge_ids.is_empty())
+
+
+func test_migrar_v3_renombra_pombero_a_newen() -> void:
+	var save := PlayerSaveData.new()
+	save.save_version = 3
+	save.current_youn_path = "res://data/youns/pombero.tres"
+	save.pending_evolution_path = "res://data/youns/pombero.tres"
+	save.discovered_evolutions = {"pombero": [1, 2]}
+
+	_service.migrate_save(save)
+
+	assert_eq(save.current_youn_path, "res://data/youns/newen.tres")
+	assert_eq(save.pending_evolution_path, "res://data/youns/newen.tres")
+	assert_eq(save.discovered_evolutions["newen"], [1, 2])
+	assert_false(save.discovered_evolutions.has("pombero"))

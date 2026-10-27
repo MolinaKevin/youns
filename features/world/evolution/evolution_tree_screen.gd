@@ -7,10 +7,8 @@ extends Control
 ## Se abre desde el menú del juego.
 
 const Intelligences := preload("res://data/youns/intelligences.gd")
-const ScenePaths := preload("res://shared/scene_paths.gd")
-const YOUNS_DIR := "res://data/youns/"
+const YounCatalog := preload("res://shared/youn_catalog.gd")
 const STAGES := ["bebe", "nino", "adolescente", "campeon", "ultimate"]
-const GAME_WORLD := ScenePaths.GAME_WORLD
 const NODE_SIZE := Vector2(150, 54)
 const BG := Color(0.03, 0.06, 0.09)
 const PANEL_BG := Color(0.05, 0.1, 0.15)
@@ -29,7 +27,7 @@ var _detail: EvolutionDetailOverlay
 var _focus_nav: EvolutionFocusNav
 
 func _ready() -> void:
-	ModalScreenContext.enter_fullscreen()
+	ModalScreenContext.enter_fullscreen(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
 	_detail = EvolutionDetailOverlay.new(self)
 	_focus_nav = EvolutionFocusNav.new(self)
 	_load_youns()
@@ -42,13 +40,7 @@ func _load_youns() -> void:
 		_current_path = save.current_youn_path
 		for key in save.discovered_evolutions:
 			_discovered[key] = true
-	var dir := DirAccess.open(YOUNS_DIR)
-	if dir == null:
-		return
-	for file in dir.get_files():
-		if not file.ends_with(".tres"):
-			continue
-		var data := load(YOUNS_DIR + file) as YounData
+	for data in YounCatalog.all():
 		if data == null or not data.stage in STAGES:
 			continue
 		# Los salvajes sueltos (sin etapa propia ni evoluciones) no van.
@@ -217,7 +209,4 @@ func _unhandled_input(event: InputEvent) -> void:
 			_on_back()
 
 func _on_back() -> void:
-	if GameState.ui_return.has_return():
-		get_tree().change_scene_to_file(GameState.ui_return.take_scene_path())
-		return
-	get_tree().change_scene_to_file(GAME_WORLD)
+	SceneNavigator.return_to_origin(get_tree())

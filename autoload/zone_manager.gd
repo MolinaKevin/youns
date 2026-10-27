@@ -2,6 +2,7 @@ extends Node
 
 const WorldBoundary := preload("res://features/world/zones/world_boundary.gd")
 const ScenePaths := preload("res://shared/scene_paths.gd")
+const GameDataValidator := preload("res://shared/game_data_validator.gd")
 const TITLE_MENU_SCENE := ScenePaths.TITLE_MENU
 
 signal zone_changed(previous_zone: String, current_zone: String)
@@ -56,6 +57,7 @@ func initialize_world() -> void:
 	if _world_initialized:
 		return
 	var catalog_errors := catalog.validate()
+	catalog_errors.append_array(GameDataValidator.zone_graph_errors(catalog))
 	if not catalog_errors.is_empty():
 		for error_text in catalog_errors:
 			push_error("ZoneCatalog: " + error_text)

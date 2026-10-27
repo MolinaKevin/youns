@@ -14,6 +14,11 @@ const OUTPUT_PATH := "res://assets/maps/world/baked_world_decoration.scn"
 
 
 func _init() -> void:
+	# Al ejecutar un script de SceneTree Godot instancia los autoloads del
+	# proyecto. El baker construye el mundo de forma aislada, así que ningún
+	# autoload debe comenzar a streamear zonas en el frame de salida.
+	for autoload in root.get_children():
+		autoload.process_mode = Node.PROCESS_MODE_DISABLED
 	call_deferred("_bake")
 
 
@@ -21,7 +26,10 @@ func _bake() -> void:
 	print("[WorldDecorationBaker] Generando decoración horneada…")
 	var boundary := WorldBoundary.new()
 	# Fuerza la ruta procedural aunque ya exista un horneado previo.
-	boundary.build(ZoneCatalog.new(), true)
+	# El horneado sólo necesita la grilla y las mallas que se guardan. Las
+	# paredes y los MultiMeshes de árboles son runtime-only (las posiciones se
+	# guardan como metadato) y no se crean en este proceso headless.
+	boundary.build(ZoneCatalog.new(), true, false, false)
 	var decoration := boundary.get_node_or_null("AutoDecoration") as Node3D
 	if decoration == null:
 		push_error("WorldDecorationBaker: no se generó AutoDecoration.")
@@ -49,6 +57,8 @@ func _bake() -> void:
 		quit(1)
 		return
 	print("[WorldDecorationBaker] Listo: %s (%d posiciones de árboles)." % [OUTPUT_PATH, boundary.decoration_tree_positions().size()])
+	# En este punto sólo quedan las mallas serializadas: las paredes y los
+	# MultiMeshes de runtime no se crearon para el horneado.
 	decoration.free()
 	boundary.free()
 	quit()

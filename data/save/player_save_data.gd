@@ -17,6 +17,9 @@ class_name PlayerSaveData
 @export var inventory_items: Array[Dictionary] = []
 
 @export var gold: int = 0
+## Identidad elegida en la ceremonia de una partida nueva.
+@export var player_name: String = ""
+@export var companion_name: String = ""
 @export var unlocked_relic_ids: Array[String] = []
 @export var player_level: int = 1
 @export_range(0, 100, 1) var discipline: int = 55

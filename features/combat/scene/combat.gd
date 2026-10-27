@@ -79,6 +79,7 @@ var enemy_reveal := _CombatEnemyRevealPresentation.new()
 var _player_name := ""
 var _enemy_name := ""
 var _preview_tween: Tween = null
+var _flow_token: AsyncFlowToken
 
 func _enter_tree() -> void:
 	# Esto corre antes del _ready de MapArea: cuando haya layouts por bioma,
@@ -88,6 +89,7 @@ func _enter_tree() -> void:
 		combat_map.setup_biome(GameState.world_combat.biome)
 
 func _ready() -> void:
+	_flow_token = AsyncFlowToken.new(self)
 	GlobalHUD.set_clock_visible(false)
 	GlobalHUD.set_clock_paused(true)
 	GlobalHUD.set_youns_status_visible(false)
@@ -121,7 +123,8 @@ func _ready() -> void:
 	deck_manager.reshuffled.connect(func(): log_message(LocalizationState.t("combat.reshuffle")))
 
 	player_actions = _CombatPlayerActions.new()
-	player_actions.setup(state, map_area, _damage.deal_to_enemy, _damage.deal_to_player, _result_flow.check_combat_end)
+	player_actions.setup(state, map_area, _damage.deal_to_enemy, _damage.deal_to_player, _result_flow.check_combat_end,
+		current_flow, is_flow_active)
 	player_actions.log_requested.connect(log_message)
 	map_area.player_knocked_off_tree.connect(player_actions.player_falls_from_tree)
 	player_actions.hand_refresh_requested.connect(refresh_hand)
@@ -139,7 +142,7 @@ func _ready() -> void:
 	var wild_youn: YounData = GameState.world_combat.take_wild_youn_data()
 	# El combate de prueba del menú también pelea contra un Youn.
 	if wild_youn == null:
-		wild_youn = load("res://data/youns/pombero.tres")
+		wild_youn = load("res://data/youns/newen.tres")
 	state.enemy_hp     = wild_youn.combat_max_hp()
 	state.enemy_max_hp = state.enemy_hp
 	if wild_youn.base_stats != null:
@@ -221,9 +224,28 @@ func _ready() -> void:
 	_turn_flow.start_planning()
 
 func _exit_tree() -> void:
+	if _flow_token:
+		_flow_token.cancel()
 	ZoneManager.set_world_visible(true)
 	PartyManager.set_party_visible(true)
 	GlobalHUD.set_debug_stats_visible(true)
+
+
+## Cada secuencia de ronda conserva su token. Al comenzar una nueva se invalida
+## cualquier continuación diferida de la anterior.
+func begin_flow() -> AsyncFlowToken:
+	if _flow_token:
+		_flow_token.cancel()
+	_flow_token = AsyncFlowToken.new(self)
+	return _flow_token
+
+
+func current_flow() -> AsyncFlowToken:
+	return _flow_token
+
+
+func is_flow_active(flow: AsyncFlowToken) -> bool:
+	return is_inside_tree() and flow != null and flow == _flow_token and flow.is_active()
 
 ## Casi todo lo llama CombatTurnFlow — este passthrough existe porque también
 ## lo llaman directo CombatWildcards y la señal hand_refresh_requested.

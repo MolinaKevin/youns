@@ -5,11 +5,11 @@
 
 [sub_resource type="Resource" id="Effect_Evolve"]
 script = ExtResource("2_evolve")
-youn_data_path = "res://data/youns/pombero.tres"
+youn_data_path = "res://data/youns/newen.tres"
 
 [resource]
 script = ExtResource("1_itemdata")
 id = "semilla_embrujada"
 name = "Semilla Embrujada"
-description = "Una semilla cargada de magia oscura. El Youn que la consume evoluciona en Pombero."
+description = "Una semilla cargada de magia oscura. El Youn que la consume evoluciona en Newen."
 effects = [SubResource("Effect_Evolve")]

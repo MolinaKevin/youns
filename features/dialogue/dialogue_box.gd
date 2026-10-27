@@ -1,5 +1,7 @@
 extends CanvasLayer
 
+const DebugLogging := preload("res://shared/debug_logging.gd")
+
 ## Servicio global de diálogo. Cada entrada usa las claves `speaker`, `text`
 ## y, opcionalmente, `portrait` (Texture2D).
 signal line_changed(index: int)
@@ -32,10 +34,10 @@ var _lines: Array[Dictionary] = []
 var _line_index := -1
 var _visible_characters := 0.0
 var _typing := false
-var _tree_was_paused := false
+var _dialogue_modal: ModalScreenContext
 ## La elección puede abrirse dentro de un diálogo ya pausado o sola. Conserva
 ## su propia pausa para no sobrescribir la que pertenece al diálogo.
-var _choice_tree_was_paused := false
+var _choice_modal: ModalScreenContext
 
 var _choice_menu_logic: DialogueChoiceMenu
 var _toast_notifier: DialogueToast
@@ -43,6 +45,8 @@ var _toast_notifier: DialogueToast
 
 func _ready() -> void:
 	_root.hide()
+	_dialogue_modal = ModalScreenContext.new(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
+	_choice_modal = ModalScreenContext.new(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
 	_choice_menu_logic = DialogueChoiceMenu.new(self)
 	_toast_notifier = DialogueToast.new(self)
 
@@ -58,9 +62,7 @@ func start(lines: Array[Dictionary], mirrored := false) -> void:
 		configured_line["mirrored"] = bool(configured_line.get("mirrored", mirrored))
 		_lines.append(configured_line)
 	_line_index = 0
-	_tree_was_paused = get_tree().paused
-	get_tree().paused = true
-	GlobalHUD.set_clock_paused(true)
+	_dialogue_modal.enter_overlay(self)
 	_root.show()
 	_show_current_line()
 
@@ -75,9 +77,7 @@ func finish() -> void:
 	_line_index = -1
 	_typing = false
 	_root.hide()
-	if not _tree_was_paused:
-		get_tree().paused = false
-		GlobalHUD.set_clock_paused(false)
+	_dialogue_modal.exit_overlay(self)
 	if was_playing:
 		dialogue_finished.emit()
 
@@ -106,9 +106,7 @@ func ask(options: Array[String]) -> int:
 ## Abre el menú de elección y toma la pausa temporal que le corresponde. La
 ## lógica de botones no manipula nodos ni estado de pausa privados.
 func open_choice_menu() -> void:
-	_choice_tree_was_paused = get_tree().paused
-	get_tree().paused = true
-	GlobalHUD.set_clock_paused(true)
+	_choice_modal.enter_overlay(self)
 	_root.show()
 	_choice_menu.show()
 
@@ -116,9 +114,7 @@ func open_choice_menu() -> void:
 ## Cierra el menú de elección y restaura sólo la pausa que abrió él mismo.
 func close_choice_menu() -> void:
 	_choice_menu.hide()
-	if not _choice_tree_was_paused:
-		get_tree().paused = false
-		GlobalHUD.set_clock_paused(false)
+	_choice_modal.exit_overlay(self)
 	if not is_playing():
 		_root.hide()
 
@@ -219,7 +215,7 @@ func _show_current_line() -> void:
 	_portrait.position = portrait_position
 	_portrait.scale = portrait_scale
 	if DEBUG_LAYOUT and _line_index == 0:
-		if DebugSettings.verbose_logging_enabled:
+		if DebugLogging.verbose_enabled():
 			call_deferred("_log_layout", _speaker_label.text, mirrored, portrait_position)
 
 	_visible_characters = 0.0
@@ -278,6 +274,8 @@ func _reset_layout() -> void:
 
 
 func _log_layout(speaker: String, mirrored: bool, portrait_position: Vector2) -> void:
+	if not DebugLogging.verbose_enabled():
+		return
 	var viewport_rect := get_viewport().get_visible_rect()
 	print("[DialogueLayout] speaker=%s mirrored=%s viewport=%s root=(pos=%s size=%s) box=(rect=%s anchors=(%s,%s,%s,%s)) frame=(rect=%s anchors=(%s,%s,%s,%s)) portrait=(pos=%s scale=%s rect=%s)" % [
 		speaker,

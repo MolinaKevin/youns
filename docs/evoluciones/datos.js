@@ -70,7 +70,7 @@ window.EVOLUCIONES = {
     },
 
     // ── Rookies (en el código: etapa "adolescente") ──────────────────────────
-    { id: "pombero", nombre: "Pombero", etapa: "rookie", inteligencias: ["corporal"], desde: [{ id: "nino_1", tipo: "normal" }],
+    { id: "newen", nombre: "Newen", etapa: "rookie", inteligencias: ["corporal"], desde: [{ id: "nino_1", tipo: "normal" }],
       notas: "Rookie por defecto de Niño 1. Stats dominantes: Agilidad, Técnica, Inteligencia, Mente." },
     { id: "rookie_1b", nombre: "Rookie 1B", etapa: "rookie", provisorio: true, inteligencias: ["logica"], desde: [{ id: "nino_2", tipo: "normal" }] },
     { id: "nguruvilu", nombre: "Nguruvilu", etapa: "rookie", inteligencias: ["naturalista"], desde: [{ id: "nino_1", tipo: "normal" }],

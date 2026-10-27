@@ -29,7 +29,7 @@ func _make_save(youn_path: String, days_in_stage: float) -> PlayerSaveData:
 	var save := PlayerSaveData.new()
 	save.current_youn_path = youn_path
 	# Con errores de cuidado no llega a 3 condiciones de ningún campeón (un
-	# Pombero bien cuidado va a Yaguareté-Abá): cae en el comodín.
+	# Newen bien cuidado va a Yaguareté-Abá): cae en el comodín.
 	save.care_mistakes = 5
 	save.stage_entered_total_hour = GameState.get_total_hours() - days_in_stage * 24.0
 	return save
@@ -39,7 +39,7 @@ func _make_save(youn_path: String, days_in_stage: float) -> PlayerSaveData:
 
 func test_check_conditions_retorna_vacio_por_defecto() -> void:
 	var save := PlayerSaveData.new()
-	var youn := load("res://data/youns/pombero.tres") as YounData
+	var youn := load("res://data/youns/newen.tres") as YounData
 	assert_eq(EvolutionChecker.check_conditions(save, youn), "")
 
 
@@ -48,14 +48,14 @@ func test_check_conditions_retorna_vacio_con_youn_null() -> void:
 
 
 func test_check_conditions_retorna_vacio_con_save_null() -> void:
-	var youn := load("res://data/youns/pombero.tres") as YounData
+	var youn := load("res://data/youns/newen.tres") as YounData
 	assert_eq(EvolutionChecker.check_conditions(null, youn), "")
 
 
 # ── try_evolve — guards ───────────────────────────────────────────────────────
 
 func test_try_evolve_retorna_vacio_con_save_null() -> void:
-	var youn := load("res://data/youns/pombero.tres") as YounData
+	var youn := load("res://data/youns/newen.tres") as YounData
 	assert_eq(EvolutionChecker.try_evolve(null, youn), "")
 
 
@@ -66,20 +66,20 @@ func test_try_evolve_retorna_vacio_con_youn_null() -> void:
 # ── try_evolve — vida maxima rookie (3 dias) ──────────────────────────────────
 
 func test_rookie_no_evoluciona_antes_de_3_dias() -> void:
-	var save := _make_save("res://data/youns/pombero.tres", 2.9)
-	var youn := load("res://data/youns/pombero.tres") as YounData
+	var save := _make_save("res://data/youns/newen.tres", 2.9)
+	var youn := load("res://data/youns/newen.tres") as YounData
 	assert_eq(EvolutionChecker.try_evolve(save, youn), "")
 
 
 func test_rookie_evoluciona_al_comodin_exactamente_a_3_dias() -> void:
-	var save := _make_save("res://data/youns/pombero.tres", 3.0)
-	var youn := load("res://data/youns/pombero.tres") as YounData
+	var save := _make_save("res://data/youns/newen.tres", 3.0)
+	var youn := load("res://data/youns/newen.tres") as YounData
 	assert_eq(EvolutionChecker.try_evolve(save, youn), WILDCARD_CAMPEON)
 
 
 func test_rookie_evoluciona_al_comodin_si_paso_mas_de_3_dias() -> void:
-	var save := _make_save("res://data/youns/pombero.tres", 4.0)
-	var youn := load("res://data/youns/pombero.tres") as YounData
+	var save := _make_save("res://data/youns/newen.tres", 4.0)
+	var youn := load("res://data/youns/newen.tres") as YounData
 	assert_eq(EvolutionChecker.try_evolve(save, youn), WILDCARD_CAMPEON)
 
 
@@ -116,8 +116,8 @@ func test_is_wildcard_es_false_por_defecto() -> void:
 	assert_false(YounData.new().is_wildcard)
 
 
-func test_pombero_no_es_comodin() -> void:
-	var youn := load("res://data/youns/pombero.tres") as YounData
+func test_newen_no_es_comodin() -> void:
+	var youn := load("res://data/youns/newen.tres") as YounData
 	assert_false(youn.is_wildcard)
 
 
@@ -140,7 +140,7 @@ func test_mboi_tui_es_campeon() -> void:
 
 const BEBE := "res://data/youns/bebe_1.tres"
 const NINO := "res://data/youns/nino_1.tres"
-const POMBERO := "res://data/youns/pombero.tres"
+const NEWEN := "res://data/youns/newen.tres"
 const NGURUVILU := "res://data/youns/nguruvilu.tres"
 
 
@@ -177,9 +177,9 @@ func test_nino_evoluciona_al_cumplir_el_dia() -> void:
 	assert_eq(EvolutionChecker.try_evolve(save, load(NINO) as YounData), NGURUVILU)
 
 
-func test_stat_dominante_de_pombero_va_a_pombero() -> void:
+func test_stat_dominante_de_newen_va_a_newen() -> void:
 	for key in ["agilidad", "tecnica", "inteligencia", "mente"]:
-		assert_eq(_pick(_nino_save({key: 45})), POMBERO, key)
+		assert_eq(_pick(_nino_save({key: 45})), NEWEN, key)
 
 
 func test_stat_dominante_de_nguruvilu_va_a_nguruvilu() -> void:
@@ -188,7 +188,7 @@ func test_stat_dominante_de_nguruvilu_va_a_nguruvilu() -> void:
 
 
 func test_empate_arriba_entre_rookies_va_al_por_defecto() -> void:
-	assert_eq(_pick(_nino_save({"agilidad": 45, "espiritu": 45})), POMBERO)
+	assert_eq(_pick(_nino_save({"agilidad": 45, "espiritu": 45})), NEWEN)
 
 
 func test_empate_arriba_del_mismo_rookie_va_a_ese() -> void:
@@ -201,7 +201,7 @@ func test_dominant_stats_devuelve_las_empatadas() -> void:
 
 func test_rookies_de_nino_1_se_reparten_las_8_stats() -> void:
 	var seen: Array[String] = []
-	for path in [POMBERO, NGURUVILU]:
+	for path in [NEWEN, NGURUVILU]:
 		var youn := load(path) as YounData
 		assert_eq(youn.dominant_stats.size(), 4, path)
 		assert_eq(youn.intelligences.size(), 1, path)
@@ -243,5 +243,5 @@ func test_condicion_de_valores_usa_min_y_max() -> void:
 func test_condicion_de_inteligencia() -> void:
 	var c := EvolutionConditionIntelligence.new()
 	c.intelligences = PackedStringArray(["corporal", "logica"])
-	assert_true(c.is_met({"from": load(POMBERO)}))
+	assert_true(c.is_met({"from": load(NEWEN)}))
 	assert_false(c.is_met({"from": load(NGURUVILU)}))

@@ -130,9 +130,8 @@ func _activate() -> void:
 		return
 	var scene: String = data.get("scene", "")
 	if scene != "":
-		GameState.ui_return.set_return(get_tree().current_scene.scene_file_path if overlay_mode else "")
 		get_tree().paused = false
-		get_tree().change_scene_to_file(scene)
+		SceneNavigator.open_from_current(get_tree(), scene)
 
 func _is_sleep_time() -> bool:
 	var youn_node = PartyManager.youn if PartyManager else null

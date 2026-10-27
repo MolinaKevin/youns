@@ -22,8 +22,16 @@ var emotions_blocked: bool:
 	get: return emotion_service.is_blocked()
 
 func _ready() -> void:
-	care_service = CareStatsService.new(_queue_stat_changed, show_emotion, clear_emotion, _find_emotion_rule, func(): bathroom_accident.emit())
-	emotion_service = EmotionService.new(care_service.apply_expire_penalty, apply_bathroom_accident, _queue_stat_changed)
+	var session := CareSessionContext.new(
+		func() -> PlayerSaveData: return GameState.player_save,
+		func() -> YounData:
+			var youn := PartyManager.youn
+			return youn.get("youn_data") as YounData if youn else null,
+		GameState.get_total_hours,
+		GlobalHUD.notify_youns_status_changed,
+	)
+	care_service = CareStatsService.new(session, _queue_stat_changed, show_emotion, clear_emotion, _find_emotion_rule, func(): bathroom_accident.emit())
+	emotion_service = EmotionService.new(session, care_service.apply_expire_penalty, apply_bathroom_accident, _queue_stat_changed)
 	_life_stage = StatsLifeStage.new(
 		func() -> Dictionary: return active_states,
 		block_emotions,

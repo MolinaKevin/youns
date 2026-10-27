@@ -41,6 +41,7 @@ const INTRO_PAGES := [
 
 var _index := 0
 var _active := false
+var _world_lease: WorldTransitionLease
 
 
 func _ready() -> void:
@@ -58,10 +59,10 @@ func start() -> void:
 	_active = true
 	_index = 0
 	visible = true
-	GlobalHUD.set_clock_visible(false)
-	GlobalHUD.set_clock_paused(true)
-	GlobalHUD.set_youns_status_visible(false)
-	PartyManager.freeze_camera()
+	_world_lease = WorldTransitionLease.new(
+		ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager), PartyManager,
+		{"hide_clock": true, "hide_status": true, "freeze_actors": false}
+	)
 	PartyManager.player.movement_locked = true
 	PartyManager.youn.movement_locked = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -92,16 +93,23 @@ func handle_input(event: InputEvent) -> bool:
 
 
 func _close() -> void:
-	_active = false
 	GameState.save_service.world_intro_seen = true
 	visible = false
-	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
-	GlobalHUD.set_clock_paused(false)
-	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
-	PartyManager.unfreeze_camera()
-	PartyManager.player.movement_locked = false
-	PartyManager.youn.movement_locked = false
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_release_world()
+	_active = false
+
+
+func _exit_tree() -> void:
+	_release_world()
+
+
+func _release_world() -> void:
+	if _world_lease:
+		_world_lease.release()
+	if _active and is_instance_valid(PartyManager.player):
+		PartyManager.player.movement_locked = false
+	if _active and is_instance_valid(PartyManager.youn):
+		PartyManager.youn.movement_locked = false
 
 
 func _refresh_language(_language: String = "") -> void:

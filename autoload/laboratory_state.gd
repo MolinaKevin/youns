@@ -2,6 +2,7 @@ extends Node
 
 const LabReward := preload("res://data/lab_reward.gd")
 const LabRecipeAction := preload("res://data/lab_recipe_action.gd")
+const GameDataValidator := preload("res://shared/game_data_validator.gd")
 const RECIPES_PATH := "res://data/lab_recipes/"
 
 signal recipe_completed(recipe: Resource)
@@ -60,6 +61,8 @@ func _load_recipes() -> void:
 							recipes_by_ingredient[ing["id"]] = []
 						recipes_by_ingredient[ing["id"]].append(recipe)
 		file = dir.get_next()
+	for error_text in GameDataValidator.recipe_errors(all_recipes):
+		push_error("LaboratoryState: " + error_text)
 	_loading = false
 	recipes_loaded.emit()
 

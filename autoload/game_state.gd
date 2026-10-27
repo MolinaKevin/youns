@@ -1,5 +1,7 @@
 extends Node
 
+const DebugLogging := preload("res://shared/debug_logging.gd")
+
 signal clock_changed(current_hour: float, current_day: int)
 signal twenty_min_ticked
 
@@ -11,6 +13,7 @@ const DAY_DURATION_SECONDS := DAY_DURATION_MINUTES * 60.0
 ## Dueño del reloj y punto de acceso de transición durante la migración.
 var clock: GameClock = GameClock.new()
 var save_service: SaveService = SaveService.new()
+var player_session: PlayerSessionService
 
 ## Compatibilidad temporal: todavía hay consumidores de alto nivel que leen la
 ## partida desde GameState. Los accesos puntuales nuevos van a SaveService.
@@ -33,6 +36,9 @@ var clock_paused: bool:
 ## Transición efímera mundo → combate → mundo. No forma parte del guardado.
 var world_combat: WorldCombatContext = WorldCombatContext.new()
 var world_entry: WorldEntryContext = WorldEntryContext.new()
+## Evita volver a reproducir la ceremonia al llegar a GameWorld después de la
+## escena independiente de una partida nueva.
+var new_game_ceremony_completed := false
 var ui_return: UiReturnContext = UiReturnContext.new()
 
 ## Fachada de los datos iniciales: su dueño es SaveService.
@@ -40,12 +46,32 @@ const STARTING_YOUN_PATH := SaveService.STARTING_YOUN_PATH
 const STARTING_STATS := SaveService.STARTING_STATS
 
 func _ready() -> void:
+	var care_action := func(action: String) -> void:
+		match action:
+			"reward": StatsManager.reward_youn()
+			"punish": StatsManager.punish_youn()
+			"deny": StatsManager.deny_youn()
+			"play": StatsManager.play_with_youn()
+	player_session = PlayerSessionService.new(
+		func() -> PlayerSaveData: return player_save,
+		care_action,
+		GlobalHUD.notify_youns_status_changed,
+	)
+	save_service.feature_bridge = SaveFeatureBridge.new(
+		func(save: PlayerSaveData) -> void:
+			StatsManager.restore_from_save(save)
+			LaboratoryState.restore_from_save(save),
+		func(save: PlayerSaveData) -> void:
+			StatsManager.write_to_save(save)
+			LaboratoryState.write_to_save(save)
+			ZoneManager.write_to_save(save),
+	)
 	clock.clock_changed.connect(func(hour: float, day: int): clock_changed.emit(hour, day))
 	clock.twenty_min_ticked.connect(func(): twenty_min_ticked.emit())
 	player_save = save_service.make_new_save(get_total_hours())
 	# Permite abrir la escena de combate directamente durante desarrollo.
-	world_combat.set_preview_youn(load("res://data/youns/pombero.tres") as YounData)
-	if DebugSettings.verbose_logging_enabled:
+	world_combat.set_preview_youn(load("res://data/youns/newen.tres") as YounData)
+	if DebugLogging.verbose_enabled():
 		print("GameState loaded")
 	clock_changed.emit(time_of_day_hours, current_day)
 
@@ -111,6 +137,7 @@ func has_saved_game() -> bool:
 func start_new_game() -> void:
 	# La etapa inicial del Youn se guarda con la hora real de esta partida, no
 	# con la hora de la sesión anterior.
+	new_game_ceremony_completed = false
 	clock.set_time(1, 8.0, false)
 	_reset_session()
 	save_service.start_new_session(get_total_hours())

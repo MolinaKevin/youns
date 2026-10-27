@@ -3,6 +3,7 @@ extends RefCounted
 
 const ForestBuilder := preload("res://features/world/zones/forest_builder.gd")
 const CollisionLayers := preload("res://shared/world_collision_layers.gd")
+const DebugLogging := preload("res://shared/debug_logging.gd")
 
 func build(parent: Node3D, grid: WorldBoundaryGrid, layout: WorldLayout, wall_height: float) -> void:
 	var started_at := Time.get_ticks_msec()
@@ -67,6 +68,6 @@ func set_trail_visible(parent: Node3D, open: bool) -> void:
 
 func _log_build_step(step: String, started_at: int, previous_at: int) -> int:
 	var now := Time.get_ticks_msec()
-	if DebugSettings.verbose_logging_enabled:
+	if DebugLogging.verbose_enabled():
 		print("[WorldBoundaryWalls] %s: +%d ms (total: %d ms)" % [step, now - previous_at, now - started_at])
 	return now

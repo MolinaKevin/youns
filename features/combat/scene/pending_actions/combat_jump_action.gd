@@ -38,6 +38,9 @@ func on_tile_selected(pos: Vector2) -> void:
 	host.confirm_popup_show_requested.emit(false)
 
 func execute(landing_pos: Vector2) -> void:
+	var flow := _flow()
+	if not _flow_is_active(flow):
+		return
 	if not _index_valid():
 		clear()
 		return
@@ -56,6 +59,8 @@ func execute(landing_pos: Vector2) -> void:
 	if hit_enemy:
 		host.emit_log("combat.log.jump.hits_enemy", [played_card.name, played_card.damage])
 		await host.deal_damage_to_enemy.call(played_card.damage, false, played_card.damage_type)
+		if not _flow_is_active(flow):
+			return
 	else:
 		host.emit_log("combat.log.jump.landed", [played_card.name, landing_pos.x, landing_pos.y])
 

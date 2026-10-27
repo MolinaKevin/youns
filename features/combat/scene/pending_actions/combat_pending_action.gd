@@ -44,6 +44,14 @@ func clear() -> void:
 func _index_valid() -> bool:
 	return index >= 0 and index < host.state.turn_actions.size()
 
+
+func _flow() -> AsyncFlowToken:
+	return host.current_flow()
+
+
+func _flow_is_active(flow: AsyncFlowToken) -> bool:
+	return host.is_flow_active(flow)
+
 ## Gasta la carta jugada: sale de turn_actions, se limpia la selección propia
 ## de la familia (clear(), polimórfico) y se cierra la vista previa. La
 ## mayoría de los execute() arrancan así. grenade no lo usa porque necesita

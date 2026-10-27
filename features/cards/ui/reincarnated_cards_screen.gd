@@ -5,12 +5,10 @@ extends Control
 ## se abre desde el menú del juego.
 
 const CARD_SCENE := preload("res://features/cards/presentation/card_view.tscn")
-const ScenePaths := preload("res://shared/scene_paths.gd")
 const CARD_SIZE := Vector2(195, 293)
-const GAME_WORLD := ScenePaths.GAME_WORLD
 
 func _ready() -> void:
-	ModalScreenContext.enter_fullscreen()
+	ModalScreenContext.enter_fullscreen(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
 	_build()
 
 func _build() -> void:
@@ -77,7 +75,4 @@ func _unhandled_input(event: InputEvent) -> void:
 		_on_back()
 
 func _on_back() -> void:
-	if GameState.ui_return.has_return():
-		get_tree().change_scene_to_file(GameState.ui_return.take_scene_path())
-		return
-	get_tree().change_scene_to_file(GAME_WORLD)
+	SceneNavigator.return_to_origin(get_tree())

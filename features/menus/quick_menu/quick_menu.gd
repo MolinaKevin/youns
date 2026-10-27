@@ -20,10 +20,13 @@ var _labels: Dictionary = {}
 var _selected := "up"
 var _style_normal: StyleBoxFlat
 var _style_selected: StyleBoxFlat
-var _modal := ModalScreenContext.new()
+var _modal: ModalScreenContext
+var _session: PlayerSessionService
 
 
 func _ready() -> void:
+	_session = GameState.player_session
+	_modal = ModalScreenContext.new(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
 	_build_styles()
 	_build_cross()
 	LocalizationState.language_changed.connect(_apply_localized_text)
@@ -167,8 +170,4 @@ func activate_selected() -> void:
 	var dir := _selected
 	close()
 	await YounInteraction.run(ITEMS[dir].anim)
-	match dir:
-		"up":    StatsManager.reward_youn()
-		"down":  StatsManager.punish_youn()
-		"left":  StatsManager.deny_youn()
-		"right": StatsManager.play_with_youn()
+	_session.care({"up": "reward", "down": "punish", "left": "deny", "right": "play"}[dir])

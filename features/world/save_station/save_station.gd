@@ -12,10 +12,10 @@ var _crystal: MeshInstance3D
 var _near := false
 var _dialog: CanvasLayer = null
 var _time := 0.0
-var _tree_was_paused := false
-var _clock_was_paused := false
+var _modal: ModalScreenContext
 
 func _ready() -> void:
+	_modal = ModalScreenContext.new(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
 	_build_model()
 	var area := Area3D.new()
 	var col := CollisionShape3D.new()
@@ -110,8 +110,6 @@ func _unhandled_input(event: InputEvent) -> void:
 func open_dialog() -> void:
 	if _dialog != null:
 		return
-	_tree_was_paused = get_tree().paused
-	_clock_was_paused = GameState.clock_paused
 	_prompt.visible = false
 	_dialog = CanvasLayer.new()
 	_dialog.layer = 80
@@ -153,9 +151,7 @@ func open_dialog() -> void:
 	cancel_catcher.cancelled.connect(close_dialog)
 	_dialog.add_child(cancel_catcher)
 	get_tree().root.add_child(_dialog)
-	get_tree().paused = true
-	GlobalHUD.set_clock_paused(true)
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_modal.enter_overlay(self, false, false, true)
 	yes.grab_focus()
 
 func _on_save() -> void:
@@ -168,9 +164,7 @@ func close_dialog() -> void:
 		return
 	_dialog.queue_free()
 	_dialog = null
-	get_tree().paused = _tree_was_paused
-	GlobalHUD.set_clock_paused(_clock_was_paused)
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_modal.exit_overlay(self)
 	_prompt.visible = _near
 
 ## Escucha Esc mientras el diálogo está abierto (con el juego pausado).

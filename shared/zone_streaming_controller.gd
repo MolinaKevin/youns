@@ -6,6 +6,7 @@ extends Node
 
 const AutoDecorationScript := preload("res://features/world/zones/auto_decoration.gd")
 const CollisionLayers := preload("res://shared/world_collision_layers.gd")
+const DebugLogging := preload("res://shared/debug_logging.gd")
 
 signal zone_loaded(zone_id: String)
 signal zone_unloaded(zone_id: String)
@@ -147,7 +148,7 @@ func _unload_zone(id: String) -> void:
 
 
 func _log_streaming(action: String, zone_id: String) -> void:
-	if not DebugSettings.verbose_logging_enabled:
+	if not DebugLogging.verbose_enabled():
 		return
 	var loaded_ids := loaded_zone_ids()
 	loaded_ids.sort()

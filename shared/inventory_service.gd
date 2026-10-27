@@ -1,6 +1,8 @@
 class_name InventoryService
 extends RefCounted
 
+const ItemCatalog := preload("res://shared/item_catalog.gd")
+
 ## Operaciones consistentes sobre el inventario persistido del jugador.
 const MAX_STACK := 20
 
@@ -54,9 +56,9 @@ static func item_at(save: PlayerSaveData, index: int) -> Dictionary:
 ## de una versión vieja del juego, asset borrado, etc.).
 static func resolve_item_data(entry: Dictionary) -> ItemData:
 	var data_path := str(entry.get("data_path", ""))
-	if data_path.is_empty() or not ResourceLoader.exists(data_path):
+	if data_path.is_empty():
 		return null
-	return load(data_path) as ItemData
+	return ItemCatalog.by_path(data_path)
 
 ## Consume hasta `amount` unidades de la entrada en `index` del inventario de
 ## la partida. Devuelve cuántas se sacaron.

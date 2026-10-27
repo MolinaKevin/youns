@@ -23,6 +23,9 @@ func on_tile_selected(pos: Vector2) -> void:
 	host.confirm_popup_show_requested.emit(false)
 
 func execute(_cell: Vector2) -> void:
+	var flow := _flow()
+	if not _flow_is_active(flow):
+		return
 	if not _index_valid():
 		clear()
 		return
@@ -49,6 +52,8 @@ func execute(_cell: Vector2) -> void:
 	_spend_card()
 	host.hand_refresh_requested.emit()
 	await host.deal_damage_to_enemy.call(damage, false, damage_type)
+	if not _flow_is_active(flow):
+		return
 	if enchant_status != "" and host.state.enemy_hp > 0:
 		host._apply_spell_status(enchant_status, 3)
 	host.ui_update_requested.emit()

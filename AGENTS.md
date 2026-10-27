@@ -21,4 +21,10 @@ Lo más importante:
   `data/zones/definitions/<id>.tres` (con conexiones en los dos sentidos) y en
   `meadow_maps` de `data/world/world_layout.tres`.
 
+## Minas (interiores)
+
+Los interiores de la mina (`blender/mina.blend`, `blender/mina2.blend`) tienen su
+propia guía: **[docs/minas.md](docs/minas.md)** — warps, spawns, luces, estados
+de la tierra (`*_E0/_E1/_E2`) y lo que falta en Godot.
+
 Otros documentos: `docs/patrones_modulares.md`, `docs/sistema_movimiento.md`, `docs/TODO.md`.

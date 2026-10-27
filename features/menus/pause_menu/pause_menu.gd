@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 var enabled := false
-var _modal := ModalScreenContext.new()
+var _modal: ModalScreenContext
 
 @onready var title_label = $Panel/VBox/Title
 @onready var continue_button = $Panel/VBox/ContinueButton
@@ -9,6 +9,7 @@ var _modal := ModalScreenContext.new()
 @onready var quit_button = $Panel/VBox/QuitButton
 
 func _ready() -> void:
+	_modal = ModalScreenContext.new(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
 	LocalizationState.language_changed.connect(_apply_localized_text)
 	continue_button.pressed.connect(close)
 	deck_button.pressed.connect(_on_deck)
@@ -35,7 +36,7 @@ func close() -> void:
 
 func _on_deck() -> void:
 	close()
-	get_tree().change_scene_to_file("res://features/deck_builder/ui/deck_builder_screen.tscn")
+	SceneNavigator.open_from_current(get_tree(), ScenePaths.DECK_BUILDER)
 
 func _on_quit() -> void:
 	get_tree().paused = false

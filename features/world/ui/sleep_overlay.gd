@@ -7,6 +7,7 @@ var _panel: PanelContainer
 var _message: Label
 var _yes_btn: Button
 var _no_btn: Button
+var _world_lease: WorldTransitionLease
 ## El jugador eligió guardar: game_world guarda al despertar (con la hora y el
 ## estado de la mañana).
 var save_requested := false
@@ -18,8 +19,7 @@ func _ready() -> void:
 	_build_ui()
 	_apply_text()
 	LocalizationState.language_changed.connect(_apply_text)
-	GlobalHUD.set_clock_paused(true)
-	_freeze_world()
+	_world_lease = WorldTransitionLease.new(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager), PartyManager)
 	_fade_in()
 
 
@@ -131,18 +131,11 @@ func _fade_out() -> void:
 
 
 func _finish() -> void:
-	GlobalHUD.set_clock_paused(false)
-	_unfreeze_world()
+	if _world_lease:
+		_world_lease.release()
 	queue_free()
 
 
-func _freeze_world() -> void:
-	PartyManager.freeze_actors()
-	PartyManager.freeze_camera()
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-
-
-func _unfreeze_world() -> void:
-	PartyManager.unfreeze_actors()
-	PartyManager.unfreeze_camera()
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+func _exit_tree() -> void:
+	if _world_lease:
+		_world_lease.release()

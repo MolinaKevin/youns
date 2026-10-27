@@ -11,6 +11,7 @@ const SLEEP_HEALTH_MAX_HOURS := 8
 
 var _configs: Array[StatConfig] = []
 var _accumulators: Dictionary = {}
+var _session: CareSessionContext
 var _queue_changed: Callable
 var _show_emotion: Callable
 var _clear_emotion: Callable
@@ -18,7 +19,8 @@ var _find_emotion_rule: Callable
 var _bathroom_accident: Callable
 
 
-func _init(queue_changed: Callable, show_emotion: Callable, clear_emotion: Callable, find_rule: Callable, bathroom_accident: Callable) -> void:
+func _init(session: CareSessionContext, queue_changed: Callable, show_emotion: Callable, clear_emotion: Callable, find_rule: Callable, bathroom_accident: Callable) -> void:
+	_session = session
 	_queue_changed = queue_changed
 	_show_emotion = show_emotion
 	_clear_emotion = clear_emotion
@@ -39,15 +41,14 @@ func calc_hunger_delta(delta: int, multiplier: float, weight: float, base_weight
 
 
 func add_stat(key: String, delta: int) -> void:
-	var save := GameState.player_save
+	var save := _session.player_save()
 	if save == null:
 		return
 	var current = save.get(key)
 	if current == null:
 		return
 	var multiplier := 1.0
-	var youn = PartyManager.youn
-	var data: YounData = youn.get("youn_data") if youn else null
+	var data := _session.youn_data()
 	if data and data.get("mult_" + key) != null:
 		multiplier = data.get("mult_" + key)
 	var final_delta := calc_hunger_delta(delta, multiplier, save.weight, data.base_weight) if key == "hambre" and data else roundi(delta * multiplier)
@@ -56,7 +57,7 @@ func add_stat(key: String, delta: int) -> void:
 
 
 func set_stat(key: String, value: int) -> void:
-	var save := GameState.player_save
+	var save := _session.player_save()
 	if save == null or save.get(key) == null:
 		return
 	save.set(key, clampi(value, 0, 100))
@@ -64,24 +65,27 @@ func set_stat(key: String, value: int) -> void:
 
 
 func set_discipline(value: int) -> void:
-	if GameState.player_save == null:
+	var save := _session.player_save()
+	if save == null:
 		return
-	GameState.player_save.discipline = clampi(value, 0, 100)
-	GlobalHUD.notify_youns_status_changed()
+	save.discipline = clampi(value, 0, 100)
+	_session.notify_youns_status_changed()
 
 
 func add_care_mistake(amount: int = 1) -> void:
-	if GameState.player_save == null:
+	var save := _session.player_save()
+	if save == null:
 		return
-	GameState.player_save.care_mistakes = clampi(GameState.player_save.care_mistakes + amount, 0, 10)
-	GlobalHUD.notify_youns_status_changed()
+	save.care_mistakes = clampi(save.care_mistakes + amount, 0, 10)
+	_session.notify_youns_status_changed()
 
 
 func clear_care_mistakes() -> void:
-	if GameState.player_save == null:
+	var save := _session.player_save()
+	if save == null:
 		return
-	GameState.player_save.care_mistakes = 0
-	GlobalHUD.notify_youns_status_changed()
+	save.care_mistakes = 0
+	_session.notify_youns_status_changed()
 
 
 func drain_energy(amount: int) -> void:
@@ -90,9 +94,10 @@ func drain_energy(amount: int) -> void:
 
 
 func set_sick(value: bool) -> void:
-	if GameState.player_save == null:
+	var save := _session.player_save()
+	if save == null:
 		return
-	GameState.player_save.enfermo = value
+	save.enfermo = value
 	if value:
 		_show_emotion.call("sick")
 	else:
@@ -101,12 +106,13 @@ func set_sick(value: bool) -> void:
 
 
 func set_weight(value: float) -> void:
-	if GameState.player_save != null:
-		GameState.player_save.weight = maxf(0.0, value)
+	var save := _session.player_save()
+	if save != null:
+		save.weight = maxf(0.0, value)
 
 
 func on_bathroom_used(rng: RandomNumberGenerator = null) -> void:
-	var save := GameState.player_save
+	var save := _session.player_save()
 	if save == null:
 		return
 	var random_factor := rng.randf() if rng else randf()
@@ -115,7 +121,7 @@ func on_bathroom_used(rng: RandomNumberGenerator = null) -> void:
 
 
 func attend_bathroom(rng: RandomNumberGenerator = null) -> void:
-	if GameState.player_save == null:
+	if _session.player_save() == null:
 		return
 	on_bathroom_used(rng)
 	set_stat("ganas_bano", 0)
@@ -123,7 +129,7 @@ func attend_bathroom(rng: RandomNumberGenerator = null) -> void:
 
 
 func apply_bathroom_accident() -> void:
-	if GameState.player_save == null:
+	if _session.player_save() == null:
 		return
 	apply_expire_penalty(_find_emotion_rule.call("bathroom"))
 	on_bathroom_used()
@@ -137,26 +143,27 @@ func apply_expire_penalty(rule: EmotionRule) -> void:
 		return
 	for key in rule.expire_stats:
 		add_stat(key, rule.expire_stats[key])
-	if rule.expire_reset_hambre and GameState.player_save != null:
-		GameState.player_save.hambre = 0
+	var save := _session.player_save()
+	if rule.expire_reset_hambre and save != null:
+		save.hambre = 0
 	if rule.expire_care_mistakes != 0:
 		add_care_mistake(rule.expire_care_mistakes)
 
 
 func on_meal_eaten() -> void:
-	if GameState.player_save == null:
+	var save := _session.player_save()
+	if save == null:
 		return
-	GameState.player_save.last_meal_total_hour = GameState.get_total_hours()
+	save.last_meal_total_hour = _session.total_hours()
 	_clear_emotion.call("hungry")
 	_queue_changed.call()
 
 
 func apply_decay() -> void:
-	var save := GameState.player_save
+	var save := _session.player_save()
 	if save == null:
 		return
-	var youn = PartyManager.youn
-	var data: YounData = youn.get("youn_data") if youn else null
+	var data := _session.youn_data()
 	for cfg in _configs:
 		if cfg.stat_key.is_empty() or cfg.rate_per_hour == 0.0:
 			continue
@@ -218,13 +225,14 @@ func play() -> void:
 
 
 func _add_discipline(delta: int) -> void:
-	if GameState.player_save == null:
+	var save := _session.player_save()
+	if save == null:
 		return
-	set_discipline(GameState.player_save.discipline + delta)
+	set_discipline(save.discipline + delta)
 
 
 func _check_sick_chance() -> void:
-	var save := GameState.player_save
+	var save := _session.player_save()
 	if save == null or save.enfermo or save.salud >= 80:
 		return
 	var t := clampf((80.0 - float(save.salud)) / 75.0, 0.0, 1.0)

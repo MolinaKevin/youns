@@ -25,6 +25,7 @@ var _ui: CanvasLayer
 var _flash: ColorRect
 var _scene3d: CutsceneScene3D
 var _msg: CutsceneMessageBox
+var _world_lease: WorldTransitionLease
 
 func setup(from_data: YounData, cause := ReincarnationRules.CAUSE_AGE) -> void:
 	_from = from_data
@@ -53,11 +54,10 @@ func _run() -> void:
 	var player := PartyManager.player
 	var youn := PartyManager.youn
 	var youn_name := _from.youn_name if _from != null else "?"
-	get_tree().paused = true
-	GlobalHUD.set_clock_paused(true)
-	GlobalHUD.set_clock_visible(false)
-	GlobalHUD.set_youns_status_visible(false)
-	PartyManager.freeze_camera()
+	_world_lease = WorldTransitionLease.new(
+		ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager), PartyManager,
+		{"hide_clock": true, "hide_status": true, "pause_tree": true}
+	)
 
 	# 1. Te llama la atención: se acerca y aparece un "!".
 	var toward := player.global_transform.basis.z
@@ -122,15 +122,15 @@ func _run() -> void:
 
 func _finish() -> void:
 	_scene3d.finish_camera()
-	get_tree().paused = false
-	PartyManager.unfreeze_camera()
-	PartyManager.unfreeze_actors()
-	GlobalHUD.set_clock_paused(false)
-	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
-	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	if _world_lease:
+		_world_lease.release()
 	finished.emit()
 	queue_free()
+
+
+func _exit_tree() -> void:
+	if _world_lease:
+		_world_lease.release()
 
 ## El mazo del Youn: el jugador elige una carta (la que va a heredar el huevo,
 ## aunque no se le dice).

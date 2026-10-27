@@ -107,7 +107,7 @@ func test_la_descripcion_escrita_a_mano_tiene_prioridad() -> void:
 # ── rookies: una condición por stat dominante ─────────────────────────────────
 
 func test_los_rookies_tienen_una_condicion_por_stat_dominante() -> void:
-	for path in ["res://data/youns/pombero.tres", "res://data/youns/nguruvilu.tres"]:
+	for path in ["res://data/youns/newen.tres", "res://data/youns/nguruvilu.tres"]:
 		var rookie: YounData = load(path)
 		assert_eq(rookie.evolution_conditions.size(), 4, path)
 		var stats := []
@@ -185,7 +185,7 @@ func test_evolucionar_desde_el_bebe_se_cumple() -> void:
 	var nino: YounData = load("res://data/youns/nino_1.tres")
 	var bebe: YounData = load("res://data/youns/bebe_1.tres")
 	assert_eq(EvolutionDiscovery.met_indices(nino, {"save": save, "from": bebe}), [0] as Array[int])
-	var otro: YounData = load("res://data/youns/pombero.tres")
+	var otro: YounData = load("res://data/youns/newen.tres")
 	assert_eq(EvolutionDiscovery.met_indices(nino, {"save": save, "from": otro}), [] as Array[int])
 
 
@@ -194,4 +194,3 @@ func test_el_nino_se_revela_la_primera_vez() -> void:
 	var r := EvolutionDiscovery.discover(save, nino, [0])
 	assert_true(r["first_time"])
 	assert_eq(r["revealed"], 0)
-

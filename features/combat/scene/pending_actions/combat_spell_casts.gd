@@ -8,7 +8,7 @@ const CombatEffect := preload("res://features/combat/scene/combat_effect.gd")
 ## resuelto (cell, dir, el charco o el árbol elegidos) y aplica el efecto.
 
 ## Chispa / Escarcha: daño mágico en un círculo y cambia los charcos que toca.
-func cast_element_bolt(played_card: CardActionLine, cell: Vector2) -> void:
+func cast_element_bolt(played_card: CardActionLine, cell: Vector2, flow: AsyncFlowToken) -> void:
 	var radius := host.w(played_card.primary_range_cells())
 	if played_card.pattern != null:
 		host.map_area.presentation.show_card_pattern(played_card.pattern, cell, Vector2(0, 1), radius)
@@ -27,6 +27,7 @@ func cast_element_bolt(played_card: CardActionLine, cell: Vector2) -> void:
 	var was_wet: bool = host.state.enemy_wet_turns > 0
 	host.emit_log("combat.log.spell.hits_enemy", [played_card.name, played_card.damage])
 	await host.deal_damage_to_enemy.call(played_card.damage, true, CombatState.MAGICO)
+	if not _flow_is_active(flow): return
 	if host.state.enemy_hp <= 0:
 		return
 	if played_card.puddle_effect == "ice" and was_wet:
@@ -36,7 +37,7 @@ func cast_element_bolt(played_card: CardActionLine, cell: Vector2) -> void:
 
 ## Descarga: rayo en línea. Pega doble a los mojados y se propaga por el agua
 ## que toca (a quien esté parado en ella, también a vos).
-func cast_chain_bolt(played_card: CardActionLine, bolt_dir: Vector2) -> void:
+func cast_chain_bolt(played_card: CardActionLine, bolt_dir: Vector2, flow: AsyncFlowToken) -> void:
 	var from: Vector2 = host.map_area.player_pos
 	var to: Vector2 = from + bolt_dir * host.w(played_card.cast_range_cells())
 	# Pararrayos: el rayo se frena en el primer árbol y le pega a quien esté arriba.
@@ -47,6 +48,7 @@ func cast_chain_bolt(played_card: CardActionLine, bolt_dir: Vector2) -> void:
 		if host.map_area.interactions.is_player_in_tree(rod["tree"]):
 			host.emit_log("combat.log.spell.player_in_tree_hit", [played_card.damage])
 			await host.deal_damage_to_player.call(played_card.damage, true, CombatState.MAGICO)
+			if not _flow_is_active(flow): return
 	var water: Array = host.map_area.interactions.puddles_on_segment(from, to, ["wet"])
 	var enemy_in_water: bool = host.map_area.queries.is_enemy_in_zones(water)
 	var hit_enemy: bool = host.map_area.queries.segment_hits_enemy(from, to) or enemy_in_water
@@ -58,10 +60,12 @@ func cast_chain_bolt(played_card: CardActionLine, bolt_dir: Vector2) -> void:
 		var dmg: int = played_card.damage * (2 if host.state.enemy_wet_turns > 0 or enemy_in_water else 1)
 		host.emit_log("combat.log.spell.electrocutes_enemy", [played_card.name, dmg])
 		await host.deal_damage_to_enemy.call(dmg, true, CombatState.MAGICO)
+		if not _flow_is_active(flow): return
 	if hit_player and host.state.player_hp > 0:
 		var own: int = played_card.damage * 2
 		host.emit_log("combat.log.spell.shock_returns", [played_card.name, own])
 		await host.deal_damage_to_player.call(own, true, CombatState.MAGICO)
+		if not _flow_is_active(flow): return
 
 ## Zona demorada: marca el punto, cae unas rondas después (ver
 ## CombatRoundResolver/MapArea.place_delayed_zone).
@@ -73,7 +77,7 @@ func cast_delayed_area(played_card: CardActionLine, cell: Vector2) -> void:
 	host.emit_log("combat.log.spell.delayed_zone_marked", [played_card.name, maxi(1, played_card.delay)])
 
 ## Soplido en cono: daño y estado si alcanza al enemigo, puede prender árboles.
-func cast_cone_blast(played_card: CardActionLine, blast_dir: Vector2) -> void:
+func cast_cone_blast(played_card: CardActionLine, blast_dir: Vector2, flow: AsyncFlowToken) -> void:
 	var cone_angle := played_card.pattern.cone_half_angle if played_card.pattern != null else CombatPlayerActions.CONE_HALF_ANGLE
 	if played_card.pattern != null:
 		host.map_area.presentation.show_card_pattern(played_card.pattern, host.map_area.player_pos, blast_dir, host.w(played_card.cast_range_cells()))
@@ -83,6 +87,7 @@ func cast_cone_blast(played_card: CardActionLine, blast_dir: Vector2) -> void:
 	if in_pattern:
 		host.emit_log("combat.log.spell.reaches_enemy", [played_card.name, played_card.damage])
 		await host.deal_damage_to_enemy.call(played_card.damage, true, CombatState.MAGICO)
+		if not _flow_is_active(flow): return
 		if played_card.status_effect != "ninguno" and host.state.enemy_hp > 0:
 			host._apply_spell_status(played_card.status_effect, maxi(1, played_card.duration))
 	else:
@@ -90,9 +95,10 @@ func cast_cone_blast(played_card: CardActionLine, blast_dir: Vector2) -> void:
 
 ## Maldición: daño directo opcional + estado. Las raíces de un árbol cercano
 ## suman un turno de enredo.
-func cast_curse(played_card: CardActionLine) -> void:
+func cast_curse(played_card: CardActionLine, flow: AsyncFlowToken) -> void:
 	if played_card.damage > 0:
 		await host.deal_damage_to_enemy.call(played_card.damage, true, CombatState.MAGICO)
+		if not _flow_is_active(flow): return
 	var turns: int = maxi(1, played_card.duration)
 	if played_card.status_effect == "entangle" and host.map_area.interactions.is_tree_near(host.map_area.enemy_pos, CombatPlayerActions.TREE_ROOT_REACH):
 		turns += CombatPlayerActions.TREE_ROOT_BONUS_TURNS
@@ -106,7 +112,7 @@ func cast_blink(played_card: CardActionLine, cell: Vector2) -> void:
 
 ## Traslado de charco: el charco salta a `cell`. Si le cae encima al enemigo,
 ## el resolver de zonas aplica su estado; el hielo cae como granizo.
-func cast_puddle_hop(played_card: CardActionLine, moved_puddle: Dictionary, cell: Vector2) -> void:
+func cast_puddle_hop(played_card: CardActionLine, moved_puddle: Dictionary, cell: Vector2, flow: AsyncFlowToken) -> void:
 	var effect: String = moved_puddle.get("effect", "wet")
 	var zone_damage: int = moved_puddle.get("damage", 0)
 	var landed: Dictionary = host.map_area.interactions.move_puddle(moved_puddle, cell)
@@ -116,6 +122,7 @@ func cast_puddle_hop(played_card: CardActionLine, moved_puddle: Dictionary, cell
 	if effect == "ice":
 		host.emit_log("combat.log.spell.hail_hits_enemy", [played_card.name, played_card.damage])
 		await host.deal_damage_to_enemy.call(played_card.damage, true, CombatState.MAGICO)
+		if not _flow_is_active(flow): return
 		return
 	host.emit_log("combat.log.spell.puddle_hits_enemy", [played_card.name])
 	var fx: Array = host.zone_effects.apply_direct_impact(host.state, effect, zone_damage, false)

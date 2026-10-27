@@ -9,6 +9,7 @@ extends Node
 var _running := false
 var _youn_inside := false
 var _scene3d: CutsceneScene3D
+var _world_lease: WorldTransitionLease
 
 @onready var _area: Area3D = $ToiletArea
 
@@ -51,10 +52,12 @@ func _run() -> void:
 
 	StatsManager.attend_bathroom()
 
-	# Freezar controles y reloj
-	PartyManager.freeze_actors()
-	PartyManager.freeze_camera()
-	GlobalHUD.set_clock_paused(true)
+	# La secuencia puede desaparecer junto con la zona: el lease garantiza que
+	# no deja reloj, cámara o actores congelados en ese caso.
+	_world_lease = WorldTransitionLease.new(
+		ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager), PartyManager,
+		{"show_mouse": false}
+	)
 
 	var player_original_rot_y := player.rotation.y
 
@@ -193,11 +196,14 @@ func _run() -> void:
 	await tw.finished
 
 	# Restaurar todo
-	GlobalHUD.set_clock_paused(false)
-	PartyManager.unfreeze_camera()
-	PartyManager.unfreeze_actors()
+	_world_lease.release()
 	cam_pivot.queue_free()
 	_running = false
+
+
+func _exit_tree() -> void:
+	if _world_lease:
+		_world_lease.release()
 
 
 ## Igual que CutsceneScene3D.face(), pero sin tocar la rotación si ya está

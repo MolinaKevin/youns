@@ -1,7 +1,5 @@
 extends Control
 
-const ScenePaths := preload("res://shared/scene_paths.gd")
-
 @onready var card_grid = $MarginContainer/MainVBox/Body/LeftPanel/CardGrid
 @onready var preview_panel = $MarginContainer/MainVBox/Body/RightPanel/PreviewPanel
 @onready var deck_list = $MarginContainer/MainVBox/Body/RightPanel/DeckScroll/DeckList
@@ -16,12 +14,14 @@ var owned_cards: Array[CardData] = []
 ## Copias propias (ver DeckRules): pueden traer cambios de las evoluciones.
 var current_deck: Array[CardData] = []
 var selected_card: CardData = null
+var _session: PlayerSessionService
 
 func _ready() -> void:
-	ModalScreenContext.enter_fullscreen()
+	_session = GameState.player_session
+	ModalScreenContext.enter_fullscreen(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
 	LocalizationState.language_changed.connect(_apply_localized_text)
 	owned_cards = _get_owned_cards()
-	current_deck = DeckRules.cards(GameState.player_save).duplicate()
+	current_deck = _session.deck_cards()
 
 	card_grid.set_cards(owned_cards)
 	card_grid.card_selected.connect(_on_collection_card_selected)
@@ -73,9 +73,7 @@ func _refresh_deck_panel() -> void:
 		row.add_child(btn)
 
 func _on_save_pressed() -> void:
-	if GameState.player_save == null:
-		return
-	GameState.player_save.deck = current_deck.duplicate()
+	_session.replace_deck(current_deck)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
@@ -83,20 +81,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		_return_to_origin()
 
 func _return_to_origin() -> void:
-	if GameState.ui_return.has_return():
-		get_tree().change_scene_to_file(GameState.ui_return.take_scene_path())
-		return
-	get_tree().change_scene_to_file(ScenePaths.GAME_WORLD)
+	SceneNavigator.return_to_origin(get_tree())
 
 ## Las cartas que se pueden sumar al mazo: primero las guardadas de vidas
 ## anteriores (con sus cambios), después la colección.
 func _get_owned_cards() -> Array[CardData]:
-	if GameState.player_save == null:
-		return []
-	var cards: Array[CardData] = []
-	cards.append_array(GameState.player_save.saved_cards)
-	cards.append_array(CardDatabase.get_cards_from_ids(GameState.player_save.owned_card_ids))
-	return cards
+	return _session.owned_cards()
 
 func _apply_localized_text(_language: String = "") -> void:
 	title_label.text = LocalizationState.t("deck.title")

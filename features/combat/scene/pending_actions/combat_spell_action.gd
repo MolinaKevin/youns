@@ -125,6 +125,9 @@ func _on_tree_climb_click(pos: Vector2) -> void:
 	host.confirm_popup_show_requested.emit(false)
 
 func execute(cell: Vector2) -> void:
+	var flow := _flow()
+	if not _flow_is_active(flow):
+		return
 	if not _index_valid():
 		clear()
 		return
@@ -137,24 +140,28 @@ func execute(cell: Vector2) -> void:
 	if not played_card.card_type in [CardActionLine.TYPE_BLINK, CardActionLine.TYPE_DELAYED_AREA, CardActionLine.TYPE_TREE_CLIMB]:
 		host.map_area.actors.play_player_animation("range")
 		await host.map_area.player_anim_finished
+		if not _flow_is_active(flow):
+			return
 		host.map_area.actors.play_player_animation("idle")
 	match played_card.card_type:
 		CardActionLine.TYPE_ELEMENT_BOLT:
-			await _casts.cast_element_bolt(played_card, cell)
+			await _casts.cast_element_bolt(played_card, cell, flow)
 		CardActionLine.TYPE_CHAIN_BOLT:
-			await _casts.cast_chain_bolt(played_card, saved_dir)
+			await _casts.cast_chain_bolt(played_card, saved_dir, flow)
 		CardActionLine.TYPE_DELAYED_AREA:
 			_casts.cast_delayed_area(played_card, cell)
 		CardActionLine.TYPE_CONE_BLAST:
-			await _casts.cast_cone_blast(played_card, saved_dir)
+			await _casts.cast_cone_blast(played_card, saved_dir, flow)
 		CardActionLine.TYPE_CURSE:
-			await _casts.cast_curse(played_card)
+			await _casts.cast_curse(played_card, flow)
 		CardActionLine.TYPE_BLINK:
 			_casts.cast_blink(played_card, cell)
 		CardActionLine.TYPE_PUDDLE_HOP:
-			await _casts.cast_puddle_hop(played_card, saved_puddle, cell)
+			await _casts.cast_puddle_hop(played_card, saved_puddle, cell, flow)
 		CardActionLine.TYPE_TREE_CLIMB:
 			_casts.cast_tree_climb(played_card, saved_tree, cell)
+	if not _flow_is_active(flow):
+		return
 	_finish()
 	host.map_area.presentation.clear_card_pattern()
 

@@ -18,6 +18,8 @@ var zone_effects := CombatZoneEffectResolver.new()
 var deal_damage_to_enemy: Callable
 var deal_damage_to_player: Callable
 var check_combat_end: Callable
+var get_flow: Callable
+var flow_is_active: Callable
 
 var move_mode := false
 
@@ -100,12 +102,23 @@ func _init() -> void:
 	_all_actions = [_move_action, _attack_action, _grenade_action, _trap_action, _self_action,
 		_jump_action, _push_action, _module_action, _spell_action, _puddle_action, _overwatch_action]
 
-func setup(p_state: CombatState, p_map_area: MapArea, p_damage_enemy: Callable, p_damage_player: Callable, p_check_end: Callable) -> void:
+func setup(p_state: CombatState, p_map_area: MapArea, p_damage_enemy: Callable, p_damage_player: Callable, p_check_end: Callable,
+		p_get_flow: Callable = Callable(), p_flow_is_active: Callable = Callable()) -> void:
 	state = p_state
 	map_area = p_map_area
 	deal_damage_to_enemy = p_damage_enemy
 	deal_damage_to_player = p_damage_player
 	check_combat_end = p_check_end
+	get_flow = p_get_flow
+	flow_is_active = p_flow_is_active
+
+
+func current_flow() -> AsyncFlowToken:
+	return get_flow.call() as AsyncFlowToken if get_flow.is_valid() else null
+
+
+func is_flow_active(flow: AsyncFlowToken) -> bool:
+	return flow_is_active.call(flow) if flow_is_active.is_valid() else true
 
 ## Casillas de la grilla → unidades de mundo del mapa.
 func w(cells: int) -> float:
@@ -352,21 +365,28 @@ func apply_player_zone_effects(from: Vector2, to: Vector2) -> void:
 		zone_effects.log_zone_effect(event, "combat.log.player.zone", CombatZoneEffectResolver.PLAYER_LOG_TURNS, emit_log)
 
 ## Talar: el árbol cae alejándose del jugador y queda un tronco tirado.
-func _fell_tree(card: CardActionLine, tree: Dictionary) -> void:
+func _fell_tree(card: CardActionLine, tree: Dictionary, flow: AsyncFlowToken) -> void:
 	var result: Dictionary = map_area.interactions.fell_tree(tree, tree["pos"] - map_area.player_pos)
 	emit_log("combat.log.player.tree_felled", [card.name])
 	if result["enemy_hit"]:
 		emit_log("combat.log.player.tree_hits_enemy", [TREE_CRUSH_DAMAGE])
 		await deal_damage_to_enemy.call(TREE_CRUSH_DAMAGE, true, CombatState.FISICO)
+		if not is_flow_active(flow):
+			return
 
 ## El jugador se cae del árbol (lo talaron o se prendió fuego): daño de caída
 ## y, si ardía, queda en llamas. map_area ya lo bajó al pie del árbol.
 func player_falls_from_tree(burning: bool) -> void:
+	var flow := current_flow()
+	if not is_flow_active(flow):
+		return
 	if not state.player_in_tree:
 		return
 	state.player_in_tree = false
 	emit_log("combat.log.player.tree_fall", [TREE_FALL_DAMAGE])
 	await deal_damage_to_player.call(TREE_FALL_DAMAGE, true, CombatState.FISICO)
+	if not is_flow_active(flow):
+		return
 	if burning and state.player_hp > 0:
 		var turns: int = state.set_player_status("burn", TREE_FIRE_BURN_TURNS)
 		emit_log("combat.log.player.burning_tree_fall", [turns])
@@ -377,7 +397,7 @@ func player_falls_from_tree(burning: bool) -> void:
 
 ## El enemigo fue movido a la fuerza (empuje, tirón, ancla, nova): se le
 ## aplican los charcos y trampas que cruzó. Devuelve si pasó por alguno.
-func _apply_enemy_forced_move(card_name: String, from: Vector2, landing: Vector2) -> bool:
+func _apply_enemy_forced_move(card_name: String, from: Vector2, landing: Vector2, flow: AsyncFlowToken) -> bool:
 	var contact_margin: float = map_area.queries.enemy_area_contact_radius()
 	var fx: Dictionary = map_area.interactions.zone_effects_along(from, landing, contact_margin)
 	var zone_dmg: Dictionary = map_area.interactions.puddle_damage_along(from, landing, contact_margin)
@@ -388,11 +408,16 @@ func _apply_enemy_forced_move(card_name: String, from: Vector2, landing: Vector2
 	if fx.get("trap_damage", 0) > 0:
 		emit_log("combat.log.player.enemy_forced_trap", [card_name, fx["trap_damage"]])
 		await deal_damage_to_enemy.call(fx["trap_damage"])
+		if not is_flow_active(flow):
+			return any_zone
 		any_zone = true
 	return any_zone
 
 ## Nova: daño mágico alrededor tuyo y empuja al enemigo hacia afuera.
 func _execute_nova(card: CardActionLine) -> void:
+	var flow := current_flow()
+	if not is_flow_active(flow):
+		return
 	var radius := w(card.primary_range_cells())
 	var in_pattern: bool = map_area.interactions.is_enemy_in_card_pattern(card.pattern, map_area.player_pos, Vector2(0, 1), radius) if card.pattern != null else map_area.queries.is_enemy_in_area_circle(map_area.player_pos, radius)
 	if not in_pattern:
@@ -400,6 +425,8 @@ func _execute_nova(card: CardActionLine) -> void:
 		return
 	emit_log("combat.log.player.nova_hits_enemy", [card.name, card.damage])
 	await deal_damage_to_enemy.call(card.damage, true, CombatState.MAGICO)
+	if not is_flow_active(flow):
+		return
 	if state.enemy_hp <= 0:
 		check_combat_end.call()
 		return
@@ -408,7 +435,11 @@ func _execute_nova(card: CardActionLine) -> void:
 	var landing: Vector2 = map_area.interactions.calculate_push_landing(away, w(card.cast_range_cells()))
 	map_area.interactions.push_enemy_to(landing)
 	await map_area.enemy_reached_target
-	await _apply_enemy_forced_move(card.name, from, landing)
+	if not is_flow_active(flow):
+		return
+	await _apply_enemy_forced_move(card.name, from, landing, flow)
+	if not is_flow_active(flow):
+		return
 	hand_refresh_requested.emit()
 	ui_update_requested.emit()
 	check_combat_end.call()

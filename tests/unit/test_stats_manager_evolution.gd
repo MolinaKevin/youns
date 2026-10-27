@@ -35,7 +35,7 @@ func after_each() -> void:
 
 func _make_rookie_save(days_in_stage: float) -> PlayerSaveData:
 	var ps := PlayerSaveData.new()
-	ps.current_youn_path = "res://data/youns/pombero.tres"
+	ps.current_youn_path = "res://data/youns/newen.tres"
 	# Sin 3 condiciones de ningún campeón: va al comodín.
 	ps.care_mistakes = 5
 	ps.stage_entered_total_hour = GameState.get_total_hours() - days_in_stage * 24.0

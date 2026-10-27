@@ -20,7 +20,7 @@ func check_combat_end() -> bool:
 		if not host._combat_finished:
 			host._combat_finished = true
 			host.log_message(LocalizationState.t("combat.win"))
-			_show_victory.call_deferred()
+			_show_victory.call_deferred(host.current_flow())
 		return true
 	if host.state.player_hp <= 0:
 		host.hand_section.disable_cards()
@@ -29,18 +29,22 @@ func check_combat_end() -> bool:
 			host._combat_finished = true
 			host.log_message(LocalizationState.t("combat.lose"))
 			host.map_area.actors.play_player_animation("die")
-			_show_defeat.call_deferred()
+			_show_defeat.call_deferred(host.current_flow())
 		return true
 	return false
 
 ## Muestra la pantalla de fin de lucha y, al continuar, vuelve al mundo.
-func _show_victory() -> void:
-	await _prepare_result_screen()
+func _show_victory(flow: AsyncFlowToken) -> void:
+	await _prepare_result_screen(flow)
+	if not host.is_flow_active(flow):
+		return
 	# Solo los combates del mundo dan recompensa (no el combate rápido del título).
 	var rewarded := GameState.world_combat.active
 	var gold := Combat.VICTORY_GOLD if rewarded else 0
 	host.result_screen.show_victory(_victory_stat_lines() + _echo_reward_lines() if rewarded else [], gold)
 	await host.result_screen.continue_pressed
+	if not host.is_flow_active(flow):
+		return
 	if rewarded:
 		GameState.player_save.gold += gold
 		var youn = PartyManager.youn
@@ -65,13 +69,17 @@ func _echo_reward_lines() -> Array:
 
 ## Provisorio: derrota sin penalidad todavía. Se vuelve al mundo igual que
 ## al ganar (el enemigo del mundo huye, así no te vuelve a atrapar al aparecer).
-func _show_defeat() -> void:
-	await _prepare_result_screen()
+func _show_defeat(flow: AsyncFlowToken) -> void:
+	await _prepare_result_screen(flow)
+	if not host.is_flow_active(flow):
+		return
 	host.result_screen.show_defeat()
 	await host.result_screen.continue_pressed
+	if not host.is_flow_active(flow):
+		return
 	_leave_combat()
 
-func _prepare_result_screen() -> void:
+func _prepare_result_screen(flow: AsyncFlowToken) -> void:
 	host.enemy_reveal.hide()
 	host.wildcards_ui.hide()
 	await host.get_tree().create_timer(Combat.VICTORY_SCREEN_DELAY).timeout
