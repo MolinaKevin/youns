@@ -51,7 +51,7 @@ func test_migrar_v1_con_puente_construido_conserva_el_acceso() -> void:
 
 	_service.migrate_save(save)
 
-	assert_true(save.world_progress.has_bridge("river_bridge"))
+	assert_true(save.world_progress.has_construction("river_bridge"))
 
 
 func test_migrar_v2_con_puente_guardado_lo_pasa_a_construcciones() -> void:

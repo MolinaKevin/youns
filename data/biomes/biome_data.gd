@@ -8,12 +8,12 @@ extends Resource
 
 ## Entrega a MapArea los obstáculos lógicos del bioma. Se hace antes de _ready,
 ## por lo que el mapa puede construir sus visuales con el layout correcto.
-func setup_combat_map(map: Node3D) -> void:
+func setup_combat_map(construction) -> void:
 	if combat_layout != null:
-		combat_layout.populate_map(map)
+		combat_layout.populate_map(construction)
 
 ## Construye los elementos visuales que están por encima del suelo una vez que
 ## MapArea ya está listo. Cada layout es dueño de esas decisiones estéticas.
-func build_combat_map(map: Node3D) -> void:
+func build_combat_map(map: Node3D, construction) -> void:
 	if combat_layout != null:
-		combat_layout.build_visuals(map)
+		combat_layout.build_visuals(map, construction.obstacles())

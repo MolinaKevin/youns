@@ -27,14 +27,12 @@ const TURN_ORDER_PAUSE := 0.8
 const WILD_ATTACK: CardAction = preload("res://data/wildcards/wild_attack.tres")
 const WILD_MOVE: CardAction = preload("res://data/wildcards/wild_move.tres")
 
-const _CombatState = preload("res://features/combat/scene/combat_state.gd")
-const _CombatPlayerActions = preload("res://features/combat/scene/combat_player_actions.gd")
-const _CombatEnemyAI = preload("res://features/combat/scene/combat_enemy_ai.gd")
 const _CombatTurnController = preload("res://features/combat/scene/combat_turn_controller.gd")
 const _CombatRoundResolver = preload("res://features/combat/scene/combat_round_resolver.gd")
 const _CombatWildcardsUI = preload("res://features/combat/scene/combat_wildcards_ui.gd")
 const _CombatEnemyRevealPresentation = preload("res://features/combat/scene/combat_enemy_reveal_presentation.gd")
 const _CombatSceneBootstrap = preload("res://features/combat/scene/combat_scene_bootstrap.gd")
+const _CombatRuntimeBootstrap = preload("res://features/combat/scene/combat_runtime_bootstrap.gd")
 const Phase = _CombatTurnController.Phase
 const Wild = _CombatTurnController.Wild
 
@@ -83,6 +81,7 @@ var _preview_tween: Tween = null
 var _flow_token: AsyncFlowToken
 var board: CombatBoardContext
 var _scene_bootstrap: CombatSceneBootstrap
+var _runtime_bootstrap: CombatRuntimeBootstrap
 
 func _enter_tree() -> void:
 	_scene_bootstrap = _CombatSceneBootstrap.new(self)
@@ -95,70 +94,8 @@ func _ready() -> void:
 	_scene_bootstrap.ready_environment()
 	LocalizationState.language_changed.connect(_apply_localized_text)
 	randomize()
-
-	state = _CombatState.new()
-	board = CombatBoardContext.new(map_area.state, map_area.queries, map_area.actors,
-		map_area.selection, map_area.placement, map_area.effects, map_area.obstacles,
-		map_area.push, map_area.presentation, map_area.movement, map_area.terrain, map_area.scene)
-	_result_flow = CombatResultFlow.new(self)
-	_damage = CombatDamageResolver.new(self)
-	_pile_popup = CombatPilePopup.new(self)
-	_turn_flow = CombatTurnFlow.new(self)
-
-	deck_manager = CombatDeckManager.new()
-	deck_manager.setup(state)
-	deck_manager.reshuffled.connect(func(): log_message(LocalizationState.t("combat.reshuffle")))
-
-	player_actions = _CombatPlayerActions.new()
-	player_actions.setup(state, map_area, _damage.deal_to_enemy, _damage.deal_to_player, _result_flow.check_combat_end,
-		current_flow, is_flow_active)
-	player_actions.log_requested.connect(log_message)
-	map_area.scene.player_knocked_off_tree.connect(player_actions.player_falls_from_tree)
-	player_actions.hand_refresh_requested.connect(refresh_hand)
-	player_actions.ui_update_requested.connect(update_ui)
-	player_actions.card_preview_show_requested.connect(show_card_preview)
-	player_actions.card_preview_hide_requested.connect(hide_card_preview)
-	player_actions.confirm_popup_show_requested.connect(_on_confirm_popup_show)
-	player_actions.confirm_popup_hide_requested.connect(func():
-		confirm_popup.visible = false
-		map_area.scene.input.unlock_hover())
-	player_actions.end_move_button_visible_changed.connect(func(v): end_move_button.visible = v)
-	player_actions.move_mode_button_reset_requested.connect(func(): move_mode_button.button_pressed = false)
-
-	var enemy_name_str := ""
-	var wild_youn: YounData = GameState.world_combat.take_wild_youn_data()
-	# El combate de prueba del menú también pelea contra un Youn.
-	if wild_youn == null:
-		wild_youn = load("res://data/youns/newen.tres")
-	state.enemy_hp     = wild_youn.combat_max_hp()
-	state.enemy_max_hp = state.enemy_hp
-	if wild_youn.base_stats != null:
-		state.enemy_status_reduction = YounStatRules.status_reduction(wild_youn.base_stats.to_dict())
-	map_area.scene.actors.setup_enemy(wild_youn)
-	enemy_ai = _CombatEnemyAI.new()
-	enemy_ai.setup_with_board(state, CombatEnemyBoardMapAdapter.new(map_area), wild_youn.strategy, _damage.deal_to_enemy, _damage.deal_to_player, _result_flow.check_combat_end)
-	enemy_ai.initiative = DEFAULT_ENEMY_INITIATIVE
-	enemy_ai.set_monster_deck(wild_youn.monster_deck)
-	enemy_name_str = wild_youn.youn_name
-
-	enemy_ai.log_requested.connect(log_message)
-	enemy_ai.card_action_started.connect(func(i): monster_card_view.highlight(i))
-	enemy_ai.ui_update_requested.connect(update_ui)
-
-	var _youn = PartyManager.youn
-	if is_instance_valid(_youn) and _youn.youn_data:
-		map_area.scene.actors.setup_player(_youn.youn_data)
-		_player_name = _youn.youn_data.youn_name
-	var player_stat_values := CardScaling.player_stats()
-	var lab_hp_bonus := GameState.player_save.lab_max_hp_bonus if GameState.player_save else 0
-	state.player_hp = YounStatRules.max_hp(player_stat_values, lab_hp_bonus)
-	state.player_max_hp = state.player_hp
-	state.player_max_mp = YounStatRules.max_mp(player_stat_values)
-	state.player_mp = state.player_max_mp
-	state.player_status_reduction = YounStatRules.status_reduction(player_stat_values)
-	if _player_name == "":
-		_player_name = LocalizationState.t("combat.you")
-	_enemy_name = enemy_name_str
+	_runtime_bootstrap = _CombatRuntimeBootstrap.new()
+	_runtime_bootstrap.setup(self)
 
 	end_turn_button.pressed.connect(_turn_flow.on_end_turn_pressed)
 	move_mode_button.toggled.connect(player_actions.set_move_mode)
@@ -201,7 +138,7 @@ func _ready() -> void:
 
 	PauseMenu.enabled = true
 
-	log_message(LocalizationState.t("combat.started", [enemy_name_str]))
+	log_message(LocalizationState.t("combat.started", [_enemy_name]))
 	# Salud baja: las cartas rinden menos (ver CardScaling.health_penalty).
 	if GameState.player_save != null:
 		var penalty := CardScaling.health_penalty(GameState.player_save.salud)
@@ -233,8 +170,8 @@ func current_flow() -> AsyncFlowToken:
 func is_flow_active(flow: AsyncFlowToken) -> bool:
 	return is_inside_tree() and flow != null and flow == _flow_token and flow.is_active()
 
-## Casi todo lo llama CombatTurnFlow — este passthrough existe porque también
-## lo llaman directo CombatWildcards y la señal hand_refresh_requested.
+## Punto de entrada de compatibilidad para CombatWildcards y la señal
+## hand_refresh_requested; la lógica vive en CombatTurnFlow.
 func refresh_hand() -> void:
 	_turn_flow.refresh_hand()
 

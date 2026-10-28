@@ -10,7 +10,7 @@ const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd"
 ##
 ## Vive como hijo de MapArea, que se asigna a sí mismo en `map` antes de
 ## agregarlo al árbol (ver MapArea._init()) — lo necesita para la lista de
-## obstáculos compartida (solid_obstacles), las mallas y discos compartidos (_attack_disc,
+## obstáculos compartida del terreno, las mallas y discos compartidos (_attack_disc,
 ## _push_disc, build_cone_disc), el empujón genérico (start_push_enemy_selection)
 ## y la caché de bloqueos (obstacles_changed).
 ##
@@ -36,8 +36,8 @@ const MODULE_COLLAPSE_MARGIN := MODULE_SIZE + 0.1
 var _module_mat: StandardMaterial3D
 
 
-## Arma el cilindro de una piedra inicial (las que ya están en solid_obstacles
-## al arrancar el combate, con module:true). Llamado por MapArea._setup_obstacles().
+## Arma el cilindro de una piedra inicial (las que ya están en el terreno
+## al arrancar el combate, con module:true). Llamado por el layout del bioma.
 func build_initial_rock_mesh(mi: MeshInstance3D, obs: Dictionary, pos: Vector2, rock_mat: StandardMaterial3D) -> void:
 	var r: float      = obs["radius"]
 	var cyl          := CylinderMesh.new()

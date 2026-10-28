@@ -10,7 +10,7 @@ func _map_for_modules():
 
 func _map_with_tree(tree_pos := Vector2(10, 15)):
 	var map = _map_for_modules()
-	map.solid_obstacles.append({"pos": tree_pos, "radius": 0.6, "type": "tree"})
+	map.terrain.obstacles().append({"pos": tree_pos, "radius": 0.6, "type": "tree"})
 	return map
 
 
@@ -20,7 +20,7 @@ func test_talar_arbol_deja_un_tronco_tirado() -> void:
 	var result: Dictionary = map.obstacles.trees.movement.fell_tree(tree, Vector2.RIGHT)
 	assert_false(result["enemy_hit"])
 	assert_true(map.obstacles.trees.queries.tree_at(Vector2(10, 15)).is_empty())
-	var segments: Array = map.solid_obstacles.filter(func(o): return o.has("log_id"))
+	var segments: Array = map.terrain.obstacles().filter(func(o): return o.has("log_id"))
 	assert_eq(segments.size(), map.LOG_SEGMENTS)
 	assert_true(map.terrain.geometry.collision.is_blocked(Vector2(10.9, 15)))
 	assert_true(map.queries.line_of_sight.has_line_of_sight(Vector2(10.9, 13), Vector2(10.9, 17)))  # es bajo: se ve por encima
@@ -32,7 +32,7 @@ func test_el_tronco_se_rompe_entero_con_una_carta() -> void:
 	map.obstacles.trees.movement.fell_tree(map.obstacles.trees.queries.tree_at(Vector2(10, 15)), Vector2.RIGHT)
 	var piece: Dictionary = map.obstacles.modules.module_at(Vector2(10.9, 15))
 	assert_eq(map.obstacles.modules.break_modules(piece, 1), map.LOG_SEGMENTS)
-	assert_true(map.solid_obstacles.is_empty())
+	assert_true(map.terrain.obstacles().is_empty())
 	map.free()
 
 
@@ -122,7 +122,7 @@ func test_charco_de_planta_junto_a_un_arbol_es_mas_grande() -> void:
 
 func test_el_fuego_del_arbol_se_propaga_por_la_planta_a_otro_arbol() -> void:
 	var map = _map_with_tree(Vector2(10, 15))
-	map.solid_obstacles.append({"pos": Vector2(13, 15), "radius": 0.6, "type": "tree"})
+	map.terrain.obstacles().append({"pos": Vector2(13, 15), "radius": 0.6, "type": "tree"})
 	map.placement.puddles.place_puddle(Vector2(11.5, 15), 1.0, "vine")  # une los dos árboles
 	map.obstacles.trees.effects.ignite_trees_in_circle(Vector2(10, 15), 0.5)
 	assert_eq(map.effects.puddles()[0]["effect"], "fire")
@@ -133,9 +133,9 @@ func test_el_fuego_del_arbol_se_propaga_por_la_planta_a_otro_arbol() -> void:
 func test_ariete_empuja_el_tronco_entero() -> void:
 	var map = _map_with_tree(Vector2(10, 10))
 	map.obstacles.trees.movement.fell_tree(map.obstacles.trees.queries.tree_at(Vector2(10, 10)), Vector2.RIGHT)
-	var before: Array = map.solid_obstacles.map(func(o): return o["pos"])
+	var before: Array = map.terrain.obstacles().map(func(o): return o["pos"])
 	map.obstacles.modules.slide_module(map.obstacles.modules.module_at(Vector2(10, 10)), Vector2.DOWN, 3.0)
-	var after: Array = map.solid_obstacles.map(func(o): return o["pos"])
+	var after: Array = map.terrain.obstacles().map(func(o): return o["pos"])
 	for i in before.size():
 		assert_almost_eq((after[i] - before[i]).y, 3.0, 0.001)
 		assert_almost_eq((after[i] - before[i]).x, 0.0, 0.001)
@@ -184,4 +184,3 @@ func test_caerse_de_un_arbol_en_llamas_hace_danio_y_prende_fuego() -> void:
 	assert_false(s.player_in_tree)
 	assert_eq(s.player_hp, hp - CombatPlayerActions.TREE_FALL_DAMAGE)
 	assert_gt(s.player_burning_turns, 0)
-

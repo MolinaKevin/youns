@@ -73,6 +73,7 @@ const EnemyBoardStatePort := preload("res://features/combat/scene/combat_enemy_b
 const EnemyBoardQueriesPort := preload("res://features/combat/scene/combat_enemy_board_queries_port.gd")
 const EnemyBoardEffectsPort := preload("res://features/combat/scene/combat_enemy_board_effects_port.gd")
 const EnemyBoardMovementPort := preload("res://features/combat/scene/combat_enemy_board_movement_port.gd")
+const ConstructionPort := preload("res://features/combat/scene/combat_map_construction_port.gd")
 
 
 func test_las_fachadas_reales_implementan_los_puertos_de_combate() -> void:
@@ -154,6 +155,8 @@ func test_las_fachadas_reales_implementan_los_puertos_de_combate() -> void:
 	assert_is(enemy_board.movement, EnemyBoardMovementPort)
 	assert_is(map.state, StatePort)
 	assert_is(map.state, CombatMapStateAdapter)
+	assert_is(map.construction, ConstructionPort)
+	assert_is(map.construction, CombatMapConstructionAdapter)
 	map.player_pos = Vector2(4.0, 5.0)
 	assert_eq(map.state.player_position(), Vector2(4.0, 5.0))
 	map.free()

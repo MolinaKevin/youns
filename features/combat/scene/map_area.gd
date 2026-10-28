@@ -1,8 +1,6 @@
 class_name MapArea
 extends CombatMapArea
 
-const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
-
 ## Charcos, trampas, granadas, salto de roca, árboles y módulos: estado y
 ## lógica en su propio componente (ver puddle_system.gd/trap_system.gd/
 ## grenade_system.gd/rock_jump_system.gd/tree_system.gd/module_system.gd). Se
@@ -20,6 +18,7 @@ var _navigation         := CombatNavigation.new()
 var _actor_mover        := CombatActorMover.new()
 var _spell_system       := CombatSpellSystem.new()
 var _terrain            := CombatTerrain.new()
+var _construction_impl: CombatMapConstructionAdapter
 var _targeting          := CombatTargeting.new()
 var _push_system        := CombatPushSystem.new()
 var _overwatch_system   := CombatOverwatchSystem.new()
@@ -49,6 +48,8 @@ func _init() -> void:
 	_scene_impl = CombatMapSceneAdapter.new(_input_controller, _actor_presentation)
 	scene = _scene_impl
 	terrain = CombatMapTerrain.new()
+	_construction_impl = CombatMapConstructionAdapter.new(_terrain)
+	construction = _construction_impl
 	movement = CombatMapMovement.new()
 	selection = CombatMapSelectionAdapter.new(self, _targeting, _presentation_impl,
 		_trap_system, _grenade_system, _rock_jump_system, _puddle_system,
@@ -125,58 +126,13 @@ var biome: BiomeData
 
 func setup_biome(value: BiomeData) -> void:
 	biome = value if value != null else DEFAULT_BIOME
-	biome.setup_combat_map(self)
-
-# ── Shared combat state ───────────────────────────────────────────────────────
-var _enemy_move_pending:
-	get: return _actor_mover.enemy_move_pending
-	set(value): _actor_mover.enemy_move_pending = value
-## Reenvío a PuddleSystem (compat con combat_player_actions.gd/combat_enemy_ai.gd/tests).
+	biome.setup_combat_map(construction)
 
 # ── Elevation ─────────────────────────────────────────────────────────────────
 # ── Pathfinding ───────────────────────────────────────────────────────────────
 # ── Obstacles ─────────────────────────────────────────────────────────────────
-# type CombatObstacle.SOLID  → bloquea movimiento Y línea de visión
-# type CombatObstacle.ROCK   → bloquea movimiento, LOS pasa a través (piedra pequeña)
-# type CombatObstacle.BRIDGE → movimiento permitido por debajo, LOS bloqueada (puente)
-# "module": true → es un módulo: se puede romper, golpear y saltar desde él
-#                  (las piedras chicas; las cartas crean más, ver build_modules)
-## Lo provee el CombatBiomeLayout; CombatTerrain conserva e interpreta esa
-## geometría durante el combate. Devuelve el array real (no una copia): lo
-## usan los tests para armar tableros a mano y CombatBiomeLayout para leerlo
-## una vez al construir los visuales. El código de juego que agrega, saca o
-## mueve obstáculos durante el combate no debe usar esto — tiene que pasar
-## por `terrain.mutation.add_obstacle()`/`terrain.mutation.remove_obstacle()` (o mutar en el
-## lugar, como slide_module), que son los que saben invalidar los cachés de
-## CombatTerrain.
-var solid_obstacles: Array[Dictionary]:
-	get: return _terrain.obstacles
-
-## ── API de construcción de biomas ────────────────────────────────────────────
-## CombatBiomeLayout usa estos métodos en vez de depender del formato interno
-## de `solid_obstacles`. Los elementos agregados acá son el estado inicial;
-## durante el combate los sistemas pueden mutarlos o agregar módulos propios.
-func clear_biome_obstacles() -> void:
-	_terrain.clear()
-
-func add_solid(pos: Vector2, radius: float) -> void:
-	_terrain.add({"pos": pos, "radius": radius, "type": CombatObstacle.SOLID})
-
-func add_solid_box(pos: Vector2, size: Vector2) -> void:
-	_terrain.add({"pos": pos, "box": size, "type": CombatObstacle.SOLID})
-
-func add_rock(pos: Vector2, radius: float, module: bool = true) -> void:
-	_terrain.add({"pos": pos, "radius": radius, "type": CombatObstacle.ROCK, "module": module})
-
-func add_bridge(pos: Vector2, size: Vector2) -> void:
-	_terrain.add({"pos": pos, "box": size, "type": CombatObstacle.BRIDGE})
-
-func add_tree(pos: Vector2, radius: float = 0.6) -> void:
-	_terrain.add({"pos": pos, "radius": radius, "type": CombatObstacle.TREE})
-
-func add_platform(pos: Vector2, size: Vector2, ramps: Array[Dictionary] = []) -> void:
-	_terrain.add({"pos": pos, "box": size, "type": CombatObstacle.PLATFORM, "ramps": ramps.duplicate(true)})
-
+# La geometría inicial llega por `construction`; el estado y sus mutaciones
+# durante el combate viven en `terrain`.
 # ── Visual ────────────────────────────────────────────────────────────────────
 ## Alturas de los resaltados sobre el suelo: la sombra está en 0.02.
 ## Un área tiene que cubrir este tramo del radio de la huella para afectarla.
@@ -190,7 +146,7 @@ func _ready() -> void:
 	_setup_ground()
 	_overlay.setup()
 
-	biome.build_combat_map(self)
+	biome.build_combat_map(self, construction)
 	_scene_impl.setup_actors()
 
 func _setup_ground() -> void:

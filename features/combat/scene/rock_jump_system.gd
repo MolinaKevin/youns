@@ -10,7 +10,7 @@ const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd"
 ##
 ## Vive como hijo de MapArea, que se asigna a sí mismo en `map` antes de
 ## agregarlo al árbol (ver MapArea._init()) — lo necesita para la lista de
-## obstáculos (solid_obstacles, is_module) y las mallas compartidas
+## obstáculos del terreno (incluyendo is_module) y las mallas compartidas
 ## (make_disc, build_tile_disc, make_mat).
 
 ## Asignado por MapArea antes de add_child(self) — ver MapArea._init().

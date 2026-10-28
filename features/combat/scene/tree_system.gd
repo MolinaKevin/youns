@@ -9,7 +9,7 @@ const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd"
 ##
 ## Vive como hijo de MapArea, que se asigna a sí mismo en `map` antes de
 ## agregarlo al árbol (ver MapArea._init()) — lo necesita para la lista de
-## obstáculos compartida (solid_obstacles), las mallas compartidas (make_disc,
+## obstáculos compartida del terreno, las mallas compartidas (make_disc,
 ## build_tile_disc), el movimiento del jugador (can_blink_to,
 ## blink_player_to y la sincronización de actores), la señal
 ## map.scene.player_knocked_off_tree y la caché de bloqueos (obstacles_changed).
@@ -37,8 +37,8 @@ var _tree_landing_marker: MeshInstance3D
 var _next_log_id := 0
 
 
-## Arma el tronco + la copa de un árbol inicial (los que ya están en
-## solid_obstacles al arrancar el combate). Llamado por MapArea._setup_obstacles().
+## Arma el tronco + la copa de un árbol inicial. El layout del bioma lo llama
+## durante la construcción visual del tablero.
 func build_initial_tree_mesh(mi: MeshInstance3D, obs: Dictionary, pos: Vector2) -> void:
 	var r: float = obs["radius"]
 	var trunk := CylinderMesh.new()

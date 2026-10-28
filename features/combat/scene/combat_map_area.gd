@@ -38,3 +38,6 @@ var movement: CombatMapMovementPort
 var terrain: CombatMapTerrainPort
 var scene: CombatMapScenePort
 var state: CombatMapStatePort
+## Puerto de construcción inicial; queda sin tipo nominal para que los recursos
+## de datos puedan cargarse antes de registrar el script del puerto.
+var construction

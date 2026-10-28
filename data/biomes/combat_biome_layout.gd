@@ -3,12 +3,11 @@ extends Resource
 
 const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
 
-func populate_map(map: Node3D) -> void:
-	# Las subclases describen el tablero usando la API de MapArea. Así no conocen
-	# el formato interno de `solid_obstacles`.
-	map.clear_biome_obstacles()
+func populate_map(construction) -> void:
+	# Las subclases describen el tablero usando el puerto de construcción.
+	construction.clear_obstacles()
 
-func build_visuals(map: Node3D) -> void:
+func build_visuals(map: Node3D, obstacles: Array[Dictionary]) -> void:
 	var solid_mat := StandardMaterial3D.new()
 	solid_mat.albedo_color = Color(0.30, 0.25, 0.20)
 	solid_mat.roughness = 0.9
@@ -22,7 +21,7 @@ func build_visuals(map: Node3D) -> void:
 	bridge_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	bridge_mat.roughness = 0.7
 
-	for obs: Dictionary in map.solid_obstacles:
+	for obs: Dictionary in obstacles:
 		assert(CombatObstacle.is_known(obs), "Tipo de obstáculo desconocido: %s" % CombatObstacle.type_of(obs))
 		var pos: Vector2 = obs["pos"]
 		var obs_type := CombatObstacle.type_of(obs)

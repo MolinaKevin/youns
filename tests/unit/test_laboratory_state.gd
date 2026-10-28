@@ -152,7 +152,7 @@ func test_reward_item_en_99_no_incrementa() -> void:
 func test_reward_world_bridge_guarda_el_puente_en_el_progreso() -> void:
 	LaboratoryState.grant_reward({"type": "world_bridge", "id": "river_bridge"}, "r")
 
-	assert_true(GameState.player_save.world_progress.has_bridge("river_bridge"))
+	assert_true(GameState.player_save.world_progress.has_construction("river_bridge"))
 
 
 func test_reward_youn_growth_bonus_se_acumula() -> void:

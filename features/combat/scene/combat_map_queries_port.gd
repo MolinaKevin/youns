@@ -5,7 +5,7 @@ var line_of_sight: CombatMapLineOfSightPort = CombatMapLineOfSightPort.new()
 var actors: CombatMapActorQueriesPort = CombatMapActorQueriesPort.new()
 var areas: CombatMapAreaQueriesPort = CombatMapAreaQueriesPort.new()
 
-## Compatibilidad geométrica; su destino final es el puerto de colisión del terreno.
+## Seam geométrico mantenido para el adaptador de colisión del terreno.
 func clip_path_at_obstacle(_from: Vector2, to: Vector2) -> Vector2: return to
 
 ## Contrato de las consultas espaciales que consumen las reglas de combate.

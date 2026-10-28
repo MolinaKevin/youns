@@ -23,13 +23,4 @@ func has_construction(construction_id: String) -> bool:
 func migrate_legacy_bridges() -> void:
 	for bridge_id in unlocked_bridge_ids:
 		unlock_construction(bridge_id)
-	unlocked_bridge_ids.clear()
-
-
-## Compatibilidad temporal para consumidores todavía no migrados.
-func unlock_bridge(bridge_id: String) -> void:
-	unlock_construction(bridge_id)
-
-
-func has_bridge(bridge_id: String) -> bool:
-	return has_construction(bridge_id)
+		unlocked_bridge_ids.clear()
