@@ -39,6 +39,10 @@ var world_entry: WorldEntryContext = WorldEntryContext.new()
 ## Evita volver a reproducir la ceremonia al llegar a GameWorld después de la
 ## escena independiente de una partida nueva.
 var new_game_ceremony_completed := false
+## Recurso efímero preparado durante la ceremonia de partida nueva. No se
+## guarda: WorldLoading lo consume una sola vez al entrar al exterior.
+var preloaded_game_world: PackedScene
+var preloaded_zone_scenes: Dictionary = {}
 var ui_return: UiReturnContext = UiReturnContext.new()
 
 ## Fachada de los datos iniciales: su dueño es SaveService.
@@ -48,10 +52,10 @@ const STARTING_STATS := SaveService.STARTING_STATS
 func _ready() -> void:
 	var care_action := func(action: String) -> void:
 		match action:
-			"reward": StatsManager.reward_youn()
-			"punish": StatsManager.punish_youn()
-			"deny": StatsManager.deny_youn()
-			"play": StatsManager.play_with_youn()
+			"reward": StatsManager.care_service.reward()
+			"punish": StatsManager.care_service.punish()
+			"deny": StatsManager.care_service.deny()
+			"play": StatsManager.care_service.play()
 	player_session = PlayerSessionService.new(
 		func() -> PlayerSaveData: return player_save,
 		care_action,
@@ -138,6 +142,8 @@ func start_new_game() -> void:
 	# La etapa inicial del Youn se guarda con la hora real de esta partida, no
 	# con la hora de la sesión anterior.
 	new_game_ceremony_completed = false
+	preloaded_game_world = null
+	preloaded_zone_scenes.clear()
 	clock.set_time(1, 8.0, false)
 	_reset_session()
 	save_service.start_new_session(get_total_hours())
@@ -148,6 +154,8 @@ func load_game() -> bool:
 	var loaded := save_service.load_from_disk()
 	if loaded == null:
 		return false
+	preloaded_game_world = null
+	preloaded_zone_scenes.clear()
 	clock.set_time(loaded.saved_day, loaded.saved_hour, false)
 	_reset_session()
 	save_service.activate_loaded_session(loaded)
@@ -168,3 +176,11 @@ func save_player_save() -> Error:
 func _reset_session() -> void:
 	world_combat.clear()
 	discard_pending_ticks()
+
+
+## Entrega una zona ya leída en segundo plano. La escena se consume una sola
+## vez para que no quede retenida después de entrar al mundo.
+func take_preloaded_zone_scene(path: String) -> PackedScene:
+	var scene := preloaded_zone_scenes.get(path) as PackedScene
+	preloaded_zone_scenes.erase(path)
+	return scene

@@ -12,7 +12,9 @@ const GREASY_MOVE_PENALTY_MODULES := 3
 const BLINDED_RANGE_MODULES := 2  # rango máximo estando cegado
 
 var state: CombatState
-var map_area: MapArea
+## Las acciones del jugador necesitan el mismo contrato liviano que la IA.
+## `MapArea` lo implementa en juego; los tests pueden usar `CombatMapArea`.
+var map_area: CombatMapArea
 var zone_effects := CombatZoneEffectResolver.new()
 
 var deal_damage_to_enemy: Callable
@@ -102,7 +104,7 @@ func _init() -> void:
 	_all_actions = [_move_action, _attack_action, _grenade_action, _trap_action, _self_action,
 		_jump_action, _push_action, _module_action, _spell_action, _puddle_action, _overwatch_action]
 
-func setup(p_state: CombatState, p_map_area: MapArea, p_damage_enemy: Callable, p_damage_player: Callable, p_check_end: Callable,
+func setup(p_state: CombatState, p_map_area: CombatMapArea, p_damage_enemy: Callable, p_damage_player: Callable, p_check_end: Callable,
 		p_get_flow: Callable = Callable(), p_flow_is_active: Callable = Callable()) -> void:
 	state = p_state
 	map_area = p_map_area

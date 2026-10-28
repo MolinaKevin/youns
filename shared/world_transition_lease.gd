@@ -5,27 +5,22 @@ extends RefCounted
 ## flags permiten reutilizarlo en popups, cinemáticas y pantallas sin imponer
 ## una política visual única.
 
-var _hud: Variant
-var _party: Variant
+var _hud: ModalScreenHostPort
+var _party: WorldTransitionPartyPort
 var _clock_was_paused := false
 var _clock_was_visible := true
 var _status_was_visible := true
 var _tree_was_paused := false
 var _tree: SceneTree
 var _mouse_mode := Input.MOUSE_MODE_CAPTURED
-var _player: Variant
-var _youn: Variant
-var _camera: Variant
-var _player_physics_was_enabled := false
-var _youn_physics_was_enabled := false
-var _camera_was_enabled := false
+var _party_state: Dictionary = {}
 var _freeze_actors := true
 var _freeze_camera := true
 var _pause_tree := false
 var _released := false
 
 
-func _init(hud: Variant, party: Variant, options: Dictionary = {}) -> void:
+func _init(hud: ModalScreenHostPort, party: WorldTransitionPartyPort, options: Dictionary = {}) -> void:
 	_hud = hud
 	_party = party
 	_freeze_actors = options.get("freeze_actors", true)
@@ -71,19 +66,9 @@ func release() -> void:
 func _snapshot_party_state() -> void:
 	if not is_instance_valid(_party):
 		return
-	_player = _party.player
-	_youn = _party.youn
-	_camera = _party.camera_rig
-	_player_physics_was_enabled = _player.is_physics_processing() if is_instance_valid(_player) else false
-	_youn_physics_was_enabled = _youn.is_physics_processing() if is_instance_valid(_youn) else false
-	_camera_was_enabled = _camera.enabled if is_instance_valid(_camera) else false
+	_party_state = _party.snapshot_transition_state()
 
 
 func _restore_party_state() -> void:
-	if _freeze_actors:
-		if is_instance_valid(_player):
-			_player.set_physics_process(_player_physics_was_enabled)
-		if is_instance_valid(_youn):
-			_youn.set_physics_process(_youn_physics_was_enabled)
-	if _freeze_camera and is_instance_valid(_camera):
-		_camera.enabled = _camera_was_enabled
+	if is_instance_valid(_party):
+		_party.restore_transition_state(_party_state, _freeze_actors, _freeze_camera)

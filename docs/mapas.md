@@ -71,6 +71,17 @@ En builds de desarrollo el juego avisa si detecta que el horneado no coincide
 con sus mapas o con el algoritmo actual. El `.blend` sigue siendo la fuente;
 el `.scn` es un asset generado que se versiona junto al juego.
 
+Si el cambio afecta un mesh `*Meadow`, `*Canyon`, `*Rock`, el río, la montaña
+o cualquier otra superficie que determine por dónde se camina, regenerar
+también los límites globales:
+
+```bash
+godot --headless --path . --script res://tools/bake_world_boundary.gd
+```
+
+Esto produce `baked_world_boundary.tres` (grilla caminable y zonas) y
+`baked_world_boundary_walls.scn` (colisiones de las paredes invisibles).
+
 ### Capas de colisión
 
 `WorldCollisionLayers.configure_ground_colliders` pasa a la capa **GROUND (2)**

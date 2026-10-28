@@ -83,7 +83,7 @@ func collapse_modules_on_enemy() -> int:
 	for obs in fallen:
 		_remove_module(obs)
 	if not fallen.is_empty():
-		map.obstacles_changed()
+		map.terrain.obstacles_changed()
 	return fallen.size()
 
 ## Lanza el módulo a `target` (vuela por encima de todo): al caer se rompe y le
@@ -95,7 +95,7 @@ func throw_module(obs: Dictionary, target: Vector2) -> Dictionary:
 		"player": target.distance_to(map.player_pos) <= reach + map.actors.player_radius(),
 	}
 	map.terrain.remove_obstacle(obs)
-	map.obstacles_changed()
+	map.terrain.obstacles_changed()
 	var node = obs.get("node")
 	if is_instance_valid(node):
 		if node.is_inside_tree():
@@ -139,7 +139,7 @@ func build_modules(center: Vector2, count: int) -> int:
 			_add_module(p)
 			built += 1
 	if built > 0:
-		map.obstacles_changed()
+		map.terrain.obstacles_changed()
 	return built
 
 func _module_fits(p: Vector2) -> bool:
@@ -195,7 +195,7 @@ func break_modules(first: Dictionary, count: int) -> int:
 		group.append(best)
 	for obs in group:
 		_remove_module(obs)
-	map.obstacles_changed()
+	map.terrain.obstacles_changed()
 	return group.size()
 
 ## Golpe de módulo: lo desliza en `dir` hasta `distance` o hasta chocar con un
@@ -246,7 +246,7 @@ func slide_module(obs: Dictionary, dir: Vector2, distance: float) -> Dictionary:
 				node.create_tween().tween_property(node, "position", target, 0.25)
 			else:
 				node.position = target
-	map.obstacles_changed()
+			map.terrain.obstacles_changed()
 	if not hit_tree.is_empty():
 		tree_system.knock_player_off(hit_tree, false)  # el golpe sacude el árbol
 	return {"hit": hit, "pos": obs["pos"], "tree": hit_tree}

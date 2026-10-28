@@ -149,7 +149,7 @@ func _ready() -> void:
 		state.enemy_status_reduction = YounStatRules.status_reduction(wild_youn.base_stats.to_dict())
 	map_area.setup_enemy_youn(wild_youn)
 	enemy_ai = _CombatEnemyAI.new()
-	enemy_ai.setup(state, map_area, wild_youn.strategy, _damage.deal_to_enemy, _damage.deal_to_player, _result_flow.check_combat_end)
+	enemy_ai.setup_with_board(state, CombatEnemyBoardMapAdapter.new(map_area), wild_youn.strategy, _damage.deal_to_enemy, _damage.deal_to_player, _result_flow.check_combat_end)
 	enemy_ai.initiative = DEFAULT_ENEMY_INITIATIVE
 	enemy_ai.set_monster_deck(wild_youn.monster_deck)
 	enemy_name_str = wild_youn.youn_name

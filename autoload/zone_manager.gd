@@ -56,6 +56,7 @@ func _is_gut_unit_test_run() -> bool:
 func initialize_world() -> void:
 	if _world_initialized:
 		return
+	var initialization_started_at := Time.get_ticks_msec()
 	var catalog_errors := catalog.validate()
 	catalog_errors.append_array(GameDataValidator.zone_graph_errors(catalog))
 	if not catalog_errors.is_empty():
@@ -65,7 +66,9 @@ func initialize_world() -> void:
 	_boundary = WorldBoundary.new()
 	_boundary.name = "WorldBoundary"
 	add_child(_boundary)
+	var boundary_started_at := Time.get_ticks_msec()
 	_boundary.build(catalog)
+	print("[ZoneManager] WorldBoundary.build: %d ms." % (Time.get_ticks_msec() - boundary_started_at))
 	_boundary.set_north_trail_open(north_trail_open)
 	_streaming = ZoneStreamingController.new()
 	add_child(_streaming)
@@ -84,11 +87,14 @@ func initialize_world() -> void:
 	_presence.set_current_zone(_initial_zone)
 	_presence.zone_detected.connect(_on_zone_detected)
 	# El hub se carga de forma bloqueante: el jugador aparece ahí.
+	var hub_started_at := Time.get_ticks_msec()
 	_streaming.load_now("hub")
+	print("[ZoneManager] Carga e instancia de hub: %d ms." % (Time.get_ticks_msec() - hub_started_at))
 	_streaming.activate("hub")
 	# Posicionar party en el spawn del hub
 	call_deferred("_initial_spawn")
 	_world_initialized = true
+	print("[ZoneManager] initialize_world total: %d ms." % (Time.get_ticks_msec() - initialization_started_at))
 
 func is_world_initialized() -> bool:
 	return _world_initialized
@@ -96,7 +102,9 @@ func is_world_initialized() -> bool:
 func _initial_spawn() -> void:
 	if not _world_initialized:
 		return
+	var spawn_started_at := Time.get_ticks_msec()
 	PartyManager.place_at_spawn(get_zone_node("hub"))
+	print("[ZoneManager] Spawn inicial de party: %d ms." % (Time.get_ticks_msec() - spawn_started_at))
 
 ## Abre (o vuelve a cerrar) el sendero norte: árboles y pared del hub, y el
 ## camino de tierra de WorldBoundary.

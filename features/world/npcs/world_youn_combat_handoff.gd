@@ -49,6 +49,6 @@ func _start_transition() -> void:
 		host.youn_data,
 		ZoneManager.get_current_biome(),
 	)
-	if GameState.player_save != null and "bathroom" in StatsManager.active_states:
+	if GameState.player_save != null and "bathroom" in StatsManager.emotion_service.active_states:
 		GameState.player_save.bathroom_pending_after_combat = true
 	host.get_tree().change_scene_to_file("res://features/combat/scene/combat.tscn")

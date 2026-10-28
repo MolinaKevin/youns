@@ -39,7 +39,7 @@ func _on_area_exited(body: Node3D) -> void:
 func _try_start() -> void:
 	if _running:
 		return
-	if GameState.player_save == null or "bathroom" not in StatsManager.active_states:
+	if GameState.player_save == null or "bathroom" not in StatsManager.emotion_service.active_states:
 		return
 	_run()
 
@@ -50,12 +50,12 @@ func _run() -> void:
 	var youn   := PartyManager.youn
 	var cam    := PartyManager.camera_rig
 
-	StatsManager.attend_bathroom()
+	StatsManager.care_service.attend_bathroom()
 
 	# La secuencia puede desaparecer junto con la zona: el lease garantiza que
 	# no deja reloj, cámara o actores congelados en ese caso.
 	_world_lease = WorldTransitionLease.new(
-		ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager), PartyManager,
+		ModalScreenHost.from_runtime(), PartyManager,
 		{"show_mouse": false}
 	)
 

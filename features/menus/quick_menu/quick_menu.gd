@@ -26,7 +26,7 @@ var _session: PlayerSessionService
 
 func _ready() -> void:
 	_session = GameState.player_session
-	_modal = ModalScreenContext.new(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
+	_modal = ModalScreenContext.new(ModalScreenHost.from_runtime())
 	_build_styles()
 	_build_cross()
 	LocalizationState.language_changed.connect(_apply_localized_text)

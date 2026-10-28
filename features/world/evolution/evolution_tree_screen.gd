@@ -27,7 +27,7 @@ var _detail: EvolutionDetailOverlay
 var _focus_nav: EvolutionFocusNav
 
 func _ready() -> void:
-	ModalScreenContext.enter_fullscreen(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
+	ModalScreenContext.enter_fullscreen(ModalScreenHost.from_runtime())
 	_detail = EvolutionDetailOverlay.new(self)
 	_focus_nav = EvolutionFocusNav.new(self)
 	_load_youns()

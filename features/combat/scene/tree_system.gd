@@ -150,7 +150,7 @@ func fell_tree(tree: Dictionary, dir: Vector2) -> Dictionary:
 		if not map.terrain.is_inside_bounds(p):
 			continue
 		_add_log_segment(p, dir, log_id)
-	map.obstacles_changed()
+	map.terrain.obstacles_changed()
 	return {"enemy_hit": enemy_hit}
 
 func _add_log_segment(p: Vector2, dir: Vector2, log_id: int) -> void:
@@ -268,4 +268,4 @@ func tick_trees() -> void:
 			map.terrain.remove_obstacle(obs)
 			changed = true
 	if changed:
-		map.obstacles_changed()
+		map.terrain.obstacles_changed()

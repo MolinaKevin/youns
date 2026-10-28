@@ -1,12 +1,17 @@
-extends GutTest
+extends "res://tests/helpers/graphical_integration_test_case.gd"
 
-# Menú rápido: el jugador mira al Youn, el Youn se acerca, el jugador hace la
-# animación y recién después se aplican los cambios.
+## Menú rápido: el jugador mira al Youn, el Youn se acerca, el jugador hace la
+## animación y recién después se aplican los cambios. Requiere los modelos y
+## AnimationPlayer reales, por eso no forma parte de la suite headless.
 
 const YounInteraction := preload("res://features/world/party/youn_interaction.gd")
 
 var _pos := Vector3.ZERO
 var _save_before: PlayerSaveData
+
+
+func before_all() -> void:
+	PartyManager.initialize_party()
 
 
 func before_each() -> void:

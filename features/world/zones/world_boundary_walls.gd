@@ -60,7 +60,8 @@ func build(parent: Node3D, grid: WorldBoundaryGrid, layout: WorldLayout, wall_he
 	_log_build_step("Sendero norte", started_at, checkpoint)
 
 func set_trail_visible(parent: Node3D, open: bool) -> void:
-	var trail := parent.get_node_or_null("NorthTrail")
+	# En el horneado las paredes y el sendero viven bajo una escena raíz.
+	var trail := parent.find_child("NorthTrail", true, false)
 	if trail == null: return
 	for mi in trail.find_children("*", "MeshInstance3D", false, false):
 		(mi as MeshInstance3D).visible = open

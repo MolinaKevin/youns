@@ -33,7 +33,7 @@ static func update_hover_preview(map: MapArea, disc: MeshInstance3D, preview: Me
 		preview.visible = false
 		return last_pos
 	var in_range := pos.distance_to(map.player_pos) <= max_range \
-		and not map.tile_in_obstacle(pos, map.player_elevation)
+		and not map.terrain.is_tile_obstructed(pos, map.player_elevation)
 	if not in_range:
 		preview.visible = false
 		return last_pos

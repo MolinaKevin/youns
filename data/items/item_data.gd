@@ -13,7 +13,7 @@ func apply_effects(save: PlayerSaveData) -> void:
 	for effect in effects:
 		effect.apply(save)
 	if weight_gain > 0.0:
-		StatsManager.add_weight(weight_gain)
+		StatsManager.care_service.set_weight(save.weight + weight_gain)
 	if poop_size > 0.0:
 		save.poop_pending += poop_size
 	StatsManager.check_status()

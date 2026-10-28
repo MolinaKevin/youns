@@ -52,6 +52,8 @@ extends Resource
 @export_group("")
 @export var mesh_scale: float = 1.0
 @export var mesh_y_offset: float = 0.0
+## Corrección local del frente del FBX. Se aplica en mundo, combate y
+## cinemáticas; 0 mantiene la orientación estándar y PI invierte un modelo.
 @export var mesh_rotation_y: float = 0.0
 
 @export_group("Animations")

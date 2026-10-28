@@ -1,4 +1,4 @@
-extends Node
+extends "res://shared/world_transition_party_port.gd"
 
 const PARTY_SCENE := preload("res://features/world/party/party.tscn")
 const CollisionLayers := preload("res://shared/world_collision_layers.gd")
@@ -129,6 +129,22 @@ func unfreeze_actors() -> void:
 func freeze_camera() -> void:
 	if is_instance_valid(camera_rig):
 		camera_rig.enabled = false
+
+func snapshot_transition_state() -> Dictionary:
+	return {
+		"player_physics": player.is_physics_processing() if is_instance_valid(player) else false,
+		"youn_physics": youn.is_physics_processing() if is_instance_valid(youn) else false,
+		"camera_enabled": camera_rig.enabled if is_instance_valid(camera_rig) else false,
+	}
+
+func restore_transition_state(snapshot: Dictionary, restore_actors: bool, restore_camera: bool) -> void:
+	if restore_actors:
+		if is_instance_valid(player):
+			player.set_physics_process(snapshot.get("player_physics", false))
+		if is_instance_valid(youn):
+			youn.set_physics_process(snapshot.get("youn_physics", false))
+	if restore_camera and is_instance_valid(camera_rig):
+		camera_rig.enabled = snapshot.get("camera_enabled", false)
 
 func unfreeze_camera() -> void:
 	if is_instance_valid(camera_rig):

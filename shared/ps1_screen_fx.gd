@@ -4,9 +4,9 @@ extends RefCounted
 ## Pixelado PS1 que cubre toda la pantalla: una CanvasLayer con un ColorRect a
 ## pantalla completa y el shader ps1_screen. Estaba copiado tal cual en
 ## game_world.gd y world_map.gd.
-static func attach(parent: Node) -> void:
+static func attach(parent: Node, layer_index := 0) -> void:
 	var layer := CanvasLayer.new()
-	layer.layer = 0
+	layer.layer = layer_index
 	var rect := ColorRect.new()
 	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var mat := ShaderMaterial.new()

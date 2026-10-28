@@ -1,13 +1,10 @@
 extends Control
 
-## Escena puente entre el menú y el exterior. Se muestra un frame antes de
-## construir el mundo para que el usuario vea que la partida está cargando.
+## Escena puente negra entre el menú y el exterior. Mantiene la transición
+## limpia mientras se construye el mundo, sin mostrar un popup de carga.
 
 const ScenePaths := preload("res://shared/scene_paths.gd")
 const GAME_WORLD := ScenePaths.GAME_WORLD
-
-@onready var status_label: Label = $Center/Panel/Margin/VBox/Status
-
 
 func _ready() -> void:
 	GlobalHUD.set_clock_visible(false)
@@ -19,10 +16,20 @@ func _ready() -> void:
 func _load_world() -> void:
 	# Deja que la pantalla se dibuje antes del trabajo pesado síncrono.
 	await get_tree().process_frame
-	status_label.text = LocalizationState.t("world.loading.prepare_companion")
+	var started_at := Time.get_ticks_msec()
+	var party_started_at := Time.get_ticks_msec()
 	PartyManager.initialize_party()
-	status_label.text = LocalizationState.t("world.loading.build_world")
+	print("[WorldLoading] PartyManager.initialize_party: %d ms." % (Time.get_ticks_msec() - party_started_at))
+	var world_started_at := Time.get_ticks_msec()
 	ZoneManager.initialize_world()
+	print("[WorldLoading] ZoneManager.initialize_world: %d ms." % (Time.get_ticks_msec() - world_started_at))
 	# También deja correr el spawn diferido del hub antes de restaurar ubicación.
 	await get_tree().process_frame
-	get_tree().change_scene_to_file(GAME_WORLD)
+	var preloaded_world := GameState.preloaded_game_world
+	GameState.preloaded_game_world = null
+	if preloaded_world != null:
+		print("[WorldLoading] Total hasta GameWorld (precargado): %d ms." % (Time.get_ticks_msec() - started_at))
+		get_tree().change_scene_to_packed(preloaded_world)
+	else:
+		print("[WorldLoading] Total hasta GameWorld (normal): %d ms." % (Time.get_ticks_msec() - started_at))
+		get_tree().change_scene_to_file(GAME_WORLD)

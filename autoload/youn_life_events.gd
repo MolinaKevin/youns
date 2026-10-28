@@ -63,8 +63,8 @@ func mark_player_slept() -> void:
 		_sick_sleep_count += 1
 		if _sick_sleep_count >= 2:
 			_sick_sleep_count = 0
-			StatsManager.set_enfermo(false)
-			StatsManager.add_care_mistake(1)
+			StatsManager.care_service.set_sick(false)
+			StatsManager.care_service.add_care_mistake(1)
 
 func _check_sleep_penalty(hour: float, _day: int) -> void:
 	var youn_node = PartyManager.youn if PartyManager else null
@@ -79,7 +79,7 @@ func _check_sleep_penalty(hour: float, _day: int) -> void:
 	var penalty_h := (data.sleep_hour + 1) % 24
 	if _hour_in_range(hour, penalty_h, data.wake_hour):
 		_sleep_penalty_applied = true
-		StatsManager.add_care_mistake(1)
+		StatsManager.care_service.add_care_mistake(1)
 
 func _check_end_of_night(hour: float, _day: int) -> void:
 	var youn_node = PartyManager.youn if PartyManager else null
@@ -95,9 +95,9 @@ func _check_end_of_night(hour: float, _day: int) -> void:
 		_slept_this_cycle = false
 	if not in_sleep and _was_in_sleep_range:
 		if not _slept_this_cycle:
-			StatsManager.add_salud(-20)
+			StatsManager.care_service.add_stat("salud", -20)
 			if GameState.player_save != null and GameState.player_save.energia < 20:
-				StatsManager.set_enfermo(true)
+				StatsManager.care_service.set_sick(true)
 	_was_in_sleep_range = in_sleep
 
 func _hour_in_range(hour: float, from_h: int, to_h: int) -> bool:
@@ -110,8 +110,8 @@ func _hour_in_range(hour: float, from_h: int, to_h: int) -> bool:
 
 ## Deja una caca en el suelo donde está el Youn. Va colgada de la zona actual,
 ## así se oculta en los interiores y se va si la zona se descarga.
-## Al agregar una animación: StatsManager.block_emotions() al inicio,
-## StatsManager.unblock_emotions() en el callback de fin de animación.
+## Al agregar una animación: EmotionService.block() al inicio,
+## EmotionService.unblock() en el callback de fin de animación.
 func _on_bathroom_accident() -> void:
 	var youn := PartyManager.youn
 	if not is_instance_valid(youn):
@@ -150,13 +150,13 @@ func _on_reincarnation_triggered(from_data: YounData, cause: String) -> void:
 ## Partida cargada en medio de una muerte: se retoma desde el principio. Lo
 ## llama game_world.gd en su _ready() (partida nueva/cargada o vuelta de combate).
 func restore_pending_reincarnation() -> void:
-	if not "dying" in StatsManager.active_states:
+	if not "dying" in StatsManager.emotion_service.active_states:
 		return
 	var ps := GameState.player_save
 	var from_data: YounData = null
 	if ps and not ps.current_youn_path.is_empty() and ResourceLoader.exists(ps.current_youn_path):
 		from_data = load(ps.current_youn_path) as YounData
-	var cause: String = StatsManager.active_states["dying"].get("cause", ReincarnationRules.CAUSE_AGE)
+	var cause: String = StatsManager.emotion_service.active_states["dying"].get("cause", ReincarnationRules.CAUSE_AGE)
 	call_deferred("_on_reincarnation_triggered", from_data, cause)
 
 
@@ -165,9 +165,9 @@ func restore_pending_reincarnation() -> void:
 ## Partida cargada en medio de una evolución: se retoma desde el principio.
 ## Lo llama game_world.gd en su _ready() (partida nueva/cargada o vuelta de combate).
 func restore_pending_evolution() -> void:
-	if not "evolving" in StatsManager.active_states:
+	if not "evolving" in StatsManager.emotion_service.active_states:
 		return
-	var target_path: String = StatsManager.active_states["evolving"].get("target_youn_path", "")
+	var target_path: String = StatsManager.emotion_service.active_states["evolving"].get("target_youn_path", "")
 	if target_path.is_empty():
 		return
 	var ps := GameState.player_save
@@ -242,7 +242,7 @@ func _on_evolution_triggered(from_data: YounData, to_data: YounData) -> void:
 			return
 		world_lighting.world_env.environment = saved_env
 		world_lighting.reapply_current_period()
-		var result := StatsManager.complete_evolution()
+		var result := StatsManager.life_stage.complete_evolution()
 		if to_data and PartyManager.youn.has_method("load_youn"):
 			PartyManager.youn.load_youn(to_data)
 		evo.queue_free()

@@ -75,7 +75,7 @@ class_name PlayerSaveData
 @export var has_saved_position: bool = false
 ## Progreso del mundo: rutas, puentes y warps desbloqueados.
 @export var world_progress: WorldProgressData = WorldProgressData.new()
-## Estados activos del Youn (StatsManager.active_states).
+## Estados activos del Youn (EmotionService.active_states).
 @export var active_states: Dictionary = {}
 ## Laboratorio: lo producido sin retirar y el avance de cada receta.
 @export var lab_pending_output: Dictionary = {}

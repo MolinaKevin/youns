@@ -17,18 +17,18 @@ func before_each() -> void:
 	GameState.current_day = 20
 	GameState.time_of_day_hours = 10.0
 	GameState.player_save = PlayerSaveData.new()
-	StatsManager.active_states.clear()
-	while StatsManager.emotions_blocked:
-		StatsManager.unblock_emotions()
+	StatsManager.emotion_service.active_states.clear()
+	while StatsManager.emotion_service.is_blocked():
+		StatsManager.emotion_service.unblock()
 
 
 func after_each() -> void:
 	GameState.player_save = _save_backup
 	GameState.current_day = _day
 	GameState.time_of_day_hours = _hour
-	StatsManager.active_states.clear()
-	while StatsManager.emotions_blocked:
-		StatsManager.unblock_emotions()
+	StatsManager.emotion_service.active_states.clear()
+	while StatsManager.emotion_service.is_blocked():
+		StatsManager.emotion_service.unblock()
 
 
 func _inherited() -> CardData:
@@ -42,19 +42,19 @@ func test_el_campeon_al_terminar_su_vida_empieza_a_morir() -> void:
 	ps.current_youn_path = CAMPEON
 	ps.stage_entered_total_hour = GameState.get_total_hours() - 6.5 * 24.0
 	watch_signals(StatsManager)
-	StatsManager.check_evolution()
+	StatsManager.life_stage.check_evolution()
 	assert_signal_emitted(StatsManager, "reincarnation_triggered")
-	assert_true("dying" in StatsManager.active_states)
-	assert_true(StatsManager.emotions_blocked)
+	assert_true("dying" in StatsManager.emotion_service.active_states)
+	assert_true(StatsManager.emotion_service.is_blocked())
 
 
 func test_mientras_muere_no_vuelve_a_dispararse() -> void:
 	var ps := GameState.player_save
 	ps.current_youn_path = CAMPEON
 	ps.stage_entered_total_hour = GameState.get_total_hours() - 6.5 * 24.0
-	StatsManager.check_evolution()
+	StatsManager.life_stage.check_evolution()
 	watch_signals(StatsManager)
-	StatsManager.check_evolution()
+	StatsManager.life_stage.check_evolution()
 	assert_signal_not_emitted(StatsManager, "reincarnation_triggered")
 
 
@@ -68,8 +68,8 @@ func test_la_vida_nueva_es_el_bebe_con_su_mazo_y_la_carta_heredada() -> void:
 	ps.enfermo = true
 	var baby: YounData = load(BEBE)
 	var inherited := _inherited()
-	StatsManager.active_states["dying"] = {"hour": 0.0, "stat_value": 100.0}
-	StatsManager.complete_reincarnation(baby, inherited)
+	StatsManager.emotion_service.active_states["dying"] = {"hour": 0.0, "stat_value": 100.0}
+	StatsManager.life_stage.complete_reincarnation(baby, inherited)
 
 	assert_eq(ps.current_youn_path, BEBE)
 	assert_eq(YounStatRules.current(ps, "constitucion"), baby.base_stats.constitucion)
@@ -81,8 +81,8 @@ func test_la_vida_nueva_es_el_bebe_con_su_mazo_y_la_carta_heredada() -> void:
 	assert_eq(ps.care_mistakes, baby.base_care_mistakes)
 	assert_false(ps.enfermo)
 	assert_almost_eq(ps.stage_entered_total_hour, GameState.get_total_hours(), 0.01)
-	assert_false("dying" in StatsManager.active_states)
-	assert_false(StatsManager.emotions_blocked)
+	assert_false("dying" in StatsManager.emotion_service.active_states)
+	assert_false(StatsManager.emotion_service.is_blocked())
 	# Lo del jugador sigue.
 	assert_eq(ps.gold, 500)
 	assert_true(ps.discovered_evolutions.has("mboi_tui"))
@@ -91,8 +91,8 @@ func test_la_vida_nueva_es_el_bebe_con_su_mazo_y_la_carta_heredada() -> void:
 func test_la_carta_heredada_queda_guardada_para_siempre() -> void:
 	var ps := GameState.player_save
 	var baby: YounData = load(BEBE)
-	StatsManager.complete_reincarnation(baby, _inherited())
-	StatsManager.complete_reincarnation(baby, (load("res://data/cards/strike.tres") as CardData).clone())
+	StatsManager.life_stage.complete_reincarnation(baby, _inherited())
+	StatsManager.life_stage.complete_reincarnation(baby, (load("res://data/cards/strike.tres") as CardData).clone())
 	assert_eq(ps.saved_cards.size(), 2)
 	assert_eq(ps.saved_cards[0].id, "diluvio")
 	# Copias propias: no son las mismas que las del mazo.
@@ -114,7 +114,7 @@ func test_el_bebe_tiene_mazo_inicial() -> void:
 func test_la_reencarnacion_desbloquea_el_listado_de_cartas_reencarnadas() -> void:
 	var ps := GameState.player_save
 	assert_false(ps.reincarnated_cards_unlocked)
-	StatsManager.complete_reincarnation(load(BEBE), _inherited())
+	StatsManager.life_stage.complete_reincarnation(load(BEBE), _inherited())
 	assert_true(ps.reincarnated_cards_unlocked)
 
 
@@ -129,7 +129,7 @@ func test_con_salud_en_0_el_youn_muere_por_salud() -> void:
 	StatsManager.check_status()
 	assert_signal_emitted_with_parameters(StatsManager, "reincarnation_triggered",
 		[load("res://data/youns/nguruvilu.tres"), ReincarnationRules.CAUSE_HEALTH])
-	assert_eq(StatsManager.active_states["dying"]["cause"], ReincarnationRules.CAUSE_HEALTH)
+	assert_eq(StatsManager.emotion_service.active_states["dying"]["cause"], ReincarnationRules.CAUSE_HEALTH)
 
 
 func test_morir_por_salud_pierde_una_vida_y_no_deja_carta() -> void:
@@ -137,7 +137,7 @@ func test_morir_por_salud_pierde_una_vida_y_no_deja_carta() -> void:
 	ps.current_youn_path = "res://data/youns/nguruvilu.tres"
 	ps.salud = 0
 	StatsManager.check_status()
-	StatsManager.complete_reincarnation(load(BEBE), null)
+	StatsManager.life_stage.complete_reincarnation(load(BEBE), null)
 	assert_eq(ps.lives, ReincarnationRules.MAX_LIVES - 1)
 	assert_eq(ps.saved_cards.size(), 0)
 	assert_false(ps.reincarnated_cards_unlocked)
@@ -148,8 +148,8 @@ func test_morir_de_viejo_no_pierde_vidas() -> void:
 	var ps := GameState.player_save
 	ps.current_youn_path = CAMPEON
 	ps.stage_entered_total_hour = GameState.get_total_hours() - 6.5 * 24.0
-	StatsManager.check_evolution()
-	StatsManager.complete_reincarnation(load(BEBE), _inherited())
+	StatsManager.life_stage.check_evolution()
+	StatsManager.life_stage.complete_reincarnation(load(BEBE), _inherited())
 	assert_eq(ps.lives, ReincarnationRules.MAX_LIVES)
 
 
@@ -159,7 +159,7 @@ func test_las_vidas_no_bajan_de_0() -> void:
 	ps.current_youn_path = "res://data/youns/nguruvilu.tres"
 	ps.salud = 0
 	StatsManager.check_status()
-	StatsManager.complete_reincarnation(load(BEBE), null)
+	StatsManager.life_stage.complete_reincarnation(load(BEBE), null)
 	assert_eq(ps.lives, 0)
 
 

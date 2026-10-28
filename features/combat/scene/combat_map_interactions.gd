@@ -110,7 +110,7 @@ func start_puddle_placement(reach: float, effect: String, radius: float) -> void
 func clear_puddle_placement() -> void:
 	puddle_system.clear_puddle_placement()
 
-func place_puddle(pos: Vector2, radius: float, effect: String, turns: int, damage: int) -> void:
+func place_puddle(pos: Vector2, radius: float, effect: String = "wet", turns: int = 0, damage: int = 0) -> void:
 	puddle_system.place_puddle(pos, radius, effect, turns, damage)
 
 func tick_puddles() -> void:
@@ -229,17 +229,23 @@ func throw_module(obstacle: Dictionary, target: Vector2) -> Dictionary:
 func collapse_modules_on_enemy() -> int:
 	return module_system.collapse_modules_on_enemy()
 
+func modules_adjacent_to_enemy() -> Array:
+	return module_system.modules_adjacent_to_enemy()
+
 func start_spell_selection(reach: float) -> void:
 	spell_system.start_selection(reach)
 
 func clear_spell_selection() -> void:
 	spell_system.clear_selection()
 
-func place_delayed_zone(pos: Vector2, radius: float, damage: int, name: String, rounds: int, effect: String, puddle_turns: int) -> void:
+func place_delayed_zone(pos: Vector2, radius: float, damage: int, name: String, rounds: int = 1, effect: String = "", puddle_turns: int = 0) -> void:
 	spell_system.place_delayed_zone(pos, radius, damage, name, rounds, effect, puddle_turns)
 
 func resolve_delayed_zones() -> Array:
 	return spell_system.resolve_delayed_zones()
+
+func delayed_zones() -> Array[Dictionary]:
+	return spell_system.delayed_zones
 
 func blink_player_to(pos: Vector2) -> void:
 	map.player_pos = pos
@@ -284,6 +290,10 @@ func tick_trees() -> void:
 
 func is_player_in_tree(tree: Dictionary) -> bool:
 	return tree_system.is_player_in_this_tree(tree)
+
+## Estado global del jugador, distinto de consultar si ocupa un árbol concreto.
+func player_is_in_tree() -> bool:
+	return tree_system.is_player_in_tree()
 
 func is_click_on_enemy(pos: Vector2) -> bool:
 	return targeting.is_click_on_enemy(pos)

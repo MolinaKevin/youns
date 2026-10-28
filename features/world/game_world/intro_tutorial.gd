@@ -1,6 +1,8 @@
 class_name IntroTutorial
 extends CanvasLayer
 
+signal tutorial_finished
+
 ## Tutorial de 5 páginas que se muestra la primera vez que se entra al mundo.
 ## Popup propio con fondo negro detrás (no la caja de diálogo de los NPCs).
 ## El jugador y el Youn no cortan `physics_process`: así la gravedad sigue
@@ -60,7 +62,7 @@ func start() -> void:
 	_index = 0
 	visible = true
 	_world_lease = WorldTransitionLease.new(
-		ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager), PartyManager,
+		ModalScreenHost.from_runtime(), PartyManager,
 		{"hide_clock": true, "hide_status": true, "freeze_actors": false}
 	)
 	PartyManager.player.movement_locked = true
@@ -97,6 +99,7 @@ func _close() -> void:
 	visible = false
 	_release_world()
 	_active = false
+	tutorial_finished.emit()
 
 
 func _exit_tree() -> void:

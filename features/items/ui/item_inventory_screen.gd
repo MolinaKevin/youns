@@ -27,7 +27,7 @@ var _session: PlayerSessionService
 
 func _ready() -> void:
 	_session = GameState.player_session
-	ModalScreenContext.enter_fullscreen(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
+	ModalScreenContext.enter_fullscreen(ModalScreenHost.from_runtime())
 	LocalizationState.language_changed.connect(_apply_localized_text)
 	close_button.pressed.connect(_on_close_pressed)
 	use_button.pressed.connect(_on_use_pressed)

@@ -37,3 +37,6 @@ func test_cambiar_de_zona_descarga_las_lejanas_y_emite_eventos() -> void:
 	assert_false(streaming.has_loaded_zone("a"))
 	assert_false(streaming.has_loaded_zone("b"))
 	assert_eq(events, ["+a", "+b", "+c", "-a", "-b"])
+	assert_eq(streaming.zone_node("c").get_parent(), streaming)
+	streaming.clear()
+	assert_true(streaming.loaded_zone_ids().is_empty())

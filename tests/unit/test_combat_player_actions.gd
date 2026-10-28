@@ -2,6 +2,18 @@ extends "res://tests/helpers/combat_test_case.gd"
 
 ## Pruebas de selección, confirmación y resolución de acciones del jugador.
 
+
+func test_setup_acepta_el_contrato_combat_map_area() -> void:
+	var state := CombatState.new()
+	var map := CombatMapArea.new()
+	var actions := CombatPlayerActions.new()
+
+	actions.setup(state, map, Callable(), Callable(), Callable())
+
+	assert_eq(actions.map_area, map)
+	map.free()
+
+
 # ── Block card — confirm_self_action ──────────────────────────────────────────
 
 func test_block_card_suma_block_amount_al_player_block() -> void:

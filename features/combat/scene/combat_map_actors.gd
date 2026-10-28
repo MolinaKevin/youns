@@ -1,11 +1,12 @@
 class_name CombatMapActors
-extends RefCounted
+extends "res://features/combat/scene/combat_map_actors_port.gd"
 
 ## Fachada inicial del estado físico/visual de los combatientes. Centraliza los
 ## radios que usan navegación, targeting y presentación sin exponerlos como un
 ## detalle de MapArea.
-var map: MapArea
+var map: CombatMapArea
 var overlay: CombatMapOverlay
+var renderer: CombatMapRenderer
 var terrain: CombatMapTerrain
 var mover: CombatActorMover
 var trees: TreeSystem
@@ -53,9 +54,9 @@ func play_enemy_animation(animation: String) -> void:
 
 func refresh_shadows() -> void:
 	if _player_view != null:
-		map.show_disc(overlay.player_shadow, Vector2(_player_view.position.x, _player_view.position.z), player_radius())
+		renderer.show_disc(overlay.player_shadow, Vector2(_player_view.position.x, _player_view.position.z), player_radius())
 	if _enemy_view != null:
-		map.show_disc(overlay.enemy_shadow, Vector2(_enemy_view.position.x, _enemy_view.position.z), enemy_radius())
+		renderer.show_disc(overlay.enemy_shadow, Vector2(_enemy_view.position.x, _enemy_view.position.z), enemy_radius())
 
 func player_view() -> CombatActorView:
 	return _player_view

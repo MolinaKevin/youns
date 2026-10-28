@@ -6,7 +6,7 @@ extends Node
 ##   2. El jugador lo mira, confundido ("?"): "¿Quieres que elija una carta?".
 ##   3. Elige una carta del mazo (sin saber para qué). El Youn muere.
 ##   4. Elige un huevo (4 a la vista; en el demo solo uno se puede elegir).
-##   5. Nace el bebé, con la carta heredada (StatsManager.complete_reincarnation).
+##   5. Nace el bebé, con la carta heredada (StatsLifeStage.complete_reincarnation).
 ##      La primera vez se desbloquea el listado de cartas reencarnadas.
 ## Si muere por salud en 0 (ReincarnationRules.CAUSE_HEALTH) no hay carta: el
 ## Youn está muy débil, se va, el jugador pierde una vida (se muestran las vidas
@@ -55,7 +55,7 @@ func _run() -> void:
 	var youn := PartyManager.youn
 	var youn_name := _from.youn_name if _from != null else "?"
 	_world_lease = WorldTransitionLease.new(
-		ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager), PartyManager,
+		ModalScreenHost.from_runtime(), PartyManager,
 		{"hide_clock": true, "hide_status": true, "pause_tree": true}
 	)
 
@@ -115,7 +115,7 @@ func _run() -> void:
 		await _msg.message(LocalizationState.t("reincarnation.born", [baby.youn_name, card_name]))
 	else:
 		await _msg.message(LocalizationState.t("reincarnation.born_no_card", [baby.youn_name]))
-	StatsManager.complete_reincarnation(baby, card)
+	StatsManager.life_stage.complete_reincarnation(baby, card)
 	if first_unlock and GameState.player_save.reincarnated_cards_unlocked:
 		await _msg.message(LocalizationState.t("reincarnation.cards_unlocked"))
 	_finish()

@@ -8,7 +8,7 @@ const CARD_SCENE := preload("res://features/cards/presentation/card_view.tscn")
 const CARD_SIZE := Vector2(195, 293)
 
 func _ready() -> void:
-	ModalScreenContext.enter_fullscreen(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
+	ModalScreenContext.enter_fullscreen(ModalScreenHost.from_runtime())
 	_build()
 
 func _build() -> void:

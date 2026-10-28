@@ -45,8 +45,8 @@ var _toast_notifier: DialogueToast
 
 func _ready() -> void:
 	_root.hide()
-	_dialogue_modal = ModalScreenContext.new(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
-	_choice_modal = ModalScreenContext.new(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
+	_dialogue_modal = ModalScreenContext.new(ModalScreenHost.from_runtime())
+	_choice_modal = ModalScreenContext.new(ModalScreenHost.from_runtime())
 	_choice_menu_logic = DialogueChoiceMenu.new(self)
 	_toast_notifier = DialogueToast.new(self)
 

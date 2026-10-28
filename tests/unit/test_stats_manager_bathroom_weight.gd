@@ -4,17 +4,17 @@ extends GutTest
 # - PlayerSaveData tiene poop_pending: float
 # - ItemData tiene poop_size: float
 # - ItemData.apply_effects() acumula poop_size en save.poop_pending
-# - StatsManager.on_bathroom_used(rng: RandomNumberGenerator = null)
+# - StatsManager.care_service.on_bathroom_used(rng: RandomNumberGenerator = null)
 #     baja el peso en poop_pending + randf()*peso*0.1, resetea poop_pending
 
 
 func before_each() -> void:
 	GameState.player_save = PlayerSaveData.new()
-	StatsManager.active_states.clear()
+	StatsManager.emotion_service.active_states.clear()
 
 
 func after_each() -> void:
-	StatsManager.active_states.clear()
+	StatsManager.emotion_service.active_states.clear()
 	GameState.player_save = null
 
 
@@ -60,7 +60,7 @@ func test_bano_reduce_peso_al_menos_el_poop_pending() -> void:
 	GameState.player_save.poop_pending = 2.0
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 0  # randf() puede ser cualquier valor
-	StatsManager.on_bathroom_used(rng)
+	StatsManager.care_service.on_bathroom_used(rng)
 	assert_lte(GameState.player_save.weight, 20.0 - 2.0)
 
 
@@ -70,7 +70,7 @@ func test_bano_no_reduce_mas_del_poop_pending_mas_10_porciento_del_peso() -> voi
 	var max_loss := 2.0 + 20.0 * 0.1  # 4.0
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 0
-	StatsManager.on_bathroom_used(rng)
+	StatsManager.care_service.on_bathroom_used(rng)
 	assert_gte(GameState.player_save.weight, 20.0 - max_loss)
 
 
@@ -80,14 +80,14 @@ func test_bano_con_seed_produce_resultado_deterministico() -> void:
 
 	var rng1 := RandomNumberGenerator.new()
 	rng1.seed = 42
-	StatsManager.on_bathroom_used(rng1)
+	StatsManager.care_service.on_bathroom_used(rng1)
 	var weight1 := GameState.player_save.weight
 
 	GameState.player_save.weight = 20.0
 	GameState.player_save.poop_pending = 2.0
 	var rng2 := RandomNumberGenerator.new()
 	rng2.seed = 42
-	StatsManager.on_bathroom_used(rng2)
+	StatsManager.care_service.on_bathroom_used(rng2)
 	var weight2 := GameState.player_save.weight
 
 	assert_almost_eq(weight1, weight2, 0.001)
@@ -96,12 +96,12 @@ func test_bano_con_seed_produce_resultado_deterministico() -> void:
 func test_bano_resetea_poop_pending() -> void:
 	GameState.player_save.weight = 20.0
 	GameState.player_save.poop_pending = 2.0
-	StatsManager.on_bathroom_used()
+	StatsManager.care_service.on_bathroom_used()
 	assert_almost_eq(GameState.player_save.poop_pending, 0.0, 0.001)
 
 
 func test_bano_no_baja_el_peso_por_debajo_de_cero() -> void:
 	GameState.player_save.weight = 0.5
 	GameState.player_save.poop_pending = 5.0
-	StatsManager.on_bathroom_used()
+	StatsManager.care_service.on_bathroom_used()
 	assert_gte(GameState.player_save.weight, 0.0)

@@ -1,11 +1,11 @@
 class_name CombatMapQueries
-extends RefCounted
+extends "res://features/combat/scene/combat_map_queries_port.gd"
 
 const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
 
 ## Consultas geométricas puras del tablero. Lee el estado espacial de MapArea,
 ## pero no lo modifica: LOS, intersecciones y distancias a obstáculos.
-var map: MapArea
+var map: CombatMapArea
 
 func has_line_of_sight(from: Vector2, to: Vector2) -> bool:
 	return line_of_sight_clear(from, to, false, true, map.elevation_at(from), map.elevation_at(to))

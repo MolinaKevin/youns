@@ -236,8 +236,8 @@ func _get_current_states() -> Array[String]:
 	if StatsManager == null:
 		return result
 	var game_state = GameState if GameState else null
-	for emotion_name in StatsManager.active_states:
-		var since_hour: float = StatsManager.active_states[emotion_name].get("hour", 0.0)
+	for emotion_name in StatsManager.emotion_service.active_states:
+		var since_hour: float = StatsManager.emotion_service.active_states[emotion_name].get("hour", 0.0)
 		if game_state:
 			var elapsed := game_state.get_total_hours() - since_hour
 			result.append("%s (%.1fh)" % [emotion_name, elapsed])

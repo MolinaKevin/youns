@@ -18,7 +18,7 @@ var _session: PlayerSessionService
 
 func _ready() -> void:
 	_session = GameState.player_session
-	ModalScreenContext.enter_fullscreen(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
+	ModalScreenContext.enter_fullscreen(ModalScreenHost.from_runtime())
 	LocalizationState.language_changed.connect(_apply_localized_text)
 	owned_cards = _get_owned_cards()
 	current_deck = _session.deck_cards()

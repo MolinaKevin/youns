@@ -16,6 +16,12 @@ extends Node3D
 const GymForest := preload("res://features/world/zones/gym_forest.gd")
 const AutoDecorationScript := preload("res://features/world/zones/auto_decoration.gd")
 const DebugLogging := preload("res://shared/debug_logging.gd")
+const BoundaryBakeData := preload("res://features/world/zones/world_boundary_bake_data.gd")
+const BoundaryBakeSignature := preload("res://features/world/zones/world_boundary_bake_signature.gd")
+
+const USE_BAKED_BOUNDARY := true
+const BAKED_GRID := "res://assets/maps/world/baked_world_boundary.tres"
+const BAKED_WALLS := "res://assets/maps/world/baked_world_boundary_walls.scn"
 
 ## Margen de la grilla alrededor de lo caminable (en metros, más 4).
 ## Zonas de pradera: lo caminable son sus meshes *Meadow (zona -> .glb).
@@ -59,11 +65,16 @@ var _geometry := WorldGeometryReader.new()
 var _layout: WorldLayout = preload("res://data/world/world_layout.tres")
 var _settings: WorldGenerationSettings = preload("res://data/world/world_generation_settings.tres")
 
-func build(catalog: ZoneCatalog, force_procedural_decoration := false, build_walls := true, build_tree_meshes := true) -> void:
+func build(catalog: ZoneCatalog, force_procedural_decoration := false, build_walls := true, build_tree_meshes := true, use_baked_boundary := true) -> void:
 	var started_at := Time.get_ticks_msec()
 	var checkpoint := started_at
 	if DebugLogging.verbose_enabled():
 		print("[WorldBoundary] Construyendo límites y decoración global…")
+	if use_baked_boundary and _load_baked_boundary(build_walls):
+		_decoration.prepare(force_procedural_decoration, build_tree_meshes)
+		_decoration.build(self, _grid, _layout, catalog, _settings.tree_clearance, _settings.tree_spacing, _settings.tree_seed)
+		_log_build_step("Límites horneados y decoración", started_at, checkpoint)
+		return
 	for error_text in _layout.validate(catalog): push_error("WorldLayout: " + error_text)
 	checkpoint = _log_build_step("Validación de configuración", started_at, checkpoint)
 	_decoration.prepare(force_procedural_decoration, build_tree_meshes)
@@ -109,6 +120,26 @@ func build(catalog: ZoneCatalog, force_procedural_decoration := false, build_wal
 		checkpoint = _log_build_step("Construcción de paredes", started_at, checkpoint)
 	_decoration.build(self, _grid, _layout, catalog, _settings.tree_clearance, _settings.tree_spacing, _settings.tree_seed)
 	_log_build_step("Decoración y árboles", started_at, checkpoint)
+
+
+func _load_baked_boundary(build_walls: bool) -> bool:
+	if not ResourceLoader.exists(BAKED_GRID) or (build_walls and not ResourceLoader.exists(BAKED_WALLS)):
+		return false
+	var baked := load(BAKED_GRID) as WorldBoundaryBakeData
+	if baked == null or baked.width <= 0 or baked.height <= 0:
+		return false
+	if OS.is_debug_build() and baked.source_signature != BoundaryBakeSignature.current(_layout):
+		push_warning("WorldBoundary: límites horneados desactualizados. Ejecutá: godot --headless --path . --script res://tools/bake_world_boundary.gd")
+		return false
+	_grid = baked.to_grid()
+	if build_walls:
+		var walls := (load(BAKED_WALLS) as PackedScene).instantiate() as Node3D
+		if walls == null:
+			return false
+		add_child(walls)
+	if DebugLogging.verbose_enabled():
+		print("[WorldBoundary] Grilla y paredes horneadas cargadas.")
+	return true
 
 func _offset_rect(r: Rect2, offset: Vector3) -> Rect2:
 	return Rect2(r.position + Vector2(offset.x, offset.z), r.size)

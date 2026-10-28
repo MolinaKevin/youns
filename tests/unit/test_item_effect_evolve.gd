@@ -8,22 +8,22 @@ var _previous_emotions_blocked := false
 
 func before_each() -> void:
 	_previous_save = GameState.player_save
-	_previous_active_states = StatsManager.active_states.duplicate(true)
-	_previous_emotions_blocked = StatsManager.emotions_blocked
+	_previous_active_states = StatsManager.emotion_service.active_states.duplicate(true)
+	_previous_emotions_blocked = StatsManager.emotion_service.is_blocked()
 	save = PlayerSaveData.new()
 	GameState.player_save = save
-	StatsManager.active_states.clear()
-	while StatsManager.emotions_blocked:
-		StatsManager.unblock_emotions()
+	StatsManager.emotion_service.active_states.clear()
+	while StatsManager.emotion_service.is_blocked():
+		StatsManager.emotion_service.unblock()
 
 
 func after_each() -> void:
 	GameState.player_save = _previous_save
-	StatsManager.active_states = _previous_active_states.duplicate(true)
-	while StatsManager.emotions_blocked:
-		StatsManager.unblock_emotions()
+	StatsManager.emotion_service.active_states = _previous_active_states.duplicate(true)
+	while StatsManager.emotion_service.is_blocked():
+		StatsManager.emotion_service.unblock()
 	if _previous_emotions_blocked:
-		StatsManager.block_emotions()
+		StatsManager.emotion_service.block()
 
 
 # ── ItemEffectEvolve — pending_evolution_path ─────────────────────────────────
@@ -56,47 +56,47 @@ func test_evolve_activa_emocion_evolving() -> void:
 	var effect := ItemEffectEvolve.new()
 	effect.youn_data_path = "res://data/youns/newen.tres"
 	effect.apply(save)
-	assert_true(StatsManager.active_states.has("evolving"))
+	assert_true(StatsManager.emotion_service.active_states.has("evolving"))
 
 
 func test_evolve_guarda_target_youn_path_en_active_states() -> void:
 	var effect := ItemEffectEvolve.new()
 	effect.youn_data_path = "res://data/youns/newen.tres"
 	effect.apply(save)
-	assert_eq(StatsManager.active_states["evolving"].get("target_youn_path"), "res://data/youns/newen.tres")
+	assert_eq(StatsManager.emotion_service.active_states["evolving"].get("target_youn_path"), "res://data/youns/newen.tres")
 
 
 func test_evolve_nguruvilu_guarda_su_propio_target_en_active_states() -> void:
 	var effect := ItemEffectEvolve.new()
 	effect.youn_data_path = "res://data/youns/nguruvilu.tres"
 	effect.apply(save)
-	assert_eq(StatsManager.active_states["evolving"].get("target_youn_path"), "res://data/youns/nguruvilu.tres")
+	assert_eq(StatsManager.emotion_service.active_states["evolving"].get("target_youn_path"), "res://data/youns/nguruvilu.tres")
 
 
 func test_evolve_limpia_emociones_previas() -> void:
-	StatsManager.active_states["happy"] = {"hour": 0.0, "stat_value": 100.0}
-	StatsManager.active_states["tired"] = {"hour": 0.0, "stat_value": 50.0}
+	StatsManager.emotion_service.active_states["happy"] = {"hour": 0.0, "stat_value": 100.0}
+	StatsManager.emotion_service.active_states["tired"] = {"hour": 0.0, "stat_value": 50.0}
 	var effect := ItemEffectEvolve.new()
 	effect.youn_data_path = "res://data/youns/newen.tres"
 	effect.apply(save)
-	assert_false(StatsManager.active_states.has("happy"))
-	assert_false(StatsManager.active_states.has("tired"))
+	assert_false(StatsManager.emotion_service.active_states.has("happy"))
+	assert_false(StatsManager.emotion_service.active_states.has("tired"))
 
 
 func test_evolve_bloquea_nuevas_emociones() -> void:
 	var effect := ItemEffectEvolve.new()
 	effect.youn_data_path = "res://data/youns/newen.tres"
 	effect.apply(save)
-	StatsManager.show_emotion("happy")
-	assert_false(StatsManager.active_states.has("happy"))
+	StatsManager.emotion_service.show("happy")
+	assert_false(StatsManager.emotion_service.active_states.has("happy"))
 
 
 func test_evolve_solo_deja_activa_la_emocion_evolving() -> void:
 	var effect := ItemEffectEvolve.new()
 	effect.youn_data_path = "res://data/youns/newen.tres"
 	effect.apply(save)
-	assert_eq(StatsManager.active_states.size(), 1)
-	assert_true(StatsManager.active_states.has("evolving"))
+	assert_eq(StatsManager.emotion_service.active_states.size(), 1)
+	assert_true(StatsManager.emotion_service.active_states.has("evolving"))
 
 
 # ── Items concretos — efecto directo ─────────────────────────────────────────
@@ -120,17 +120,17 @@ func test_brebaje_mapuche_evoluciona_a_nguruvilu() -> void:
 func test_dar_semilla_embrujada_activa_emocion_evolving() -> void:
 	var item := load("res://data/items/semilla_embrujada.tres") as ItemData
 	item.apply_effects(save)
-	assert_true(StatsManager.active_states.has("evolving"))
+	assert_true(StatsManager.emotion_service.active_states.has("evolving"))
 
 
 func test_dar_brebaje_mapuche_activa_emocion_evolving() -> void:
 	var item := load("res://data/items/brebaje_mapuche.tres") as ItemData
 	item.apply_effects(save)
-	assert_true(StatsManager.active_states.has("evolving"))
+	assert_true(StatsManager.emotion_service.active_states.has("evolving"))
 
 
 func test_dar_semilla_embrujada_bloquea_otras_emociones() -> void:
 	var item := load("res://data/items/semilla_embrujada.tres") as ItemData
 	item.apply_effects(save)
-	StatsManager.show_emotion("happy")
-	assert_false(StatsManager.active_states.has("happy"))
+	StatsManager.emotion_service.show("happy")
+	assert_false(StatsManager.emotion_service.active_states.has("happy"))

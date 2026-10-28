@@ -9,7 +9,9 @@ godot --headless --path . -s res://addons/gut/gut_cmdln.gd -- -gdir=res://tests/
 ```
 
 GitHub Actions ejecuta este comando automáticamente en cada pull request y
-cambio a `main` (`.github/workflows/tests.yml`).
+cambio a `main` (`.github/workflows/tests.yml`). La ejecución tiene un límite
+de cinco minutos (y el job, diez): así un test que se quede esperando no deja
+el CI colgado indefinidamente.
 
 ## Integración del mundo
 
@@ -24,6 +26,13 @@ godot --path . -s res://addons/gut/gut_cmdln.gd -- -gdir=res://tests/integration
 
 Si se ejecutan por error en headless, los casos gráficos se omiten de forma
 explícita en lugar de intentar crear meshes con el renderer dummy.
+
+CI ejecuta esta suite con un display virtual (`Xvfb`) y el renderer OpenGL;
+tiene un límite de diez minutos (quince para el job). Así los mapas, la grilla
+del mundo y las escenas 3D se validan también antes de integrar un cambio.
+
+`test_youn_interaction.gd` también vive en esta suite: usa los modelos y las
+animaciones reales del jugador y del Youn.
 
 `ZoneManager` detecta GUT y no inicializa el exterior automáticamente. Cada
 test de integración lo habilita explícitamente en `before_all()`.

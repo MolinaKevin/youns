@@ -2,6 +2,7 @@ extends Node3D
 
 const SleepOverlay    := preload("res://features/world/ui/sleep_overlay.gd")
 const YounInteraction := preload("res://features/world/party/youn_interaction.gd")
+const NewWorldWelcome := preload("res://features/world/game_world/new_world_welcome.gd")
 
 @onready var menu: Control = $MenuLayer/MainMenu
 @onready var pause_overlay: ColorRect = $MenuLayer/PauseOverlay
@@ -32,7 +33,20 @@ func _ready() -> void:
 	YounLifeEvents.restore_pending_evolution()
 	YounLifeEvents.restore_pending_reincarnation()
 	menu.sleep_requested.connect(_on_sleep_requested)
-	intro.start()
+	if GameState.new_game_ceremony_completed:
+		_start_new_world_welcome()
+	else:
+		intro.start()
+
+
+func _start_new_world_welcome() -> void:
+	intro.visible = false
+	var welcome := NewWorldWelcome.new()
+	welcome.finished.connect(func() -> void:
+		intro.tutorial_finished.connect(welcome.restore_gameplay_camera, CONNECT_ONE_SHOT)
+		intro.start())
+	add_child(welcome)
+	welcome.start()
 
 ## El Youn del grupo es el de la partida: al cargar una en la que ya evolucionó,
 ## el modelo tiene que ser el del Youn actual (party.tscn trae el inicial).
@@ -98,10 +112,10 @@ func _restore_after_combat() -> void:
 	PartyManager.youn.global_position = pos + Vector3(1.5, 0, 1.5)
 	PartyManager.youn.velocity = Vector3.ZERO
 	GameState.world_combat.resolve_victory(get_tree())
-	StatsManager.add_hambre(30)  # combate ganado: esfuerzo físico
+	StatsManager.care_service.add_stat("hambre", 30)  # combate ganado: esfuerzo físico
 	if GameState.player_save != null and GameState.player_save.bathroom_pending_after_combat:
 		GameState.player_save.bathroom_pending_after_combat = false
-		StatsManager.apply_bathroom_accident()
+		StatsManager.care_service.apply_bathroom_accident()
 
 
 func _exit_tree() -> void:
@@ -117,8 +131,8 @@ func _on_sleep_requested() -> void:
 	overlay.tree_exiting.connect(func():
 		_sleeping = false
 		var sleep_duration := GameState.get_total_hours() - _sleep_start_hour
-		StatsManager.add_hambre(20)
-		StatsManager.on_wake_up(sleep_duration)
+		StatsManager.care_service.add_stat("hambre", 20)
+		StatsManager.emotion_service.on_wake_up(sleep_duration)
 		if overlay.save_requested:
 			var save_error := GameState.save_player_save()
 			GlobalHUD.show_toast(LocalizationState.t("game.saved") if save_error == OK else LocalizationState.t("game.save_failed"))

@@ -30,7 +30,7 @@ var _close_button: Button
 
 
 func _ready() -> void:
-	ModalScreenContext.enter_fullscreen(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
+	ModalScreenContext.enter_fullscreen(ModalScreenHost.from_runtime())
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build_ui()
 	resized.connect(_refresh_layout)

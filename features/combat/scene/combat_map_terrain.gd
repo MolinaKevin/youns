@@ -1,11 +1,11 @@
 class_name CombatMapTerrain
-extends RefCounted
+extends "res://features/combat/scene/combat_map_terrain_port.gd"
 
 const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
 
 ## Fachada de consultas espaciales para sistemas de combate. Mantiene juntos
 ## terreno, navegación y geometría sin exponer su estructura interna.
-var map: MapArea
+var map: CombatMapArea
 var logic: CombatTerrain
 var navigation: CombatNavigation
 
@@ -23,6 +23,9 @@ func add_obstacle(obstacle: Dictionary) -> void:
 
 func remove_obstacle(obstacle: Dictionary) -> void:
 	logic.obstacles.erase(obstacle)
+	logic.invalidate()
+
+func obstacles_changed() -> void:
 	logic.invalidate()
 
 func is_inside_bounds(pos: Vector2, margin: float = 0.0) -> bool:
@@ -87,17 +90,20 @@ func player_height_at(pos: Vector2, elevation: int) -> float:
 func elevation_height(elevation: int) -> float:
 	return float(elevation) * CombatTerrain.PLATFORM_HEIGHT
 
+func height_at(pos: Vector2) -> float:
+	return logic.height_at(pos)
+
 func warm_caches(first_radius: float, second_radius: float) -> void:
 	logic.warm_caches(first_radius, second_radius)
 
 func player_contact_radius() -> float:
-	return map.player_area_contact_radius()
+	return map.queries.player_area_contact_radius()
 
 func enemy_contact_radius() -> float:
-	return map.enemy_area_contact_radius()
+	return map.queries.enemy_area_contact_radius()
 
 func clip_path_at_obstacle(from: Vector2, to: Vector2) -> Vector2:
-	return map.clip_path_at_obstacle(from, to)
+	return map.queries.clip_path_at_obstacle(from, to)
 
 func is_blocked(pos: Vector2, elevation: int = 0, margin: float = CombatTerrain.PATH_CELL * 0.5) -> bool:
 	return logic.pos_blocked(pos, elevation, margin)

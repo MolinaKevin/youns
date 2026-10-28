@@ -32,7 +32,9 @@ func load_now(zone_id: String) -> void:
 		return
 	_loading.erase(zone_id)
 	_log_streaming("Cargando", zone_id)
-	var scene := load(definition.scene_path) as PackedScene
+	var scene := GameState.take_preloaded_zone_scene(definition.scene_path)
+	if scene == null:
+		scene = load(definition.scene_path) as PackedScene
 	if scene == null:
 		push_error("ZoneStreamingController: no se pudo cargar '%s'." % definition.scene_path)
 		return
@@ -86,6 +88,15 @@ func loaded_zone_nodes() -> Array[Node3D]:
 		zones.append(zone as Node3D)
 	return zones
 
+## Descarga todas las zonas y descarta solicitudes pendientes. Además de
+## permitir reiniciar el streaming, deja a este nodo como único dueño de las
+## instancias que creó.
+func clear() -> void:
+	_loading.clear()
+	for id in _loaded.keys().duplicate():
+		_unload_zone(id)
+	_active_zone = ""
+
 
 func _process(_delta: float) -> void:
 	if _loading.is_empty() or _active_zone.is_empty():
@@ -131,7 +142,7 @@ func _add_zone(id: String, scene: PackedScene) -> void:
 	inst.zone_id = id
 	inst.position = _catalog.definition(id).offset
 	inst.visible = _show_exterior.call()
-	get_parent().add_child(inst)
+	add_child(inst)
 	_loaded[id] = inst
 	_log_streaming("Cargado", id)
 	zone_loaded.emit(id)

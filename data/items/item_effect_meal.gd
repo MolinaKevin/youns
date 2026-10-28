@@ -3,7 +3,7 @@ class_name ItemEffectMeal
 
 ## El ítem es una comida: baja el hambre lo que llene esta comida, suma ganas de
 ## ir al baño, sube la salud, registra la hora de la comida y le quita la emoción de hambre
-## (ver StatsManager.on_meal_eaten).
+## (ver CareStatsService.on_meal_eaten).
 
 ## Ganas de baño que suma si la comida no define las suyas.
 const DEFAULT_BATHROOM_GAIN := 30
@@ -19,7 +19,7 @@ const DEFAULT_HEALTH_GAIN := 5
 @export var health_gain: Variant = null
 
 func apply(_save: PlayerSaveData) -> void:
-	StatsManager.add_hambre(-fills)
-	StatsManager.add_stat("ganas_bano", bathroom_gain if bathroom_gain >= 0 else DEFAULT_BATHROOM_GAIN)
-	StatsManager.add_salud(DEFAULT_HEALTH_GAIN if health_gain == null else int(health_gain))
-	StatsManager.on_meal_eaten()
+	StatsManager.care_service.add_stat("hambre", -fills)
+	StatsManager.care_service.add_stat("ganas_bano", bathroom_gain if bathroom_gain >= 0 else DEFAULT_BATHROOM_GAIN)
+	StatsManager.care_service.add_stat("salud", DEFAULT_HEALTH_GAIN if health_gain == null else int(health_gain))
+	StatsManager.care_service.on_meal_eaten()

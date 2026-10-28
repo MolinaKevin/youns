@@ -9,7 +9,7 @@ var _modal: ModalScreenContext
 @onready var quit_button = $Panel/VBox/QuitButton
 
 func _ready() -> void:
-	_modal = ModalScreenContext.new(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
+	_modal = ModalScreenContext.new(ModalScreenHost.from_runtime())
 	LocalizationState.language_changed.connect(_apply_localized_text)
 	continue_button.pressed.connect(close)
 	deck_button.pressed.connect(_on_deck)

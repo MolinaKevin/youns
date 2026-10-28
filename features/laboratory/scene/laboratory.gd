@@ -33,7 +33,7 @@ var notified_locations: Array = []
 
 func _ready() -> void:
 	if standalone_mode:
-		ModalScreenContext.enter_fullscreen(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
+		ModalScreenContext.enter_fullscreen(ModalScreenHost.from_runtime())
 		interaction_enabled = false
 	else:
 		GlobalHUD.set_clock_visible(true)

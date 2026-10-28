@@ -7,6 +7,8 @@ extends Node3D
 
 const PACHAMAMA_PATH := "res://data/youns/pachamama.tres"
 const WORLD_LOADING := "res://features/world/game_world/world_loading.tscn"
+const GAME_WORLD := "res://features/world/game_world/game_world.tscn"
+const HUB_SCENE := "res://features/world/zones/zone_hub.tscn"
 const NEWEN_PATH := "res://data/youns/newen.tres"
 const NGURUVILU_PATH := "res://data/youns/nguruvilu.tres"
 const ENTRANCE_SECONDS := 6.5
@@ -20,6 +22,8 @@ var _sequence_completed := false
 var _entering_world := false
 var _player_name := "Viajero"
 var _companion_name := ""
+var _world_preload_started := false
+var _hub_preload_started := false
 
 
 func _ready() -> void:
@@ -38,8 +42,53 @@ func _ready() -> void:
 		return
 	print("[NewGameCeremony:%s] Pachamama cargada: id=%s." % [get_instance_id(), _data.id])
 	_build_black_stage()
+	_request_world_preload()
+	_request_hub_preload()
 	print("[NewGameCeremony:%s] Escenario negro, cámara y modelo construidos; difiriendo secuencia." % get_instance_id())
 	_run.call_deferred()
+
+
+func _request_world_preload() -> void:
+	var error := ResourceLoader.load_threaded_request(GAME_WORLD, "PackedScene", true)
+	if error == OK:
+		_world_preload_started = true
+		print("[NewGameCeremony:%s] Precarga de GameWorld iniciada." % get_instance_id())
+	else:
+		push_warning("NewGameCeremony: no se pudo iniciar la precarga de GameWorld (%s)." % error)
+
+
+func _request_hub_preload() -> void:
+	var error := ResourceLoader.load_threaded_request(HUB_SCENE, "PackedScene", true)
+	if error == OK:
+		_hub_preload_started = true
+		print("[NewGameCeremony:%s] Precarga de la zona hub iniciada." % get_instance_id())
+	else:
+		push_warning("NewGameCeremony: no se pudo iniciar la precarga de hub (%s)." % error)
+
+
+func _collect_preloaded_world() -> void:
+	if not _world_preload_started:
+		return
+	var status := ResourceLoader.load_threaded_get_status(GAME_WORLD)
+	if status == ResourceLoader.THREAD_LOAD_LOADED:
+		GameState.preloaded_game_world = ResourceLoader.load_threaded_get(GAME_WORLD) as PackedScene
+		print("[NewGameCeremony:%s] GameWorld ya estaba cargado en segundo plano." % get_instance_id())
+	elif status == ResourceLoader.THREAD_LOAD_FAILED:
+		push_warning("NewGameCeremony: falló la precarga de GameWorld; se cargará normalmente.")
+	else:
+		print("[NewGameCeremony:%s] GameWorld sigue cargando; WorldLoading usará el flujo normal." % get_instance_id())
+	if not _hub_preload_started:
+		return
+	var hub_status := ResourceLoader.load_threaded_get_status(HUB_SCENE)
+	if hub_status == ResourceLoader.THREAD_LOAD_LOADED:
+		var hub_scene := ResourceLoader.load_threaded_get(HUB_SCENE) as PackedScene
+		if hub_scene != null:
+			GameState.preloaded_zone_scenes[HUB_SCENE] = hub_scene
+			print("[NewGameCeremony:%s] La zona hub ya estaba cargada en segundo plano." % get_instance_id())
+	elif hub_status == ResourceLoader.THREAD_LOAD_FAILED:
+		push_warning("NewGameCeremony: falló la precarga de hub; se cargará normalmente.")
+	else:
+		print("[NewGameCeremony:%s] Hub sigue cargando; ZoneManager usará el flujo normal." % get_instance_id())
 
 
 func _build_black_stage() -> void:
@@ -113,22 +162,15 @@ func _run() -> void:
 		await tween.finished
 		_settle_facing_camera()
 	print("[NewGameCeremony:%s] Entrada terminada; primer diálogo." % get_instance_id())
-	await _say(["Detenete un momento, viajero.", "Antes de que des tu primer paso, quiero conocerte."])
-	print("[NewGameCeremony:%s] Primer diálogo terminado; pregunta 1." % get_instance_id())
-	var has_youn := await _ask("¿Venís acompañado por un Youn?", ["Sí.", "No."])
-	var partner_choice := 0
-	if has_youn == 0:
-		partner_choice = await _ask("¿Te guía más el amanecer o la noche?", ["El amanecer.", "La noche."])
-	else:
-		partner_choice = await _ask("¿Caminás entre muchos vínculos o por tu propia senda?", ["Entre muchos vínculos.", "Por mi propia senda."])
+	await _say(["Mari mari, extraño.", "¿Quién eres?"])
+	_player_name = await _ask_name("¿Quién eres?", "Viajero", false)
+	print("[NewGameCeremony:%s] Saludo terminado; afinidad del compañero." % get_instance_id())
+	var partner_choice := await _ask("¿Preferís caminar por el bosque o relajarte en un lago?", ["Caminar por el bosque.", "Relajarme en un lago."], false)
 	_apply_starting_youn(NEWEN_PATH if partner_choice == 0 else NGURUVILU_PATH)
-	_player_name = await _ask_name("Decime tu nombre.", "Viajero")
-	_companion_name = await _ask_name("¿Cómo llamarás a tu compañero?", _starting_youn_name())
+	await _ask("¿Preferís rodearte de muchas personas o la introspección en soledad?", ["Rodearme de muchas personas.", "La introspección en soledad."], false)
+	_companion_name = await _ask_name("¿Cómo se llama tu compañero?", _starting_youn_name())
 	_save_ceremony_names()
-	await _say(["Entonces, %s, este será el comienzo de tu camino junto a %s." % [_player_name, _companion_name]])
-	print("[NewGameCeremony:%s] Preguntas y nombres terminados; despedida." % get_instance_id())
-	await _say(["Guardá esas respuestas cerca del corazón.", "Tu camino empieza ahora."])
-	print("[NewGameCeremony:%s] Despedida terminada." % get_instance_id())
+	print("[NewGameCeremony:%s] Preguntas y nombres terminados; pasando a la ciudad." % get_instance_id())
 	_sequence_completed = true
 	_enter_world()
 
@@ -157,13 +199,13 @@ func _say(lines: Array[String]) -> void:
 	print("[NewGameCeremony:%s] Dialogue.finished." % get_instance_id())
 
 
-func _ask(question: String, options: Array[String]) -> int:
+func _ask(question: String, options: Array[String], confirm_choice := true) -> int:
 	print("[NewGameCeremony:%s] Pregunta: %s" % [get_instance_id(), question])
 	await _say([question])
 	print("[NewGameCeremony:%s] Abriendo opciones: %s" % [get_instance_id(), " | ".join(options)])
 	var choice: int = await Dialogue.ask(options)
 	print("[NewGameCeremony:%s] Opción recibida: %s" % [get_instance_id(), choice])
-	if choice >= 0 and choice < options.size():
+	if confirm_choice and choice >= 0 and choice < options.size():
 		await _say(["Comprendo. Elegís: %s" % options[choice]])
 	return choice
 
@@ -192,8 +234,9 @@ func _save_ceremony_names() -> void:
 	save.companion_name = _companion_name
 
 
-func _ask_name(prompt: String, placeholder: String) -> String:
-	await _say([prompt])
+func _ask_name(prompt: String, placeholder: String, announce_prompt := true) -> String:
+	if announce_prompt:
+		await _say([prompt])
 	print("[NewGameCeremony:%s] Abriendo teclado virtual para: %s" % [get_instance_id(), prompt])
 	var layer := CanvasLayer.new()
 	layer.layer = 90
@@ -350,6 +393,7 @@ func _enter_world() -> void:
 
 func _change_to_world() -> void:
 	print("[NewGameCeremony:%s] change_scene_to_file(WorldLoading)." % get_instance_id())
+	_collect_preloaded_world()
 	get_tree().paused = false
 	var result := get_tree().change_scene_to_file(WORLD_LOADING)
 	if result != OK:

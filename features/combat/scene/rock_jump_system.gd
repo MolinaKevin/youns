@@ -37,7 +37,7 @@ func _ready() -> void:
 func get_rocks_in_range(origin: Vector2, max_range: float) -> Array[Dictionary]:
 	var rocks: Array[Dictionary] = []
 	for obs in map.terrain.obstacles():
-		if CombatObstacle.type_of(obs) != CombatObstacle.ROCK and not MapArea.is_module(obs):
+		if CombatObstacle.type_of(obs) != CombatObstacle.ROCK and not ModuleSystem.is_module(obs):
 			continue
 		if origin.distance_to(obs["pos"]) <= max_range:
 			rocks.append(obs)

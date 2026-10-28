@@ -25,10 +25,10 @@ var _status_was_visible := false
 var _clock_was_paused := false
 var _tree_was_paused := false
 var _mouse_was_mode := Input.MOUSE_MODE_CAPTURED
-var _host: ModalScreenHost
+var _host: ModalScreenHostPort
 
 
-func _init(host: ModalScreenHost) -> void:
+func _init(host: ModalScreenHostPort) -> void:
 	_host = host
 
 func enter_overlay(node: Node, hide_clock := false, hide_status := false, show_mouse := false) -> void:

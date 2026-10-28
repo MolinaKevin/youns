@@ -4,14 +4,15 @@ const AsyncFlowTokenScript := preload("res://shared/async_flow_token.gd")
 const WorldTransitionLeaseScript := preload("res://shared/world_transition_lease.gd")
 
 
-class FakeHud extends RefCounted:
+class FakeHud extends ModalScreenHostPort:
 	var paused := false
-	var clock_visible := true
+	var _clock_visible := true
 	var status_visible := true
 
 	func clock_paused() -> bool: return paused
+	func clock_visible() -> bool: return _clock_visible
 	func set_clock_paused(value: bool) -> void: paused = value
-	func set_clock_visible(value: bool) -> void: clock_visible = value
+	func set_clock_visible(value: bool) -> void: _clock_visible = value
 	func set_youns_status_visible(value: bool) -> void: status_visible = value
 	func youns_status_visible() -> bool: return status_visible
 
@@ -20,7 +21,7 @@ class FakeCamera extends Node:
 	var enabled := true
 
 
-class FakeParty extends Node:
+class FakeParty extends WorldTransitionPartyPort:
 	var player := Node.new()
 	var youn := Node.new()
 	var camera_rig := FakeCamera.new()
@@ -36,6 +37,19 @@ class FakeParty extends Node:
 
 	func freeze_camera() -> void:
 		camera_rig.enabled = false
+	func snapshot_transition_state() -> Dictionary:
+		return {
+			"player_physics": player.is_physics_processing(),
+			"youn_physics": youn.is_physics_processing(),
+			"camera_enabled": camera_rig.enabled,
+		}
+
+	func restore_transition_state(snapshot: Dictionary, restore_actors: bool, restore_camera: bool) -> void:
+		if restore_actors:
+			player.set_physics_process(snapshot["player_physics"])
+			youn.set_physics_process(snapshot["youn_physics"])
+		if restore_camera:
+			camera_rig.enabled = snapshot["camera_enabled"]
 
 
 func test_async_flow_token_se_cancela_al_salir_su_owner() -> void:
@@ -54,7 +68,7 @@ func test_lease_restaura_el_estado_previo_e_idempotente() -> void:
 	get_tree().paused = false
 	var hud := FakeHud.new()
 	hud.paused = true
-	hud.clock_visible = false
+	hud._clock_visible = false
 	hud.status_visible = false
 	var party := FakeParty.new()
 	add_child_autofree(party)
@@ -72,7 +86,7 @@ func test_lease_restaura_el_estado_previo_e_idempotente() -> void:
 	lease.release()
 
 	assert_true(hud.paused)
-	assert_false(hud.clock_visible)
+	assert_false(hud.clock_visible())
 	assert_false(hud.status_visible)
 	assert_true(party.player.is_physics_processing())
 	assert_true(party.youn.is_physics_processing())
@@ -80,3 +94,17 @@ func test_lease_restaura_el_estado_previo_e_idempotente() -> void:
 	assert_false(get_tree().paused)
 	assert_eq(Input.mouse_mode, mouse_before)
 	get_tree().paused = tree_was_paused
+
+
+func test_lease_restaura_el_grupo_sin_pausar_el_arbol() -> void:
+	var party := FakeParty.new()
+	add_child_autofree(party)
+	party.player.set_physics_process(true)
+	party.youn.set_physics_process(true)
+	var lease = WorldTransitionLeaseScript.new(FakeHud.new(), party)
+
+	assert_false(party.player.is_physics_processing())
+	lease.release()
+	assert_true(party.player.is_physics_processing())
+	assert_true(party.youn.is_physics_processing())
+	assert_true(party.camera_rig.enabled)

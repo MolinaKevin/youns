@@ -66,9 +66,10 @@ Pendientes conocidos, agrupados por sistema. Al resolver uno, borrarlo de acá.
       vecinos y un anillo visual para no mostrar vacío a distancia. Las guías
       Blender siguen siendo la fuente: regenerar el horneado cuando cambien
       mapas, guías `Auto*`/`NoAuto*` o parámetros de generación.
-- [ ] **Paredes globales**: `WorldBoundaryWalls.build()` sigue construyendo
-      todas al iniciar (~2,7 s en el demo). Hornearlas o dividirlas por los
-      mismos chunks de decoración cuando se escale el overworld.
+- [x] **Paredes y grilla globales horneadas**: `tools/bake_world_boundary.gd`
+      serializa la grilla caminable y las colisiones de los límites. Al cambiar
+      geometría caminable de los mapas hay que regenerarlo; para un overworld
+      mucho mayor convendrá dividirlo en chunks.
 - [ ] La entrada del sendero norte (hub → crossroads) se ve poco.
 - [ ] Crossroads y left son planos grises de placeholder.
 - [ ] Al agregar una zona nueva (p. ej. en las puntas de la pradera: ExitUp,

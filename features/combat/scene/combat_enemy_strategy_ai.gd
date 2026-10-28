@@ -66,7 +66,7 @@ func _conditions_met_list(conditions: Array) -> bool:
 	return true
 
 func _eval_condition(cond: AiCondition) -> bool:
-	var dist: float = host.map_area.queries.movement_distance(host.map_area.enemy_pos, host.map_area.player_pos)
+	var dist: float = host.board.movement_distance(host.board.enemy_position(), host.board.player_position())
 	match cond.type:
 		"always":
 			return true
@@ -74,10 +74,10 @@ func _eval_condition(cond: AiCondition) -> bool:
 			return dist <= cond.check_range
 		"player_in_range":
 			return dist <= cond.check_range \
-				and host.map_area.queries.has_line_of_sight(host.map_area.enemy_pos, host.map_area.player_pos)
+			and host.board.has_line_of_sight(host.board.enemy_position(), host.board.player_position())
 		"player_out_of_range":
 			return dist > cond.check_range \
-				or not host.map_area.queries.has_line_of_sight(host.map_area.enemy_pos, host.map_area.player_pos)
+			or not host.board.has_line_of_sight(host.board.enemy_position(), host.board.player_position())
 		"player_far":
 			return dist > 15.0
 		"self_hp_low":
@@ -85,10 +85,10 @@ func _eval_condition(cond: AiCondition) -> bool:
 		"self_hp_critical":
 			return float(host.state.enemy_hp) / float(host.state.enemy_max_hp) < 0.15
 		"has_los":
-			return host.map_area.queries.has_line_of_sight(host.map_area.enemy_pos, host.map_area.player_pos)
+			return host.board.has_line_of_sight(host.board.enemy_position(), host.board.player_position())
 		"player_hidden":
 			return host._had_los \
-				and not host.map_area.queries.has_line_of_sight(host.map_area.enemy_pos, host.map_area.player_pos)
+				and not host.board.has_line_of_sight(host.board.enemy_position(), host.board.player_position())
 	push_warning("CombatEnemyAI: condición desconocida '%s'" % cond.type)
 	return false
 
@@ -108,7 +108,7 @@ func execute_action(action: AiAction) -> void:
 			await host.deal_damage_to_player.call(action.damage, false, action.damage_type)
 			await host._try_player_counter()
 		"range_attack":
-			if host.state.enemy_blinded_turns > 0 and host.map_area.queries.movement_distance(host.map_area.enemy_pos, host.map_area.player_pos) > 2.0:
+			if host.state.enemy_blinded_turns > 0 and host.board.movement_distance(host.board.enemy_position(), host.board.player_position()) > 2.0:
 				CombatLog.emit_requested(host.log_requested, "combat.log.enemy.blinded_no_ranged")
 				return
 			if host.state.player_in_tree:
@@ -117,7 +117,7 @@ func execute_action(action: AiAction) -> void:
 			CombatLog.emit_requested(host.log_requested, "combat.log.enemy.shoots", [action.damage])
 			await host.deal_damage_to_player.call(action.damage, false, action.damage_type)
 		"move_toward":
-			await host._move_enemy(host.map_area.player_pos, action.move_range, "combat.log.enemy.moves_closer")
+			await host._move_enemy(host.board.player_position(), action.move_range, "combat.log.enemy.moves_closer")
 		"move_away":
 			await host._move_enemy(host._retreat_target(action.move_range), action.move_range, "combat.log.enemy.retreats")
 		"move_to_last_known":

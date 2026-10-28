@@ -14,17 +14,17 @@ var _previous_emotions_blocked := false
 
 func before_each() -> void:
 	_previous_save = GameState.player_save
-	_previous_active_states = StatsManager.active_states.duplicate(true)
-	_previous_emotions_blocked = StatsManager.emotions_blocked
+	_previous_active_states = StatsManager.emotion_service.active_states.duplicate(true)
+	_previous_emotions_blocked = StatsManager.emotion_service.is_blocked()
 
 
 func after_each() -> void:
 	GameState.player_save = _previous_save
-	StatsManager.active_states = _previous_active_states.duplicate(true)
-	while StatsManager.emotions_blocked:
-		StatsManager.unblock_emotions()
+	StatsManager.emotion_service.active_states = _previous_active_states.duplicate(true)
+	while StatsManager.emotion_service.is_blocked():
+		StatsManager.emotion_service.unblock()
 	if _previous_emotions_blocked:
-		StatsManager.block_emotions()
+		StatsManager.emotion_service.block()
 
 
 func _youn(base: Dictionary) -> YounData:
@@ -259,7 +259,7 @@ func test_complete_evolution_aplica_la_evolucion_sobre_las_actuales() -> void:
 	save.pending_evolution_path = CAMPEON
 	GameState.player_save = save
 
-	StatsManager.complete_evolution()
+	StatsManager.life_stage.complete_evolution()
 
 	var newen_base: YounStats = (load(NEWEN) as YounData).base_stats
 	var expected := (load(CAMPEON) as YounData).evolution_stats.apply_to(

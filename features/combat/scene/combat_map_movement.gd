@@ -1,9 +1,9 @@
 class_name CombatMapMovement
-extends RefCounted
+extends "res://features/combat/scene/combat_map_movement_port.gd"
 
 ## Coordina las rutas de navegación con el estado lógico y los waypoints de
 ## los actores. CombatNavigation calcula caminos; CombatActorMover los anima.
-var map: MapArea
+var map: CombatMapArea
 
 func try_move_player_to(pos: Vector2) -> bool:
 	var goal := CombatGrid.to_cell(pos)

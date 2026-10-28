@@ -31,7 +31,7 @@ func _ready() -> void:
 	_build_ui()
 	_apply_text()
 	LocalizationState.language_changed.connect(_apply_text)
-	_world_lease = WorldTransitionLease.new(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager), PartyManager)
+	_world_lease = WorldTransitionLease.new(ModalScreenHost.from_runtime(), PartyManager)
 	_normal_btn.grab_focus()
 
 

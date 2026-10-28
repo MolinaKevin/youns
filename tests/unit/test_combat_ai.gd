@@ -53,7 +53,7 @@ func test_ai_elige_accion_con_mayor_score() -> void:
 	strategy.actions.append(strong)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_eq(ai.pick_action().action_type, "melee_attack")
 
 
@@ -67,7 +67,7 @@ func test_ai_condicion_player_adjacent_verdadera_dentro_de_rango() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_not_null(ai.pick_action())
 
 
@@ -81,7 +81,7 @@ func test_ai_condicion_player_adjacent_falsa_fuera_de_rango() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_null(ai.pick_action())
 
 
@@ -103,7 +103,7 @@ func test_ai_elige_melee_attack_y_devuelve_danio_correcto() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	var picked := ai.pick_action()
 	assert_eq(picked.action_type, "melee_attack")
 	assert_eq(picked.damage, 12)
@@ -124,7 +124,7 @@ func test_ai_elige_block_y_devuelve_block_amount_correcto() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	var picked := ai.pick_action()
 	assert_eq(picked.action_type, "block")
 	assert_eq(picked.block_amount, 5)
@@ -139,7 +139,7 @@ func test_ai_elige_move_toward() -> void:
 	strategy.actions.append(_make_action("move_toward", 50.0, [_make_condition("always")]))
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_eq(ai.pick_action().action_type, "move_toward")
 
 
@@ -156,7 +156,7 @@ func test_condicion_player_in_range_con_los_elige_accion() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_not_null(ai.pick_action())
 
 
@@ -171,7 +171,7 @@ func test_condicion_player_in_range_sin_los_no_elige_accion() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_null(ai.pick_action())
 
 
@@ -185,7 +185,7 @@ func test_condicion_player_out_of_range_elige_accion_cuando_lejos() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_not_null(ai.pick_action())
 
 
@@ -199,7 +199,7 @@ func test_condicion_player_out_of_range_no_elige_accion_cuando_cerca() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_null(ai.pick_action())
 
 
@@ -213,7 +213,7 @@ func test_condicion_player_far_elige_accion_cuando_muy_lejos() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_not_null(ai.pick_action())
 
 
@@ -227,7 +227,7 @@ func test_condicion_player_far_no_elige_accion_cuando_cerca() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_null(ai.pick_action())
 
 
@@ -242,7 +242,7 @@ func test_condicion_has_los_elige_accion_con_linea_de_vision() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_not_null(ai.pick_action())
 
 
@@ -257,7 +257,7 @@ func test_condicion_has_los_no_elige_accion_sin_linea_de_vision() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_null(ai.pick_action())
 
 
@@ -277,7 +277,7 @@ func test_condicion_self_hp_low_activa_con_hp_menor_30_porciento() -> void:
 	strategy.actions.append(retreat)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_eq(ai.pick_action().action_type, "move_away")
 
 
@@ -295,7 +295,7 @@ func test_condicion_self_hp_low_inactiva_con_hp_normal() -> void:
 	strategy.actions.append(retreat)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_eq(ai.pick_action().action_type, "melee_attack")
 
 
@@ -311,7 +311,7 @@ func test_condicion_self_hp_critical_activa_con_hp_menor_15_porciento() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_not_null(ai.pick_action())
 
 
@@ -327,7 +327,7 @@ func test_condicion_self_hp_critical_inactiva_con_hp_exactamente_15_porciento() 
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_null(ai.pick_action())
 
 
@@ -348,7 +348,7 @@ func test_multiples_condiciones_todas_cumplidas_elige_accion() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_not_null(ai.pick_action())
 
 
@@ -367,7 +367,7 @@ func test_multiples_condiciones_una_falla_no_elige_accion() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_null(ai.pick_action())
 
 
@@ -391,7 +391,7 @@ func test_score_multiplier_menor_a_1_evita_accion_cuando_hp_bajo() -> void:
 	strategy.actions.append(preferir)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_eq(ai.pick_action().action_type, "move_away")
 
 
@@ -408,7 +408,7 @@ func test_condicion_player_out_of_range_verdadera_sin_los_aunque_cerca() -> void
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_not_null(ai.pick_action())
 
 
@@ -453,7 +453,7 @@ func test_fase_inicial_determina_acciones_disponibles() -> void:
 	var strategy := _make_phase_strategy("a", [phase_a, phase_b], [])
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_eq(ai.pick_action().action_type, "melee_attack")
 
 
@@ -468,7 +468,7 @@ func test_pick_action_no_usa_acciones_de_otras_fases() -> void:
 	var strategy := _make_phase_strategy("a", [phase_a, phase_b], [])
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_null(ai.pick_action())
 
 
@@ -481,7 +481,7 @@ func test_fase_desconocida_no_elige_accion() -> void:
 	var strategy := _make_phase_strategy("nonexistent", [phase_a], [])
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	assert_null(ai.pick_action())
 
 
@@ -500,7 +500,7 @@ func test_transicion_ocurre_cuando_condicion_cumplida() -> void:
 	var strategy := _make_phase_strategy("normal", [phase_normal, phase_flee], [trans])
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	ai.evaluate_transitions()
 	assert_eq(ai.pick_action().action_type, "move_away")
 
@@ -518,7 +518,7 @@ func test_no_transicion_cuando_condicion_no_cumplida() -> void:
 	var strategy := _make_phase_strategy("normal", [phase_normal, phase_flee], [trans])
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	ai.evaluate_transitions()
 	assert_eq(ai.pick_action().action_type, "melee_attack")
 
@@ -542,7 +542,7 @@ func test_primera_transicion_valida_gana() -> void:
 		[trans_flee, trans_berserk])
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	ai.evaluate_transitions()
 	assert_eq(ai.pick_action().action_type, "move_away")
 
@@ -563,7 +563,7 @@ func test_transicion_de_fase_no_activa_no_se_aplica() -> void:
 	var strategy := _make_phase_strategy("normal", [phase_normal, phase_flee, phase_other], [trans])
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	ai.evaluate_transitions()
 	assert_eq(ai.pick_action().action_type, "melee_attack")
 
@@ -579,7 +579,7 @@ func test_transicion_con_condicion_de_rango() -> void:
 	var strategy := _make_phase_strategy("normal", [phase_normal, phase_melee], [trans])
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	ai.evaluate_transitions()
 	assert_eq(ai.pick_action().action_type, "melee_attack")
 
@@ -600,7 +600,7 @@ func test_transicion_multiples_condiciones_and_una_falla_no_transiciona() -> voi
 	var strategy := _make_phase_strategy("normal", [phase_normal, phase_flee], [trans])
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	ai.evaluate_transitions()
 	assert_eq(ai.pick_action().action_type, "melee_attack")
 
@@ -620,7 +620,7 @@ func test_evaluate_transitions_no_encadena_en_misma_llamada() -> void:
 	var strategy := _make_phase_strategy("a", [phase_a, phase_b, phase_c], [trans_ab, trans_bc])
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	ai.evaluate_transitions()
 	assert_eq(ai.pick_action().action_type, "move_away")
 
@@ -628,7 +628,7 @@ func test_evaluate_transitions_no_encadena_en_misma_llamada() -> void:
 func test_evaluate_transitions_con_null_strategy_no_crashea() -> void:
 	var s := CombatState.new()
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, null, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, null, Callable(), Callable(), Callable())
 	ai.evaluate_transitions()  # no debe crashear
 	assert_null(ai.pick_action())
 
@@ -673,7 +673,7 @@ func test_condicion_player_hidden_false_cuando_hay_los() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	ai.update_tracking()
 	assert_null(ai.pick_action())
 
@@ -689,7 +689,7 @@ func test_condicion_player_hidden_false_si_nunca_hubo_los() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	ai.update_tracking()
 	assert_null(ai.pick_action())
 
@@ -705,7 +705,7 @@ func test_condicion_player_hidden_true_tras_perder_los() -> void:
 	strategy.actions.append(action)
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	ai.update_tracking()   # tenía LOS
 
 	_map.los_result = false
@@ -725,7 +725,7 @@ func test_player_hidden_activa_transicion_a_fase_searching() -> void:
 	var strategy := _make_phase_strategy("aware", [phase_aware, phase_searching], [trans])
 
 	var ai := CombatEnemyAI.new()
-	ai.setup(s, _map, strategy, Callable(), Callable(), Callable())
+	ai.setup_with_board(s, _enemy_board, strategy, Callable(), Callable(), Callable())
 	ai.update_tracking()  # tenía LOS
 
 	_map.los_result = false

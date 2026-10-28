@@ -15,7 +15,7 @@ var _time := 0.0
 var _modal: ModalScreenContext
 
 func _ready() -> void:
-	_modal = ModalScreenContext.new(ModalScreenHost.new(GlobalHUD, GameState, ZoneManager, PartyManager))
+	_modal = ModalScreenContext.new(ModalScreenHost.from_runtime())
 	_build_model()
 	var area := Area3D.new()
 	var col := CollisionShape3D.new()

@@ -6,4 +6,4 @@ class_name ItemEffectEvolve
 func apply(_save: PlayerSaveData) -> void:
 	if youn_data_path.is_empty():
 		return
-	StatsManager.start_evolution(youn_data_path)
+	StatsManager.life_stage.start_evolution(youn_data_path)

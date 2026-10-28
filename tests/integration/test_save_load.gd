@@ -17,7 +17,7 @@ func before_each() -> void:
 		"save": GameState.player_save, "path": GameState.save_service.save_path,
 		"session": GameState.save_service.session_active, "day": GameState.current_day,
 		"hour": GameState.time_of_day_hours, "intro": GameState.save_service.world_intro_seen,
-		"states": StatsManager.active_states.duplicate(true),
+		"states": StatsManager.emotion_service.active_states.duplicate(true),
 		"player_pos": PartyManager.player.global_position,
 		"zone": ZoneManager.current_zone,
 		"north_trail_open": ZoneManager.north_trail_open,
@@ -36,9 +36,9 @@ func after_each() -> void:
 	GameState.current_day = _backup["day"]
 	GameState.time_of_day_hours = _backup["hour"]
 	GameState.save_service.world_intro_seen = _backup["intro"]
-	StatsManager.active_states = _backup["states"]
-	while StatsManager.emotions_blocked:
-		StatsManager.unblock_emotions()
+	StatsManager.emotion_service.active_states = _backup["states"]
+	while StatsManager.emotion_service.is_blocked():
+		StatsManager.emotion_service.unblock()
 	GameState.world_entry.clear()
 	ZoneManager.set_north_trail_open(_backup["north_trail_open"])
 	LaboratoryState.pause_active_recipe()
@@ -67,14 +67,14 @@ func test_guardar_y_cargar_conserva_la_partida() -> void:
 	GameState.time_of_day_hours = 15.5
 	GameState.save_service.world_intro_seen = true
 	ZoneManager.set_north_trail_open(true)
-	StatsManager.active_states = {"hungry": {"hour": 99.0, "stat_value": 80.0}}
+	StatsManager.emotion_service.active_states = {"hungry": {"hour": 99.0, "stat_value": 80.0}}
 	assert_eq(GameState.save_player_save(), OK)
 	assert_true(GameState.has_saved_game())
 
 	# Otra partida en memoria (sin guardar), y después se carga la guardada.
 	GameState.player_save = PlayerSaveData.new()
 	GameState.current_day = 1
-	StatsManager.active_states.clear()
+	StatsManager.emotion_service.active_states.clear()
 	assert_true(GameState.load_game())
 
 	var loaded := GameState.player_save
@@ -85,18 +85,18 @@ func test_guardar_y_cargar_conserva_la_partida() -> void:
 	assert_eq(GameState.current_day, 4)
 	assert_almost_eq(GameState.time_of_day_hours, 15.5, 0.001)
 	assert_true(GameState.save_service.world_intro_seen)
-	assert_true("hungry" in StatsManager.active_states)
+	assert_true("hungry" in StatsManager.emotion_service.active_states)
 	assert_true(GameState.player_save.world_progress.north_trail_open)
 	assert_true(ZoneManager.north_trail_open, "el desbloqueo del sendero también se restaura")
 
 
 func test_partida_nueva_arranca_de_cero() -> void:
 	GameState.current_day = 9
-	StatsManager.active_states = {"sad": {"hour": 1.0, "stat_value": 0.0}}
+	StatsManager.emotion_service.active_states = {"sad": {"hour": 1.0, "stat_value": 0.0}}
 	GameState.start_new_game()
 	assert_eq(GameState.current_day, 1)
 	assert_almost_eq(GameState.time_of_day_hours, 8.0, 0.001)
-	assert_true(StatsManager.active_states.is_empty())
+	assert_true(StatsManager.emotion_service.active_states.is_empty())
 	assert_eq(GameState.player_save.current_youn_path, GameState.STARTING_YOUN_PATH)
 
 

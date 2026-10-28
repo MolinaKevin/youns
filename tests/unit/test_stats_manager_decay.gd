@@ -28,7 +28,7 @@ func after_each() -> void:
 
 func _run_hours(hours: int) -> void:
 	for i in hours * 3:
-		StatsManager.apply_stat_decay()
+		StatsManager.care_service.apply_decay()
 
 
 func _rate(stat_key: String) -> float:

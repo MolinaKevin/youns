@@ -9,7 +9,7 @@ func apply(save: PlayerSaveData) -> void:
 		return
 	match status_key:
 		"enfermo":
-			StatsManager.set_enfermo(value)
+			StatsManager.care_service.set_sick(value)
 		_:
 			if _save_has_property(save, status_key):
 				save.set(status_key, value)
