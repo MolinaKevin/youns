@@ -27,8 +27,8 @@ centro de la casilla correspondiente.
 
 ## Flujo del jugador
 
-1. `CombatMoveAction.configure()` pide a `CombatMapInteractions` iniciar la
-   selección de movimiento.
+1. `CombatMoveAction.configure()` pide al puerto de selección del tablero
+   iniciar la selección de movimiento.
 2. `CombatTargeting` llama a `terrain.reachable_cells(...)`; `CombatNavigation`
    calcula las casillas alcanzables y `presentation` dibuja el alcance.
 3. Al hacer clic, `CombatMoveAction.on_tile_selected()` llama
@@ -90,7 +90,7 @@ terreno. `CombatMapPresentation` es el único dueño de los meshes de
 nodes del overlay.
 
 `CombatMapInput` proyecta el mouse contra suelo, plataformas y rampas.
-`CombatTargeting` coordina el hover, mientras `CombatMapInteractions` actualiza
+`CombatTargeting` coordina el hover, mientras el puerto de selección actualiza
 los previews de trampas, charcos y overwatch cuando hay una colocación activa.
 
 ## Constantes relevantes

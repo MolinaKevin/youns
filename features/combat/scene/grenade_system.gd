@@ -13,7 +13,7 @@ extends Node3D
 ## si el enemigo queda en el área (is_enemy_in_area_circle).
 
 ## Asignado por MapArea antes de add_child(self) — ver MapArea._init().
-var map: MapArea
+var map: CombatMapArea
 
 var landing    := Vector2(-1.0, -1.0)
 var aoe_radius := 0.0
@@ -33,13 +33,13 @@ func calculate_landing(from: Vector2, target: Vector2, bounce: float) -> Vector2
 	else:
 		var dir := (target - from).normalized()
 		result  = target + dir.rotated(randf_range(-PI / 5.0, PI / 5.0)) * bounce * 10.0
-		result = map.terrain.clamp_to_bounds(result)
-	return map.terrain.clip_path_at_obstacle(from, result)
+		result = map.terrain.geometry.bounds.clamp_to_bounds(result)
+	return map.terrain.geometry.collision.clip_path_at_obstacle(from, result)
 
 func show_preview(new_landing: Vector2, radius: float) -> void:
 	landing    = new_landing
 	aoe_radius = float(radius)
-	map.presentation.show_disc(_disc, landing, aoe_radius)
+	map.presentation.overlay_port.show_disc(_disc, landing, aoe_radius)
 
 func clear_preview() -> void:
 	landing       = Vector2(-1.0, -1.0)
@@ -47,9 +47,9 @@ func clear_preview() -> void:
 	_disc.visible = false
 
 func is_enemy_in_explosion(center: Vector2, radius: float) -> bool:
-	return map.queries.is_enemy_in_area_circle(center, radius)
+	return map.queries.areas.is_enemy_in_area_circle(center, radius)
 
-## true mientras se ve el disco de la explosión (para el "any_disc" de
-## MapArea._update_hover()).
+## true mientras se ve el disco de la explosión; lo consulta la fachada de
+## selección para coordinar el hover.
 func is_active() -> bool:
 	return _disc.visible

@@ -28,7 +28,7 @@ func check_combat_end() -> bool:
 		if not host._combat_finished:
 			host._combat_finished = true
 			host.log_message(LocalizationState.t("combat.lose"))
-			host.map_area.actors.play_player_animation("die")
+			host.board.actors.presentation.play_player_animation("die")
 			_show_defeat.call_deferred(host.current_flow())
 		return true
 	return false

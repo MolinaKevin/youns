@@ -7,4 +7,4 @@ class_name ItemEffectStat
 func apply(_save: PlayerSaveData) -> void:
 	if stat_key.is_empty():
 		return
-	StatsManager.care_service.add_stat(stat_key, int(delta))
+	StatsManager.services.care().add_stat(stat_key, int(delta))

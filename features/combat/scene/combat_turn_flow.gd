@@ -1,6 +1,8 @@
 class_name CombatTurnFlow
 extends RefCounted
 
+const RoundResolverScript := preload("res://features/combat/scene/combat_turn_round_resolver.gd")
+
 ## El loop de turnos: planificación (elegir 2 cartas), revelado, actuar
 ## línea por línea, fin de ronda y los eventos que pasan al cerrarla (árboles,
 ## zonas demoradas, charcos/estados). `host` es el Combat dueño exclusivo de
@@ -9,9 +11,11 @@ extends RefCounted
 ## paso vive en esos otros objetos.
 
 var host: Combat
+var _round_resolver
 
 func _init(p_host: Combat) -> void:
 	host = p_host
+	_round_resolver = RoundResolverScript.new(host)
 
 # ── Gestión de mazos ─────────────────────────────────────────────────────────
 
@@ -303,84 +307,7 @@ func on_end_turn_pressed() -> void:
 	start_planning()
 
 func _reset_turn(flow: AsyncFlowToken) -> void:
-	for event in host.round_resolver.build_events(host.state, host.map_area):
-		if await _resolve_round_event(event, flow):
-			return
-		if not host.is_flow_active(flow):
-			return
+	await _round_resolver.reset_turn(flow)
 
-	host.player_actions.reset()
-	host.deck_manager.reset_turn(Combat.HAND_SIZE, host.turn.kept_indices)
-	host.turn.kept_indices.clear()
-	host.turn.turn_hand_indices.clear()
-	refresh_hand()
-	host.update_ui()
-
-## Aplica la parte visible de un evento de fin de ronda. Devuelve true si el
-## combate terminó y la secuencia no debe continuar.
 func _resolve_round_event(event: CombatRoundEvent, flow: AsyncFlowToken) -> bool:
-	match event.kind:
-		"tree_drop":
-			if event.hit:
-				host.log_message(LocalizationState.t("combat.tree_drop.enemy_hit", [event.damage]))
-				await host._damage.deal_to_enemy(event.damage, false, CombatState.FISICO)
-				if not host.is_flow_active(flow):
-					return true
-				if host._result_flow.check_combat_end():
-					return true
-			else:
-				host.log_message(LocalizationState.t("combat.tree_drop.descend"))
-			host.player_actions.apply_player_zone_effects(host.map_area.player_pos, host.map_area.player_pos)
-		"delayed_zone":
-			if await _resolve_delayed_zone_event(event, flow):
-				return true
-		"tick_map_effects":
-			host.map_area.interactions.tick_puddles()
-			host.map_area.interactions.tick_trees()
-		"status_damage":
-			host.log_message(LocalizationState.t(event.damage_log_key, [event.damage]))
-			await host._damage.deal_to_player(event.damage, true, event.damage_type)
-			if not host.is_flow_active(flow):
-				return true
-			if host._result_flow.check_combat_end():
-				return true
-			_log_expired_status(host.round_resolver.finish_status_event(host.state, event))
-		"status_duration":
-			_log_expired_status(host.round_resolver.finish_status_event(host.state, event))
-	return false
-
-func _resolve_delayed_zone_event(event: CombatRoundEvent, flow: AsyncFlowToken) -> bool:
-	var hit: Dictionary = event.zone_hit
-	match event.target:
-		"enemy":
-			host.log_message(LocalizationState.t("combat.delayed_zone.enemy_hit", [hit["name"], hit["damage"]]))
-			await host._damage.deal_to_enemy(hit["damage"], true, CombatState.MAGICO)
-			if not host.is_flow_active(flow):
-				return true
-			if host._result_flow.check_combat_end():
-				return true
-			_log_delayed_zone_impact(host.round_resolver.apply_delayed_zone_impact(host.state, event), true)
-		"player":
-			host.log_message(LocalizationState.t("combat.delayed_zone.player_hit", [hit["name"], hit["damage"]]))
-			await host._damage.deal_to_player(hit["damage"], true, CombatState.MAGICO)
-			if not host.is_flow_active(flow):
-				return true
-			if host._result_flow.check_combat_end():
-				return true
-			_log_delayed_zone_impact(host.round_resolver.apply_delayed_zone_impact(host.state, event), false)
-		"none":
-			host.log_message(LocalizationState.t("combat.delayed_zone.miss", [hit["name"]]))
-	return false
-
-func _log_delayed_zone_impact(impact: Array, on_enemy: bool) -> void:
-	if not impact.is_empty() and impact[1] > 0:
-		var key := "combat.status.enemy_applied" if on_enemy else "combat.status.player_applied"
-		var status := str(impact[0])
-		var status_key := "combat.status_name." + status
-		var status_name: String = LocalizationState.t(status_key) if LocalizationState.has_key(status_key) \
-			else str(CombatPlayerActions.STATUS_NAMES.get(status, status))
-		host.log_message(LocalizationState.t(key, [status_name, impact[1]]))
-
-func _log_expired_status(key: String) -> void:
-	if not key.is_empty():
-		host.log_message(LocalizationState.t(key))
+	return await _round_resolver.resolve_event(event, flow)

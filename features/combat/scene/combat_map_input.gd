@@ -6,7 +6,7 @@ extends Node
 ## raycast de interacción, hover bloqueado y señal de clic.
 signal position_selected(pos: Vector2)
 
-var map: Node3D
+var map: CombatMapArea
 var _hover_locked := false
 var _last_click_pos := Vector2.ZERO
 
@@ -17,15 +17,15 @@ func _process(_delta: float) -> void:
 	if camera == null:
 		return
 	if _hover_locked:
-		map.update_hover_at(_last_click_pos)
+		map.selection.targeting.hover.update_hover(_last_click_pos)
 		return
 	var screen_pos := map.get_viewport().get_mouse_position()
 	var from := camera.project_ray_origin(screen_pos)
 	var direction := camera.project_ray_normal(screen_pos)
 	if abs(direction.y) < 0.001:
-		map.clear_hover()
+		map.selection.targeting.hover.clear_hover()
 		return
-	map.update_hover_at(_ray_to_terrain(from, direction))
+	map.selection.targeting.hover.update_hover(_ray_to_terrain(from, direction))
 
 func _unhandled_input(event: InputEvent) -> void:
 	if map == null or not (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT):
@@ -51,7 +51,7 @@ func is_hover_locked() -> bool:
 
 func _ray_to_terrain(from: Vector3, direction: Vector3) -> Vector2:
 	var best_t := INF
-	for obstacle: Dictionary in map.terrain.platforms():
+	for obstacle: Dictionary in map.terrain.geometry.collision.platforms():
 		var center: Vector2 = obstacle["pos"]
 		var half_size: Vector2 = obstacle["box"] * 0.5
 		if abs(direction.y) > 0.0001:
@@ -71,7 +71,7 @@ func _ray_to_terrain(from: Vector3, direction: Vector3) -> Vector2:
 	if best_t == INF:
 		best_t = 1.0
 	var hit := from + direction * best_t
-	return map.terrain.clamp_to_bounds(Vector2(hit.x, hit.z))
+	return map.terrain.geometry.bounds.clamp_to_bounds(Vector2(hit.x, hit.z))
 
 func _ray_to_ramp(from: Vector3, direction: Vector3, center: Vector2, half_size: Vector2, ramp: Dictionary) -> float:
 	var half_width: float = ramp.get("width", 2.0) * 0.5

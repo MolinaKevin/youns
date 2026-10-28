@@ -184,7 +184,7 @@ func _process(delta: float) -> void:
 
 func _on_stat_changed() -> void:
 	var new_queue := EmotionDisplayQueue.build(
-		StatsManager.emotion_service.active_states, StatsManager.emotion_service.is_blocked(), _icon.sprite_frames)
+		StatsManager.services.emotions().active_states, StatsManager.services.emotions().is_blocked(), _icon.sprite_frames)
 	if new_queue.is_empty():
 		return
 	if _state == State.HIDDEN or _state == State.PAUSING:
@@ -247,7 +247,7 @@ func _on_pop_finished() -> void:
 
 func _start_cycle() -> void:
 	_queue = EmotionDisplayQueue.build(
-		StatsManager.emotion_service.active_states, StatsManager.emotion_service.is_blocked(), _icon.sprite_frames)
+		StatsManager.services.emotions().active_states, StatsManager.services.emotions().is_blocked(), _icon.sprite_frames)
 	if not _queue.is_empty():
 		show_emotion(_queue.pop_front())
 	else:

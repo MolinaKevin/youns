@@ -11,16 +11,16 @@ const CombatEffect := preload("res://features/combat/scene/combat_effect.gd")
 func cast_element_bolt(played_card: CardActionLine, cell: Vector2, flow: AsyncFlowToken) -> void:
 	var radius := host.w(played_card.primary_range_cells())
 	if played_card.pattern != null:
-		host.map_area.presentation.show_card_pattern(played_card.pattern, cell, Vector2(0, 1), radius)
+		host.board.presentation.patterns.show_card_pattern(played_card.pattern, cell, Vector2(0, 1), radius)
 	var from_effects: Array = CombatEffect.ELEMENT_CONVERSIONS.get(played_card.puddle_effect, [])
-	var converted: int = host.map_area.interactions.convert_puddles(cell, radius, from_effects, played_card.puddle_effect)
+	var converted: int = host.board.effects.puddle_port.mutation.convert_puddles(cell, radius, from_effects, played_card.puddle_effect)
 	if converted > 0:
 		host.emit_log("combat.log.spell.puddles_converted", [played_card.name, converted])
-	if played_card.puddle_effect == "fire" and host.map_area.interactions.ignite_trees_in_circle(cell, radius) > 0:
+	if played_card.puddle_effect == "fire" and host.board.obstacles.ignite_trees_in_circle(cell, radius) > 0:
 		host.emit_log("combat.log.spell.tree_ignited", [played_card.name])
-	elif played_card.puddle_effect == "ice" and host.map_area.interactions.extinguish_trees_in_circle(cell, radius) > 0:
+	elif played_card.puddle_effect == "ice" and host.board.obstacles.extinguish_trees_in_circle(cell, radius) > 0:
 		host.emit_log("combat.log.spell.tree_extinguished", [played_card.name])
-	var hit_enemy: bool = host.map_area.interactions.is_enemy_in_card_pattern(played_card.pattern, cell, Vector2(0, 1), radius) if played_card.pattern != null else host.map_area.queries.is_enemy_in_area_circle(cell, radius)
+	var hit_enemy: bool = host.board.selection.targeting.queries.is_enemy_in_card_pattern(played_card.pattern, cell, Vector2(0, 1), radius) if played_card.pattern != null else host.board.queries.areas.is_enemy_in_area_circle(cell, radius)
 	if not hit_enemy:
 		host.emit_log("combat.log.spell.missed_enemy", [played_card.name])
 		return
@@ -38,21 +38,21 @@ func cast_element_bolt(played_card: CardActionLine, cell: Vector2, flow: AsyncFl
 ## Descarga: rayo en línea. Pega doble a los mojados y se propaga por el agua
 ## que toca (a quien esté parado en ella, también a vos).
 func cast_chain_bolt(played_card: CardActionLine, bolt_dir: Vector2, flow: AsyncFlowToken) -> void:
-	var from: Vector2 = host.map_area.player_pos
+	var from: Vector2 = host.board.state.player_position()
 	var to: Vector2 = from + bolt_dir * host.w(played_card.cast_range_cells())
 	# Pararrayos: el rayo se frena en el primer árbol y le pega a quien esté arriba.
-	var rod: Dictionary = host.map_area.interactions.first_tree_on_segment(from, to)
+	var rod: Dictionary = host.board.obstacles.first_tree_on_segment(from, to)
 	if not rod.is_empty():
 		to = from + (to - from) * float(rod["t"])
 		host.emit_log("combat.log.spell.bolt_hits_tree", [played_card.name])
-		if host.map_area.interactions.is_player_in_tree(rod["tree"]):
+		if host.board.obstacles.is_player_in_tree(rod["tree"]):
 			host.emit_log("combat.log.spell.player_in_tree_hit", [played_card.damage])
 			await host.deal_damage_to_player.call(played_card.damage, true, CombatState.MAGICO)
 			if not _flow_is_active(flow): return
-	var water: Array = host.map_area.interactions.puddles_on_segment(from, to, ["wet"])
-	var enemy_in_water: bool = host.map_area.queries.is_enemy_in_zones(water)
-	var hit_enemy: bool = host.map_area.queries.segment_hits_enemy(from, to) or enemy_in_water
-	var hit_player: bool = host.map_area.queries.is_player_in_zones(water)
+	var water: Array = host.board.effects.puddle_port.queries.puddles_on_segment(from, to, ["wet"])
+	var enemy_in_water: bool = host.board.queries.areas.is_enemy_in_zones(water)
+	var hit_enemy: bool = host.board.queries.areas.segment_hits_enemy(from, to) or enemy_in_water
+	var hit_player: bool = host.board.queries.areas.is_player_in_zones(water)
 	if not hit_enemy and not hit_player:
 		host.emit_log("combat.log.spell.missed_all", [played_card.name])
 		return
@@ -68,11 +68,11 @@ func cast_chain_bolt(played_card: CardActionLine, bolt_dir: Vector2, flow: Async
 		if not _flow_is_active(flow): return
 
 ## Zona demorada: marca el punto, cae unas rondas después (ver
-## CombatRoundResolver/MapArea.place_delayed_zone).
+## CombatMapEffectsPort.place_delayed_zone).
 func cast_delayed_area(played_card: CardActionLine, cell: Vector2) -> void:
 	# Deja charco solo si tiene duración (un charco permanente de un hechizo no).
 	var effect := played_card.puddle_effect if played_card.duration > 0 else ""
-	host.map_area.interactions.place_delayed_zone(cell, host.w(played_card.primary_range_cells()), played_card.damage, played_card.name,
+	host.board.effects.delayed.place_delayed_zone(cell, host.w(played_card.primary_range_cells()), played_card.damage, played_card.name,
 		played_card.delay, effect, played_card.duration)
 	host.emit_log("combat.log.spell.delayed_zone_marked", [played_card.name, maxi(1, played_card.delay)])
 
@@ -80,10 +80,10 @@ func cast_delayed_area(played_card: CardActionLine, cell: Vector2) -> void:
 func cast_cone_blast(played_card: CardActionLine, blast_dir: Vector2, flow: AsyncFlowToken) -> void:
 	var cone_angle := played_card.pattern.cone_half_angle if played_card.pattern != null else CombatPlayerActions.CONE_HALF_ANGLE
 	if played_card.pattern != null:
-		host.map_area.presentation.show_card_pattern(played_card.pattern, host.map_area.player_pos, blast_dir, host.w(played_card.cast_range_cells()))
-	if played_card.status_effect == "burn" and host.map_area.interactions.ignite_trees_in_cone(host.map_area.player_pos, blast_dir, host.w(played_card.cast_range_cells()), cone_angle) > 0:
+		host.board.presentation.patterns.show_card_pattern(played_card.pattern, host.board.state.player_position(), blast_dir, host.w(played_card.cast_range_cells()))
+	if played_card.status_effect == "burn" and host.board.obstacles.ignite_trees_in_cone(host.board.state.player_position(), blast_dir, host.w(played_card.cast_range_cells()), cone_angle) > 0:
 		host.emit_log("combat.log.spell.tree_ignited", [played_card.name])
-	var in_pattern: bool = host.map_area.interactions.is_enemy_in_card_pattern(played_card.pattern, host.map_area.player_pos, blast_dir, host.w(played_card.cast_range_cells())) if played_card.pattern != null else host.map_area.queries.is_enemy_in_cone(host.map_area.player_pos, blast_dir, host.w(played_card.cast_range_cells()), cone_angle)
+	var in_pattern: bool = host.board.selection.targeting.queries.is_enemy_in_card_pattern(played_card.pattern, host.board.state.player_position(), blast_dir, host.w(played_card.cast_range_cells())) if played_card.pattern != null else host.board.queries.areas.is_enemy_in_cone(host.board.state.player_position(), blast_dir, host.w(played_card.cast_range_cells()), cone_angle)
 	if in_pattern:
 		host.emit_log("combat.log.spell.reaches_enemy", [played_card.name, played_card.damage])
 		await host.deal_damage_to_enemy.call(played_card.damage, true, CombatState.MAGICO)
@@ -100,14 +100,14 @@ func cast_curse(played_card: CardActionLine, flow: AsyncFlowToken) -> void:
 		await host.deal_damage_to_enemy.call(played_card.damage, true, CombatState.MAGICO)
 		if not _flow_is_active(flow): return
 	var turns: int = maxi(1, played_card.duration)
-	if played_card.status_effect == "entangle" and host.map_area.interactions.is_tree_near(host.map_area.enemy_pos, CombatPlayerActions.TREE_ROOT_REACH):
+	if played_card.status_effect == "entangle" and host.board.obstacles.is_tree_near(host.board.state.enemy_position(), CombatPlayerActions.TREE_ROOT_REACH):
 		turns += CombatPlayerActions.TREE_ROOT_BONUS_TURNS
 		host.emit_log("combat.log.spell.tree_roots_help")
 	host._apply_spell_status(played_card.status_effect, turns)
 
 ## Parpadeo: teletransporte instantáneo, sin daño ni estado.
 func cast_blink(played_card: CardActionLine, cell: Vector2) -> void:
-	host.map_area.interactions.blink_player_to(cell)
+	host.board.effects.delayed.blink_player_to(cell)
 	host.emit_log("combat.log.spell.blink", [played_card.name])
 
 ## Traslado de charco: el charco salta a `cell`. Si le cae encima al enemigo,
@@ -115,8 +115,8 @@ func cast_blink(played_card: CardActionLine, cell: Vector2) -> void:
 func cast_puddle_hop(played_card: CardActionLine, moved_puddle: Dictionary, cell: Vector2, flow: AsyncFlowToken) -> void:
 	var effect: String = moved_puddle.get("effect", "wet")
 	var zone_damage: int = moved_puddle.get("damage", 0)
-	var landed: Dictionary = host.map_area.interactions.move_puddle(moved_puddle, cell)
-	if not host.map_area.queries.is_enemy_in_area_circle(cell, landed.get("radius", 0.0)):
+	var landed: Dictionary = host.board.effects.puddle_port.mutation.move_puddle(moved_puddle, cell)
+	if not host.board.queries.areas.is_enemy_in_area_circle(cell, landed.get("radius", 0.0)):
 		host.emit_log("combat.log.spell.puddle_lands_elsewhere", [played_card.name])
 		return
 	if effect == "ice":
@@ -134,5 +134,5 @@ func cast_tree_climb(played_card: CardActionLine, climbed_tree: Dictionary, cell
 	host.state.player_in_tree = true
 	host.state.player_tree_landing = cell
 	host.state.player_tree_drop_damage = played_card.damage
-	host.map_area.interactions.climb_tree(climbed_tree, cell)
+	host.board.obstacles.climb_tree(climbed_tree, cell)
 	host.emit_log("combat.log.spell.tree_climb", [played_card.name])

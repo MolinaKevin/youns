@@ -8,12 +8,12 @@ extends CombatPendingAction
 func start(p_index: int, p_card: CardActionLine) -> void:
 	index = p_index
 	card = p_card
-	host.map_area.presentation.show_self_highlight()
+	host.board.presentation.targeting.overlay.actors.show_self_highlight()
 	if card.pattern != null:
-		host.map_area.presentation.show_card_pattern(card.pattern, host.map_area.player_pos, Vector2(0, 1), host.w(card.primary_range_cells()))
+		host.board.presentation.patterns.show_card_pattern(card.pattern, host.board.state.player_position(), Vector2(0, 1), host.w(card.primary_range_cells()))
 
 func on_tile_selected(pos: Vector2) -> void:
-	if host.map_area.interactions.is_click_on_player(pos):
+	if host.board.selection.targeting.queries.is_click_on_player(pos):
 		execute(pos)
 
 func execute(_cell: Vector2) -> void:
@@ -49,5 +49,5 @@ func execute(_cell: Vector2) -> void:
 func clear() -> void:
 	index = -1
 	card = null
-	host.map_area.presentation.clear_self_highlight()
-	host.map_area.presentation.clear_card_pattern()
+	host.board.presentation.targeting.overlay.actors.clear_self_highlight()
+	host.board.presentation.patterns.clear_card_pattern()

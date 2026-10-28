@@ -34,6 +34,7 @@ const _CombatTurnController = preload("res://features/combat/scene/combat_turn_c
 const _CombatRoundResolver = preload("res://features/combat/scene/combat_round_resolver.gd")
 const _CombatWildcardsUI = preload("res://features/combat/scene/combat_wildcards_ui.gd")
 const _CombatEnemyRevealPresentation = preload("res://features/combat/scene/combat_enemy_reveal_presentation.gd")
+const _CombatSceneBootstrap = preload("res://features/combat/scene/combat_scene_bootstrap.gd")
 const Phase = _CombatTurnController.Phase
 const Wild = _CombatTurnController.Wild
 
@@ -80,39 +81,25 @@ var _player_name := ""
 var _enemy_name := ""
 var _preview_tween: Tween = null
 var _flow_token: AsyncFlowToken
+var board: CombatBoardContext
+var _scene_bootstrap: CombatSceneBootstrap
 
 func _enter_tree() -> void:
-	# Esto corre antes del _ready de MapArea: cuando haya layouts por bioma,
-	# MapArea ya tendrá el contexto al construir sus elementos.
-	var combat_map := get_node_or_null("CombatWorld/MapArea") as MapArea
-	if combat_map != null:
-		combat_map.setup_biome(GameState.world_combat.biome)
+	_scene_bootstrap = _CombatSceneBootstrap.new(self)
+	_scene_bootstrap.enter_tree()
 
 func _ready() -> void:
 	_flow_token = AsyncFlowToken.new(self)
-	GlobalHUD.set_clock_visible(false)
-	GlobalHUD.set_clock_paused(true)
-	GlobalHUD.set_youns_status_visible(false)
-	GlobalHUD.set_debug_stats_visible(false)
-	ZoneManager.set_world_visible(false)
-	PartyManager.set_party_visible(false)
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	if _scene_bootstrap == null:
+		_scene_bootstrap = _CombatSceneBootstrap.new(self)
+	_scene_bootstrap.ready_environment()
 	LocalizationState.language_changed.connect(_apply_localized_text)
 	randomize()
-	var cam: Camera3D = $CombatWorld/Camera3D
-	cam.look_at_from_position(Vector3(-5.0, 18.0, 39.0), Vector3(15.0, 0.0, 15.0), Vector3.UP)
-
-	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.08, 0.08, 0.12)
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.4, 0.4, 0.5)
-	env.ambient_light_energy = 0.8
-	var we := WorldEnvironment.new()
-	we.environment = env
-	$CombatWorld.add_child(we)
 
 	state = _CombatState.new()
+	board = CombatBoardContext.new(map_area.state, map_area.queries, map_area.actors,
+		map_area.selection, map_area.placement, map_area.effects, map_area.obstacles,
+		map_area.push, map_area.presentation, map_area.movement, map_area.terrain, map_area.scene)
 	_result_flow = CombatResultFlow.new(self)
 	_damage = CombatDamageResolver.new(self)
 	_pile_popup = CombatPilePopup.new(self)
@@ -126,7 +113,7 @@ func _ready() -> void:
 	player_actions.setup(state, map_area, _damage.deal_to_enemy, _damage.deal_to_player, _result_flow.check_combat_end,
 		current_flow, is_flow_active)
 	player_actions.log_requested.connect(log_message)
-	map_area.player_knocked_off_tree.connect(player_actions.player_falls_from_tree)
+	map_area.scene.player_knocked_off_tree.connect(player_actions.player_falls_from_tree)
 	player_actions.hand_refresh_requested.connect(refresh_hand)
 	player_actions.ui_update_requested.connect(update_ui)
 	player_actions.card_preview_show_requested.connect(show_card_preview)
@@ -134,7 +121,7 @@ func _ready() -> void:
 	player_actions.confirm_popup_show_requested.connect(_on_confirm_popup_show)
 	player_actions.confirm_popup_hide_requested.connect(func():
 		confirm_popup.visible = false
-		map_area.unlock_hover())
+		map_area.scene.input.unlock_hover())
 	player_actions.end_move_button_visible_changed.connect(func(v): end_move_button.visible = v)
 	player_actions.move_mode_button_reset_requested.connect(func(): move_mode_button.button_pressed = false)
 
@@ -147,7 +134,7 @@ func _ready() -> void:
 	state.enemy_max_hp = state.enemy_hp
 	if wild_youn.base_stats != null:
 		state.enemy_status_reduction = YounStatRules.status_reduction(wild_youn.base_stats.to_dict())
-	map_area.setup_enemy_youn(wild_youn)
+	map_area.scene.actors.setup_enemy(wild_youn)
 	enemy_ai = _CombatEnemyAI.new()
 	enemy_ai.setup_with_board(state, CombatEnemyBoardMapAdapter.new(map_area), wild_youn.strategy, _damage.deal_to_enemy, _damage.deal_to_player, _result_flow.check_combat_end)
 	enemy_ai.initiative = DEFAULT_ENEMY_INITIATIVE
@@ -160,7 +147,7 @@ func _ready() -> void:
 
 	var _youn = PartyManager.youn
 	if is_instance_valid(_youn) and _youn.youn_data:
-		map_area.setup_player(_youn.youn_data)
+		map_area.scene.actors.setup_player(_youn.youn_data)
 		_player_name = _youn.youn_data.youn_name
 	var player_stat_values := CardScaling.player_stats()
 	var lab_hp_bonus := GameState.player_save.lab_max_hp_bonus if GameState.player_save else 0
@@ -183,8 +170,7 @@ func _ready() -> void:
 	confirm_fin_button.pressed.connect(player_actions.finish_selection)
 	end_move_button.pressed.connect(player_actions.finish_movement)
 
-	if map_area.has_signal("position_selected"):
-		map_area.position_selected.connect(player_actions.select_position)
+	map_area.scene.position_selected.connect(player_actions.select_position)
 
 	hand_section.set_title(LocalizationState.t("combat.hand"))
 	hand_section.card_index_selected.connect(_turn_flow.on_hand_card_selected)
@@ -258,7 +244,7 @@ func update_ui() -> void:
 	player_stats.text = LocalizationState.t("combat.player_stats", [
 		state.player_hp, state.player_mp, state.player_max_mp, state.player_block, state.player_ward, state.enemy_hp
 	])
-	map_area.set_status_texts(state.status_summary(true), state.status_summary(false))
+	map_area.scene.presentation.set_status_texts(state.status_summary(true), state.status_summary(false))
 
 func show_card_preview(action: CardActionLine) -> void:
 	_preview_action = action
@@ -289,7 +275,7 @@ func _on_confirm_popup_show(show_fin: bool) -> void:
 	confirm_fin_button.visible = show_fin
 	confirm_popup.visible = true
 	# La vista previa queda fija donde se hizo clic mientras se confirma.
-	map_area.lock_hover_at_last_click()
+	map_area.scene.input.lock_hover_at_last_click()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel") and card_preview.visible:

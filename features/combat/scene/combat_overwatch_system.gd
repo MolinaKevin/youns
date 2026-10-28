@@ -2,7 +2,7 @@ class_name CombatOverwatchSystem
 extends RefCounted
 
 ## Estado, previsualización y zona activa de overwatch.
-var map: MapArea
+var map: CombatMapArea
 var selection_active := false
 var selection_range := 0.0
 var selection_angle := 10.0
@@ -16,27 +16,27 @@ func start_selection(cone_range: float, half_angle: float) -> void:
 
 func clear_selection() -> void:
 	selection_active = false
-	map.presentation.hide_overwatch_preview()
+	map.presentation.overwatch.hide_preview()
 	preview_last_direction = Vector2.ZERO
 
 func update_hover(pos: Vector2) -> void:
 	if not selection_active:
-		map.presentation.hide_overwatch_preview()
+		map.presentation.overwatch.hide_preview()
 		return
 	var to_mouse: Vector2 = pos - map.player_pos
 	if to_mouse.length() <= 0.2:
-		map.presentation.hide_overwatch_preview()
+		map.presentation.overwatch.hide_preview()
 		return
 	var direction := to_mouse.normalized()
 	if direction.distance_to(preview_last_direction) > 0.015:
 		preview_last_direction = direction
-		map.presentation.show_overwatch_preview(map.player_pos, direction, selection_range, selection_angle)
+		map.presentation.overwatch.show_preview(map.player_pos, direction, selection_range, selection_angle)
 
 func place(origin: Vector2, direction: Vector2, cone_range: float, half_angle: float) -> void:
-	map.presentation.show_overwatch_zone(origin, direction, cone_range, half_angle)
+	map.presentation.overwatch.show_zone(origin, direction, cone_range, half_angle)
 
 func clear_zone() -> void:
-	map.presentation.clear_overwatch_zone()
+	map.presentation.overwatch.clear_zone()
 
 func segment_crosses_cone(from: Vector2, to: Vector2, origin: Vector2, direction: Vector2, cone_range: float, half_angle_deg: float) -> bool:
 	var half_angle := deg_to_rad(half_angle_deg)

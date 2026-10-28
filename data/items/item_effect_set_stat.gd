@@ -7,4 +7,4 @@ class_name ItemEffectSetStat
 func apply(_save: PlayerSaveData) -> void:
 	if stat_key.is_empty():
 		return
-	StatsManager.care_service.set_stat(stat_key, int(value))
+	StatsManager.services.care().set_stat(stat_key, int(value))

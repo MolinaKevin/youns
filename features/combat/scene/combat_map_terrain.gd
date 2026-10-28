@@ -7,7 +7,12 @@ const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd"
 ## terreno, navegación y geometría sin exponer su estructura interna.
 var map: CombatMapArea
 var logic: CombatTerrain
-var navigation: CombatNavigation
+var navigation_impl: CombatNavigation
+
+func _init() -> void:
+	navigation = CombatMapTerrainNavigation.new(self)
+	geometry = CombatMapTerrainGeometryAdapter.new(self)
+	mutation = CombatMapTerrainMutationAdapter.new(self)
 
 ## Colección lógica de obstáculos. Los sistemas que cambian el tablero la usan
 ## a través de esta fachada; CombatTerrain conserva la lista y sus cachés.
@@ -58,31 +63,31 @@ func elevation_at(pos: Vector2) -> int:
 	return logic.elevation_at(pos)
 
 func has_line_of_sight(from: Vector2, to: Vector2) -> bool:
-	return map.queries.has_line_of_sight(from, to)
+	return map.queries.line_of_sight.has_line_of_sight(from, to)
 
 func movement_distance(from: Vector2, to: Vector2) -> float:
-	return map.queries.movement_distance(from, to)
+	return map.queries.actors.movement_distance(from, to)
 
 func reachable_cells(from: Vector2, move_range: float, elevation: int, actor_radius: float, blocked_by: Vector2, blocked_radius: float) -> Array[Vector2i]:
-	return navigation.begin_move(from, move_range, elevation, actor_radius, blocked_by, blocked_radius)
+	return navigation_impl.begin_move(from, move_range, elevation, actor_radius, blocked_by, blocked_radius)
 
 func plan_move(pos: Vector2, elevation: int, actor_radius: float, blocked_by: Vector2, blocked_radius: float) -> String:
-	return navigation.plan_move(pos, elevation, actor_radius, blocked_by, blocked_radius)
+	return navigation_impl.plan_move(pos, elevation, actor_radius, blocked_by, blocked_radius)
 
 func path_for_move(pos: Vector2) -> Array[Vector2i]:
-	return navigation.path_for_move(pos)
+	return navigation_impl.path_for_move(pos)
 
 func clear_planned_path() -> void:
-	navigation.clear_planned_path()
+	navigation_impl.clear_planned_path()
 
 func planned_path() -> Array[Vector2]:
-	return navigation.last_path
+	return navigation_impl.last_path
 
 func planned_path_cost() -> float:
-	return navigation.last_path_cost
+	return navigation_impl.last_path_cost
 
 func find_toward(from: Vector2, target: Vector2, move_range: float, elevation: int, actor_radius: float, blocked_by: Vector2, blocked_radius: float) -> Dictionary:
-	return navigation.find_toward(from, target, move_range, elevation, actor_radius, blocked_by, blocked_radius)
+	return navigation_impl.find_toward(from, target, move_range, elevation, actor_radius, blocked_by, blocked_radius)
 
 func player_height_at(pos: Vector2, elevation: int) -> float:
 	return logic.player_height_at(pos, elevation)
@@ -97,10 +102,10 @@ func warm_caches(first_radius: float, second_radius: float) -> void:
 	logic.warm_caches(first_radius, second_radius)
 
 func player_contact_radius() -> float:
-	return map.queries.player_area_contact_radius()
+	return map.queries.actors.player_area_contact_radius()
 
 func enemy_contact_radius() -> float:
-	return map.queries.enemy_area_contact_radius()
+	return map.queries.actors.enemy_area_contact_radius()
 
 func clip_path_at_obstacle(from: Vector2, to: Vector2) -> Vector2:
 	return map.queries.clip_path_at_obstacle(from, to)
@@ -116,4 +121,4 @@ func can_blink_to(pos: Vector2) -> bool:
 		return false
 	if pos.distance_to(map.enemy_pos) < map.MIN_SEPARATION:
 		return false
-	return not is_blocked(pos, elevation_at(pos), map.actors.player_radius())
+	return not is_blocked(pos, elevation_at(pos), map.actors.state.geometry.player_radius())

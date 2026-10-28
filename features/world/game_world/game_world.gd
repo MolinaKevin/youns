@@ -112,10 +112,10 @@ func _restore_after_combat() -> void:
 	PartyManager.youn.global_position = pos + Vector3(1.5, 0, 1.5)
 	PartyManager.youn.velocity = Vector3.ZERO
 	GameState.world_combat.resolve_victory(get_tree())
-	StatsManager.care_service.add_stat("hambre", 30)  # combate ganado: esfuerzo físico
+	StatsManager.services.care().add_stat("hambre", 30)  # combate ganado: esfuerzo físico
 	if GameState.player_save != null and GameState.player_save.bathroom_pending_after_combat:
 		GameState.player_save.bathroom_pending_after_combat = false
-		StatsManager.care_service.apply_bathroom_accident()
+		StatsManager.services.care().apply_bathroom_accident()
 
 
 func _exit_tree() -> void:
@@ -131,8 +131,8 @@ func _on_sleep_requested() -> void:
 	overlay.tree_exiting.connect(func():
 		_sleeping = false
 		var sleep_duration := GameState.get_total_hours() - _sleep_start_hour
-		StatsManager.care_service.add_stat("hambre", 20)
-		StatsManager.emotion_service.on_wake_up(sleep_duration)
+		StatsManager.services.care().add_stat("hambre", 20)
+		StatsManager.services.emotions().on_wake_up(sleep_duration)
 		if overlay.save_requested:
 			var save_error := GameState.save_player_save()
 			GlobalHUD.show_toast(LocalizationState.t("game.saved") if save_error == OK else LocalizationState.t("game.save_failed"))

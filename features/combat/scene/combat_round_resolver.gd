@@ -13,10 +13,10 @@ func build_events(state: CombatState, map_area: MapArea) -> Array[CombatRoundEve
 		state.player_in_tree = false
 		var tree_drop := CombatRoundEvent.new()
 		tree_drop.kind = "tree_drop"
-		tree_drop.hit = map_area.interactions.drop_from_tree(state.player_tree_landing)
+		tree_drop.hit = map_area.obstacles.drop_from_tree(state.player_tree_landing)
 		tree_drop.damage = state.player_tree_drop_damage
 		events.append(tree_drop)
-	for hit: Dictionary in map_area.interactions.resolve_delayed_zones():
+	for hit: Dictionary in map_area.effects.delayed.resolve_delayed_zones():
 		if hit["enemy"]:
 			events.append(_delayed_zone_event("enemy", hit))
 		if hit["player"]:

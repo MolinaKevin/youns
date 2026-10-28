@@ -19,7 +19,7 @@ const DEFAULT_HEALTH_GAIN := 5
 @export var health_gain: Variant = null
 
 func apply(_save: PlayerSaveData) -> void:
-	StatsManager.care_service.add_stat("hambre", -fills)
-	StatsManager.care_service.add_stat("ganas_bano", bathroom_gain if bathroom_gain >= 0 else DEFAULT_BATHROOM_GAIN)
-	StatsManager.care_service.add_stat("salud", DEFAULT_HEALTH_GAIN if health_gain == null else int(health_gain))
-	StatsManager.care_service.on_meal_eaten()
+	StatsManager.services.care().add_stat("hambre", -fills)
+	StatsManager.services.care().add_stat("ganas_bano", bathroom_gain if bathroom_gain >= 0 else DEFAULT_BATHROOM_GAIN)
+	StatsManager.services.care().add_stat("salud", DEFAULT_HEALTH_GAIN if health_gain == null else int(health_gain))
+	StatsManager.services.care().on_meal_eaten()

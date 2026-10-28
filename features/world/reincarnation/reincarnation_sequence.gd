@@ -115,7 +115,7 @@ func _run() -> void:
 		await _msg.message(LocalizationState.t("reincarnation.born", [baby.youn_name, card_name]))
 	else:
 		await _msg.message(LocalizationState.t("reincarnation.born_no_card", [baby.youn_name]))
-	StatsManager.life_stage.complete_reincarnation(baby, card)
+	StatsManager.services.life().complete_reincarnation(baby, card)
 	if first_unlock and GameState.player_save.reincarnated_cards_unlocked:
 		await _msg.message(LocalizationState.t("reincarnation.cards_unlocked"))
 	_finish()

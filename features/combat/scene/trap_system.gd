@@ -12,7 +12,7 @@ extends Node3D
 ## tile_in_obstacle, movement_distance).
 
 ## Asignado por MapArea antes de add_child(self) — ver MapArea._init().
-var map: MapArea
+var map: CombatMapArea
 
 var zones: Array = []
 var _visuals: Array = []
@@ -30,8 +30,8 @@ func _ready() -> void:
 	_preview.visible = false
 	add_child(_preview)
 
-## true mientras se está por tirar una trampa (para el "any_disc" de
-## MapArea._update_hover()).
+## true mientras se está por tirar una trampa; lo consulta la fachada de
+## selección para coordinar el hover.
 func is_placing() -> bool:
 	return _disc.visible
 
@@ -41,9 +41,9 @@ func start_trap_placement(trap_range: float, trap_radius: float = 1.0, previsual
 	_preview_last_pos = Vector2(-999.0, -999.0)
 	_preview.visible  = false
 	if previsualize_line_of_sight:
-		map.presentation.show_disc_with_los(_disc, map.player_pos, trap_range, map.player_elevation)
+		map.presentation.overlay_port.show_disc_with_los(_disc, map.player_pos, trap_range, map.player_elevation)
 	else:
-		map.presentation.show_simple_disc(_disc, map.player_pos, trap_range)
+		map.presentation.overlay_port.show_simple_disc(_disc, map.player_pos, trap_range)
 
 func clear_trap_placement() -> void:
 	_range            = 0.0
@@ -51,8 +51,8 @@ func clear_trap_placement() -> void:
 	_preview.visible  = false
 	_preview_last_pos = Vector2(-999.0, -999.0)
 
-## Actualiza el preview del tile bajo el mouse mientras se apunta; lo llama
-## MapArea._update_hover() con la posición en el mundo ya calculada.
+## Actualiza el preview del tile bajo el mouse con la posición ya calculada;
+## lo coordina CombatMapSelectionAdapter.
 func update_hover_preview(pos: Vector2) -> void:
 	_preview_last_pos = PlacementPreview.update_hover_preview(
 		map, _disc, _preview, pos, _range, _preview_radius, _preview_last_pos,
@@ -64,17 +64,17 @@ func place_trap(pos: Vector2, radius: float, damage: int, card_name: String) -> 
 
 func _add_trap_visual(pos: Vector2, radius: float) -> void:
 	var mi := MeshInstance3D.new()
-	mi.set_meta("fill_mat", map.presentation.make_material(Color(0.8, 0.2, 0.8, 0.25)))
-	mi.set_meta("bord_mat", map.presentation.make_material(Color(1.0, 0.5, 1.0, 0.70)))
+	mi.set_meta("fill_mat", map.presentation.overlay_port.make_material(Color(0.8, 0.2, 0.8, 0.25)))
+	mi.set_meta("bord_mat", map.presentation.overlay_port.make_material(Color(1.0, 0.5, 1.0, 0.70)))
 	add_child(mi)
-	map.presentation.build_tile_disc(mi, pos, radius, 0.0, 0.015)
+	map.presentation.overlay_port.build_tile_disc(mi, pos, radius, 0.0, 0.015)
 	_visuals.append(mi)
 
 func check_and_trigger_traps(unit_pos: Vector2, contact_margin: float = 0.0) -> int:
 	var total := 0
 	var triggered: Array = []
 	for trap in zones:
-		if map.terrain.movement_distance(trap["pos"], unit_pos) <= trap["radius"] + contact_margin:
+		if map.terrain.geometry.spatial.movement_distance(trap["pos"], unit_pos) <= trap["radius"] + contact_margin:
 			total += trap["damage"]
 			triggered.append(trap)
 	for t in triggered:

@@ -13,6 +13,7 @@ var emotion_service: EmotionService
 var care_service: CareStatsService
 
 var life_stage: StatsLifeStage
+var services: StatsServicesPort
 
 func _ready() -> void:
 	var session := CareSessionContext.new(
@@ -46,6 +47,7 @@ func _ready() -> void:
 		emit_evolution_triggered,
 		emit_reincarnation_triggered,
 	)
+	services = StatsServicesAdapter.new(care_service, emotion_service, life_stage)
 	GameState.twenty_min_ticked.connect(care_service.apply_decay)
 	GameState.twenty_min_ticked.connect(check_status)
 

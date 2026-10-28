@@ -14,7 +14,7 @@ var hit: bool = false
 var damage: int = 0
 
 ## delayed_zone: a quién le llegó el charco demorado ("enemy"/"player"/"none")
-## y el registro de impacto que ya construye PuddleSystem/CombatMapInteractions
+## y el registro de impacto que ya construye PuddleSystem y expone el puerto de efectos
 ## (sigue siendo Dictionary declarativo, fuera del alcance de este tipado).
 var target: String = ""
 var zone_hit: Dictionary = {}

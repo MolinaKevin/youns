@@ -17,6 +17,8 @@ const HOVER_Y := 0.04
 const PLATFORM_HEIGHT := 1.5
 const TREE_HEIGHT := 2.4
 const CLICK_MARGIN := 0.6
+const RAMP_DEPTH := 1.5
+const ACTOR_MOVE_SPEED := 12.0
 
 var player_pos := Vector2.ZERO
 var enemy_pos := Vector2.ZERO
@@ -24,15 +26,15 @@ var player_elevation: int = 0
 var enemy_elevation: int = 0
 ## Fachadas del tablero. `MapArea` las compone con implementaciones reales;
 ## los dobles de prueba extienden estos tipos para conservar el contrato.
-var queries: CombatMapQueries
-var actors: CombatMapActors
-var interactions: CombatMapInteractions
-var presentation: CombatMapPresentation
+var queries: CombatMapQueriesPort
+var actors: CombatMapActorsPort
+var selection: CombatMapSelectionPort
+var placement: CombatMapPlacementPort
+var effects: CombatMapEffectsPort
+var obstacles: CombatMapObstaclePort
+var push: CombatMapPushPort
+var presentation: CombatMapPresentationPort
 var movement: CombatMapMovementPort
 var terrain: CombatMapTerrainPort
-
-func elevation_at(pos: Vector2) -> int:
-	return terrain.elevation_at(pos)
-
-func update_actor_positions() -> void:
-	actors.sync_targets()
+var scene: CombatMapScenePort
+var state: CombatMapStatePort

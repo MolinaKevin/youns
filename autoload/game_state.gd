@@ -52,10 +52,10 @@ const STARTING_STATS := SaveService.STARTING_STATS
 func _ready() -> void:
 	var care_action := func(action: String) -> void:
 		match action:
-			"reward": StatsManager.care_service.reward()
-			"punish": StatsManager.care_service.punish()
-			"deny": StatsManager.care_service.deny()
-			"play": StatsManager.care_service.play()
+			"reward": StatsManager.services.care().reward()
+			"punish": StatsManager.services.care().punish()
+			"deny": StatsManager.services.care().deny()
+			"play": StatsManager.services.care().play()
 	player_session = PlayerSessionService.new(
 		func() -> PlayerSaveData: return player_save,
 		care_action,

@@ -113,8 +113,8 @@ func _skip_time() -> void:
 	var hours_slept := GameState.skip_to_next_hour(wake_h, false)
 	# Durmiendo no corre el desgaste ni se tiran los dados de emociones: lo que
 	# pasa en la noche son solo los efectos de acá y de EmotionService.on_wake_up.
-	StatsManager.care_service.add_stat("energia", _calc_energia_recovery(hours_slept))
-	StatsManager.care_service.add_stat("salud", StatsManager.care_service.health_from_sleep(hours_slept))
+	StatsManager.services.care().add_stat("energia", _calc_energia_recovery(hours_slept))
+	StatsManager.services.care().add_stat("salud", StatsManager.services.care().health_from_sleep(hours_slept))
 	GameState.notify_clock_changed()
 
 func _calc_energia_recovery(hours: int) -> int:

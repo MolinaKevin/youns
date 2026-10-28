@@ -65,7 +65,7 @@ func _execute_card_action(card: MonsterCard, index: int) -> void:
 				return
 			var amount := host.monster_deck.move_for(action)
 			if amount > 0:
-				await host._move_enemy(host.board.player_position(), host.w(amount), "combat.log.enemy_card.moves_forward", [amount])
+				await host._move_enemy(host.board.state.player_position(), host.w(amount), "combat.log.enemy_card.moves_forward", [amount])
 		"retreat":
 			var amount := host.monster_deck.move_for(action)
 			if amount > 0:

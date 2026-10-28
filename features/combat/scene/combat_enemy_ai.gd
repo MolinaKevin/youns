@@ -115,7 +115,7 @@ func take_turn() -> void:
 		if state.enemy_frozen_turns == 0:
 			emit_log("combat.log.enemy.frozen_expired")
 
-	var trap_dmg: int = board.trigger_enemy_traps()
+	var trap_dmg: int = board.effects.trigger_enemy_traps()
 	if trap_dmg > 0:
 		await deal_damage_to_enemy.call(trap_dmg)
 		emit_log("combat.log.enemy.trap_triggered", [trap_dmg])
@@ -132,9 +132,9 @@ func take_turn() -> void:
 	if action:
 		await execute_action(action)
 	else:
-		var center := board.world_center()
-		if board.enemy_position().distance_to(center) > 0.5:
-			board.move_enemy_toward(center, 3)
+		var center := board.state.world_center()
+		if board.state.enemy_position().distance_to(center) > 0.5:
+			board.movement.move_enemy_toward(center, 3)
 			emit_log("combat.log.enemy.wanders_to_center")
 
 	ui_update_requested.emit()
@@ -142,8 +142,8 @@ func take_turn() -> void:
 # ── Tracking ──────────────────────────────────────────────────────────────────
 
 func update_tracking() -> void:
-	if board.has_line_of_sight(board.enemy_position(), board.player_position()):
-		last_known_player_pos = board.player_position()
+	if board.queries.has_line_of_sight(board.state.enemy_position(), board.state.player_position()):
+		last_known_player_pos = board.state.player_position()
 		_had_los = true
 
 # ── Strategy (fases/condiciones; ver CombatEnemyStrategyAi) ───────────────────
@@ -167,20 +167,20 @@ func score_action(action: AiAction) -> float:
 func _check_overwatch_trigger(from_pos: Vector2) -> bool:
 	if not state.player_overwatch_active:
 		return false
-	if board.crosses_player_overwatch(
-			from_pos, board.enemy_position(),
+	if board.effects.crosses_player_overwatch(
+			from_pos, board.state.enemy_position(),
 			state.player_overwatch_origin, state.player_overwatch_dir,
 			state.player_overwatch_range, state.player_overwatch_half_angle):
 		state.player_overwatch_active = false
-		board.clear_player_overwatch()
+		board.effects.clear_player_overwatch()
 		return true
 	return false
 
 ## Aplica los efectos de terreno al recorrido más reciente del enemigo.
 func apply_zone_effects(from_pos: Vector2) -> void:
-	var contact_margin: float = board.enemy_contact_radius()
-	var fx: Dictionary = board.puddle_effects_along(from_pos, board.enemy_position(), contact_margin)
-	var zone_dmg: Dictionary = board.puddle_damage_along(from_pos, board.enemy_position(), contact_margin)
+	var contact_margin: float = board.queries.enemy_contact_radius()
+	var fx: Dictionary = board.effects.puddle_effects_along(from_pos, board.state.enemy_position(), contact_margin)
+	var zone_dmg: Dictionary = board.effects.puddle_damage_along(from_pos, board.state.enemy_position(), contact_margin)
 	for event in zone_effects.apply_path_effects(state, fx, zone_dmg, false):
 		zone_effects.log_zone_effect(event, "combat.log.enemy.zone", CombatZoneEffectResolver.ENEMY_LOG_TURNS, emit_log)
 
@@ -194,9 +194,9 @@ func _move_enemy(target: Vector2, move_range: float, log_key: String, log_args: 
 	if state.enemy_entangled_turns > 0 or state.enemy_frozen_turns > 0:
 		emit_log("combat.log.enemy.cannot_move")
 		return
-	var from_pos: Vector2 = board.enemy_position()
+	var from_pos: Vector2 = board.state.enemy_position()
 	var eff_range := maxf(CombatGrid.CELL, move_range - float(move_penalty()))
-	board.move_enemy_toward(target, eff_range)
+	board.movement.move_enemy_toward(target, eff_range)
 	apply_zone_effects(from_pos)
 	var ow_dmg: int = state.player_overwatch_damage
 	var ow_type: String = state.player_overwatch_damage_type
@@ -207,8 +207,8 @@ func _move_enemy(target: Vector2, move_range: float, log_key: String, log_args: 
 		emit_log(log_key, log_args)
 
 func _retreat_target(move_range: float) -> Vector2:
-	var away_dir: Vector2 = (board.enemy_position() - board.player_position()).normalized()
-	return board.clamp_to_world(board.enemy_position() + away_dir * move_range)
+	var away_dir: Vector2 = (board.state.enemy_position() - board.state.player_position()).normalized()
+	return board.state.clamp_to_world(board.state.enemy_position() + away_dir * move_range)
 
 ## reach en casillas, medido entre los bordes de las huellas (como el jugador).
 ## Si el jugador tiene contraataque y el enemigo le pegó cuerpo a cuerpo, le
@@ -222,8 +222,8 @@ func _try_player_counter() -> void:
 	await deal_damage_to_enemy.call(state.player_counter_damage, false, CombatState.FISICO)
 
 func _player_in_reach(reach: int) -> bool:
-	return board.actors_gap() <= w(reach) + CombatGrid.CELL * 0.5 \
-		and board.has_line_of_sight(board.enemy_position(), board.player_position())
+	return board.queries.actors_gap() <= w(reach) + CombatGrid.CELL * 0.5 \
+		and board.queries.has_line_of_sight(board.state.enemy_position(), board.state.player_position())
 
 func w(cells: int) -> float:
 	return CombatGrid.world_for(cells)

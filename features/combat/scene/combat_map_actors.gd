@@ -11,6 +11,11 @@ var terrain: CombatMapTerrain
 var mover: CombatActorMover
 var trees: TreeSystem
 
+func _init() -> void:
+	presentation = CombatMapActorPresentationAdapter.new(self)
+	movement = CombatMapActorMovementAdapter.new(self)
+	state = CombatMapActorStateAdapter.new(self)
+
 const PLAYER_PRIORITY_ANIMATIONS: Array[String] = ["attack", "range", "damage", "die"]
 const ENEMY_PRIORITY_ANIMATIONS: Array[String] = ["attack", "damage"]
 
@@ -36,7 +41,7 @@ func set_enemy_radius(radius: float) -> void:
 	_enemy_radius = radius
 
 func sync_targets() -> void:
-	var player_y: float = terrain.player_height_at(map.player_pos, map.player_elevation)
+	var player_y: float = terrain.geometry.bounds.player_height_at(map.player_pos, map.player_elevation)
 	_player_target = Vector3(map.player_pos.x, player_y, map.player_pos.y)
 	if trees.is_player_in_tree():
 		var tree_pos: Vector2 = trees.climbed_tree_position()

@@ -14,9 +14,9 @@ func start(p_index: int, p_card: CardActionLine, range_override: int = 0) -> voi
 		base_range = mini(base_range, CardActionLine.cells_for_modules(CombatPlayerActions.BLINDED_RANGE_MODULES))
 		host.emit_log("combat.log.attack.blinded_range_reduced", [CombatPlayerActions.BLINDED_RANGE_MODULES])
 	range_cells = base_range
-	host.map_area.interactions.start_attack_selection(host.w(range_cells))
+	host.board.selection.targeting.modes.start_attack_selection(host.w(range_cells))
 	if card.pattern != null:
-		host.map_area.presentation.show_card_pattern(card.pattern, host.map_area.player_pos, host.map_area.enemy_pos - host.map_area.player_pos, host.w(range_cells))
+		host.board.presentation.patterns.show_card_pattern(card.pattern, host.board.state.player_position(), host.board.state.enemy_position() - host.board.state.player_position(), host.w(range_cells))
 
 func on_tile_selected(pos: Vector2) -> void:
 	host.pending_cell = pos
@@ -30,7 +30,7 @@ func execute(_cell: Vector2) -> void:
 		clear()
 		return
 	var played_card: CardActionLine = host.state.turn_actions[index]
-	var in_pattern: bool = host.map_area.interactions.is_enemy_in_card_pattern(played_card.pattern, host.map_area.player_pos, host.map_area.enemy_pos - host.map_area.player_pos, host.w(range_cells)) if played_card.pattern != null else host.map_area.queries.is_enemy_in_attack_range(host.w(range_cells))
+	var in_pattern: bool = host.board.selection.targeting.queries.is_enemy_in_card_pattern(played_card.pattern, host.board.state.player_position(), host.board.state.enemy_position() - host.board.state.player_position(), host.w(range_cells)) if played_card.pattern != null else host.board.queries.actors.is_enemy_in_attack_range(host.w(range_cells))
 	if not in_pattern:
 		host.emit_log("combat.log.attack.enemy_out_of_range", [played_card.name])
 		clear()
@@ -63,4 +63,4 @@ func clear() -> void:
 	index = -1
 	card = null
 	range_cells = 0
-	host.map_area.interactions.clear_attack_selection()
+	host.board.selection.targeting.modes.clear_attack_selection()

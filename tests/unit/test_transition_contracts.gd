@@ -2,6 +2,10 @@ extends GutTest
 
 const AsyncFlowTokenScript := preload("res://shared/async_flow_token.gd")
 const WorldTransitionLeaseScript := preload("res://shared/world_transition_lease.gd")
+const ModalScreenHostScript := preload("res://shared/modal_screen_host.gd")
+const ModalScreenHudPortScript := preload("res://shared/modal_screen_hud_port.gd")
+const ModalScreenWorldPortScript := preload("res://shared/modal_screen_world_port.gd")
+const ModalScreenPartyPortScript := preload("res://shared/modal_screen_party_port.gd")
 
 
 class FakeHud extends ModalScreenHostPort:
@@ -19,6 +23,31 @@ class FakeHud extends ModalScreenHostPort:
 
 class FakeCamera extends Node:
 	var enabled := true
+
+
+class FakeModalHud extends ModalScreenHudPortScript:
+	var clock_is_visible := true
+	var clock_is_paused := false
+	var status_is_visible := true
+
+	func set_clock_visible(value: bool) -> void: clock_is_visible = value
+	func clock_visible() -> bool: return clock_is_visible
+	func set_clock_paused(value: bool) -> void: clock_is_paused = value
+	func clock_paused() -> bool: return clock_is_paused
+	func set_youns_status_visible(value: bool) -> void: status_is_visible = value
+	func youns_status_visible() -> bool: return status_is_visible
+
+
+class FakeModalWorld extends ModalScreenWorldPortScript:
+	var is_visible := true
+
+	func set_world_visible(value: bool) -> void: is_visible = value
+
+
+class FakeModalParty extends ModalScreenPartyPortScript:
+	var is_visible := true
+
+	func set_party_visible(value: bool) -> void: is_visible = value
 
 
 class FakeParty extends WorldTransitionPartyPort:
@@ -108,3 +137,22 @@ func test_lease_restaura_el_grupo_sin_pausar_el_arbol() -> void:
 	assert_true(party.player.is_physics_processing())
 	assert_true(party.youn.is_physics_processing())
 	assert_true(party.camera_rig.enabled)
+
+
+func test_modal_host_delega_a_puertos_tipados() -> void:
+	var hud := FakeModalHud.new()
+	var world := FakeModalWorld.new()
+	var party := FakeModalParty.new()
+	var host = ModalScreenHostScript.new(hud, world, party)
+
+	host.set_clock_visible(false)
+	host.set_clock_paused(true)
+	host.set_youns_status_visible(false)
+	host.set_world_visible(false)
+	host.set_party_visible(false)
+
+	assert_false(host.clock_visible())
+	assert_true(host.clock_paused())
+	assert_false(host.youns_status_visible())
+	assert_false(world.is_visible)
+	assert_false(party.is_visible)
