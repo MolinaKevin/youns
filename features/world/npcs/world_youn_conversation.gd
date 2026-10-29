@@ -46,13 +46,13 @@ func _apply_choice(choice: NpcChoice) -> void:
 	if choice.give_item != null:
 		_give_item(choice.give_item)
 	if choice.restore_energy:
-		var ps := GameState.player_save
+		var ps := GameState.save_service.player_save
 		if ps:
 			ps.energia = 100
 			GlobalHUD.notify_youns_status_changed()
 
 func _give_item(item: ItemData) -> void:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	if ps == null:
 		return
 	var display_name := LocalizationState.item_name(item.id, item.name)

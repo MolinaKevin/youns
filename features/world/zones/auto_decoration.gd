@@ -30,6 +30,7 @@ extends RefCounted
 
 const ForestBuilder := preload("res://features/world/zones/forest_builder.gd")
 const DebugLogging := preload("res://shared/debug_logging.gd")
+const Builder := preload("res://features/world/zones/auto_decoration_builder.gd")
 
 enum Kind { FOREST, GROUND, NO_FILL, NO_TREES, WATER }
 const PREFIXES := {
@@ -131,44 +132,9 @@ func has_guides() -> bool:
 ## WorldBoundary: sólo se consulta para no plantar árboles sobre lo caminable
 ## ni a menos de `clearance` celdas de su borde.
 func build(parent: Node3D, grid: WorldBoundaryGrid, clearance: int, spacing: float, tree_seed: int, build_tree_meshes := true) -> void:
-	var started_at := Time.get_ticks_msec()
-	var checkpoint := started_at
 	if DebugLogging.verbose_enabled():
 		print("[AutoDecoration] Construyendo decoración global…")
-	var ground := ground_triangles()
-	checkpoint = _log_build_step("Preparación de suelo (%d triángulos)" % (ground.size() / 3), started_at, checkpoint)
-	if not ground.is_empty():
-		parent.add_child(_ground_mesh(ground))
-	checkpoint = _log_build_step("Creación de malla de suelo", started_at, checkpoint)
-	var water := water_triangles()
-	checkpoint = _log_build_step("Preparación de agua (%d triángulos)" % (water.size() / 3), started_at, checkpoint)
-	if not water.is_empty():
-		parent.add_child(_water_mesh(water))
-	checkpoint = _log_build_step("Creación de malla de agua", started_at, checkpoint)
-	_tree_positions = tree_positions(grid, clearance, spacing, tree_seed)
-	checkpoint = _log_build_step("Cálculo de %d posiciones de árboles" % _tree_positions.size(), started_at, checkpoint)
-	if not build_tree_meshes or _tree_positions.is_empty():
-		return
-	var templates := ForestBuilder.library_templates(TREE_GROUP)
-	checkpoint = _log_build_step("Carga de %d plantillas de árbol" % templates.size(), started_at, checkpoint)
-	if templates.is_empty():
-		return
-	var rng := RandomNumberGenerator.new()
-	rng.seed = tree_seed + 1
-	var trees: Array = []
-	for p in _tree_positions:
-		trees.append([rng.randi() % templates.size(), ForestBuilder.random_tree_transform(rng, p)])
-	checkpoint = _log_build_step("Preparación de transformaciones", started_at, checkpoint)
-	ForestBuilder.add_trees(parent, templates, trees)
-	_log_build_step("Instanciación de árboles", started_at, checkpoint)
-
-
-func _log_build_step(step: String, started_at: int, previous_at: int) -> int:
-	var now := Time.get_ticks_msec()
-	if DebugLogging.verbose_enabled():
-		print("[AutoDecoration] %s: +%d ms (total: %d ms)" % [step, now - previous_at, now - started_at])
-	return now
-
+	Builder.build(self, parent, grid, clearance, spacing, tree_seed, build_tree_meshes)
 ## Dónde quedaron los árboles del último build() (para tests y depuración).
 func built_tree_positions() -> Array[Vector3]:
 	return _tree_positions
@@ -225,7 +191,7 @@ func _split_and_keep(a: Vector3, b: Vector3, c: Vector3, no_fill: _TriIndex, wat
 		_ground_out.append(b)
 		_ground_out.append(c)
 
-func _ground_mesh(tris: PackedVector3Array) -> MeshInstance3D:
+func ground_mesh(tris: PackedVector3Array) -> MeshInstance3D:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for i in range(0, tris.size(), 3):
@@ -249,7 +215,7 @@ func _ground_mesh(tris: PackedVector3Array) -> MeshInstance3D:
 
 # ── Agua ────────────────────────────────────────────────────────────────────
 
-func _water_mesh(tris: PackedVector3Array) -> MeshInstance3D:
+func water_mesh(tris: PackedVector3Array) -> MeshInstance3D:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for i in range(0, tris.size(), 3):
@@ -335,6 +301,9 @@ func tree_positions(grid: WorldBoundaryGrid, clearance: int, spacing: float, tre
 					continue
 				result.append(Vector3(p.x, y, p.y))
 	return result
+
+func set_built_tree_positions(positions: Array[Vector3]) -> void:
+	_tree_positions = positions
 
 func _well_inside(forest: _TriIndex, p: Vector2, y: float) -> bool:
 	for d in [Vector2(TREE_EDGE_MARGIN, 0), Vector2(-TREE_EDGE_MARGIN, 0), Vector2(0, TREE_EDGE_MARGIN), Vector2(0, -TREE_EDGE_MARGIN)]:

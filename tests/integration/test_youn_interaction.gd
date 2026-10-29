@@ -15,8 +15,8 @@ func before_all() -> void:
 
 
 func before_each() -> void:
-	_save_before = GameState.player_save
-	GameState.player_save = PlayerSaveData.new()
+	_save_before = GameState.save_service.player_save
+	GameState.save_service.player_save = PlayerSaveData.new()
 	_pos = PartyManager.player.global_position
 	PartyManager.player.global_position = Vector3(0, 0.9, 0)
 	PartyManager.player.rotation.y = 0.0
@@ -31,7 +31,7 @@ func _start(anim: String) -> void:
 
 func after_each() -> void:
 	PartyManager.place_at(_pos)
-	GameState.player_save = _save_before
+	GameState.save_service.player_save = _save_before
 
 
 func test_el_youn_se_acerca_y_el_jugador_lo_mira() -> void:
@@ -59,7 +59,7 @@ func test_el_jugador_hace_la_animacion() -> void:
 
 
 func test_los_stats_cambian_al_terminar_la_escena() -> void:
-	var save := GameState.player_save
+	var save := GameState.save_service.player_save
 	save.felicidad = 50
 	assert_true(QuickMenu.select("left"))
 	QuickMenu.activate_selected()

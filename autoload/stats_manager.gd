@@ -17,7 +17,7 @@ var services: StatsServicesPort
 
 func _ready() -> void:
 	var session := CareSessionContext.new(
-		func() -> PlayerSaveData: return GameState.player_save,
+		func() -> PlayerSaveData: return GameState.save_service.player_save,
 		func() -> YounData:
 			var youn := PartyManager.youn
 			return youn.get("youn_data") as YounData if youn else null,

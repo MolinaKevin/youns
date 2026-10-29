@@ -78,7 +78,7 @@ func on_pile_card_selected(card: CardData) -> void:
 ## Ítems del inventario que se pueden usar en combate: [{"index", "data", "count"}].
 func _combat_items() -> Array:
 	var result := []
-	var save: PlayerSaveData = GameState.player_save
+	var save: PlayerSaveData = GameState.save_service.player_save
 	if save == null:
 		return result
 	for i in save.inventory_items.size():
@@ -127,6 +127,6 @@ func use_item(inventory_index: int, data: ItemData) -> void:
 	host.refresh_hand()
 
 func _consume_inventory_item(index: int) -> void:
-	var items: Array = GameState.player_save.inventory_items
+	var items: Array = GameState.save_service.player_save.inventory_items
 	InventoryService.consume_at(items, index)
-	GameState.player_save.inventory_items = items
+	GameState.save_service.player_save.inventory_items = items

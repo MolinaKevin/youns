@@ -82,6 +82,8 @@ extends Resource
 ## 1.0 equivale a un módulo completo de diámetro.
 @export_range(0.25, 8.0, 0.25) var combat_footprint_modules: float = 1.0
 ## Compatibilidad para recursos antiguos que todavía guarden la medida en celdas.
+## Retirar cuando todos los `.tres` y recursos externos soportados usen
+## `combat_footprint_modules` y exista una migración de recursos versionada.
 @export_storage var combat_footprint_cells: int = 0
 @export_range(0.1, 5.0, 0.05) var collision_radius: float = 0.35
 @export_range(0.1, 5.0, 0.05) var collision_height: float = 1.6

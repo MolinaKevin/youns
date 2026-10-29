@@ -41,7 +41,7 @@ func _build() -> void:
 	back.custom_minimum_size = Vector2(160, 44)
 	back.pressed.connect(_on_back)
 
-	var cards: Array[CardData] = GameState.player_save.saved_cards if GameState.player_save else ([] as Array[CardData])
+	var cards: Array[CardData] = GameState.save_service.player_save.saved_cards if GameState.save_service.player_save else ([] as Array[CardData])
 	if cards.is_empty():
 		var empty := Label.new()
 		empty.text = LocalizationState.t("reincarnated.empty")

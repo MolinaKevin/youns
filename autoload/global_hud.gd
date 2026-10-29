@@ -49,19 +49,19 @@ func set_youns_status_visible(visible: bool) -> void:
 	youns_status_visibility_changed.emit(visible)
 
 func has_persistent_clock_ui() -> bool:
-	return DebugSettings.developer_tools_enabled or (GameState.player_save != null and GameState.player_save.clock_ui_unlocked)
+	return DebugSettings.developer_tools_enabled or (GameState.save_service.player_save != null and GameState.save_service.player_save.clock_ui_unlocked)
 
 func has_persistent_care_ui() -> bool:
-	return GameState.player_save != null and GameState.player_save.care_ui_unlocked
+	return GameState.save_service.player_save != null and GameState.save_service.player_save.care_ui_unlocked
 
 func sync_overworld_ui_visibility() -> void:
 	set_clock_visible(has_persistent_clock_ui())
 	set_youns_status_visible(has_persistent_care_ui())
 
 func notify_youns_status_changed() -> void:
-	if GameState.player_save == null:
+	if GameState.save_service.player_save == null:
 		return
-	youns_status_changed.emit(GameState.player_save.discipline, GameState.player_save.care_mistakes)
+	youns_status_changed.emit(GameState.save_service.player_save.discipline, GameState.save_service.player_save.care_mistakes)
 
 func _ensure_day_clock_ui() -> void:
 	if is_instance_valid(_day_clock_ui):

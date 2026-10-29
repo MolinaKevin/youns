@@ -11,7 +11,7 @@ func _ready() -> void:
 	super._ready()
 	$LabWarp.body_entered.connect(_on_lab_warp_entered)
 	LaboratoryState.recipe_completed.connect(_on_recipe_completed)
-	LaboratoryState.recipes_loaded.connect(_refresh_river_bridge)
+	call_deferred("_refresh_after_laboratory_load")
 	_fix_map_vertex_colors("CityMap")
 	_refresh_demo_bridge_visibility()
 	_refresh_constructions()
@@ -41,6 +41,10 @@ func _on_recipe_completed(recipe: Resource) -> void:
 		_refresh_demo_bridge_visibility()
 	_refresh_constructions()
 
+func _refresh_after_laboratory_load() -> void:
+	await LaboratoryState.ensure_loaded()
+	_refresh_constructions()
+
 ## Aplica las estructuras declaradas para esta zona. Cada construcción puede
 ## aportar escena, posición y un collider que se desactiva al desbloquearse.
 func _refresh_constructions() -> void:
@@ -48,13 +52,8 @@ func _refresh_constructions() -> void:
 		_refresh_construction(construction)
 
 
-func _refresh_river_bridge() -> void:
-	# Compatibilidad con la señal de recetas ya conectada en esta escena.
-	_refresh_constructions()
-
-
 func _refresh_construction(construction: WorldConstruction) -> void:
-	var progress := GameState.player_save.world_progress if GameState.player_save else null
+	var progress := GameState.save_service.player_save.world_progress if GameState.save_service.player_save else null
 	var built := progress != null and progress.has_construction(construction.id)
 	var blocker := get_node_or_null(construction.blocker_path) as CollisionShape3D
 	if blocker != null:

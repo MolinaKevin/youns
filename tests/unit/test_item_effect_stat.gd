@@ -6,13 +6,13 @@ var _youn_backup: Node
 
 func before_each() -> void:
 	save = PlayerSaveData.new()
-	GameState.player_save = save
+	GameState.save_service.player_save = save
 	_youn_backup = PartyManager.youn
 	PartyManager.youn = null
 
 
 func after_each() -> void:
-	GameState.player_save = null
+	GameState.save_service.player_save = null
 	PartyManager.youn = _youn_backup
 
 

@@ -8,19 +8,19 @@ var _youn_backup: Node
 
 
 func before_each() -> void:
-	GameState.player_save = PlayerSaveData.new()
+	GameState.save_service.player_save = PlayerSaveData.new()
 	StatsManager.emotion_service.active_states.clear()
 	StatsManager.emotion_service.active_states["bathroom"] = {"hour": 0.0, "stat_value": 100.0}
-	GameState.player_save.ganas_bano = 80
-	GameState.player_save.poop_pending = 2.0
-	GameState.player_save.weight = 20.0
+	GameState.save_service.player_save.ganas_bano = 80
+	GameState.save_service.player_save.poop_pending = 2.0
+	GameState.save_service.player_save.weight = 20.0
 	_youn_backup = PartyManager.youn
 	PartyManager.youn = null
 
 
 func after_each() -> void:
 	StatsManager.emotion_service.active_states.clear()
-	GameState.player_save = null
+	GameState.save_service.player_save = null
 	PartyManager.youn = _youn_backup
 
 
@@ -33,37 +33,37 @@ func test_attend_bathroom_limpia_emocion() -> void:
 
 func test_attend_bathroom_resetea_ganas_bano() -> void:
 	StatsManager.care_service.attend_bathroom()
-	assert_eq(GameState.player_save.ganas_bano, 0)
+	assert_eq(GameState.save_service.player_save.ganas_bano, 0)
 
 
 func test_attend_bathroom_resetea_poop_pending() -> void:
 	StatsManager.care_service.attend_bathroom()
-	assert_almost_eq(GameState.player_save.poop_pending, 0.0, 0.001)
+	assert_almost_eq(GameState.save_service.player_save.poop_pending, 0.0, 0.001)
 
 
 func test_attend_bathroom_reduce_peso() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 0
 	StatsManager.care_service.attend_bathroom(rng)
-	assert_lt(GameState.player_save.weight, 20.0)
+	assert_lt(GameState.save_service.player_save.weight, 20.0)
 
 
 func test_attend_bathroom_no_aplica_penalizacion_felicidad() -> void:
-	GameState.player_save.felicidad = 100
+	GameState.save_service.player_save.felicidad = 100
 	StatsManager.care_service.attend_bathroom()
-	assert_eq(GameState.player_save.felicidad, 100)
+	assert_eq(GameState.save_service.player_save.felicidad, 100)
 
 
 func test_attend_bathroom_no_aplica_penalizacion_salud() -> void:
-	GameState.player_save.salud = 100
+	GameState.save_service.player_save.salud = 100
 	StatsManager.care_service.attend_bathroom()
-	assert_eq(GameState.player_save.salud, 100)
+	assert_eq(GameState.save_service.player_save.salud, 100)
 
 
 func test_attend_bathroom_no_suma_care_mistake() -> void:
-	GameState.player_save.care_mistakes = 0
+	GameState.save_service.player_save.care_mistakes = 0
 	StatsManager.care_service.attend_bathroom()
-	assert_eq(GameState.player_save.care_mistakes, 0)
+	assert_eq(GameState.save_service.player_save.care_mistakes, 0)
 
 
 # ── accidente — apply_bathroom_accident() ────────────────────────────────────
@@ -75,35 +75,35 @@ func test_accidente_limpia_emocion() -> void:
 
 func test_accidente_resetea_ganas_bano() -> void:
 	StatsManager.care_service.apply_bathroom_accident()
-	assert_eq(GameState.player_save.ganas_bano, 0)
+	assert_eq(GameState.save_service.player_save.ganas_bano, 0)
 
 
 func test_accidente_resetea_poop_pending() -> void:
 	StatsManager.care_service.apply_bathroom_accident()
-	assert_almost_eq(GameState.player_save.poop_pending, 0.0, 0.001)
+	assert_almost_eq(GameState.save_service.player_save.poop_pending, 0.0, 0.001)
 
 
 func test_accidente_reduce_peso() -> void:
 	StatsManager.care_service.apply_bathroom_accident()
-	assert_lt(GameState.player_save.weight, 20.0)
+	assert_lt(GameState.save_service.player_save.weight, 20.0)
 
 
 func test_accidente_aplica_penalizacion_felicidad() -> void:
-	GameState.player_save.felicidad = 100
+	GameState.save_service.player_save.felicidad = 100
 	StatsManager.care_service.apply_bathroom_accident()
-	assert_eq(GameState.player_save.felicidad, 90)
+	assert_eq(GameState.save_service.player_save.felicidad, 90)
 
 
 func test_accidente_aplica_penalizacion_salud() -> void:
-	GameState.player_save.salud = 100
+	GameState.save_service.player_save.salud = 100
 	StatsManager.care_service.apply_bathroom_accident()
-	assert_eq(GameState.player_save.salud, 95)
+	assert_eq(GameState.save_service.player_save.salud, 95)
 
 
 func test_accidente_suma_care_mistake() -> void:
-	GameState.player_save.care_mistakes = 0
+	GameState.save_service.player_save.care_mistakes = 0
 	StatsManager.care_service.apply_bathroom_accident()
-	assert_eq(GameState.player_save.care_mistakes, 1)
+	assert_eq(GameState.save_service.player_save.care_mistakes, 1)
 
 
 # ── vencimiento — la hora de bathroom se cumple sin ir al baño ───────────────
@@ -117,21 +117,21 @@ func _vencer_bathroom() -> void:
 
 
 func test_bathroom_vencido_vacia_las_ganas() -> void:
-	GameState.player_save.ganas_bano = 100
+	GameState.save_service.player_save.ganas_bano = 100
 	_vencer_bathroom()
-	assert_eq(GameState.player_save.ganas_bano, 0)
+	assert_eq(GameState.save_service.player_save.ganas_bano, 0)
 	assert_false("bathroom" in StatsManager.emotion_service.active_states)
 
 
 func test_bathroom_vencido_aplica_la_perdida_de_peso() -> void:
 	_vencer_bathroom()
-	assert_lt(GameState.player_save.weight, 20.0)
-	assert_eq(GameState.player_save.poop_pending, 0.0)
+	assert_lt(GameState.save_service.player_save.weight, 20.0)
+	assert_eq(GameState.save_service.player_save.poop_pending, 0.0)
 
 
 func test_bathroom_vencido_no_vuelve_a_aparecer_enseguida() -> void:
 	# antes: las ganas quedaban en 100 y bathroom reaparecía y vencía en loop
-	GameState.player_save.ganas_bano = 100
+	GameState.save_service.player_save.ganas_bano = 100
 	_vencer_bathroom()
 	StatsManager.emotion_service.evaluate_rules()
 	assert_false("bathroom" in StatsManager.emotion_service.active_states)

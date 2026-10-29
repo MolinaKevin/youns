@@ -154,6 +154,10 @@ Pendientes conocidos, agrupados por sistema. Al resolver uno, borrarlo de acá.
 
 ## Limpieza
 
+- [ ] **Retirar puentes de compatibilidad** cuando se cumplan los criterios de
+      [`docs/compatibilidad_datos.md`](compatibilidad_datos.md) en
+      `AiStrategy`, `YounData`, `WorldProgressData` y `ZoneHub`.
+
 - [ ] **Inteligencias de cartas base, aproximadas por color viejo**: al sacar
       el campo `color` de `CardAction` (ahora se deriva de `intelligence`),
       las 106 mitades de los 53 `.tres` de `data/cards/` más

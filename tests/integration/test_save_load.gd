@@ -14,7 +14,7 @@ func before_all() -> void:
 
 func before_each() -> void:
 	_backup = {
-		"save": GameState.player_save, "path": GameState.save_service.save_path,
+		"save": GameState.save_service.player_save, "path": GameState.save_service.save_path,
 		"session": GameState.save_service.session_active, "day": GameState.current_day,
 		"hour": GameState.time_of_day_hours, "intro": GameState.save_service.world_intro_seen,
 		"states": StatsManager.emotion_service.active_states.duplicate(true),
@@ -30,7 +30,7 @@ func before_each() -> void:
 func after_each() -> void:
 	if FileAccess.file_exists(TEST_PATH):
 		DirAccess.remove_absolute(TEST_PATH)
-	GameState.player_save = _backup["save"]
+	GameState.save_service.player_save = _backup["save"]
 	GameState.save_service.save_path = _backup["path"]
 	GameState.save_service.session_active = _backup["session"]
 	GameState.current_day = _backup["day"]
@@ -58,7 +58,7 @@ func test_sin_archivo_no_hay_partida_para_continuar() -> void:
 
 func test_guardar_y_cargar_conserva_la_partida() -> void:
 	GameState.start_new_game()
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	ps.gold = 777
 	YounStatRules.gain(ps, "fuerza", 25)
 	DeckRules.cards(ps)[0].top.intelligence = "musical"
@@ -72,12 +72,12 @@ func test_guardar_y_cargar_conserva_la_partida() -> void:
 	assert_true(GameState.has_saved_game())
 
 	# Otra partida en memoria (sin guardar), y después se carga la guardada.
-	GameState.player_save = PlayerSaveData.new()
+	GameState.save_service.player_save = PlayerSaveData.new()
 	GameState.current_day = 1
 	StatsManager.emotion_service.active_states.clear()
 	assert_true(GameState.load_game())
 
-	var loaded := GameState.player_save
+	var loaded := GameState.save_service.player_save
 	assert_eq(loaded.gold, 777)
 	assert_eq(YounStatRules.current(loaded, "fuerza"), GameState.STARTING_STATS["fuerza"] + 25)
 	assert_eq(loaded.deck[0].top.intelligence, "musical")
@@ -86,7 +86,7 @@ func test_guardar_y_cargar_conserva_la_partida() -> void:
 	assert_almost_eq(GameState.time_of_day_hours, 15.5, 0.001)
 	assert_true(GameState.save_service.world_intro_seen)
 	assert_true("hungry" in StatsManager.emotion_service.active_states)
-	assert_true(GameState.player_save.world_progress.north_trail_open)
+	assert_true(GameState.save_service.player_save.world_progress.north_trail_open)
 	assert_true(ZoneManager.north_trail_open, "el desbloqueo del sendero también se restaura")
 
 
@@ -97,7 +97,7 @@ func test_partida_nueva_arranca_de_cero() -> void:
 	assert_eq(GameState.current_day, 1)
 	assert_almost_eq(GameState.time_of_day_hours, 8.0, 0.001)
 	assert_true(StatsManager.emotion_service.active_states.is_empty())
-	assert_eq(GameState.player_save.current_youn_path, GameState.STARTING_YOUN_PATH)
+	assert_eq(GameState.save_service.player_save.current_youn_path, GameState.STARTING_YOUN_PATH)
 
 
 func test_un_archivo_sin_youn_no_cuenta_como_partida() -> void:
@@ -114,7 +114,7 @@ func test_se_guarda_donde_esta_el_jugador_y_continuar_lo_deja_listo() -> void:
 	GameState.start_new_game()
 	PartyManager.place_at(Vector3(12, 1, -7))
 	GameState.save_player_save()
-	GameState.player_save = PlayerSaveData.new()
+	GameState.save_service.player_save = PlayerSaveData.new()
 	assert_true(GameState.load_game())
 	var entry := GameState.world_entry
 	assert_true(entry.pending)
@@ -149,7 +149,7 @@ func test_la_investigacion_en_curso_sigue_al_cargar() -> void:
 	GameState.save_player_save()
 	LaboratoryState.pause_active_recipe()
 	LaboratoryState.recipe_progress.clear()
-	GameState.player_save = PlayerSaveData.new()
+	GameState.save_service.player_save = PlayerSaveData.new()
 	assert_true(GameState.load_game())
 	assert_eq(LaboratoryState.active_recipe_id, "producir_datos")
 	assert_gt(LaboratoryState.get_current_progress("producir_datos"), 0.45)

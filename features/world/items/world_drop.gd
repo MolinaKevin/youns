@@ -13,5 +13,5 @@ func _on_body_entered(body: Node3D) -> void:
 	if body != PartyManager.player:
 		return
 	if gold_amount > 0:
-		GameState.player_save.gold += gold_amount
+		GameState.save_service.player_save.gold += gold_amount
 	queue_free()

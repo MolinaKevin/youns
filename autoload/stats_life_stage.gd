@@ -25,7 +25,7 @@ func _init(states: Callable, block_emotions: Callable, unblock_emotions: Callabl
 
 ## Salud en 0: el Youn muere (sin dejar carta) y el jugador pierde una vida.
 func check_health_death() -> bool:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	if ps == null or ps.salud > 0 or ps.current_youn_path.is_empty():
 		return false
 	var states: Dictionary = _states.call()
@@ -35,7 +35,7 @@ func check_health_death() -> bool:
 	return true
 
 func check_evolution() -> void:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	if ps == null or ps.current_youn_path.is_empty():
 		return
 	if not ResourceLoader.exists(ps.current_youn_path):
@@ -56,7 +56,7 @@ func check_evolution() -> void:
 ## El Youn muere: por fin de su vida (campeón sin ultimate, o ultimate al
 ## terminar su tiempo) o por salud en 0 (ReincarnationRules.CAUSE_*).
 func start_reincarnation(cause := ReincarnationRules.CAUSE_AGE) -> void:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	var states: Dictionary = _states.call()
 	if ps == null or "dying" in states:
 		return
@@ -71,7 +71,7 @@ func start_reincarnation(cause := ReincarnationRules.CAUSE_AGE) -> void:
 ## Nace el bebé elegido, con la carta heredada (ver ReincarnationRules). Si
 ## murió por salud, el jugador pierde una vida.
 func complete_reincarnation(baby: YounData, inherited: CardData) -> void:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	if ps == null or baby == null:
 		return
 	var states: Dictionary = _states.call()
@@ -86,7 +86,7 @@ func complete_reincarnation(baby: YounData, inherited: CardData) -> void:
 	_queue_stat_changed.call()
 
 func start_evolution(to_path: String) -> void:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	if ps == null or to_path.is_empty():
 		return
 	var from_data: YounData = null
@@ -113,7 +113,7 @@ func start_evolution(to_path: String) -> void:
 ##  "discovery": condición descubierta (ver EvolutionDiscovery.discover)}.
 ## Recolorear mitades y agregar líneas lo elige el jugador en esa pantalla.
 func complete_evolution() -> Dictionary:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	if ps == null or ps.pending_evolution_path.is_empty():
 		return {}
 	var from_data: YounData = null

@@ -5,7 +5,7 @@ const ACTIVATION_HOUR := 24.0  # día 1, medianoche
 
 
 func before_each() -> void:
-	GameState.player_save = PlayerSaveData.new()
+	GameState.save_service.player_save = PlayerSaveData.new()
 	GameState.current_day = 1
 	GameState.time_of_day_hours = 0.0
 	StatsManager.emotion_service.active_states.clear()
@@ -14,7 +14,7 @@ func before_each() -> void:
 
 func after_each() -> void:
 	StatsManager.emotion_service.active_states.clear()
-	GameState.player_save = null
+	GameState.save_service.player_save = null
 
 
 func _set_time_elapsed(hours: float) -> void:
@@ -38,38 +38,38 @@ func test_hungry_expira_al_cumplirse_el_tiempo() -> void:
 # ── penalizaciones al expirar ─────────────────────────────────────────────────
 
 func test_hungry_expirado_reduce_energia() -> void:
-	GameState.player_save.energia = 100
+	GameState.save_service.player_save.energia = 100
 	_set_time_elapsed(HUNGRY_DURATION)
 	StatsManager.emotion_service.check_expirations()
-	assert_eq(GameState.player_save.energia, 70)
+	assert_eq(GameState.save_service.player_save.energia, 70)
 
 
 func test_hungry_expirado_aumenta_estres() -> void:
-	GameState.player_save.estres = 0
+	GameState.save_service.player_save.estres = 0
 	_set_time_elapsed(HUNGRY_DURATION)
 	StatsManager.emotion_service.check_expirations()
-	assert_eq(GameState.player_save.estres, 30)
+	assert_eq(GameState.save_service.player_save.estres, 30)
 
 
 func test_hungry_expirado_reduce_salud() -> void:
-	GameState.player_save.salud = 100
+	GameState.save_service.player_save.salud = 100
 	_set_time_elapsed(HUNGRY_DURATION)
 	StatsManager.emotion_service.check_expirations()
-	assert_eq(GameState.player_save.salud, 60)
+	assert_eq(GameState.save_service.player_save.salud, 60)
 
 
 func test_hungry_expirado_resetea_hambre() -> void:
-	GameState.player_save.hambre = 100
+	GameState.save_service.player_save.hambre = 100
 	_set_time_elapsed(HUNGRY_DURATION)
 	StatsManager.emotion_service.check_expirations()
-	assert_eq(GameState.player_save.hambre, 0)
+	assert_eq(GameState.save_service.player_save.hambre, 0)
 
 
 func test_hungry_expirado_suma_care_mistake() -> void:
-	GameState.player_save.care_mistakes = 0
+	GameState.save_service.player_save.care_mistakes = 0
 	_set_time_elapsed(HUNGRY_DURATION)
 	StatsManager.emotion_service.check_expirations()
-	assert_eq(GameState.player_save.care_mistakes, 1)
+	assert_eq(GameState.save_service.player_save.care_mistakes, 1)
 
 
 # ── calc_hambre_delta ─────────────────────────────────────────────────────────

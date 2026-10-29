@@ -89,7 +89,7 @@ func _build_guests(center: Vector3) -> void:
 		var data := load(GUEST_PATHS[index]) as YounData
 		if data == null:
 			continue
-		if GameState.player_save != null and data.resource_path == GameState.player_save.current_youn_path:
+		if GameState.save_service.player_save != null and data.resource_path == GameState.save_service.player_save.current_youn_path:
 			continue
 		var angle := TAU * float(index) / float(GUEST_PATHS.size())
 		var position := center + Vector3(sin(angle) * RING_RADIUS, 0.0, -2.3 - cos(angle) * RING_RADIUS)
@@ -195,13 +195,13 @@ func _speak() -> void:
 	var pachamama := load(PACHAMAMA_PATH) as YounData
 	if pachamama == null:
 		return
-	var player_name := GameState.player_save.player_name if GameState.player_save != null else "viajero"
+	var player_name := GameState.save_service.player_save.player_name if GameState.save_service.player_save != null else "viajero"
 	DialogueLines.say_many(pachamama, [
 		"Mirá a tu alrededor, %s." % player_name,
 		"Cada Youn que ves tiene un camino, un vínculo y un corazón propio.",
 	])
 	await Dialogue.dialogue_finished
-	var companion_name := GameState.player_save.companion_name if GameState.player_save != null else "tu compañero"
+	var companion_name := GameState.save_service.player_save.companion_name if GameState.save_service.player_save != null else "tu compañero"
 	DialogueLines.say_many(pachamama, ["Pero hay alguien que ya eligió caminar a tu lado. Conocé a %s." % companion_name])
 	await Dialogue.dialogue_finished
 	await _turn_player_toward(0.0)

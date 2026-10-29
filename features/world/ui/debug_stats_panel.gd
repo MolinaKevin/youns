@@ -206,7 +206,7 @@ func _refresh() -> void:
 		else:
 			_anim_player_val.text = "-"
 	_refresh_position()
-	var ps: PlayerSaveData = game_state.player_save if game_state else null
+	var ps: PlayerSaveData = game_state.save_service.player_save if game_state else null
 	if ps == null:
 		return
 	for key in _value_labels:

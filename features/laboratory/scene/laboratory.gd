@@ -45,13 +45,15 @@ func _ready() -> void:
 	LaboratoryState.recipe_completed.connect(_on_recipe_completed)
 	LaboratoryState.recipe_unlocked.connect(_on_recipe_unlocked)
 	LaboratoryState.pending_output_changed.connect(_sync_pending_output)
-	LaboratoryState.recipes_loaded.connect(_on_recipes_loaded)
 	LocalizationState.language_changed.connect(_apply_localized_text)
 	close_button.pressed.connect(_close_or_return)
 	_apply_mode_state()
 	_apply_localized_text()
-	if LaboratoryState.all_recipes.size() > 0:
-		_on_recipes_loaded()
+	call_deferred("_load_and_refresh")
+
+func _load_and_refresh() -> void:
+	await LaboratoryState.ensure_loaded()
+	_refresh_after_load()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if standalone_mode and event.is_action_pressed("ui_cancel"):
@@ -71,7 +73,7 @@ func _set_view(view: String) -> void:
 	$RootVBox/ContentHBox/OutputPanel.visible = is_recipes
 	$RootVBox/ContentHBox/LocationPanel.visible = is_recipes
 
-func _on_recipes_loaded() -> void:
+func _refresh_after_load() -> void:
 	_build_location_sidebar()
 	_sync_pending_output()
 
@@ -190,7 +192,7 @@ func _on_take_all() -> void:
 	if not interaction_enabled:
 		return
 	var taken := LaboratoryState.take_all_output()
-	var save := GameState.player_save
+	var save := GameState.save_service.player_save
 	var remaining := {}
 	for item_id in taken:
 		var entry: Dictionary = taken[item_id]

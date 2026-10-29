@@ -11,8 +11,10 @@ const GAME_WORLD := "res://features/world/game_world/game_world.tscn"
 const HUB_SCENE := "res://features/world/zones/zone_hub.tscn"
 const NEWEN_PATH := "res://data/youns/newen.tres"
 const NGURUVILU_PATH := "res://data/youns/nguruvilu.tres"
+const Preloader := preload("res://features/world/game_world/new_game_ceremony_preloader.gd")
 const ENTRANCE_SECONDS := 6.5
-const WALK_ANIMATION_SPEED := 0.55
+## Mantiene el ciclo de caminata sincronizado con el mismo modelo en el mundo.
+const WALK_ANIMATION_SPEED := 1.0
 const MODEL_SCALE_MULTIPLIER := 1.45
 const MODEL_HEIGHT_OFFSET := 0.8
 
@@ -22,8 +24,7 @@ var _sequence_completed := false
 var _entering_world := false
 var _player_name := "Viajero"
 var _companion_name := ""
-var _world_preload_started := false
-var _hub_preload_started := false
+var _preloader := Preloader.new()
 
 
 func _ready() -> void:
@@ -43,52 +44,16 @@ func _ready() -> void:
 	print("[NewGameCeremony:%s] Pachamama cargada: id=%s." % [get_instance_id(), _data.id])
 	_build_black_stage()
 	_request_world_preload()
-	_request_hub_preload()
 	print("[NewGameCeremony:%s] Escenario negro, cámara y modelo construidos; difiriendo secuencia." % get_instance_id())
 	_run.call_deferred()
 
 
 func _request_world_preload() -> void:
-	var error := ResourceLoader.load_threaded_request(GAME_WORLD, "PackedScene", true)
-	if error == OK:
-		_world_preload_started = true
-		print("[NewGameCeremony:%s] Precarga de GameWorld iniciada." % get_instance_id())
-	else:
-		push_warning("NewGameCeremony: no se pudo iniciar la precarga de GameWorld (%s)." % error)
-
-
-func _request_hub_preload() -> void:
-	var error := ResourceLoader.load_threaded_request(HUB_SCENE, "PackedScene", true)
-	if error == OK:
-		_hub_preload_started = true
-		print("[NewGameCeremony:%s] Precarga de la zona hub iniciada." % get_instance_id())
-	else:
-		push_warning("NewGameCeremony: no se pudo iniciar la precarga de hub (%s)." % error)
+	_preloader.request(GAME_WORLD, HUB_SCENE)
 
 
 func _collect_preloaded_world() -> void:
-	if not _world_preload_started:
-		return
-	var status := ResourceLoader.load_threaded_get_status(GAME_WORLD)
-	if status == ResourceLoader.THREAD_LOAD_LOADED:
-		GameState.preloaded_game_world = ResourceLoader.load_threaded_get(GAME_WORLD) as PackedScene
-		print("[NewGameCeremony:%s] GameWorld ya estaba cargado en segundo plano." % get_instance_id())
-	elif status == ResourceLoader.THREAD_LOAD_FAILED:
-		push_warning("NewGameCeremony: falló la precarga de GameWorld; se cargará normalmente.")
-	else:
-		print("[NewGameCeremony:%s] GameWorld sigue cargando; WorldLoading usará el flujo normal." % get_instance_id())
-	if not _hub_preload_started:
-		return
-	var hub_status := ResourceLoader.load_threaded_get_status(HUB_SCENE)
-	if hub_status == ResourceLoader.THREAD_LOAD_LOADED:
-		var hub_scene := ResourceLoader.load_threaded_get(HUB_SCENE) as PackedScene
-		if hub_scene != null:
-			GameState.preloaded_zone_scenes[HUB_SCENE] = hub_scene
-			print("[NewGameCeremony:%s] La zona hub ya estaba cargada en segundo plano." % get_instance_id())
-	elif hub_status == ResourceLoader.THREAD_LOAD_FAILED:
-		push_warning("NewGameCeremony: falló la precarga de hub; se cargará normalmente.")
-	else:
-		print("[NewGameCeremony:%s] Hub sigue cargando; ZoneManager usará el flujo normal." % get_instance_id())
+	_preloader.collect(GAME_WORLD, HUB_SCENE)
 
 
 func _build_black_stage() -> void:
@@ -211,7 +176,7 @@ func _ask(question: String, options: Array[String], confirm_choice := true) -> i
 
 
 func _apply_starting_youn(path: String) -> void:
-	var save := GameState.player_save
+	var save := GameState.save_service.player_save
 	if save == null:
 		return
 	GameState.save_service.setup_starting_youn(save, GameState.get_total_hours(), path)
@@ -219,7 +184,7 @@ func _apply_starting_youn(path: String) -> void:
 
 
 func _starting_youn_name() -> String:
-	var save := GameState.player_save
+	var save := GameState.save_service.player_save
 	if save == null:
 		return "Compañero"
 	var data := load(save.current_youn_path) as YounData
@@ -227,7 +192,7 @@ func _starting_youn_name() -> String:
 
 
 func _save_ceremony_names() -> void:
-	var save := GameState.player_save
+	var save := GameState.save_service.player_save
 	if save == null:
 		return
 	save.player_name = _player_name

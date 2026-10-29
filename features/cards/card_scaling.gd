@@ -6,7 +6,7 @@ extends RefCounted
 ## Las estadísticas actuales de la partida más el peso ("peso"); si todavía no
 ## hay (p. ej. combate abierto directo desde el editor), la base del Youn del grupo.
 static func player_stats() -> Dictionary:
-	var save: PlayerSaveData = GameState.player_save
+	var save: PlayerSaveData = GameState.save_service.player_save
 	if save != null and not save.youn_stats.is_empty():
 		var stats: Dictionary = save.youn_stats.duplicate()
 		stats["peso"] = save.weight

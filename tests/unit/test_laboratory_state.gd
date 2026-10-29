@@ -14,14 +14,14 @@ var _previous_recipe_progress: Dictionary
 
 
 func before_each() -> void:
-	_previous_save = GameState.player_save
+	_previous_save = GameState.save_service.player_save
 	_previous_pending_output = LaboratoryState.pending_output.duplicate(true)
 	_previous_unlocked_columns = LaboratoryState.unlocked_columns.duplicate(true)
 	_previous_all_recipes = LaboratoryState.all_recipes.duplicate()
 	_previous_recipes_by_ingredient = LaboratoryState.recipes_by_ingredient.duplicate(true)
 	_previous_active_recipe_id = LaboratoryState.active_recipe_id
 	_previous_recipe_progress = LaboratoryState.recipe_progress.duplicate(true)
-	GameState.player_save = PlayerSaveData.new()
+	GameState.save_service.player_save = PlayerSaveData.new()
 	LaboratoryState.pending_output = {}
 	LaboratoryState.unlocked_columns = []
 	LaboratoryState.all_recipes = []
@@ -31,7 +31,7 @@ func before_each() -> void:
 
 
 func after_each() -> void:
-	GameState.player_save = _previous_save
+	GameState.save_service.player_save = _previous_save
 	LaboratoryState.pending_output = _previous_pending_output.duplicate(true)
 	LaboratoryState.unlocked_columns = _previous_unlocked_columns.duplicate(true)
 	LaboratoryState.all_recipes = _previous_all_recipes.duplicate()
@@ -83,20 +83,20 @@ func test_has_ingredients_count_insuficiente_retorna_false() -> void:
 
 
 func test_has_ingredients_gold_insuficiente_retorna_false() -> void:
-	GameState.player_save.gold = 10
+	GameState.save_service.player_save.gold = 10
 	var recipe := _make_recipe("r", 50, [])
 	assert_false(LaboratoryState.has_ingredients(recipe))
 
 
 func test_has_ingredients_items_del_inventario_del_jugador_no_cuentan() -> void:
 	# El inventario del jugador no es el inventario del lab — no debe satisfacer ingredientes
-	GameState.player_save.inventory_items.append({"id": "wood", "count": 10})
+	GameState.save_service.player_save.inventory_items.append({"id": "wood", "count": 10})
 	var recipe := _make_recipe("r", 0, [{"id": "wood", "amount": 1}])
 	assert_false(LaboratoryState.has_ingredients(recipe))
 
 
 func test_has_ingredients_gold_suficiente_retorna_true() -> void:
-	GameState.player_save.gold = 100
+	GameState.save_service.player_save.gold = 100
 	var recipe := _make_recipe("r", 50, [])
 	assert_true(LaboratoryState.has_ingredients(recipe))
 
@@ -118,10 +118,10 @@ func test_consume_elimina_entrada_cuando_count_llega_a_cero() -> void:
 
 
 func test_consume_deduce_gold_del_save() -> void:
-	GameState.player_save.gold = 100
+	GameState.save_service.player_save.gold = 100
 	var recipe := _make_recipe("r", 30, [])
 	LaboratoryState.consume_ingredients(recipe)
-	assert_eq(GameState.player_save.gold, 70)
+	assert_eq(GameState.save_service.player_save.gold, 70)
 
 
 # ── _process_reward — item ────────────────────────────────────────────────────
@@ -152,14 +152,14 @@ func test_reward_item_en_99_no_incrementa() -> void:
 func test_reward_world_bridge_guarda_el_puente_en_el_progreso() -> void:
 	LaboratoryState.grant_reward({"type": "world_bridge", "id": "river_bridge"}, "r")
 
-	assert_true(GameState.player_save.world_progress.has_construction("river_bridge"))
+	assert_true(GameState.save_service.player_save.world_progress.has_construction("river_bridge"))
 
 
 func test_reward_youn_growth_bonus_se_acumula() -> void:
 	LaboratoryState.grant_reward({"type": "youn_growth_bonus", "value": 2}, "r")
 	LaboratoryState.grant_reward({"type": "youn_growth_bonus", "value": 1}, "r")
 
-	assert_eq(GameState.player_save.lab_youn_growth_bonus, 3)
+	assert_eq(GameState.save_service.player_save.lab_youn_growth_bonus, 3)
 
 
 func test_reward_material_production_agrega_datos_al_deposito() -> void:
@@ -172,7 +172,7 @@ func test_reward_max_hp_se_acumula() -> void:
 	LaboratoryState.grant_reward({"type": "max_hp", "value": 25}, "r")
 	LaboratoryState.grant_reward({"type": "max_hp", "value": 10}, "r")
 
-	assert_eq(GameState.player_save.lab_max_hp_bonus, 35)
+	assert_eq(GameState.save_service.player_save.lab_max_hp_bonus, 35)
 
 
 # ── Ecos de cartas ───────────────────────────────────────────────────────────
@@ -251,7 +251,7 @@ func test_unlock_recipe_no_duplica() -> void:
 	LaboratoryState.all_recipes.append(_make_recipe("r", 0, []))
 	LaboratoryState.unlock_recipe("r")
 	LaboratoryState.unlock_recipe("r")
-	var count := GameState.player_save.unlocked_recipe_ids.filter(func(id): return id == "r").size()
+	var count := GameState.save_service.player_save.unlocked_recipe_ids.filter(func(id): return id == "r").size()
 	assert_eq(count, 1)
 
 
@@ -310,5 +310,5 @@ func test_check_indirect_unlocks_no_desbloquea_si_ya_esta_desbloqueada() -> void
 	# reset save para que unlock_recipe no duplique pero is_recipe_unlocked siga true
 	LaboratoryState.check_indirect_unlocks("wood")
 
-	var count := GameState.player_save.unlocked_recipe_ids.filter(func(id): return id == "advanced").size()
+	var count := GameState.save_service.player_save.unlocked_recipe_ids.filter(func(id): return id == "advanced").size()
 	assert_eq(count, 1)

@@ -46,9 +46,9 @@ func _show_victory(flow: AsyncFlowToken) -> void:
 	if not host.is_flow_active(flow):
 		return
 	if rewarded:
-		GameState.player_save.gold += gold
+		GameState.save_service.player_save.gold += gold
 		var youn = PartyManager.youn
-		YounStatRules.reward(GameState.player_save, Combat.VICTORY_STAT_GAINS,
+		YounStatRules.reward(GameState.save_service.player_save, Combat.VICTORY_STAT_GAINS,
 			youn.youn_data if is_instance_valid(youn) else null)
 		LaboratoryState.deposit_echoes(host.state.echoes_earned)
 	_leave_combat()

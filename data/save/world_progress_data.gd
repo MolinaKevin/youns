@@ -8,6 +8,8 @@ extends Resource
 ## Identificadores de estructuras construidas desde el laboratorio.
 @export var unlocked_construction_ids: Array[String] = []
 ## Campo legado de partidas v2 y anteriores. Se migra a construction_ids.
+## Retirar después de subir la versión mínima de guardado soportada y mantener
+## una migración de importación para esos archivos antiguos.
 @export var unlocked_bridge_ids: Array[String] = []
 
 
@@ -23,4 +25,4 @@ func has_construction(construction_id: String) -> bool:
 func migrate_legacy_bridges() -> void:
 	for bridge_id in unlocked_bridge_ids:
 		unlock_construction(bridge_id)
-		unlocked_bridge_ids.clear()
+	unlocked_bridge_ids.clear()

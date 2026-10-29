@@ -3,6 +3,7 @@ extends RefCounted
 
 const SelectionCoordinatorScript := preload("res://features/combat/scene/combat_player_selection_coordinator.gd")
 const BoardEffectsScript := preload("res://features/combat/scene/combat_player_board_effects.gd")
+const PendingExecutorScript := preload("res://features/combat/scene/combat_pending_action_executor.gd")
 
 # Las acciones espaciales internas usan celdas de CombatGrid. Las líneas
 # "move" se presentan y se configuran en módulos (8 celdas por módulo).
@@ -50,6 +51,7 @@ var _all_actions: Array[CombatPendingAction] = []
 var _current_action: CombatPendingAction = null
 var _selection_coordinator
 var _board_effects
+var _pending_executor
 
 var pending_cell := Vector2(-1.0, -1.0)
 
@@ -98,6 +100,7 @@ func emit_log(key: String, args: Array = []) -> void:
 func _init() -> void:
 	_selection_coordinator = SelectionCoordinatorScript.new(self)
 	_board_effects = BoardEffectsScript.new(self)
+	_pending_executor = PendingExecutorScript.new(self)
 	_move_action = CombatMoveAction.new(self)
 	_attack_action = CombatAttackAction.new(self)
 	_grenade_action = CombatGrenadeAction.new(self)
@@ -274,12 +277,7 @@ func _finish_movement() -> void:
 # ── Execute actions ───────────────────────────────────────────────────────────
 
 func _execute_tile_action(cell: Vector2) -> void:
-	if _current_action == null:
-		return
-	var action := _current_action
-	action.execute(cell)
-	if not action.is_active():
-		_current_action = null
+	_pending_executor.execute(cell)
 
 ## Ejecuta inmediatamente la selección activa. Es útil para entradas no-UI y
 ## conserva el mismo cierre de estado que una confirmación normal.
@@ -290,21 +288,13 @@ func execute_selection_at(cell: Vector2) -> void:
 ## terminar (por ejemplo, ataques). La UI puede seguir usando la versión
 ## inmediata; las pruebas y flujos secuenciales esperan su finalización.
 func execute_selection_at_async(cell: Vector2) -> void:
-	if _current_action == null:
-		return
-	var action := _current_action
-	await action.execute(cell)
-	if not action.is_active():
-		_current_action = null
+	await _pending_executor.execute_async(cell)
 
 func active_selection_index() -> int:
-	return _current_action.index if _current_action != null else -1
+	return _pending_executor.active_index()
 
 func active_selection_range_cells() -> int:
-	if _current_action == null:
-		return -1
-	var range_value: Variant = _current_action.get("range_cells")
-	return int(range_value) if range_value != null else -1
+	return _pending_executor.active_range_cells()
 
 ## Los charcos que pisó el jugador entre `from` y `to` le aplican sus estados
 ## (al moverse, o al caer de un árbol: from == to).

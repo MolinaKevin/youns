@@ -11,7 +11,7 @@ func before_each() -> void:
 	_previous_day = GameState.current_day
 	_previous_time_of_day_hours = GameState.time_of_day_hours
 	_previous_clock_paused = GameState.clock_paused
-	_previous_save = GameState.player_save
+	_previous_save = GameState.save_service.player_save
 	GameState.current_day = 1
 	GameState.time_of_day_hours = 8.0
 
@@ -20,7 +20,7 @@ func after_each() -> void:
 	GameState.current_day = _previous_day
 	GameState.time_of_day_hours = _previous_time_of_day_hours
 	GameState.clock_paused = _previous_clock_paused
-	GameState.player_save = _previous_save
+	GameState.save_service.player_save = _previous_save
 
 
 # ── get_time_string ───────────────────────────────────────────────────────────
@@ -89,8 +89,8 @@ func test_total_hours_increases_with_day() -> void:
 
 func test_discard_pending_ticks_no_emite_los_ticks_salteados() -> void:
 	var was_paused := GameState.clock_paused
-	var save_backup := GameState.player_save
-	GameState.player_save = null  # los ticks no tocan ninguna partida
+	var save_backup := GameState.save_service.player_save
+	GameState.save_service.player_save = null  # los ticks no tocan ninguna partida
 	GameState.clock_paused = false
 	GameState.discard_pending_ticks()
 	var ticks := [0]
@@ -101,14 +101,14 @@ func test_discard_pending_ticks_no_emite_los_ticks_salteados() -> void:
 	GameState.advance_real_seconds(0.0)
 	GameState.twenty_min_ticked.disconnect(count)
 	GameState.clock_paused = was_paused
-	GameState.player_save = save_backup
+	GameState.save_service.player_save = save_backup
 	assert_eq(ticks[0], 0)
 
 
 func test_sin_discard_los_ticks_salteados_se_emiten() -> void:
 	var was_paused := GameState.clock_paused
-	var save_backup := GameState.player_save
-	GameState.player_save = null  # los ticks no tocan ninguna partida
+	var save_backup := GameState.save_service.player_save
+	GameState.save_service.player_save = null  # los ticks no tocan ninguna partida
 	GameState.clock_paused = false
 	GameState.discard_pending_ticks()
 	var ticks := [0]
@@ -118,7 +118,7 @@ func test_sin_discard_los_ticks_salteados_se_emiten() -> void:
 	GameState.advance_real_seconds(0.0)
 	GameState.twenty_min_ticked.disconnect(count)
 	GameState.clock_paused = was_paused
-	GameState.player_save = save_backup
+	GameState.save_service.player_save = save_backup
 	assert_eq(ticks[0], 3)
 
 

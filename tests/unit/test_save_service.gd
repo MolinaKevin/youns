@@ -57,11 +57,13 @@ func test_migrar_v1_con_puente_construido_conserva_el_acceso() -> void:
 func test_migrar_v2_con_puente_guardado_lo_pasa_a_construcciones() -> void:
 	var save := PlayerSaveData.new()
 	save.save_version = 2
-	save.world_progress.unlocked_bridge_ids = ["river_bridge"]
+	save.world_progress = WorldProgressData.new()
+	save.world_progress.unlocked_bridge_ids = ["river_bridge", "north_gate"]
 
 	_service.migrate_save(save)
 
 	assert_true(save.world_progress.has_construction("river_bridge"))
+	assert_true(save.world_progress.has_construction("north_gate"))
 	assert_true(save.world_progress.unlocked_bridge_ids.is_empty())
 
 

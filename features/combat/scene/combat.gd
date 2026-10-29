@@ -140,8 +140,8 @@ func _ready() -> void:
 
 	log_message(LocalizationState.t("combat.started", [_enemy_name]))
 	# Salud baja: las cartas rinden menos (ver CardScaling.health_penalty).
-	if GameState.player_save != null:
-		var penalty := CardScaling.health_penalty(GameState.player_save.salud)
+	if GameState.save_service.player_save != null:
+		var penalty := CardScaling.health_penalty(GameState.save_service.player_save.salud)
 		if penalty > 0.0:
 			log_message(LocalizationState.t("combat.low_health", [roundi(penalty * 100)]))
 	_turn_flow.start_planning()

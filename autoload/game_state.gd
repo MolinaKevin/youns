@@ -15,12 +15,6 @@ var clock: GameClock = GameClock.new()
 var save_service: SaveService = SaveService.new()
 var player_session: PlayerSessionService
 
-## Compatibilidad temporal: todavía hay consumidores de alto nivel que leen la
-## partida desde GameState. Los accesos puntuales nuevos van a SaveService.
-var player_save: PlayerSaveData:
-	get: return save_service.player_save
-	set(value): save_service.player_save = value
-
 var current_day: int:
 	get: return clock.current_day
 	set(value): clock.current_day = maxi(1, value)
@@ -57,7 +51,7 @@ func _ready() -> void:
 			"deny": StatsManager.services.care().deny()
 			"play": StatsManager.services.care().play()
 	player_session = PlayerSessionService.new(
-		func() -> PlayerSaveData: return player_save,
+		func() -> PlayerSaveData: return save_service.player_save,
 		care_action,
 		GlobalHUD.notify_youns_status_changed,
 	)
@@ -72,7 +66,7 @@ func _ready() -> void:
 	)
 	clock.clock_changed.connect(func(hour: float, day: int): clock_changed.emit(hour, day))
 	clock.twenty_min_ticked.connect(func(): twenty_min_ticked.emit())
-	player_save = save_service.make_new_save(get_total_hours())
+	save_service.player_save = save_service.make_new_save(get_total_hours())
 	# Permite abrir la escena de combate directamente durante desarrollo.
 	world_combat.set_preview_youn(load("res://data/youns/newen.tres") as YounData)
 	if DebugLogging.verbose_enabled():

@@ -14,7 +14,7 @@ const ACTIVATION_HOUR := 24.0  # día 1, medianoche
 
 
 func before_each() -> void:
-	GameState.player_save = PlayerSaveData.new()
+	GameState.save_service.player_save = PlayerSaveData.new()
 	GameState.current_day = 1
 	GameState.time_of_day_hours = 0.0
 	StatsManager.emotion_service.active_states.clear()
@@ -22,7 +22,7 @@ func before_each() -> void:
 
 func after_each() -> void:
 	StatsManager.emotion_service.active_states.clear()
-	GameState.player_save = null
+	GameState.save_service.player_save = null
 
 
 # ── tired ─────────────────────────────────────────────────────────────────────
@@ -34,10 +34,10 @@ func test_tired_se_elimina_al_despertar() -> void:
 
 
 func test_tired_no_aplica_penalizacion_al_eliminarse() -> void:
-	GameState.player_save.energia = 50
+	GameState.save_service.player_save.energia = 50
 	StatsManager.emotion_service.active_states["tired"] = {"hour": ACTIVATION_HOUR, "stat_value": 0.0}
 	StatsManager.emotion_service.on_wake_up(8.0)
-	assert_eq(GameState.player_save.energia, 50)
+	assert_eq(GameState.save_service.player_save.energia, 50)
 
 
 # ── bathroom ──────────────────────────────────────────────────────────────────
@@ -65,19 +65,19 @@ func test_bathroom_no_expira_y_se_pausea_si_no_supero_50_porciento() -> void:
 
 
 func test_bathroom_aplica_penalizacion_de_felicidad_al_expirar_durmiendo() -> void:
-	GameState.player_save.felicidad = 100
+	GameState.save_service.player_save.felicidad = 100
 	GameState.time_of_day_hours = BATHROOM_HALF
 	StatsManager.emotion_service.active_states["bathroom"] = {"hour": ACTIVATION_HOUR, "stat_value": 100.0}
 	StatsManager.emotion_service.on_wake_up(1.0)
-	assert_eq(GameState.player_save.felicidad, 90)
+	assert_eq(GameState.save_service.player_save.felicidad, 90)
 
 
 func test_bathroom_aplica_penalizacion_de_salud_al_expirar_durmiendo() -> void:
-	GameState.player_save.salud = 100
+	GameState.save_service.player_save.salud = 100
 	GameState.time_of_day_hours = BATHROOM_HALF
 	StatsManager.emotion_service.active_states["bathroom"] = {"hour": ACTIVATION_HOUR, "stat_value": 100.0}
 	StatsManager.emotion_service.on_wake_up(1.0)
-	assert_eq(GameState.player_save.salud, 95)
+	assert_eq(GameState.save_service.player_save.salud, 95)
 
 
 # ── pausa de emociones ────────────────────────────────────────────────────────

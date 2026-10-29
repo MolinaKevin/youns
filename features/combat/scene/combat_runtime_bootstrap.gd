@@ -66,7 +66,7 @@ func _setup_player(host) -> void:
 		host.map_area.scene.actors.setup_player(youn.youn_data)
 		host._player_name = youn.youn_data.youn_name
 	var player_stat_values := CardScaling.player_stats()
-	var lab_hp_bonus := GameState.player_save.lab_max_hp_bonus if GameState.player_save else 0
+	var lab_hp_bonus := GameState.save_service.player_save.lab_max_hp_bonus if GameState.save_service.player_save else 0
 	host.state.player_hp = YounStatRules.max_hp(player_stat_values, lab_hp_bonus)
 	host.state.player_max_hp = host.state.player_hp
 	host.state.player_max_mp = YounStatRules.max_mp(player_stat_values)

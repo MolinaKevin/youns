@@ -35,7 +35,7 @@ func _ready() -> void:
 	_focus_nav.focus_initial.call_deferred()
 
 func _load_youns() -> void:
-	var save := GameState.player_save
+	var save := GameState.save_service.player_save
 	if save != null:
 		_current_path = save.current_youn_path
 		for key in save.discovered_evolutions:

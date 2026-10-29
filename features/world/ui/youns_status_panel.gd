@@ -18,7 +18,7 @@ func _ready() -> void:
 	GlobalHUD.youns_status_changed.connect(_refresh_status)
 	GlobalHUD.youns_status_visibility_changed.connect(_on_visibility_changed)
 	_apply_localized_text()
-	_refresh_status(GameState.player_save.discipline, GameState.player_save.care_mistakes)
+	_refresh_status(GameState.save_service.player_save.discipline, GameState.save_service.player_save.care_mistakes)
 
 func _exit_tree() -> void:
 	if GlobalHUD.youns_status_changed.is_connected(_refresh_status):

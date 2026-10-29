@@ -106,7 +106,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.keycode == KEY_G and event.pressed and not event.echo:
 		if visible:
 			close()
-		elif not YounInteraction.running:
+		elif not YounInteraction.running and not Dialogue.is_busy() and not GameState.clock_paused:
 			open()
 		return
 

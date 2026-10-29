@@ -11,19 +11,19 @@ var _hour: float
 
 
 func before_each() -> void:
-	_save_backup = GameState.player_save
+	_save_backup = GameState.save_service.player_save
 	_day = GameState.current_day
 	_hour = GameState.time_of_day_hours
 	GameState.current_day = 20
 	GameState.time_of_day_hours = 10.0
-	GameState.player_save = PlayerSaveData.new()
+	GameState.save_service.player_save = PlayerSaveData.new()
 	StatsManager.emotion_service.active_states.clear()
 	while StatsManager.emotion_service.is_blocked():
 		StatsManager.emotion_service.unblock()
 
 
 func after_each() -> void:
-	GameState.player_save = _save_backup
+	GameState.save_service.player_save = _save_backup
 	GameState.current_day = _day
 	GameState.time_of_day_hours = _hour
 	StatsManager.emotion_service.active_states.clear()
@@ -38,7 +38,7 @@ func _inherited() -> CardData:
 
 
 func test_el_campeon_al_terminar_su_vida_empieza_a_morir() -> void:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	ps.current_youn_path = CAMPEON
 	ps.stage_entered_total_hour = GameState.get_total_hours() - 6.5 * 24.0
 	watch_signals(StatsManager)
@@ -49,7 +49,7 @@ func test_el_campeon_al_terminar_su_vida_empieza_a_morir() -> void:
 
 
 func test_mientras_muere_no_vuelve_a_dispararse() -> void:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	ps.current_youn_path = CAMPEON
 	ps.stage_entered_total_hour = GameState.get_total_hours() - 6.5 * 24.0
 	StatsManager.life_stage.check_evolution()
@@ -59,7 +59,7 @@ func test_mientras_muere_no_vuelve_a_dispararse() -> void:
 
 
 func test_la_vida_nueva_es_el_bebe_con_su_mazo_y_la_carta_heredada() -> void:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	ps.current_youn_path = CAMPEON
 	ps.gold = 500
 	ps.discovered_evolutions = {"mboi_tui": []}
@@ -89,7 +89,7 @@ func test_la_vida_nueva_es_el_bebe_con_su_mazo_y_la_carta_heredada() -> void:
 
 
 func test_la_carta_heredada_queda_guardada_para_siempre() -> void:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	var baby: YounData = load(BEBE)
 	StatsManager.life_stage.complete_reincarnation(baby, _inherited())
 	StatsManager.life_stage.complete_reincarnation(baby, (load("res://data/cards/strike.tres") as CardData).clone())
@@ -112,7 +112,7 @@ func test_el_bebe_tiene_mazo_inicial() -> void:
 
 
 func test_la_reencarnacion_desbloquea_el_listado_de_cartas_reencarnadas() -> void:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	assert_false(ps.reincarnated_cards_unlocked)
 	StatsManager.life_stage.complete_reincarnation(load(BEBE), _inherited())
 	assert_true(ps.reincarnated_cards_unlocked)
@@ -122,7 +122,7 @@ func test_la_reencarnacion_desbloquea_el_listado_de_cartas_reencarnadas() -> voi
 # ── muerte por salud y vidas ─────────────────────────────────────────────────
 
 func test_con_salud_en_0_el_youn_muere_por_salud() -> void:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	ps.current_youn_path = "res://data/youns/nguruvilu.tres"
 	ps.salud = 0
 	watch_signals(StatsManager)
@@ -133,7 +133,7 @@ func test_con_salud_en_0_el_youn_muere_por_salud() -> void:
 
 
 func test_morir_por_salud_pierde_una_vida_y_no_deja_carta() -> void:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	ps.current_youn_path = "res://data/youns/nguruvilu.tres"
 	ps.salud = 0
 	StatsManager.check_status()
@@ -145,7 +145,7 @@ func test_morir_por_salud_pierde_una_vida_y_no_deja_carta() -> void:
 
 
 func test_morir_de_viejo_no_pierde_vidas() -> void:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	ps.current_youn_path = CAMPEON
 	ps.stage_entered_total_hour = GameState.get_total_hours() - 6.5 * 24.0
 	StatsManager.life_stage.check_evolution()
@@ -154,7 +154,7 @@ func test_morir_de_viejo_no_pierde_vidas() -> void:
 
 
 func test_las_vidas_no_bajan_de_0() -> void:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	ps.lives = 0
 	ps.current_youn_path = "res://data/youns/nguruvilu.tres"
 	ps.salud = 0

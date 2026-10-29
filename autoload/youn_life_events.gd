@@ -59,7 +59,7 @@ func _current_zone_node() -> Node:
 ## que durmió esta noche y, si estaba enfermo, cuenta para la curación.
 func mark_player_slept() -> void:
 	_slept_this_cycle = true
-	if GameState.player_save != null and GameState.player_save.enfermo:
+	if GameState.save_service.player_save != null and GameState.save_service.player_save.enfermo:
 		_sick_sleep_count += 1
 		if _sick_sleep_count >= 2:
 			_sick_sleep_count = 0
@@ -96,7 +96,7 @@ func _check_end_of_night(hour: float, _day: int) -> void:
 	if not in_sleep and _was_in_sleep_range:
 		if not _slept_this_cycle:
 			StatsManager.services.care().add_stat("salud", -20)
-			if GameState.player_save != null and GameState.player_save.energia < 20:
+			if GameState.save_service.player_save != null and GameState.save_service.player_save.energia < 20:
 				StatsManager.services.care().set_sick(true)
 	_was_in_sleep_range = in_sleep
 
@@ -152,7 +152,7 @@ func _on_reincarnation_triggered(from_data: YounData, cause: String) -> void:
 func restore_pending_reincarnation() -> void:
 	if not "dying" in StatsManager.services.emotions().active_states:
 		return
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	var from_data: YounData = null
 	if ps and not ps.current_youn_path.is_empty() and ResourceLoader.exists(ps.current_youn_path):
 		from_data = load(ps.current_youn_path) as YounData
@@ -170,7 +170,7 @@ func restore_pending_evolution() -> void:
 	var target_path: String = StatsManager.services.emotions().active_states["evolving"].get("target_youn_path", "")
 	if target_path.is_empty():
 		return
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	var from_data: YounData = null
 	if ps and not ps.current_youn_path.is_empty() and ResourceLoader.exists(ps.current_youn_path):
 		from_data = load(ps.current_youn_path) as YounData

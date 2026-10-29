@@ -8,18 +8,18 @@ var _previous_active_states: Dictionary
 var _previous_emotions_blocked := false
 
 func before_each() -> void:
-	_previous_save = GameState.player_save
+	_previous_save = GameState.save_service.player_save
 	_previous_active_states = StatsManager.emotion_service.active_states.duplicate(true)
 	_previous_emotions_blocked = StatsManager.emotion_service.is_blocked()
 	save = PlayerSaveData.new()
-	GameState.player_save = save
+	GameState.save_service.player_save = save
 	StatsManager.emotion_service.active_states.clear()
 	while StatsManager.emotion_service.is_blocked():
 		StatsManager.emotion_service.unblock()
 
 
 func after_each() -> void:
-	GameState.player_save = _previous_save
+	GameState.save_service.player_save = _previous_save
 	StatsManager.emotion_service.active_states = _previous_active_states.duplicate(true)
 	while StatsManager.emotion_service.is_blocked():
 		StatsManager.emotion_service.unblock()

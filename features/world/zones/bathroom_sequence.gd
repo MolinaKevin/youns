@@ -39,7 +39,7 @@ func _on_area_exited(body: Node3D) -> void:
 func _try_start() -> void:
 	if _running:
 		return
-	if GameState.player_save == null or "bathroom" not in StatsManager.services.emotions().active_states:
+	if GameState.save_service.player_save == null or "bathroom" not in StatsManager.services.emotions().active_states:
 		return
 	_run()
 

@@ -17,12 +17,13 @@ signal finished
 
 const Intelligences := preload("res://data/youns/intelligences.gd")
 const CardViewScript := preload("res://features/cards/presentation/card_view.gd")
+const PendingRules := preload("res://features/world/evolution/evolution_pending_rules.gd")
+const SectionRenderer := preload("res://features/world/evolution/evolution_section_renderer.gd")
 const CARD_SCENE := preload("res://features/cards/presentation/card_view.tscn")
 const CARD_SIZE := Vector2(195, 293)
 const GRID_CARD_SCALE := 0.6
 const PANEL_BG := Color(0.04, 0.09, 0.14, 0.97)
 const BORDER := Color(0.35, 0.85, 1.0)
-const GAIN := Color(0.5, 1.0, 0.55)
 const LOSS := Color(1.0, 0.45, 0.4)
 
 enum Section { STATS, COLORS, CARDS, ACTIONS }
@@ -52,7 +53,7 @@ var _card_views := {}
 func setup(result: Dictionary) -> void:
 	_result = result
 	_to = result.get("to")
-	_deck = DeckRules.cards(GameState.player_save)
+	_deck = DeckRules.cards(GameState.save_service.player_save)
 	if _to != null:
 		for id in _to.color_changes:
 			_remaining_colors[id] = _to.color_changes[id]
@@ -105,11 +106,11 @@ func deck_cards() -> Array[CardData]:
 
 ## Indica si el botón Terminar está habilitado para el jugador.
 func is_finish_enabled() -> bool:
-	return can_finish()
+	return PendingRules.can_finish(_remaining_colors, _deck, _used_lines)
 
 ## Intenta terminar la evolución. Devuelve si la pantalla se pudo cerrar.
 func finish() -> bool:
-	if not can_finish():
+	if not PendingRules.can_finish(_remaining_colors, _deck, _used_lines):
 		return false
 	finished.emit()
 	queue_free()
@@ -231,46 +232,14 @@ func _show_section(section: Section) -> void:
 func _build_stats() -> void:
 	var changes: Dictionary = _result.get("stat_changes", {})
 	_hint.text = ""
-	if changes.is_empty():
-		_content.add_child(_note(LocalizationState.t("evolution.no_changes")))
-		return
-	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 40)
-	grid.add_theme_constant_override("v_separation", 8)
-	_content.add_child(grid)
-	for key in YounStats.KEYS:
-		if not changes.has(key):
-			continue
-		var delta: int = changes[key]
-		var name_label := Label.new()
-		name_label.text = LocalizationState.t("youn_stat." + key)
-		name_label.add_theme_font_size_override("font_size", 20)
-		grid.add_child(name_label)
-		var value := Label.new()
-		value.text = ("+%d" if delta > 0 else "%d") % delta
-		value.add_theme_font_size_override("font_size", 20)
-		value.add_theme_color_override("font_color", GAIN if delta > 0 else LOSS)
-		grid.add_child(value)
+	SectionRenderer.build_stats(_content, changes)
 
 # ── Cartas agregadas ────────────────────────────────────────────────────────
 
 func _build_cards() -> void:
 	_hint.text = ""
 	var card: CardData = _result.get("added_card")
-	if card == null:
-		_content.add_child(_note(LocalizationState.t("evolution.no_changes")))
-		return
-	var center := CenterContainer.new()
-	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_content.add_child(center)
-	var holder := Control.new()
-	holder.custom_minimum_size = CARD_SIZE
-	center.add_child(holder)
-	var view = CARD_SCENE.instantiate()
-	view.hover_enabled = false
-	holder.add_child(view)
-	view.setup(card)
+	SectionRenderer.build_card(_content, card)
 
 # ── Cambio de color ─────────────────────────────────────────────────────────
 
@@ -445,22 +414,15 @@ func _undo(type: String) -> void:
 
 ## Colores que quedan por poner.
 func pending_colors() -> int:
-	var total := 0
-	for id in _remaining_colors:
-		total += _remaining_colors[id]
-	return total
+	return PendingRules.pending_colors(_remaining_colors)
 
 ## Acciones que quedan por poner. Si ya no queda ninguna mitad con lugar, no
 ## cuentan (si no, no se podría terminar nunca).
 func pending_lines() -> int:
-	var has_room := _deck.any(func(c: CardData) -> bool:
-		return DeckRules.can_add_line(c.top) or DeckRules.can_add_line(c.bottom))
-	if not has_room:
-		return 0
-	return _used_lines.count(false)
+	return PendingRules.pending_lines(_deck, _used_lines)
 
 func can_finish() -> bool:
-	return pending_colors() == 0 and pending_lines() == 0
+	return PendingRules.can_finish(_remaining_colors, _deck, _used_lines)
 
 ## Marca en el menú lo que falta y habilita "Terminar" cuando no falta nada.
 func _refresh_pending() -> void:

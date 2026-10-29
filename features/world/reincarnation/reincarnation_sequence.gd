@@ -95,7 +95,7 @@ func _run() -> void:
 	await _msg.message(LocalizationState.t("reincarnation.gone", [youn_name]))
 	if by_health:
 		# Las vidas solo se ven acá. Se descuentan al nacer el bebé.
-		var lives := maxi(0, GameState.player_save.lives - 1)
+		var lives := maxi(0, GameState.save_service.player_save.lives - 1)
 		await _msg.message(LocalizationState.t("reincarnation.life_lost"), _msg.hearts(lives, ReincarnationRules.MAX_LIVES))
 
 	# 4. Elige un huevo.
@@ -109,14 +109,14 @@ func _run() -> void:
 	_scene3d.face(youn, player.global_position)
 	youn.visible = true
 	await _scene3d.tween(_flash, "color:a", 0.0, 0.8)
-	var first_unlock := not GameState.player_save.reincarnated_cards_unlocked
+	var first_unlock := not GameState.save_service.player_save.reincarnated_cards_unlocked
 	if card != null:
 		var card_name := LocalizationState.card_name(card.id, card.name)
 		await _msg.message(LocalizationState.t("reincarnation.born", [baby.youn_name, card_name]))
 	else:
 		await _msg.message(LocalizationState.t("reincarnation.born_no_card", [baby.youn_name]))
 	StatsManager.services.life().complete_reincarnation(baby, card)
-	if first_unlock and GameState.player_save.reincarnated_cards_unlocked:
+	if first_unlock and GameState.save_service.player_save.reincarnated_cards_unlocked:
 		await _msg.message(LocalizationState.t("reincarnation.cards_unlocked"))
 	_finish()
 
@@ -153,7 +153,7 @@ func _choose_card() -> CardData:
 	confirm.disabled = true
 	var selected: Array = [null]
 	var views: Array = []
-	for card in DeckRules.cards(GameState.player_save):
+	for card in DeckRules.cards(GameState.save_service.player_save):
 		var holder := Control.new()
 		holder.custom_minimum_size = CARD_SIZE * GRID_SCALE
 		grid.add_child(holder)

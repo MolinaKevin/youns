@@ -112,7 +112,7 @@ func _train(training_id: String) -> void:
 	tween.tween_property(_fade, "color:a", 1.0, FADE_DURATION)
 	tween.tween_callback(func() -> void:
 		GameState.advance_hours(training["hours"])
-		var save := GameState.player_save
+		var save := GameState.save_service.player_save
 		if save:
 			YounStatRules.reward(save, {stat_key: training["amount"]}, _party_youn_data())
 		GlobalHUD.show_toast(LocalizationState.t("gym.result", [_stat_name(), training["amount"]])))

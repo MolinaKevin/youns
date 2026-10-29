@@ -21,7 +21,7 @@ func _init(p_host: Combat) -> void:
 
 func setup_draw_pile() -> void:
 	# El mazo propio de la partida (con lo que le cambiaron las evoluciones).
-	var deck_cards := DeckRules.cards(GameState.player_save)
+	var deck_cards := DeckRules.cards(GameState.save_service.player_save)
 	host.state.draw_pile.assign(deck_cards)
 	host.state.draw_pile.shuffle()
 	host.state.discard_pile.clear()
@@ -148,7 +148,7 @@ func _show_active_line() -> void:
 
 ## Tope de líneas por mitad para la etapa del Youn (DeckRules.line_cap).
 func _line_cap() -> int:
-	return DeckRules.line_cap(YounData.get_active_stage(GameState.player_save))
+	return DeckRules.line_cap(YounData.get_active_stage(GameState.save_service.player_save))
 
 ## "Saltar acción": el controlador gasta la mitad; CombatPlayerActions cancela
 ## la selección y la próxima sincronización avanza a la siguiente línea.

@@ -51,7 +51,7 @@ func _start_new_world_welcome() -> void:
 ## El Youn del grupo es el de la partida: al cargar una en la que ya evolucionó,
 ## el modelo tiene que ser el del Youn actual (party.tscn trae el inicial).
 func _sync_party_youn() -> void:
-	var ps := GameState.player_save
+	var ps := GameState.save_service.player_save
 	var youn := PartyManager.youn
 	if ps == null or not is_instance_valid(youn) or ps.current_youn_path.is_empty():
 		return
@@ -75,10 +75,13 @@ func _restore_saved_location() -> void:
 
 func _input(event: InputEvent) -> void:
 	if Dialogue.is_busy():
-		if Dialogue.handle_input(event):
-			get_viewport().set_input_as_handled()
+		Dialogue.handle_input(event)
+		# Mientras hay diálogo, ninguna otra capa (G, pausa, mapa, etc.)
+		# debe recibir teclas aunque el diálogo no use ese evento.
+		get_viewport().set_input_as_handled()
 		return
 	if _sleeping or intro.handle_input(event):
+		get_viewport().set_input_as_handled()
 		return
 	# El menú rápido (G) usa Enter para elegir, que también abre este menú.
 	if QuickMenu.visible or YounInteraction.running:
@@ -113,8 +116,8 @@ func _restore_after_combat() -> void:
 	PartyManager.youn.velocity = Vector3.ZERO
 	GameState.world_combat.resolve_victory(get_tree())
 	StatsManager.services.care().add_stat("hambre", 30)  # combate ganado: esfuerzo físico
-	if GameState.player_save != null and GameState.player_save.bathroom_pending_after_combat:
-		GameState.player_save.bathroom_pending_after_combat = false
+	if GameState.save_service.player_save != null and GameState.save_service.player_save.bathroom_pending_after_combat:
+		GameState.save_service.player_save.bathroom_pending_after_combat = false
 		StatsManager.services.care().apply_bathroom_accident()
 
 

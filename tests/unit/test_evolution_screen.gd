@@ -9,14 +9,14 @@ var _save_before: PlayerSaveData
 
 
 func before_each() -> void:
-	_save_before = GameState.player_save
+	_save_before = GameState.save_service.player_save
 	var save := PlayerSaveData.new()
 	save.equipped_deck_ids = ["strike", "block"]
-	GameState.player_save = save
+	GameState.save_service.player_save = save
 
 
 func after_each() -> void:
-	GameState.player_save = _save_before
+	GameState.save_service.player_save = _save_before
 	# _show_section() reemplaza controles con queue_free(); dar un frame a Godot
 	# para vaciar esa cola evita que GUT los reporte como huérfanos.
 	await get_tree().process_frame

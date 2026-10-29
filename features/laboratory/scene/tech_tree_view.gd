@@ -6,10 +6,12 @@ const TechTreeLayout := preload("res://features/laboratory/scene/tech_tree_layou
 var _layout: TechTreeLayout
 
 func _ready() -> void:
-	LaboratoryState.recipes_loaded.connect(_build)
 	LaboratoryState.recipe_unlocked.connect(func(_r): _build())
-	if LaboratoryState.all_recipes.size() > 0:
-		_build()
+	call_deferred("_load_and_build")
+
+func _load_and_build() -> void:
+	await LaboratoryState.ensure_loaded()
+	_build()
 
 func _build() -> void:
 	for child in get_children():

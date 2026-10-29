@@ -11,6 +11,7 @@ const RECIPES_DIR := "res://data/lab_recipes"
 const YOUNS_DIR := "res://data/youns"
 const ZONES_DIR := "res://data/zones/definitions"
 const INTELLIGENCES_DIR := "res://data/youns/intelligences"
+const ENEMY_STRATEGIES_DIR := "res://data/enemies/strategies"
 
 
 func _resource_paths(directory: String) -> PackedStringArray:
@@ -97,6 +98,20 @@ func test_youns_referencian_inteligencias_y_evoluciones_validas() -> void:
 		for evolution_path in youn.evolves_to:
 			assert_true(ResourceLoader.exists(evolution_path), "Evolución inexistente '%s' en %s" % [evolution_path, path])
 			assert_true(ResourceLoader.load(evolution_path) is YounData, "La evolución debe ser un YounData: %s" % evolution_path)
+
+
+func test_las_estrategias_de_enemigos_usan_fases() -> void:
+	for path in _resource_paths(ENEMY_STRATEGIES_DIR):
+		var strategy := ResourceLoader.load(path) as AiStrategy
+		assert_not_null(strategy, "Estrategia inválida: %s" % path)
+		assert_false(strategy.initial_phase.is_empty(), "Estrategia sin fase inicial: %s" % path)
+		assert_gt(strategy.phases.size(), 0, "Estrategia sin fases: %s" % path)
+
+
+func test_los_recursos_del_repositorio_no_usan_huella_legacy() -> void:
+	for path in _resource_paths(YOUNS_DIR):
+		var source := FileAccess.get_file_as_string(path)
+		assert_false(source.contains("combat_footprint_cells"), "Huella legacy en %s" % path)
 
 
 func test_zonas_tienen_escena_y_conexiones_bidireccionales() -> void:

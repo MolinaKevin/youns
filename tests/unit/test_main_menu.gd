@@ -6,12 +6,12 @@ var _save_before: PlayerSaveData
 
 
 func before_each() -> void:
-	_save_before = GameState.player_save
-	GameState.player_save = PlayerSaveData.new()
+	_save_before = GameState.save_service.player_save
+	GameState.save_service.player_save = PlayerSaveData.new()
 
 
 func after_each() -> void:
-	GameState.player_save = _save_before
+	GameState.save_service.player_save = _save_before
 
 
 func _menu() -> Control:
@@ -29,7 +29,7 @@ func test_el_item_bloqueado_no_esta_en_la_lista_visible() -> void:
 
 
 func test_el_desbloqueo_agrega_el_item_visible_correcto() -> void:
-	GameState.player_save.reincarnated_cards_unlocked = true
+	GameState.save_service.player_save.reincarnated_cards_unlocked = true
 	var menu := _menu()
 	assert_eq(menu._items.size(), 7)
 	assert_eq(menu._visible_menu_items.size(), 7)
