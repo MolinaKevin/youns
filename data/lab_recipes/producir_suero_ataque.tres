@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1_labrecipe"]
+
+[resource]
+script = ExtResource("1_labrecipe")
+id = "producir_suero_ataque"
+recipe_name = "Producir Suero Ataque"
+item_name = "Suero Ataque"
+description = "Sintetiza un suero base para investigar mejoras ofensivas."
+craft_time = 6.0
+location = "lab"
+action_type = "loop"
+reward = {"type": "item", "id": "suero_ataque", "amount": 1}
+ingredients = [{"id": "datos", "amount": 3}, {"id":"virus", "amount":2}, {"id":"eco_corporal", "amount":2}]
+starts_unlocked = false
+needs_research = true

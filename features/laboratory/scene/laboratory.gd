@@ -1,12 +1,12 @@
 extends Control
 
-const InventoryService := preload("res://shared/inventory_service.gd")
-const LabRecipeAction := preload("res://data/lab_recipe_action.gd")
+const InventoryServiceScript := preload("res://shared/inventory_service.gd")
+const LabRecipeActionScript := preload("res://data/lab_recipe_action.gd")
 
 signal close_requested
 
 const RecipeEntry := preload("res://features/laboratory/scene/recipe_entry.tscn")
-const ACTION_TYPES := LabRecipeAction.TYPES
+const ACTION_TYPES := LabRecipeActionScript.TYPES
 
 @export var standalone_mode := true
 @export var interaction_enabled := true
@@ -20,11 +20,11 @@ const ACTION_TYPES := LabRecipeAction.TYPES
 @onready var columns_container = $RootVBox/ContentHBox/MainArea/Columns
 @onready var tech_tree_view = $RootVBox/ContentHBox/MainArea/TechTreeView
 @onready var columns := {
-	LabRecipeAction.INSTANT: $RootVBox/ContentHBox/MainArea/Columns/InstantColumn,
-	LabRecipeAction.LOOP:    $RootVBox/ContentHBox/MainArea/Columns/LoopColumn,
-	LabRecipeAction.UPGRADE: $RootVBox/ContentHBox/MainArea/Columns/UpgradeColumn,
-	LabRecipeAction.NEXT:    $RootVBox/ContentHBox/MainArea/Columns/NextColumn,
-	LabRecipeAction.DUNGEON: $RootVBox/ContentHBox/MainArea/Columns/DungeonColumn,
+	LabRecipeActionScript.INSTANT: $RootVBox/ContentHBox/MainArea/Columns/InstantColumn,
+	LabRecipeActionScript.LOOP:    $RootVBox/ContentHBox/MainArea/Columns/LoopColumn,
+	LabRecipeActionScript.UPGRADE: $RootVBox/ContentHBox/MainArea/Columns/UpgradeColumn,
+	LabRecipeActionScript.NEXT:    $RootVBox/ContentHBox/MainArea/Columns/NextColumn,
+	LabRecipeActionScript.DUNGEON: $RootVBox/ContentHBox/MainArea/Columns/DungeonColumn,
 }
 
 var selected_location := ""
@@ -196,7 +196,7 @@ func _on_take_all() -> void:
 	var remaining := {}
 	for item_id in taken:
 		var entry: Dictionary = taken[item_id]
-		var result := InventoryService.add_entry(save.inventory_items, entry, save.inventory_slots)
+		var result := InventoryServiceScript.add_entry(save.inventory_items, entry, save.inventory_slots)
 		if result["remaining"] > 0:
 			var leftover := entry.duplicate()
 			leftover["count"] = result["remaining"]

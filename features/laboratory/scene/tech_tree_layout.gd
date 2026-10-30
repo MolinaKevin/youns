@@ -7,7 +7,7 @@ extends RefCounted
 ## receta). No sabe nada de Control ni de nodos — tech_tree_view.gd sólo
 ## instancia los Panels a partir de esto.
 
-const LabReward := preload("res://data/lab_reward.gd")
+const LabRewardScript := preload("res://data/lab_reward.gd")
 
 const NODE_W := 150.0
 const NODE_H := 55.0
@@ -34,7 +34,7 @@ func _compute_parents(recipes: Array) -> Dictionary:
 	var producers: Dictionary = {}  # item_id -> recipe_id que lo produce
 	for r in recipes:
 		for reward in ([r.reward] + r.extra_rewards):
-			if LabReward.type_of(reward) == LabReward.ITEM:
+			if LabRewardScript.type_of(reward) == LabRewardScript.ITEM:
 				producers[reward["id"]] = r.id
 
 	var parents: Dictionary = {}
@@ -43,7 +43,7 @@ func _compute_parents(recipes: Array) -> Dictionary:
 
 	for r in recipes:
 		for reward in ([r.reward] + r.extra_rewards):
-			if LabReward.type_of(reward) == LabReward.UNLOCK_RECIPE:
+			if LabRewardScript.type_of(reward) == LabRewardScript.UNLOCK_RECIPE:
 				var child_id: String = reward["id"]
 				if parents.has(child_id) and not parents[child_id].has(r.id):
 					parents[child_id].append(r.id)

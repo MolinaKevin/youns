@@ -11,4 +11,4 @@ craft_time = 1.0
 location = "city"
 action_type = "loop"
 reward = {"type": "material_production", "value": 1}
-ingredients = []
+ingredients = [{"id":"archivo_campo","amount":1}, {"id":"eco_logica","amount":4}, {"id":"eco_naturalista","amount":4}]

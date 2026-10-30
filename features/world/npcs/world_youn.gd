@@ -109,6 +109,10 @@ func is_interaction_near() -> bool:
 	return _interaction != null and _interaction.near
 
 func begin_combat_handoff() -> void:
+	# ZoneManager conserva las zonas durante la escena de combate. Un callback
+	# tardío de diálogo no debe poder reabrir el popup sobre ese combate.
+	if GameState.world_combat.active:
+		return
 	_combat_handoff.engage()
 
 func finish_non_combat_encounter() -> void:
@@ -126,6 +130,10 @@ func combat_start_position() -> Vector3:
 # ── Physics ───────────────────────────────────────────────────────────────────
 
 func _physics_process(delta: float) -> void:
+	# El mundo se oculta, pero sigue cargado mientras el combate usa su propia
+	# escena. No dejamos que sus NPC sigan patrullando ni generen contactos.
+	if GameState.world_combat.active:
+		return
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
 	_ai.tick(delta)
@@ -153,12 +161,16 @@ func set_active(value: bool) -> void:
 	_interaction.set_active(value)
 
 func _unhandled_input(event: InputEvent) -> void:
+	# Estos nodos pertenecen a ZoneManager (autoload), así que todavía reciben
+	# input aunque la escena principal sea la de combate.
+	if GameState.world_combat.active:
+		return
 	if _combat_handoff.handle_input(event):
 		return
 	_interaction.handle_interact_input(event)
 
 func begin_encounter() -> void:
-	if _engaging_combat:
+	if _engaging_combat or GameState.world_combat.active:
 		return
 	if conversation != null:
 		_conversation.play()

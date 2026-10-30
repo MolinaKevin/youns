@@ -10,23 +10,17 @@ const ZONE_COLOR := Color("#29444a")
 const CURRENT_ZONE_COLOR := Color("#4d896f")
 const CONNECTION_COLOR := Color("#839b88")
 const PLAYER_COLOR := Color("#f4d36b")
-const FUTURE_AREA_FILL := Color("#182426")
-const FUTURE_AREA_BORDER := Color("#71877d")
-
-# Espacio reservado para que la ciudad pueda expandirse detrás del río. Es
-# cartografía solamente: no abre una zona ni habilita el paso en el mundo.
-const FUTURE_AREAS := [
-	{
-		"rect": Rect2(-195, -65, 145, 150),
-		"label_key": "map.future.city_expansion",
-	},
-]
+const TEST_SPAWNS_BY_ZONE := {
+	"right": "TallGrassGuideTestSpawn",
+}
 
 var _map_rect := Rect2()
 var _world_bounds := Rect2()
 var _zone_edges: Array[Dictionary] = []
 var _zone_centers: Dictionary = {}
 var _close_button: Button
+var _travel_button: Button
+var _destination_panel: PanelContainer
 
 
 func _ready() -> void:
@@ -57,9 +51,52 @@ func _build_ui() -> void:
 	_close_button.pressed.connect(_close)
 	add_child(_close_button)
 
+	_travel_button = Button.new()
+	_travel_button.text = LocalizationState.t("map.travel")
+	_travel_button.custom_minimum_size = Vector2(150, 42)
+	_travel_button.size = _travel_button.custom_minimum_size
+	_travel_button.pressed.connect(_toggle_destinations)
+	add_child(_travel_button)
+
+	_destination_panel = PanelContainer.new()
+	_destination_panel.visible = false
+	_destination_panel.custom_minimum_size = Vector2(240, 0)
+	add_child(_destination_panel)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation", 8)
+	_destination_panel.add_child(content)
+	var heading := Label.new()
+	heading.text = LocalizationState.t("map.travel_title")
+	heading.add_theme_font_size_override("font_size", 20)
+	content.add_child(heading)
+	var hint := Label.new()
+	hint.text = LocalizationState.t("map.travel_hint")
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.modulate = Color(0.75, 0.84, 0.8)
+	content.add_child(hint)
+	var destinations := ScrollContainer.new()
+	destinations.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content.add_child(destinations)
+	var destination_list := VBoxContainer.new()
+	destination_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	destination_list.add_theme_constant_override("separation", 4)
+	destinations.add_child(destination_list)
+	var zone_ids := ZoneManager.catalog.ids()
+	zone_ids.sort()
+	for zone_id in zone_ids:
+		var destination_button := Button.new()
+		destination_button.text = LocalizationState.location_name(zone_id)
+		destination_button.custom_minimum_size = Vector2(210, 36)
+		var spawn_name: String = TEST_SPAWNS_BY_ZONE.get(zone_id, "SpawnPoint")
+		destination_button.pressed.connect(_teleport_to.bind(zone_id, spawn_name))
+		destination_list.add_child(destination_button)
+
 
 func _refresh_layout() -> void:
 	_close_button.position = Vector2(size.x - _close_button.size.x - 28, 24)
+	_travel_button.position = Vector2(_close_button.position.x - _travel_button.size.x - 12, 24)
+	_destination_panel.position = Vector2(28, 105)
+	_destination_panel.size = Vector2(260, maxf(280.0, size.y - 135.0))
 	_world_bounds = ZoneManager.get_map_bounds()
 	_zone_edges = ZoneManager.get_map_zone_edges()
 	_zone_centers = ZoneManager.get_map_zone_centers()
@@ -73,15 +110,21 @@ func _input(event: InputEvent) -> void:
 		_close()
 
 
+func _toggle_destinations() -> void:
+	_destination_panel.visible = not _destination_panel.visible
+
+
+func _teleport_to(zone_id: String, spawn_name: String) -> void:
+	if ZoneManager.teleport_to_zone_spawn(zone_id, spawn_name):
+		_close()
+
+
 func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), PANEL_COLOR)
 	if _map_rect.size.x <= 0.0 or _world_bounds.size.x <= 0.0:
 		return
 	draw_rect(_map_rect.grow(12.0), Color("#19292b"), true)
 	draw_rect(_map_rect.grow(12.0), Color("#5a7870"), false, 2.0)
-	for area in FUTURE_AREAS:
-		_draw_future_area(area)
-
 	for edge in _zone_edges:
 		var is_current: bool = edge["zone"] == ZoneManager.current_zone
 		var color := Color("#d0e2ca") if is_current else CONNECTION_COLOR
@@ -94,22 +137,6 @@ func _draw() -> void:
 		draw_circle(player_pos, 9.0, Color("#1c2423"))
 		draw_circle(player_pos, 6.0, PLAYER_COLOR)
 		draw_arc(player_pos, 12.0, 0.0, TAU, 24, PLAYER_COLOR, 1.5, true)
-
-
-func _draw_future_area(area: Dictionary) -> void:
-	var world_rect: Rect2 = area["rect"]
-	var map_rect := _world_rect_to_map(world_rect)
-	draw_rect(map_rect, FUTURE_AREA_FILL, true)
-	draw_rect(map_rect, FUTURE_AREA_BORDER, false, 2.0)
-	var label_key: String = area["label_key"]
-	var label := LocalizationState.t(label_key)
-	var font := ThemeDB.fallback_font
-	var font_size := 16
-	var lines := label.split("\n")
-	var first_baseline := map_rect.get_center().y - (lines.size() - 1) * font_size * 0.6
-	for line_index in lines.size():
-		var text_position := Vector2(map_rect.position.x + 10.0, first_baseline + line_index * font_size * 1.2)
-		draw_string(font, text_position, lines[line_index], HORIZONTAL_ALIGNMENT_CENTER, map_rect.size.x - 20.0, font_size, FUTURE_AREA_BORDER)
 
 
 func _draw_zone_label(zone_id: String) -> void:
@@ -140,12 +167,5 @@ func _world_point_to_map(world_pos: Vector2) -> Vector2:
 	return origin + (world_pos - _world_bounds.position) * map_scale
 
 
-func _world_rect_to_map(world_rect: Rect2) -> Rect2:
-	var top_left := _world_point_to_map(world_rect.position)
-	var bottom_right := _world_point_to_map(world_rect.end)
-	return Rect2(top_left, bottom_right - top_left)
-
-
 func _close() -> void:
-	get_tree().paused = false
 	SceneNavigator.return_to_session_origin(get_tree())

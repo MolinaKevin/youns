@@ -1,6 +1,6 @@
 class_name PuddleSystem
 extends Node3D
-const CombatEffect := preload("res://features/combat/scene/combat_effect.gd")
+const CombatEffects := preload("res://features/combat/scene/combat_effect.gd")
 
 ## Charcos del combate: colocarlos, que se combinen (charco "lente" donde dos
 ## reaccionan entre sí), que se evaporen con las rondas, y las consultas que
@@ -30,7 +30,7 @@ var visuals: Array[MeshInstance3D]:
 
 var _disc:             MeshInstance3D
 var _preview:          MeshInstance3D
-var _preview_effect:   String  = CombatEffect.WET
+var _preview_effect:   String  = CombatEffects.WET
 var _preview_radius:   float   = 1.0
 var _throw_range:      float   = 0.0
 var _preview_last_pos: Vector2 = Vector2(-999.0, -999.0)
@@ -50,7 +50,7 @@ func is_placing() -> bool:
 
 
 func _puddle_base_color(effect: String) -> Color:
-	return CombatEffect.puddle_color(effect)
+	return CombatEffects.puddle_color(effect)
 
 func start_puddle_placement(throw_range: float, effect: String = "wet", puddle_radius: float = 1.0) -> void:
 	_throw_range    = throw_range
@@ -79,7 +79,7 @@ func update_hover_preview(pos: Vector2) -> void:
 		Color(minf(base.r + 0.2, 1.0), minf(base.g + 0.2, 1.0), minf(base.b + 0.2, 1.0), 0.60))
 
 func _puddle_interaction(a: String, b: String) -> String:
-	return CombatEffect.combined_zone_effect(a, b)
+	return CombatEffects.combined_zone_effect(a, b)
 
 ## Deja un charco. turns: rondas que dura (0 = no se va nunca; ver
 ## tick_puddles). damage: daño por turno del estado que causa (0 = el de
@@ -91,7 +91,7 @@ func _puddle_interaction(a: String, b: String) -> String:
 ## "excl"}; excl son los ids de los charcos cuyo disco se recorta del dibujo.
 func place_puddle(pos: Vector2, radius: float, effect: String = "wet", turns: int = 0, damage: int = 0) -> void:
 	var r2 := float(radius)
-	if effect == CombatEffect.VINE and map.obstacles.trees.queries.is_tree_near(pos, r2 + TreeSystem.TREE_VINE_REACH):
+	if effect == CombatEffects.VINE and map.obstacles.trees.queries.is_tree_near(pos, r2 + TreeSystem.TREE_VINE_REACH):
 		r2 *= TreeSystem.TREE_VINE_RADIUS_MULT  # las plantas crecen más al lado de un árbol
 	var new_id := _next_id
 	_next_id += 1
@@ -134,9 +134,9 @@ func place_puddle(pos: Vector2, radius: float, effect: String = "wet", turns: in
 	_visuals.append(_make_puddle_visual(pos, r2, effect, _puddle_exclusions(zones.back())))
 	for i in to_rebuild:
 		_rebuild_puddle_visual(i)
-	if effect == CombatEffect.FIRE:
+	if effect == CombatEffects.FIRE:
 		map.obstacles.trees.effects.ignite_trees_in_circle(pos, r2)
-	elif effect in [CombatEffect.ICE, CombatEffect.WET]:
+	elif effect in [CombatEffects.ICE, CombatEffects.WET]:
 		map.obstacles.trees.effects.extinguish_trees_in_circle(pos, r2)
 
 ## Pasa una ronda: los charcos con duración pierden una y los que llegan a 0

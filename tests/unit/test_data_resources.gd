@@ -1,9 +1,9 @@
 extends GutTest
 
-const LabReward := preload("res://data/lab_reward.gd")
-const LabRecipeAction := preload("res://data/lab_recipe_action.gd")
-const WorldConstructionCatalog := preload("res://data/world/world_construction_catalog.gd")
-const CombatEffect := preload("res://features/combat/scene/combat_effect.gd")
+const LabRewardScript := preload("res://data/lab_reward.gd")
+const LabRecipeActionScript := preload("res://data/lab_recipe_action.gd")
+const WorldConstructionCatalogScript := preload("res://data/world/world_construction_catalog.gd")
+const CombatEffects := preload("res://features/combat/scene/combat_effect.gd")
 const DATA_DIR := "res://data"
 const CARDS_DIR := "res://data/cards"
 const ITEMS_DIR := "res://data/items"
@@ -57,8 +57,8 @@ func _assert_card_effects(card: CardData, path: String) -> void:
 		if action == null:
 			continue
 		for line in action.lines:
-			assert_true(CombatEffect.is_known_zone(line.puddle_effect), "Efecto de charco desconocido '%s' en %s" % [line.puddle_effect, path])
-			assert_true(CombatEffect.is_known_status(line.status_effect, true), "Estado desconocido '%s' en %s" % [line.status_effect, path])
+			assert_true(CombatEffects.is_known_zone(line.puddle_effect), "Efecto de charco desconocido '%s' en %s" % [line.puddle_effect, path])
+			assert_true(CombatEffects.is_known_status(line.status_effect, true), "Estado desconocido '%s' en %s" % [line.status_effect, path])
 
 
 func test_recetas_tienen_nombre_y_tipo_localizados() -> void:
@@ -130,7 +130,7 @@ func test_zonas_tienen_escena_y_conexiones_bidireccionales() -> void:
 func test_construcciones_del_mundo_referencian_recetas_y_zonas_validas() -> void:
 	var recipes := _resources_by_id(RECIPES_DIR, LabRecipe)
 	var zones := _resources_by_id(ZONES_DIR, ZoneDefinition)
-	var catalog := WorldConstructionCatalog.new()
+	var catalog := WorldConstructionCatalogScript.new()
 	assert_eq(catalog.validate().size(), 0)
 	for construction in catalog.all():
 		assert_true(recipes.has(construction.unlock_recipe_id), "Receta inexistente en construcción %s" % construction.id)
@@ -169,7 +169,7 @@ func _assert_localized_key(key: String, path: String) -> void:
 
 
 func _assert_recipe_references(recipe: LabRecipe, recipes: Dictionary) -> void:
-	assert_true(LabRecipeAction.is_known(recipe.action_type), "Tipo de acción desconocido en %s: %s" % [recipe.resource_path, recipe.action_type])
+	assert_true(LabRecipeActionScript.is_known(recipe.action_type), "Tipo de acción desconocido en %s: %s" % [recipe.resource_path, recipe.action_type])
 	_assert_reward_reference(recipe.reward, recipe.resource_path, recipes)
 	for reward in recipe.extra_rewards:
 		_assert_reward_reference(reward, recipe.resource_path, recipes)
@@ -180,23 +180,23 @@ func _assert_recipe_references(recipe: LabRecipe, recipes: Dictionary) -> void:
 
 
 func _assert_reward_reference(reward: Dictionary, path: String, recipes: Dictionary) -> void:
-	var reward_type := LabReward.type_of(reward)
+	var reward_type := LabRewardScript.type_of(reward)
 	assert_false(reward_type.is_empty(), "Recompensa sin tipo en %s" % path)
-	assert_true(LabReward.is_known(reward), "Tipo de recompensa desconocido '%s' en %s" % [reward_type, path])
+	assert_true(LabRewardScript.is_known(reward), "Tipo de recompensa desconocido '%s' en %s" % [reward_type, path])
 	_assert_reward_shape(reward, path)
-	if reward_type == LabReward.UNLOCK_RECIPE:
+	if reward_type == LabRewardScript.UNLOCK_RECIPE:
 		var recipe_id := str(reward.get("id", ""))
 		assert_true(recipes.has(recipe_id), "Receta inexistente '%s' en %s" % [recipe_id, path])
-	elif reward_type == LabReward.ITEM or reward_type == LabReward.WORLD_BRIDGE:
+	elif reward_type == LabRewardScript.ITEM or reward_type == LabRewardScript.WORLD_BRIDGE:
 		assert_false(str(reward.get("id", "")).is_empty(), "Recompensa %s sin id en %s" % [reward_type, path])
-	if reward_type == LabReward.ITEM:
+	if reward_type == LabRewardScript.ITEM:
 		assert_gt(int(reward.get("amount", 0)), 0, "Ítem sin cantidad válida en %s" % path)
-	elif reward_type in [LabReward.YOUN_GROWTH_BONUS, LabReward.MATERIAL_PRODUCTION, LabReward.MAX_HP]:
+	elif reward_type in [LabRewardScript.YOUN_GROWTH_BONUS, LabRewardScript.MATERIAL_PRODUCTION, LabRewardScript.MAX_HP]:
 		assert_gt(int(reward.get("value", 0)), 0, "Recompensa sin valor positivo en %s" % path)
 
 
 func _assert_reward_shape(reward: Dictionary, path: String) -> void:
-	var expected: Array = LabReward.expected_fields(LabReward.type_of(reward))
+	var expected: Array = LabRewardScript.expected_fields(LabRewardScript.type_of(reward))
 	for field in expected:
 		assert_true(reward.has(field), "Falta '%s' en la recompensa de %s" % [field, path])
 	for field in reward:

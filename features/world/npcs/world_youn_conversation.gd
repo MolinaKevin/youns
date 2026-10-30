@@ -1,7 +1,7 @@
 class_name WorldYounConversation
 extends RefCounted
 
-const InventoryService := preload("res://shared/inventory_service.gd")
+const InventoryServiceScript := preload("res://shared/inventory_service.gd")
 
 ## Diálogo previo al encuentro: lo reproduce, resuelve sus choices (si tiene)
 ## y decide si termina en combate o no. `host._combat_handoff.engage()` es
@@ -56,7 +56,7 @@ func _give_item(item: ItemData) -> void:
 	if ps == null:
 		return
 	var display_name := LocalizationState.item_name(item.id, item.name)
-	var result := InventoryService.add_entry(ps.inventory_items, item.to_inventory_entry(), ps.inventory_slots)
+	var result := InventoryServiceScript.add_entry(ps.inventory_items, item.to_inventory_entry(), ps.inventory_slots)
 	if result["added"] > 0:
 		GlobalHUD.show_toast(LocalizationState.t("world.hub.received", [display_name]))
 

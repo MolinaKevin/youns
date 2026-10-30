@@ -1,9 +1,9 @@
 extends Node
 
 const WorldBoundary := preload("res://features/world/zones/world_boundary.gd")
-const ScenePaths := preload("res://shared/scene_paths.gd")
-const GameDataValidator := preload("res://shared/game_data_validator.gd")
-const TITLE_MENU_SCENE := ScenePaths.TITLE_MENU
+const ScenePathsScript := preload("res://shared/scene_paths.gd")
+const GameDataValidatorScript := preload("res://shared/game_data_validator.gd")
+const TITLE_MENU_SCENE := ScenePathsScript.TITLE_MENU
 
 signal zone_changed(previous_zone: String, current_zone: String)
 signal zone_loaded(zone_id: String)
@@ -58,7 +58,7 @@ func initialize_world() -> void:
 		return
 	var initialization_started_at := Time.get_ticks_msec()
 	var catalog_errors := catalog.validate()
-	catalog_errors.append_array(GameDataValidator.zone_graph_errors(catalog))
+	catalog_errors.append_array(GameDataValidatorScript.zone_graph_errors(catalog))
 	if not catalog_errors.is_empty():
 		for error_text in catalog_errors:
 			push_error("ZoneCatalog: " + error_text)
@@ -225,6 +225,24 @@ func reset_to_start() -> void:
 	_streaming.load_now("hub")
 	_set_current_zone("hub")
 	PartyManager.place_at_spawn(get_zone_node("hub"))
+
+
+## Atajo de desarrollo: lleva al grupo al SpawnPoint seguro de una zona del
+## exterior. Carga primero su vecindad para que el suelo esté listo al aparecer.
+func teleport_to_zone_spawn(zone_id: String, spawn_name := "SpawnPoint") -> bool:
+	if not _world_initialized or not catalog.has(zone_id):
+		return false
+	_leave_interior_silently()
+	_streaming.load_neighborhood_now(zone_id)
+	var zone := get_zone_node(zone_id)
+	if zone == null or zone.get_node_or_null(NodePath(spawn_name)) == null:
+		return false
+	_set_current_zone(zone_id)
+	PartyManager.next_spawn = spawn_name
+	PartyManager.place_at_spawn(zone)
+	refresh_current_zone()
+	return true
+
 
 func _set_current_zone(zone_id: String) -> void:
 	_activate_zone(zone_id)

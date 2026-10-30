@@ -12,11 +12,11 @@ var _get_total_hours: Callable
 var _notify_youns_status_changed: Callable
 
 
-func _init(get_player_save: Callable, get_youn_data: Callable, get_total_hours: Callable, notify_youns_status_changed: Callable) -> void:
+func _init(get_player_save: Callable, get_youn_data: Callable, get_total_hours: Callable, status_changed_callback: Callable) -> void:
 	_get_player_save = get_player_save
 	_get_youn_data = get_youn_data
 	_get_total_hours = get_total_hours
-	_notify_youns_status_changed = notify_youns_status_changed
+	_notify_youns_status_changed = status_changed_callback
 
 
 func player_save() -> PlayerSaveData:

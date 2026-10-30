@@ -31,6 +31,7 @@ var check_combat_end: Callable
 signal log_requested(text: String)
 signal ui_update_requested()
 ## Se emite al empezar cada acción de current_card (índice en card.actions).
+@warning_ignore("unused_signal")
 signal card_action_started(index: int)
 
 func emit_log(key: String, args: Array = []) -> void:

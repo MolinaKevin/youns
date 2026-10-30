@@ -24,6 +24,10 @@ const MAX_CATCH_UP_SPEED := 20.0
 const FOLLOW_ACCELERATION := 12.0
 const FOLLOW_DECELERATION := 7.0
 const WALK_ANIMATION_MAX_SPEED := 4.0
+## Radio combinado de los dos cápsulas más un margen visual. Si el jugador se
+## mete en este espacio, el Youn se corre antes de intentar seguirlo.
+const PLAYER_SEPARATION_DISTANCE := 1.0
+const PLAYER_SEPARATION_SPEED := 5.0
 ## Al cruzar esta distancia, el Youn entra en recuperación: ignora obstáculos,
 ## pero sigue colisionando con la capa de suelo. Hay histéresis para que no
 ## alterne de estado cada frame al llegar junto al jugador.
@@ -75,6 +79,9 @@ func tick(delta: float) -> void:
 	var to_player := _player.global_position - host.global_position
 	to_player.y = 0.0
 	var dist := to_player.length()
+	if dist < PLAYER_SEPARATION_DISTANCE:
+		_move_away_from_player(to_player, dist, delta)
+		return
 
 	# Seguimiento elástico: cerca conserva el ritmo del jugador; lejos agrega
 	# velocidad según la separación para poder alcanzarlo después de una carrera.
@@ -123,6 +130,21 @@ func tick(delta: float) -> void:
 		host.play_anim("idle")
 
 	host.move_and_slide()
+
+
+func _move_away_from_player(to_player: Vector3, distance_to_player: float, delta: float) -> void:
+	var away := -to_player / distance_to_player if distance_to_player > 0.01 else _fallback_away_direction()
+	var speed := PLAYER_SEPARATION_SPEED * inverse_lerp(0.0, PLAYER_SEPARATION_DISTANCE, PLAYER_SEPARATION_DISTANCE - distance_to_player)
+	host.velocity.x = away.x * speed
+	host.velocity.z = away.z * speed
+	_face_dir(away, delta)
+	host.play_anim("walk")
+	host.move_and_slide()
+
+
+func _fallback_away_direction() -> Vector3:
+	var forward := Vector3(sin(_player.rotation.y), 0.0, cos(_player.rotation.y))
+	return -forward.normalized()
 
 
 func _begin_recovery() -> void:

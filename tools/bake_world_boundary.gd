@@ -6,10 +6,10 @@ extends SceneTree
 ## Guarda la grilla transitable/zonas y las colisiones de los límites globales.
 
 const WorldBoundary := preload("res://features/world/zones/world_boundary.gd")
-const ZoneCatalog := preload("res://data/zones/zone_catalog.gd")
-const WorldBoundaryBakeData := preload("res://features/world/zones/world_boundary_bake_data.gd")
-const WorldBoundaryBakeSignature := preload("res://features/world/zones/world_boundary_bake_signature.gd")
-const WorldLayout := preload("res://data/world/world_layout.tres")
+const ZoneCatalogScript := preload("res://data/zones/zone_catalog.gd")
+const WorldBoundaryBakeDataScript := preload("res://features/world/zones/world_boundary_bake_data.gd")
+const WorldBoundaryBakeSignatureScript := preload("res://features/world/zones/world_boundary_bake_signature.gd")
+const WorldLayoutScript := preload("res://data/world/world_layout.tres")
 const GRID_OUTPUT := "res://assets/maps/world/baked_world_boundary.tres"
 const WALLS_OUTPUT := "res://assets/maps/world/baked_world_boundary_walls.scn"
 
@@ -24,9 +24,9 @@ func _bake() -> void:
 	print("[WorldBoundaryBaker] Generando grilla y límites horneados…")
 	var boundary := WorldBoundary.new()
 	# Fuerza la ruta fuente: este baker es quien actualiza los artefactos.
-	boundary.build(ZoneCatalog.new(), false, true, false, false)
-	var bake_data := WorldBoundaryBakeData.new()
-	bake_data.from_grid(boundary._grid, WorldBoundaryBakeSignature.current(WorldLayout))
+	boundary.build(ZoneCatalogScript.new(), false, true, false, false)
+	var bake_data := WorldBoundaryBakeDataScript.new()
+	bake_data.from_grid(boundary._grid, WorldBoundaryBakeSignatureScript.current(WorldLayoutScript))
 	var grid_error := ResourceSaver.save(bake_data, GRID_OUTPUT, ResourceSaver.FLAG_COMPRESS)
 	if grid_error != OK:
 		_fail(boundary, "No se pudo guardar %s (%s)." % [GRID_OUTPUT, grid_error])

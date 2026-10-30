@@ -2,16 +2,16 @@ class_name ToiletData
 extends Resource
 
 @export_group("Posiciones")
-## Posición global del inodoro en el mundo.
-@export var world_position: Vector3 = Vector3.ZERO
-## Posición global donde el jugador y el Youn se ubican para iniciar la animación.
-@export var start_point: Vector3 = Vector3.ZERO
-
-@export_group("Distancias de animación")
-## Metros delante del start_point donde el Youn espera al jugador.
-@export var meeting_distance: float = 2.0
-## Metros antes del inodoro desde donde el Youn entra caminando.
-@export var entrance_distance: float = 3.0
+## Posición global que ocupa el jugador durante la secuencia.
+@export var player_start_position: Vector3 = Vector3.ZERO
+## Posición global a la que llega el Youn antes de ir al baño.
+@export var youn_start_position: Vector3 = Vector3.ZERO
+## Posición global desde la que el Youn entra al baño.
+@export var youn_entrance_position: Vector3 = Vector3.ZERO
+## Posición global dentro del baño. El Youn se oculta al llegar aquí.
+@export var youn_inside_position: Vector3 = Vector3.ZERO
+## Punto global que encuadra la cámara durante los momentos en que se miran.
+@export var camera_focus_position: Vector3 = Vector3.ZERO
 
 @export_group("Cámara")
 ## Altura del pivot de cámara sobre el punto medio entre los dos personajes.

@@ -2,7 +2,7 @@ extends Node3D
 
 const SleepOverlay    := preload("res://features/world/ui/sleep_overlay.gd")
 const YounInteraction := preload("res://features/world/party/youn_interaction.gd")
-const NewWorldWelcome := preload("res://features/world/game_world/new_world_welcome.gd")
+const NewWorldWelcomeScript := preload("res://features/world/game_world/new_world_welcome.gd")
 
 @onready var menu: Control = $MenuLayer/MainMenu
 @onready var pause_overlay: ColorRect = $MenuLayer/PauseOverlay
@@ -11,8 +11,10 @@ const NewWorldWelcome := preload("res://features/world/game_world/new_world_welc
 
 var _sleeping := false
 var _sleep_start_hour := 0.0
+var _menu_modal: ModalScreenContext
 
 func _ready() -> void:
+	_menu_modal = ModalScreenContext.new(ModalScreenHost.from_runtime())
 	# Permite abrir esta escena sola desde el editor; el flujo normal llega desde
 	# WorldLoading y ya tiene ambos autoloads inicializados.
 	PartyManager.initialize_party()
@@ -41,7 +43,7 @@ func _ready() -> void:
 
 func _start_new_world_welcome() -> void:
 	intro.visible = false
-	var welcome := NewWorldWelcome.new()
+	var welcome := NewWorldWelcomeScript.new()
 	welcome.finished.connect(func() -> void:
 		intro.tutorial_finished.connect(welcome.restore_gameplay_camera, CONNECT_ONE_SHOT)
 		intro.start())
@@ -96,15 +98,14 @@ func _toggle_menu() -> void:
 	var showing := not menu.visible
 	menu.visible = showing
 	pause_overlay.visible = showing
-	GlobalHUD.set_clock_visible(false if showing else GlobalHUD.has_persistent_clock_ui())
-	GlobalHUD.set_clock_paused(showing)
-	GlobalHUD.set_youns_status_visible(false if showing else GlobalHUD.has_persistent_care_ui())
 	if showing:
+		_menu_modal.enter_overlay(self, true, true, true)
 		PartyManager.freeze_camera()
 	else:
+		_menu_modal.exit_overlay(self)
+		GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
+		GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
 		PartyManager.unfreeze_camera()
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if showing else Input.MOUSE_MODE_CAPTURED
-	get_tree().paused = showing
 
 func _restore_after_combat() -> void:
 	if not GameState.world_combat.active:

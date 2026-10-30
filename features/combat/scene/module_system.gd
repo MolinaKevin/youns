@@ -1,7 +1,7 @@
 class_name ModuleSystem
 extends Node3D
 
-const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
+const CombatObstacleScript := preload("res://features/combat/scene/combat_obstacle.gd")
 
 ## Los obstáculos que se pueden romper, golpear o crear son módulos: bloques
 ## de MODULE_SIZE × MODULE_SIZE (las piedras chicas del mapa también cuentan
@@ -167,7 +167,7 @@ func _add_module(p: Vector2) -> Dictionary:
 	mi.position = Vector3(p.x, MODULE_SIZE * 0.5, p.y)
 	mi.material_override = _module_mat
 	map.add_child(mi)
-	var obs := {"pos": p, "box": Vector2(MODULE_SIZE, MODULE_SIZE), "type": CombatObstacle.SOLID, "module": true, "node": mi}
+	var obs := {"pos": p, "box": Vector2(MODULE_SIZE, MODULE_SIZE), "type": CombatObstacleScript.SOLID, "module": true, "node": mi}
 	map.terrain.mutation.add_obstacle(obs)
 	return obs
 
@@ -222,7 +222,7 @@ func slide_module(obs: Dictionary, dir: Vector2, distance: float) -> Dictionary:
 				hit = actor[0]
 				hit_tree = {}
 		for other in map.terrain.geometry.collision.obstacles():
-			if group.any(func(g): return is_same(g, other)) or CombatObstacle.type_of(other) == CombatObstacle.BRIDGE:
+			if group.any(func(g): return is_same(g, other)) or CombatObstacleScript.type_of(other) == CombatObstacleScript.BRIDGE:
 				continue
 			var t: float
 			if other.has("box"):
@@ -232,7 +232,7 @@ func slide_module(obs: Dictionary, dir: Vector2, distance: float) -> Dictionary:
 			if t >= 0.0 and t < best_t:
 				best_t = t
 				hit = ""
-				hit_tree = other if CombatObstacle.type_of(other) == CombatObstacle.TREE else {}
+				hit_tree = other if CombatObstacleScript.type_of(other) == CombatObstacleScript.TREE else {}
 	var length := step.length()
 	var travel := maxf(0.0, best_t * length - 0.02) if best_t < 1.0 else length
 	var offset: Vector2 = step.normalized() * travel if length > 0.001 else Vector2.ZERO

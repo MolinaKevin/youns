@@ -1,7 +1,7 @@
 class_name TreeSystem
 extends Node3D
 
-const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
+const CombatObstacleScript := preload("res://features/combat/scene/combat_obstacle.gd")
 
 ## Árboles: se pueden trepar (tree_climb), talar (cae y queda un tronco
 ## tirado) o prender fuego (arde TREE_BURN_ROUNDS y desaparece). Si el
@@ -66,7 +66,7 @@ func build_initial_tree_mesh(mi: MeshInstance3D, obs: Dictionary, pos: Vector2) 
 ## El árbol bajo `pos` (o {} si no hay).
 func get_tree_at(pos: Vector2) -> Dictionary:
 	for obs in map.terrain.geometry.collision.obstacles():
-		if CombatObstacle.type_of(obs) == CombatObstacle.TREE and CombatMapQueries.obstacle_edge_distance(obs, pos) <= map.CLICK_MARGIN:
+		if CombatObstacleScript.type_of(obs) == CombatObstacleScript.TREE and CombatMapQueries.obstacle_edge_distance(obs, pos) <= map.CLICK_MARGIN:
 			return obs
 	return {}
 
@@ -167,7 +167,7 @@ func _add_log_segment(p: Vector2, dir: Vector2, log_id: int) -> void:
 	mi.material_override = mat
 	map.add_child(mi)
 	map.terrain.mutation.add_obstacle({
-		"pos": p, "radius": LOG_SEGMENT_RADIUS, "type": CombatObstacle.ROCK, "module": true,
+		"pos": p, "radius": LOG_SEGMENT_RADIUS, "type": CombatObstacleScript.ROCK, "module": true,
 		"log_id": log_id, "node": mi,
 	})
 
@@ -175,7 +175,7 @@ func _add_log_segment(p: Vector2, dir: Vector2, log_id: int) -> void:
 func ignite_trees_in_circle(center: Vector2, radius: float) -> int:
 	var count := 0
 	for obs in map.terrain.geometry.collision.obstacle_snapshot():
-		if CombatObstacle.type_of(obs) == CombatObstacle.TREE and CombatMapQueries.obstacle_edge_distance(obs, center) <= radius:
+		if CombatObstacleScript.type_of(obs) == CombatObstacleScript.TREE and CombatMapQueries.obstacle_edge_distance(obs, center) <= radius:
 			count += int(_ignite_tree(obs))
 	return count
 
@@ -183,7 +183,7 @@ func ignite_trees_in_circle(center: Vector2, radius: float) -> int:
 func ignite_trees_in_cone(origin: Vector2, dir: Vector2, cone_range: float, half_angle_deg: float) -> int:
 	var count := 0
 	for obs in map.terrain.geometry.collision.obstacle_snapshot():
-		if CombatObstacle.type_of(obs) != CombatObstacle.TREE:
+		if CombatObstacleScript.type_of(obs) != CombatObstacleScript.TREE:
 			continue
 		var to_tree: Vector2 = obs["pos"] - origin
 		var dist := to_tree.length()
@@ -212,7 +212,7 @@ func _spread_fire_from_tree(tree: Dictionary) -> void:
 func extinguish_trees_in_circle(center: Vector2, radius: float) -> int:
 	var count := 0
 	for obs in map.terrain.geometry.collision.obstacles():
-		if CombatObstacle.type_of(obs) == CombatObstacle.TREE and is_tree_burning(obs) and CombatMapQueries.obstacle_edge_distance(obs, center) <= radius:
+		if CombatObstacleScript.type_of(obs) == CombatObstacleScript.TREE and is_tree_burning(obs) and CombatMapQueries.obstacle_edge_distance(obs, center) <= radius:
 			obs["burning"] = 0
 			_paint_canopy(obs, false)
 			count += 1
@@ -234,7 +234,7 @@ func _paint_canopy(tree: Dictionary, burning: bool) -> void:
 ## Hay un árbol (que no arde) a `reach` o menos de `pos` (Raíces, charcos de planta).
 func is_tree_near(pos: Vector2, reach: float) -> bool:
 	for obs in map.terrain.geometry.collision.obstacles():
-		if CombatObstacle.type_of(obs) == CombatObstacle.TREE and not is_tree_burning(obs) and CombatMapQueries.obstacle_edge_distance(obs, pos) <= reach:
+		if CombatObstacleScript.type_of(obs) == CombatObstacleScript.TREE and not is_tree_burning(obs) and CombatMapQueries.obstacle_edge_distance(obs, pos) <= reach:
 			return true
 	return false
 
@@ -243,7 +243,7 @@ func is_tree_near(pos: Vector2, reach: float) -> bool:
 func first_tree_on_segment(from: Vector2, to: Vector2) -> Dictionary:
 	var best := {}
 	for obs in map.terrain.geometry.collision.obstacles():
-		if CombatObstacle.type_of(obs) != CombatObstacle.TREE:
+		if CombatObstacleScript.type_of(obs) != CombatObstacleScript.TREE:
 			continue
 		var t := CombatMapQueries.first_contact_circle(from, to, obs["pos"], float(obs["radius"]))
 		if t >= 0.0 and (best.is_empty() or t < best["t"]):

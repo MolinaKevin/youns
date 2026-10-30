@@ -70,8 +70,8 @@ const TREE_BLOCKED_LINES := [CardActionLine.TYPE_MOVE, CardActionLine.TYPE_BLINK
 
 
 ## Qué charcos cambia cada hechizo elemental (element_bolt, según puddle_effect).
-const CombatEffect := preload("res://features/combat/scene/combat_effect.gd")
-const ELEMENT_CONVERSIONS := CombatEffect.ELEMENT_CONVERSIONS
+const CombatEffects := preload("res://features/combat/scene/combat_effect.gd")
+const ELEMENT_CONVERSIONS := CombatEffects.ELEMENT_CONVERSIONS
 ## Ancho (medio ángulo) de los hechizos en línea y en cono.
 const BOLT_HALF_ANGLE := 4.0
 const CONE_HALF_ANGLE := 30.0
@@ -87,8 +87,10 @@ const STATUS_NAMES := {
 signal log_requested(text: String)
 signal hand_refresh_requested()
 signal ui_update_requested()
+@warning_ignore("unused_signal")
 signal card_preview_show_requested(card: CardActionLine)
 signal card_preview_hide_requested()
+@warning_ignore("unused_signal")
 signal confirm_popup_show_requested(show_fin_button: bool)
 signal confirm_popup_hide_requested()
 signal end_move_button_visible_changed(visible: bool)
@@ -119,10 +121,13 @@ func setup(p_state: CombatState, p_map_area: CombatMapArea, p_damage_enemy: Call
 		p_get_flow: Callable = Callable(), p_flow_is_active: Callable = Callable()) -> void:
 	state = p_state
 	map_area = p_map_area
+	var signal_source: Object = p_map_area
+	if p_map_area.scene != null:
+		signal_source = p_map_area.scene
 	board = CombatBoardContext.new(p_map_area.state, p_map_area.queries, p_map_area.actors,
 		p_map_area.selection, p_map_area.placement, p_map_area.effects, p_map_area.obstacles,
 		p_map_area.push, p_map_area.presentation, p_map_area.movement, p_map_area.terrain,
-		p_map_area.scene if p_map_area.scene != null else p_map_area)
+		signal_source)
 	deal_damage_to_enemy = p_damage_enemy
 	deal_damage_to_player = p_damage_player
 	check_combat_end = p_check_end

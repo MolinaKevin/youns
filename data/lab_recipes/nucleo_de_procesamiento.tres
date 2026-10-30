@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "nucleo_de_procesamiento"
+recipe_name = "Núcleo de Procesamiento"
+description = "Automatiza el análisis en lotes para investigación avanzada."
+craft_time = 38.0
+location = "analisis"
+action_type = "upgrade"
+reward = {"type":"lab_efficiency", "data_per_cycle":3, "data_cost_reduction":0.45}
+ingredients = [{"id":"datos","amount":55},{"id":"archivo_campo","amount":2},{"id":"eco_logica","amount":10},{"id":"eco_linguistica","amount":4}]
+needs_research = true

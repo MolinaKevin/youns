@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="YounData" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://data/youns/youn_data.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/youns/luzmala/portraits/luzmala_neutral.png" id="2_portrait"]
+[ext_resource type="PackedScene" path="res://assets/youns/pombero/idle.fbx" id="3_placeholder_model"]
+[ext_resource type="Texture2D" path="res://assets/youns/pombero/texture.png" id="4_model_texture"]
+
+[resource]
+script = ExtResource("1_script")
+id = "guardacostas_temporal"
+youn_name = "Guardacostas"
+portrait = ExtResource("2_portrait")
+dialogue_portrait_position = Vector2(-175, -190)
+portrait_scale = Vector2(0.36, 0.36)
+dialogue_nameplate_side = "right"
+mesh_scale = 0.2
+mesh_y_offset = -0.8
+texture = ExtResource("4_model_texture")
+scene_idle = ExtResource("3_placeholder_model")

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemData" load_steps=4 format=3]
+[ext_resource type="Script" path="res://data/items/item_data.gd" id="1"]
+[ext_resource type="Script" path="res://data/items/item_effect_lab_flag.gd" id="2"]
+[ext_resource type="Texture2D" path="res://assets/icons/icon_3.png" id="3"]
+[sub_resource type="Resource" id="effect"]
+script = ExtResource("2")
+flag = "training_progress"
+[resource]
+script = ExtResource("1")
+id = "potenciador_de_entrenamiento"
+name = "Potenciador de Entrenamiento"
+description = "El próximo entrenamiento otorga 150% de progreso."
+icon = ExtResource("3")
+effects = [SubResource("effect")]

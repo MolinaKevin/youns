@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "preparar_unguento"
+recipe_name = "Preparar Ungüento"
+item_name = "Ungüento"
+description = "Mezcla ingredientes de campo para crear un protector de combate."
+craft_time = 10.0
+location = "lab"
+action_type = "loop"
+reward = {"type":"item", "id":"unguento", "amount":1}
+ingredients = [{"id":"archivo_campo","amount":1},{"id":"datos","amount":5},{"id":"vacuna","amount":3},{"id":"eco_naturalista","amount":2},{"id":"eco_corporal","amount":3}]
+needs_research = true

@@ -18,8 +18,9 @@ const DEFAULT_HEALTH_GAIN := 5
 ## En el inspector: elegir el tipo int y poner el número.
 @export var health_gain: Variant = null
 
-func apply(_save: PlayerSaveData) -> void:
-	StatsManager.services.care().add_stat("hambre", -fills)
-	StatsManager.services.care().add_stat("ganas_bano", bathroom_gain if bathroom_gain >= 0 else DEFAULT_BATHROOM_GAIN)
-	StatsManager.services.care().add_stat("salud", DEFAULT_HEALTH_GAIN if health_gain == null else int(health_gain))
-	StatsManager.services.care().on_meal_eaten()
+func apply(_save: PlayerSaveData, context: ItemEffectContext = null) -> void:
+	var item_context := runtime_context(context)
+	item_context.add_stat("hambre", -fills)
+	item_context.add_stat("ganas_bano", bathroom_gain if bathroom_gain >= 0 else DEFAULT_BATHROOM_GAIN)
+	item_context.add_stat("salud", DEFAULT_HEALTH_GAIN if health_gain == null else int(health_gain))
+	item_context.finish_meal()

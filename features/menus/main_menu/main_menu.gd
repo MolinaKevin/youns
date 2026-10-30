@@ -1,7 +1,7 @@
 extends Control
 
 const MenuItem := preload("res://features/menus/main_menu/menu_item.tscn")
-const ScenePaths := preload("res://shared/scene_paths.gd")
+const ScenePathsScript := preload("res://shared/scene_paths.gd")
 const COLUMNS := 3
 
 const MENU_ITEMS := [
@@ -130,7 +130,6 @@ func _activate() -> void:
 		return
 	var scene: String = data.get("scene", "")
 	if scene != "":
-		get_tree().paused = false
 		SceneNavigator.open_from_current(get_tree(), scene)
 
 func _is_sleep_time() -> bool:

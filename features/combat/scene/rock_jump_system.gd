@@ -1,7 +1,7 @@
 class_name RockJumpSystem
 extends Node3D
 
-const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
+const CombatObstacleScript := preload("res://features/combat/scene/combat_obstacle.gd")
 
 ## Salto de roca en roca: elegir una piedra al alcance y después dónde cae el
 ## salto desde ahí. Dos pasos, cada uno con su propio disco (alcance de
@@ -37,7 +37,7 @@ func _ready() -> void:
 func get_rocks_in_range(origin: Vector2, max_range: float) -> Array[Dictionary]:
 	var rocks: Array[Dictionary] = []
 	for obs in map.terrain.geometry.collision.obstacles():
-		if CombatObstacle.type_of(obs) != CombatObstacle.ROCK and not ModuleSystem.is_module(obs):
+		if CombatObstacleScript.type_of(obs) != CombatObstacleScript.ROCK and not ModuleSystem.is_module(obs):
 			continue
 		if origin.distance_to(obs["pos"]) <= max_range:
 			rocks.append(obs)

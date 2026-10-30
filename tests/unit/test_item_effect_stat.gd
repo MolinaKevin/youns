@@ -1,7 +1,19 @@
 extends GutTest
 
+const ItemEffectContextScript := preload("res://shared/item_effect_context.gd")
+
 var save: PlayerSaveData
 var _youn_backup: Node
+
+class SpyItemEffectContext extends ItemEffectContext:
+	var stat_calls: Array[Dictionary] = []
+	var checked := false
+
+	func add_stat(key: String, delta: int) -> void:
+		stat_calls.append({"key": key, "delta": delta})
+
+	func check_status() -> void:
+		checked = true
 
 
 func before_each() -> void:
@@ -98,6 +110,16 @@ func test_set_stat_guard_key_vacia_no_modifica_nada() -> void:
 	save.salud = 70
 	_make_set_effect("", 100.0).apply(save)
 	assert_eq(save.salud, 70)
+
+
+func test_item_data_usa_el_contexto_inyectado() -> void:
+	var item := ItemData.new()
+	var effect := _make_stat_effect("salud", 30.0)
+	var context := SpyItemEffectContext.new()
+	item.effects = [effect]
+	item.apply_effects(save, context)
+	assert_eq(context.stat_calls, [{"key": "salud", "delta": 30}])
+	assert_true(context.checked)
 
 
 func test_set_stat_key_inexistente_no_crashea() -> void:

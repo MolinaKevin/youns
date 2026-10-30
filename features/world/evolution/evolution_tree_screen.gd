@@ -7,7 +7,7 @@ extends Control
 ## Se abre desde el menú del juego.
 
 const Intelligences := preload("res://data/youns/intelligences.gd")
-const YounCatalog := preload("res://shared/youn_catalog.gd")
+const YounCatalogScript := preload("res://shared/youn_catalog.gd")
 const STAGES := ["bebe", "nino", "adolescente", "campeon", "ultimate"]
 const NODE_SIZE := Vector2(150, 54)
 const BG := Color(0.03, 0.06, 0.09)
@@ -40,7 +40,7 @@ func _load_youns() -> void:
 		_current_path = save.current_youn_path
 		for key in save.discovered_evolutions:
 			_discovered[key] = true
-	for data in YounCatalog.all():
+	for data in YounCatalogScript.all():
 		if data == null or not data.stage in STAGES:
 			continue
 		# Los salvajes sueltos (sin etapa propia ni evoluciones) no van.

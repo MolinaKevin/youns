@@ -1,6 +1,6 @@
 extends Resource
 class_name CardActionLine
-const CombatEffect := preload("res://features/combat/scene/combat_effect.gd")
+const CombatEffects := preload("res://features/combat/scene/combat_effect.gd")
 
 ## Una unidad visible de movimiento equivale a varias celdas de la grilla
 ## interna. Las cartas hablan en módulos; el mapa conserva la precisión de
@@ -82,10 +82,10 @@ const TYPE_OVERWATCH := "overwatch"
 ## agregan de forma gradual por recurso.
 @export var pattern: CardPattern
 @export_group("")
-@export var puddle_effect: String = CombatEffect.WET
+@export var puddle_effect: String = CombatEffects.WET
 ## Estado que aplica la línea (maldiciones, aliento, encantar arma). Ver
 ## CombatState.set_enemy_status.
-@export_enum("ninguno", "blind", "slow", "entangle", "burn", "poison", "freeze", "wet") var status_effect: String = CombatEffect.NONE
+@export_enum("ninguno", "blind", "slow", "entangle", "burn", "poison", "freeze", "wet") var status_effect: String = CombatEffects.NONE
 ## Módulos que rompe ("break") o levanta ("build") la línea.
 @export var module_count: int = 1
 ## Hechizos retardados: rondas hasta que caen (1 = al terminar esta ronda).

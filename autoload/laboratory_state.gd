@@ -1,8 +1,8 @@
 extends Node
 
-const LabReward := preload("res://data/lab_reward.gd")
-const LabRecipeAction := preload("res://data/lab_recipe_action.gd")
-const GameDataValidator := preload("res://shared/game_data_validator.gd")
+const LabRewardScript := preload("res://data/lab_reward.gd")
+const LabRecipeActionScript := preload("res://data/lab_recipe_action.gd")
+const GameDataValidatorScript := preload("res://shared/game_data_validator.gd")
 const RecipeCatalog := preload("res://shared/laboratory_recipe_catalog.gd")
 const RewardService := preload("res://shared/laboratory_reward_service.gd")
 const RecipeRuntime := preload("res://shared/laboratory_recipe_runtime.gd")
@@ -58,7 +58,7 @@ func _load_recipes() -> void:
 			_unlock_column(recipe.location, recipe.action_type)
 		if recipe.starts_unlocked and not GameState.save_service.player_save.unlocked_recipe_ids.has(recipe.id):
 			unlock_recipe(recipe.id)
-	for error_text in GameDataValidator.recipe_errors(all_recipes):
+	for error_text in GameDataValidatorScript.recipe_errors(all_recipes):
 		push_error("LaboratoryState: " + error_text)
 	_loading = false
 
@@ -98,9 +98,9 @@ func get_recipe_by_id(id: String) -> Resource:
 # ── Activar / pausar ──────────────────────────────────────────────────────────
 
 func activate_recipe(recipe: Resource) -> void:
-	if recipe.action_type == LabRecipeAction.UPGRADE and is_recipe_completed(recipe.id):
+	if recipe.action_type == LabRecipeActionScript.UPGRADE and is_recipe_completed(recipe.id):
 		return
-	if recipe.action_type == LabRecipeAction.INSTANT:
+	if recipe.action_type == LabRecipeActionScript.INSTANT:
 		if not has_ingredients(recipe):
 			return
 		_pause_current()
@@ -127,7 +127,7 @@ func has_ingredients(recipe: Resource) -> bool:
 
 func _has_enough_ingredients(ingredients: Array) -> bool:
 	for ing in ingredients:
-		if pending_output.get(ing["id"], {}).get("count", 0) < ing["amount"]:
+		if pending_output.get(ing["id"], {}).get("count", 0) < _ingredient_amount(ing):
 			return false
 	return true
 
@@ -136,12 +136,18 @@ func consume_ingredients(recipe: Resource) -> void:
 		GameState.save_service.player_save.gold = max(0, GameState.save_service.player_save.gold - recipe.gold_cost)
 	for ing in recipe.ingredients:
 		var item_id: String = ing["id"]
-		var new_count: int = pending_output[item_id]["count"] - ing["amount"]
+		var new_count: int = pending_output[item_id]["count"] - _ingredient_amount(ing)
 		if new_count <= 0:
 			pending_output.erase(item_id)
 		else:
 			pending_output[item_id]["count"] = new_count
 	pending_output_changed.emit()
+
+func _ingredient_amount(ingredient: Dictionary) -> int:
+	var amount := int(ingredient.get("amount", 0))
+	if str(ingredient.get("id", "")) == "datos" and GameState.save_service.player_save != null:
+		amount = ceili(float(amount) * (1.0 - GameState.save_service.player_save.lab_data_cost_reduction))
+	return maxi(1, amount)
 
 ## Pausa la receta activa y guarda su avance en memoria. La UI y los cambios
 ## de partida pueden usarlo sin depender del temporizador interno.

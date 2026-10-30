@@ -134,6 +134,16 @@ func setup_biome(value: BiomeData) -> void:
 # La geometría inicial llega por `construction`; el estado y sus mutaciones
 # durante el combate viven en `terrain`.
 # ── Visual ────────────────────────────────────────────────────────────────────
+## Los layouts de bioma construyen la visual inicial mediante MapArea; los
+## sistemas concretos conservan la implementación de cada tipo de obstáculo.
+func build_initial_tree_mesh(mesh_instance: MeshInstance3D, obstacle: Dictionary, grid_position: Vector2) -> void:
+	_tree_system.build_initial_tree_mesh(mesh_instance, obstacle, grid_position)
+
+
+func build_initial_rock_mesh(mesh_instance: MeshInstance3D, obstacle: Dictionary, grid_position: Vector2, material: StandardMaterial3D) -> void:
+	_module_system.build_initial_rock_mesh(mesh_instance, obstacle, grid_position, material)
+
+
 ## Alturas de los resaltados sobre el suelo: la sombra está en 0.02.
 ## Un área tiene que cubrir este tramo del radio de la huella para afectarla.
 ## Las colisiones físicas conservan el radio completo.

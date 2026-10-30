@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "embotellar_agua_manantial"
+recipe_name = "Embotellar Agua de Manantial"
+item_name = "Agua de Manantial"
+description = "Purifica agua de una fuente registrada para usarla en combate."
+craft_time = 8.0
+location = "lab"
+action_type = "loop"
+reward = {"type":"item", "id":"agua_de_manantial", "amount":1}
+ingredients = [{"id":"archivo_campo","amount":1},{"id":"datos","amount":4},{"id":"vacuna","amount":1},{"id":"eco_naturalista","amount":3},{"id":"eco_espacial","amount":2}]
+needs_research = true

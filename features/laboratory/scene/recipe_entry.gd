@@ -1,6 +1,6 @@
 extends PanelContainer
 
-const LabRecipeAction := preload("res://data/lab_recipe_action.gd")
+const LabRecipeActionScript := preload("res://data/lab_recipe_action.gd")
 
 signal activate_requested(recipe: Resource)
 
@@ -43,7 +43,7 @@ func setup(recipe: Resource, interactive := true) -> void:
 	_interactive = interactive
 	name_label.text = LocalizationState.recipe_name(recipe.id, recipe.recipe_name)
 	description_label.text = LocalizationState.recipe_description(recipe.id, recipe.description)
-	time_label.text = "" if recipe.action_type == LabRecipeAction.INSTANT else "%.0fs" % recipe.craft_time
+	time_label.text = "" if recipe.action_type == LabRecipeActionScript.INSTANT else "%.0fs" % recipe.craft_time
 
 	var parts: Array = []
 	if recipe.gold_cost > 0:

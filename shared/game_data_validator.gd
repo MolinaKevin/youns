@@ -4,10 +4,10 @@ extends RefCounted
 ## Validaciones que deben correr al cargar catálogos de recursos, además de
 ## las pruebas. Dan un error temprano al editar un .tres a mano.
 
-const LabRecipeAction := preload("res://data/lab_recipe_action.gd")
-const LabReward := preload("res://data/lab_reward.gd")
-const YounCatalog := preload("res://shared/youn_catalog.gd")
-const ItemCatalog := preload("res://shared/item_catalog.gd")
+const LabRecipeActionScript := preload("res://data/lab_recipe_action.gd")
+const LabRewardScript := preload("res://data/lab_reward.gd")
+const YounCatalogScript := preload("res://shared/youn_catalog.gd")
+const ItemCatalogScript := preload("res://shared/item_catalog.gd")
 
 
 static func card_errors(cards: Array[CardData]) -> PackedStringArray:
@@ -48,13 +48,13 @@ static func recipe_errors(recipes: Array[Resource]) -> PackedStringArray:
 			errors.append("Id de receta repetido '%s': %s y %s" % [recipe.id, ids[recipe.id], path])
 		else:
 			ids[recipe.id] = path
-		if not LabRecipeAction.is_known(recipe.action_type):
+		if not LabRecipeActionScript.is_known(recipe.action_type):
 			errors.append("Acción de receta desconocida '%s' en %s" % [recipe.action_type, path])
 		for ingredient in recipe.ingredients:
 			if str(ingredient.get("id", "")).is_empty() or int(ingredient.get("amount", 0)) <= 0:
 				errors.append("Ingrediente inválido en %s" % path)
 		for reward in [recipe.reward] + recipe.extra_rewards:
-			if not LabReward.is_known(reward):
+			if not LabRewardScript.is_known(reward):
 				errors.append("Recompensa inválida en %s" % path)
 	return errors
 
@@ -62,7 +62,7 @@ static func recipe_errors(recipes: Array[Resource]) -> PackedStringArray:
 static func youn_errors() -> PackedStringArray:
 	var errors := PackedStringArray()
 	var ids := {}
-	for youn in YounCatalog.all():
+	for youn in YounCatalogScript.all():
 		var path := youn.resource_path
 		if youn.id.is_empty():
 			errors.append("Youn sin id: %s" % path)
@@ -71,7 +71,7 @@ static func youn_errors() -> PackedStringArray:
 		else:
 			ids[youn.id] = path
 		for target_path in youn.evolves_to:
-			if YounCatalog.by_path(target_path) == null:
+			if YounCatalogScript.by_path(target_path) == null:
 				errors.append("Evolución inexistente '%s' en %s" % [target_path, path])
 	return errors
 
@@ -79,7 +79,7 @@ static func youn_errors() -> PackedStringArray:
 static func item_errors() -> PackedStringArray:
 	var errors := PackedStringArray()
 	var ids := {}
-	for item in ItemCatalog.all():
+	for item in ItemCatalogScript.all():
 		var path := item.resource_path
 		if item.id.is_empty():
 			errors.append("Ítem sin id: %s" % path)

@@ -5,10 +5,10 @@ var _care: CareStatsService
 var _emotions: EmotionService
 var _life: StatsLifeStage
 
-func _init(care: CareStatsService, emotions: EmotionService, life: StatsLifeStage) -> void:
-	_care = care
-	_emotions = emotions
-	_life = life
+func _init(care_service: CareStatsService, emotion_service: EmotionService, life_stage: StatsLifeStage) -> void:
+	_care = care_service
+	_emotions = emotion_service
+	_life = life_stage
 
 func care() -> CareStatsService:
 	return _care

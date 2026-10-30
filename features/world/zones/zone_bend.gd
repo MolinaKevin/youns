@@ -25,3 +25,24 @@ extends ZoneBase
 func _ready() -> void:
 	super._ready()
 	_fix_map_vertex_colors("Recodo")
+	$CoastalGuard.coastal_descent_opened.connect(_refresh_coastal_descent)
+	$CoastalDescentWarning.body_entered.connect(_on_coastal_descent_warning_body_entered)
+	_refresh_coastal_descent()
+
+
+func _on_coastal_descent_warning_body_entered(body: Node3D) -> void:
+	if body == PartyManager.player and not _coastal_descent_open():
+		$CoastalGuard.warn_descent_blocked()
+
+
+func _refresh_coastal_descent() -> void:
+	var open := _coastal_descent_open()
+	$CoastalDescentBarrier/Col.disabled = open
+	$CoastalDescentWarning.monitoring = not open
+	$CoastalGuard.visible = not open
+	$CoastalGuard.set_active(not open)
+
+
+func _coastal_descent_open() -> bool:
+	var save := GameState.save_service.player_save
+	return save != null and save.world_progress != null and save.world_progress.coastal_descent_open

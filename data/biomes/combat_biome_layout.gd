@@ -1,7 +1,7 @@
 class_name CombatBiomeLayout
 extends Resource
 
-const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
+const CombatObstacleScript := preload("res://features/combat/scene/combat_obstacle.gd")
 
 func populate_map(construction) -> void:
 	# Las subclases describen el tablero usando el puerto de construcción.
@@ -22,24 +22,24 @@ func build_visuals(map: Node3D, obstacles: Array[Dictionary]) -> void:
 	bridge_mat.roughness = 0.7
 
 	for obs: Dictionary in obstacles:
-		assert(CombatObstacle.is_known(obs), "Tipo de obstáculo desconocido: %s" % CombatObstacle.type_of(obs))
+		assert(CombatObstacleScript.is_known(obs), "Tipo de obstáculo desconocido: %s" % CombatObstacleScript.type_of(obs))
 		var pos: Vector2 = obs["pos"]
-		var obs_type := CombatObstacle.type_of(obs)
+		var obs_type := CombatObstacleScript.type_of(obs)
 		var mi := MeshInstance3D.new()
 		match obs_type:
-			CombatObstacle.PLATFORM:
+			CombatObstacleScript.PLATFORM:
 				_build_platform(map, mi, obs, pos)
 				continue
-			CombatObstacle.BRIDGE:
+			CombatObstacleScript.BRIDGE:
 				var size: Vector2 = obs["box"]
 				var box := BoxMesh.new()
 				box.size = Vector3(size.x, 0.22, size.y)
 				mi.mesh = box
 				mi.position = Vector3(pos.x, 0.9, pos.y)
 				mi.material_override = bridge_mat
-			CombatObstacle.TREE:
+			CombatObstacleScript.TREE:
 				map.build_initial_tree_mesh(mi, obs, pos)
-			CombatObstacle.ROCK:
+			CombatObstacleScript.ROCK:
 				map.build_initial_rock_mesh(mi, obs, pos, rock_mat)
 			_:
 				if obs.has("box"):

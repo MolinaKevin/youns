@@ -1,7 +1,7 @@
 class_name WorldConstructionCatalog
 extends RefCounted
 
-const WorldConstruction := preload("res://data/world/world_construction.gd")
+const WorldConstructionData := preload("res://data/world/world_construction.gd")
 const CONSTRUCTIONS_DIR := "res://data/world/constructions"
 
 var _by_id: Dictionary = {}
@@ -14,7 +14,7 @@ func _init() -> void:
 	for filename in paths:
 		if not filename.ends_with(".tres"):
 			continue
-		var construction := load(CONSTRUCTIONS_DIR.path_join(filename)) as WorldConstruction
+		var construction := load(CONSTRUCTIONS_DIR.path_join(filename)) as WorldConstructionData
 		if construction == null or construction.id.is_empty():
 			_load_errors.append("Construcción inválida '%s'." % filename)
 			continue
@@ -24,16 +24,16 @@ func _init() -> void:
 		_by_id[construction.id] = construction
 
 
-func for_zone(target_zone_id: String) -> Array[WorldConstruction]:
-	var result: Array[WorldConstruction] = []
+func for_zone(target_zone_id: String) -> Array[WorldConstructionData]:
+	var result: Array[WorldConstructionData] = []
 	for construction in _by_id.values():
 		if construction.zone_id == target_zone_id:
 			result.append(construction)
 	return result
 
 
-func all() -> Array[WorldConstruction]:
-	var result: Array[WorldConstruction] = []
+func all() -> Array[WorldConstructionData]:
+	var result: Array[WorldConstructionData] = []
 	for construction in _by_id.values():
 		result.append(construction)
 	return result

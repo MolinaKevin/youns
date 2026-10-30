@@ -2,8 +2,8 @@ extends "res://shared/world_transition_party_port.gd"
 
 const PARTY_SCENE := preload("res://features/world/party/party.tscn")
 const CollisionLayers := preload("res://shared/world_collision_layers.gd")
-const ScenePaths := preload("res://shared/scene_paths.gd")
-const TITLE_MENU_SCENE := ScenePaths.TITLE_MENU
+const ScenePathsScript := preload("res://shared/scene_paths.gd")
+const TITLE_MENU_SCENE := ScenePathsScript.TITLE_MENU
 const PLAYER_PATH := ^"Player"
 const YOUN_PATH := ^"Youn"
 const CAMERA_RIG_PATH := ^"CameraRig"
@@ -46,11 +46,9 @@ func initialize_party() -> void:
 	# temporalmente a sólo suelo cuando necesita recuperar distancia.
 	player.collision_mask = CollisionLayers.ACTOR_WORLD_MASK
 	youn.collision_mask = CollisionLayers.ACTOR_WORLD_MASK
-	# Mantiene las capas actuales para que las Areas del mundo sigan detectando
-	# al jugador, pero ambos CharacterBody3D se ignoran entre sí y no pueden
-	# bloquearse al caminar.
-	player.add_collision_exception_with(youn)
-	youn.add_collision_exception_with(player)
+	# Ambos usan la capa de obstáculos por defecto, por lo que sus máscaras ya
+	# los detectan entre sí. El seguimiento del Youn mantiene una separación
+	# corta para que no bloquee al jugador al tocarlo.
 	_initialized = true
 
 ## Resuelve el contrato estructural de party.tscn sin asumir que sus nodos

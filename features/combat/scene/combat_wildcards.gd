@@ -1,7 +1,7 @@
 class_name CombatWildcards
 extends RefCounted
 
-const InventoryService := preload("res://shared/inventory_service.gd")
+const InventoryServiceScript := preload("res://shared/inventory_service.gd")
 
 ## Qué hace cada comodín (Ataque/Mover/Mantener/Ítem) cuando se arma o se
 ## usa. `combat_wildcards_ui.gd` es la contraparte visual del widget; esta
@@ -128,5 +128,5 @@ func use_item(inventory_index: int, data: ItemData) -> void:
 
 func _consume_inventory_item(index: int) -> void:
 	var items: Array = GameState.save_service.player_save.inventory_items
-	InventoryService.consume_at(items, index)
+	InventoryServiceScript.consume_at(items, index)
 	GameState.save_service.player_save.inventory_items = items

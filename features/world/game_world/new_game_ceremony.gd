@@ -346,7 +346,6 @@ func _ask_name(prompt: String, placeholder: String, announce_prompt := true) -> 
 
 func _enter_world() -> void:
 	if not _sequence_completed:
-		push_warning("[NewGameCeremony:%s] Se ignoró una transición prematura al mundo." % get_instance_id())
 		return
 	if _entering_world:
 		return
@@ -359,7 +358,6 @@ func _enter_world() -> void:
 func _change_to_world() -> void:
 	print("[NewGameCeremony:%s] change_scene_to_file(WorldLoading)." % get_instance_id())
 	_collect_preloaded_world()
-	get_tree().paused = false
-	var result := get_tree().change_scene_to_file(WORLD_LOADING)
+	var result := SceneNavigator.change_scene_resumed(get_tree(), WORLD_LOADING)
 	if result != OK:
 		push_error("NewGameCeremony: no se pudo cargar WorldLoading (%s)." % result)

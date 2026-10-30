@@ -1,6 +1,6 @@
 extends HBoxContainer
 
-const DebugLogging := preload("res://shared/debug_logging.gd")
+const DebugLog := preload("res://shared/debug_logging.gd")
 
 signal card_selected(card_data: CardData)
 
@@ -11,7 +11,7 @@ func set_cards(cards: Array[CardData]) -> void:
 	for child in grid.get_children():
 		child.queue_free()
 
-	if DebugLogging.verbose_enabled():
+	if DebugLog.verbose_enabled():
 		print("set_cards: ", cards.size())
 
 	for card_data in cards:

@@ -1,13 +1,13 @@
 extends GutTest
 
-const ZoneCatalog := preload("res://data/zones/zone_catalog.gd")
-const ZoneDefinition := preload("res://data/zones/zone_definition.gd")
-const ZoneStreamingController := preload("res://shared/zone_streaming_controller.gd")
+const ZoneCatalogScript := preload("res://data/zones/zone_catalog.gd")
+const ZoneDefinitionScript := preload("res://data/zones/zone_definition.gd")
+const ZoneStreamingControllerScript := preload("res://shared/zone_streaming_controller.gd")
 const FIXTURE_SCENE := "res://tests/fixtures/zones/fixture_zone.tscn"
 
 
-func _definition(id: String, connections: Array[String]) -> ZoneDefinition:
-	var definition := ZoneDefinition.new()
+func _definition(id: String, connections: Array[String]) -> ZoneDefinitionScript:
+	var definition := ZoneDefinitionScript.new()
 	definition.id = id
 	definition.scene_path = FIXTURE_SCENE
 	definition.connections = connections
@@ -15,14 +15,14 @@ func _definition(id: String, connections: Array[String]) -> ZoneDefinition:
 
 
 func test_cambiar_de_zona_descarga_las_lejanas_y_emite_eventos() -> void:
-	var definitions: Array[ZoneDefinition] = [
+	var definitions: Array[ZoneDefinitionScript] = [
 		_definition("a", ["b"]),
 		_definition("b", ["a"]),
 		_definition("c", []),
 	]
-	var streaming := ZoneStreamingController.new()
+	var streaming := ZoneStreamingControllerScript.new()
 	add_child_autofree(streaming)
-	streaming.configure(ZoneCatalog.from_definitions(definitions), func() -> bool: return true)
+	streaming.configure(ZoneCatalogScript.from_definitions(definitions), func() -> bool: return true)
 	var events: Array[String] = []
 	streaming.zone_loaded.connect(func(zone_id: String): events.append("+" + zone_id))
 	streaming.zone_unloaded.connect(func(zone_id: String): events.append("-" + zone_id))

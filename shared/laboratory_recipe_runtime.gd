@@ -1,7 +1,7 @@
 class_name LaboratoryRecipeRuntime
 extends RefCounted
 
-const LabRecipeAction := preload("res://data/lab_recipe_action.gd")
+const LabRecipeActionScript := preload("res://data/lab_recipe_action.gd")
 
 ## Ciclo temporal de una receta activa. El estado conserva los datos públicos;
 ## este servicio concentra Timer, pausa, progreso y reanudación.
@@ -41,7 +41,7 @@ func complete(recipe: Resource) -> void:
 	for reward in recipe.extra_rewards:
 		_state.grant_reward(reward, recipe.recipe_name)
 	_state.recipe_progress.erase(recipe.id)
-	if recipe.action_type != LabRecipeAction.UPGRADE:
+	if recipe.action_type != LabRecipeActionScript.UPGRADE:
 		if _state.has_ingredients(recipe):
 			_state.consume_ingredients(recipe)
 			start(recipe)

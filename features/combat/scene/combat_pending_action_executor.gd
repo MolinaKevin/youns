@@ -20,7 +20,10 @@ func execute(cell: Vector2) -> void:
 func execute_async(cell: Vector2) -> void:
 	if _host._current_action == null:
 		return
-	var action: CombatPendingAction = _host._current_action
+	# Las implementaciones de `execute()` pueden ser corrutinas o inmediatas.
+	# El puerto base es intencionalmente síncrono, por eso se despacha como
+	# Variant para que `await` conserve la corrutina concreta cuando exista.
+	var action: Variant = _host._current_action
 	await action.execute(cell)
 	if not action.is_active():
 		_host._current_action = null

@@ -15,7 +15,7 @@ extends Node3D
 
 const GymForest := preload("res://features/world/zones/gym_forest.gd")
 const AutoDecorationScript := preload("res://features/world/zones/auto_decoration.gd")
-const DebugLogging := preload("res://shared/debug_logging.gd")
+const DebugLog := preload("res://shared/debug_logging.gd")
 const BoundaryBakeData := preload("res://features/world/zones/world_boundary_bake_data.gd")
 const BoundaryBakeSignature := preload("res://features/world/zones/world_boundary_bake_signature.gd")
 
@@ -68,7 +68,7 @@ var _settings: WorldGenerationSettings = preload("res://data/world/world_generat
 func build(catalog: ZoneCatalog, force_procedural_decoration := false, build_walls := true, build_tree_meshes := true, use_baked_boundary := true) -> void:
 	var started_at := Time.get_ticks_msec()
 	var checkpoint := started_at
-	if DebugLogging.verbose_enabled():
+	if DebugLog.verbose_enabled():
 		print("[WorldBoundary] Construyendo límites y decoración global…")
 	if use_baked_boundary and _load_baked_boundary(build_walls):
 		_decoration.prepare(force_procedural_decoration, build_tree_meshes)
@@ -137,7 +137,7 @@ func _load_baked_boundary(build_walls: bool) -> bool:
 		if walls == null:
 			return false
 		add_child(walls)
-	if DebugLogging.verbose_enabled():
+	if DebugLog.verbose_enabled():
 		print("[WorldBoundary] Grilla y paredes horneadas cargadas.")
 	return true
 
@@ -147,7 +147,7 @@ func _offset_rect(r: Rect2, offset: Vector3) -> Rect2:
 
 func _log_build_step(step: String, started_at: int, previous_at: int) -> int:
 	var now := Time.get_ticks_msec()
-	if DebugLogging.verbose_enabled():
+	if DebugLog.verbose_enabled():
 		print("[WorldBoundary] %s: +%d ms (total: %d ms)" % [step, now - previous_at, now - started_at])
 	return now
 

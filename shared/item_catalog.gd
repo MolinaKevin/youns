@@ -11,6 +11,10 @@ static func by_path(path: String) -> ItemData:
 	_ensure_loaded()
 	return _by_path.get(path) as ItemData
 
+static func by_id(item_id: String) -> ItemData:
+	_ensure_loaded()
+	return _by_id.get(item_id) as ItemData
+
 
 static func all() -> Array[ItemData]:
 	_ensure_loaded()

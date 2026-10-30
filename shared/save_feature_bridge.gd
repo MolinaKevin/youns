@@ -8,9 +8,9 @@ var _restore: Callable
 var _write: Callable
 
 
-func _init(restore: Callable, write: Callable) -> void:
-	_restore = restore
-	_write = write
+func _init(restore_callback: Callable, write_callback: Callable) -> void:
+	_restore = restore_callback
+	_write = write_callback
 
 
 func restore(save: PlayerSaveData) -> void:

@@ -1,6 +1,8 @@
 extends Resource
 class_name ItemData
 
+const ItemEffectRuntimeScript := preload("res://shared/item_effect_runtime.gd")
+
 @export var id: String = ""
 @export var name: String = ""
 @export var description: String = ""
@@ -9,14 +11,18 @@ class_name ItemData
 @export_range(0.0, 10.0, 0.1) var weight_gain: float = 0.0
 @export_range(0.0, 10.0, 0.1) var poop_size: float = 0.0
 
-func apply_effects(save: PlayerSaveData) -> void:
+func apply_effects(save: PlayerSaveData, context: ItemEffectContext = null) -> void:
+	var item_context := runtime_context(context)
 	for effect in effects:
-		effect.apply(save)
+		effect.apply(save, item_context)
 	if weight_gain > 0.0:
-		StatsManager.services.care().set_weight(save.weight + weight_gain)
+		item_context.set_weight(save.weight + weight_gain)
 	if poop_size > 0.0:
 		save.poop_pending += poop_size
-	StatsManager.check_status()
+	item_context.check_status()
+
+func runtime_context(context: ItemEffectContext) -> ItemEffectContext:
+	return context if context != null else ItemEffectRuntimeScript.context()
 
 ## ¿Se puede usar en combate? (tiene algún ItemEffectCombat)
 func is_combat_item() -> bool:

@@ -1,7 +1,7 @@
 class_name EvolutionChecker
 
 const YOUNS_DIR := "res://data/youns/"
-const YounCatalog := preload("res://shared/youn_catalog.gd")
+const YounCatalogScript := preload("res://shared/youn_catalog.gd")
 const REINCARNATE := "reincarnate"
 
 ## Tiempo máximo en cada etapa (días de juego). Como DW1: el bebé evoluciona a
@@ -67,7 +67,7 @@ static func pick_by_conditions(candidates: Array, ctx: Dictionary) -> String:
 	var best: Array[String] = []
 	var best_score := -1
 	for path in candidates:
-		var data := YounCatalog.by_path(path)
+		var data := YounCatalogScript.by_path(path)
 		if data == null:
 			continue
 		var met := count_met(data, ctx)
@@ -93,7 +93,7 @@ static func stage_candidates(stage: String) -> Array[String]:
 	var result: Array[String] = []
 	if stage.is_empty():
 		return result
-	return YounCatalog.paths_for_stage(stage, false)
+	return YounCatalogScript.paths_for_stage(stage, false)
 
 
 static func make_context(save: PlayerSaveData, from: YounData) -> Dictionary:
@@ -114,7 +114,7 @@ static func pick_target(candidates: Array[String], ctx: Dictionary) -> String:
 		return ""
 	var datas: Array[YounData] = []
 	for path in candidates:
-		datas.append(YounCatalog.by_path(path))
+		datas.append(YounCatalogScript.by_path(path))
 	if datas.any(func(d: YounData) -> bool: return d != null and not d.dominant_stats.is_empty()):
 		return _pick_by_dominant_stat(candidates, datas, ctx)
 	var best := candidates[0]
@@ -181,7 +181,7 @@ static func count_met(target: YounData, ctx: Dictionary) -> int:
 static func _find_wildcard(stage: String) -> String:
 	if stage.is_empty():
 		return ""
-	var paths := YounCatalog.paths_for_stage(stage, true)
+	var paths := YounCatalogScript.paths_for_stage(stage, true)
 	if not paths.is_empty():
 		return paths[0]
 	return ""

@@ -11,5 +11,5 @@ craft_time = 2.0
 location = "lab"
 action_type = "upgrade"
 reward = {"type": "item", "id": "suero_muy_loco", "amount": 1}
-extra_rewards = []
-ingredients = [{"id": "suero_loco", "amount": 2}, {"id": "suero_vitalidad", "amount": 1}]
+extra_rewards = [{"type": "unlock_recipe", "id": "suero_potenciado"}, {"type": "unlock_recipe", "id": "suero_produccion"}]
+ingredients = [{"id":"datos","amount":42}, {"id":"virus","amount":8}, {"id":"vacuna","amount":3}, {"id": "suero_loco", "amount": 2}, {"id": "suero_vitalidad", "amount": 1}, {"id":"eco_corporal","amount":5}]

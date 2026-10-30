@@ -11,6 +11,6 @@ craft_time = 35.0
 location = "infraestructura"
 action_type = "upgrade"
 reward = {"type": "world_bridge", "id": "river_bridge"}
-ingredients = [{"id": "datos", "amount": 20}]
+ingredients = [{"id": "datos", "amount": 55}, {"id":"eco_espacial","amount":6}, {"id":"eco_naturalista","amount":3}]
 starts_unlocked = false
 needs_research = true

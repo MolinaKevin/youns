@@ -15,12 +15,12 @@ var _push_system: CombatPushSystem
 var _module_system: ModuleSystem
 var _spell_system: CombatSpellSystem
 
-func _init(map: CombatMapArea, targeting: CombatTargeting, presentation: CombatMapPresentation,
+func _init(map: CombatMapArea, targeting_system: CombatTargeting, presentation: CombatMapPresentation,
 		trap_system: TrapSystem, grenade_system: GrenadeSystem, rock_jump_system: RockJumpSystem,
 		puddle_system: PuddleSystem, overwatch_system: CombatOverwatchSystem,
 		push_system: CombatPushSystem, module_system: ModuleSystem, spell_system: CombatSpellSystem) -> void:
 	_map = map
-	_targeting = targeting
+	_targeting = targeting_system
 	_presentation = presentation
 	_trap_system = trap_system
 	_grenade_system = grenade_system

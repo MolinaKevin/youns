@@ -4,7 +4,7 @@ class_name ItemEffectSetStat
 @export var stat_key: String = ""
 @export var value: float = 0.0
 
-func apply(_save: PlayerSaveData) -> void:
+func apply(_save: PlayerSaveData, context: ItemEffectContext = null) -> void:
 	if stat_key.is_empty():
 		return
-	StatsManager.services.care().set_stat(stat_key, int(value))
+	runtime_context(context).set_stat(stat_key, int(value))

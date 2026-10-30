@@ -12,6 +12,8 @@ const WORLD_BRIDGE := "world_bridge"
 const YOUN_GROWTH_BONUS := "youn_growth_bonus"
 const MATERIAL_PRODUCTION := "material_production"
 const MAX_HP := "max_hp"
+const LAB_EFFICIENCY := "lab_efficiency"
+const COMBAT_RECOVERY := "combat_recovery"
 
 const TYPES := [
 	UNLOCK_RECIPE,
@@ -22,6 +24,8 @@ const TYPES := [
 	YOUN_GROWTH_BONUS,
 	MATERIAL_PRODUCTION,
 	MAX_HP,
+	LAB_EFFICIENCY,
+	COMBAT_RECOVERY,
 ]
 
 ## Campos serializables permitidos para cada tipo. Así los .tres siguen siendo
@@ -35,6 +39,8 @@ const FIELDS_BY_TYPE := {
 	YOUN_GROWTH_BONUS: ["type", "value"],
 	MATERIAL_PRODUCTION: ["type", "value"],
 	MAX_HP: ["type", "value"],
+	LAB_EFFICIENCY: ["type", "data_per_cycle", "data_cost_reduction"],
+	COMBAT_RECOVERY: ["type", "value"],
 }
 
 

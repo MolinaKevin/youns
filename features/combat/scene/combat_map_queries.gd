@@ -1,7 +1,7 @@
 class_name CombatMapQueries
 extends "res://features/combat/scene/combat_map_queries_port.gd"
 
-const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
+const CombatObstacleScript := preload("res://features/combat/scene/combat_obstacle.gd")
 
 ## Consultas geométricas puras del tablero. Lee el estado espacial de MapArea,
 ## pero no lo modifica: LOS, intersecciones y distancias a obstáculos.
@@ -20,12 +20,12 @@ func movement_distance(from: Vector2, to: Vector2) -> float:
 
 func line_of_sight_clear(from: Vector2, to: Vector2, block_rocks: bool, block_bridges: bool, from_elevation: int, to_elevation: int) -> bool:
 	for obstacle: Dictionary in map.terrain.geometry.collision.obstacles():
-		var obstacle_type := CombatObstacle.type_of(obstacle)
-		if obstacle_type == CombatObstacle.ROCK and not block_rocks:
+		var obstacle_type := CombatObstacleScript.type_of(obstacle)
+		if obstacle_type == CombatObstacleScript.ROCK and not block_rocks:
 			continue
-		if obstacle_type == CombatObstacle.BRIDGE and not block_bridges:
+		if obstacle_type == CombatObstacleScript.BRIDGE and not block_bridges:
 			continue
-		if obstacle_type == CombatObstacle.PLATFORM:
+		if obstacle_type == CombatObstacleScript.PLATFORM:
 			if from_elevation > 0 or to_elevation > 0:
 				continue
 			if segment_hits_box(from, to, obstacle["pos"], obstacle["box"] * 0.5):
@@ -41,7 +41,7 @@ func line_of_sight_clear(from: Vector2, to: Vector2, block_rocks: bool, block_br
 func clip_path_at_obstacle(from: Vector2, to: Vector2) -> Vector2:
 	var closest_time := 1.0
 	for obstacle: Dictionary in map.terrain.geometry.collision.obstacles():
-		if CombatObstacle.type_of(obstacle) == CombatObstacle.ROCK:
+		if CombatObstacleScript.type_of(obstacle) == CombatObstacleScript.ROCK:
 			continue
 		var hit_time := segment_hit_time_box(from, to, obstacle["pos"], obstacle["box"] * 0.5) if obstacle.has("box") else segment_hit_time_circle(from, to, obstacle["pos"], obstacle["radius"])
 		if hit_time >= 0.0 and hit_time < closest_time:

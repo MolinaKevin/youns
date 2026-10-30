@@ -4,12 +4,12 @@ class_name ItemEffectStatus
 @export var status_key: String = ""
 @export var value: bool = false
 
-func apply(save: PlayerSaveData) -> void:
+func apply(save: PlayerSaveData, context: ItemEffectContext = null) -> void:
 	if status_key.is_empty() or save == null:
 		return
 	match status_key:
 		"enfermo":
-			StatsManager.services.care().set_sick(value)
+			runtime_context(context).set_sick(value)
 		_:
 			if _save_has_property(save, status_key):
 				save.set(status_key, value)

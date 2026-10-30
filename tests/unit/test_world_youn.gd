@@ -59,3 +59,11 @@ func test_bloqueo_de_combate_y_posicion_inicial_usan_al_jugador() -> void:
 	assert_false(_player.is_physics_processing())
 	_youn.set_player_combat_locked(false)
 	assert_true(_player.is_physics_processing())
+
+
+func test_no_inicia_un_encuentro_mientras_un_combate_mundial_esta_activo() -> void:
+	GameState.world_combat.active = true
+	_youn.begin_encounter()
+
+	assert_false(_youn.is_engaging_combat())
+	GameState.world_combat.clear()

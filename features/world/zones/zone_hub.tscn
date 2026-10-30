@@ -15,6 +15,7 @@
 [ext_resource type="Resource" path="res://data/dialogue/hub/tetue_greeting.tres" id="12_tetue_conv"]
 [ext_resource type="Resource" path="res://data/dialogue/hub/luzmala_npc_greeting.tres" id="13_luzmala_conv"]
 [ext_resource type="Resource" path="res://data/biomes/pradera.tres" id="biome_pradera"]
+[ext_resource type="PackedScene" path="res://assets/maps/hub/bano.glb" id="20_bano"]
 
 [sub_resource type="BoxShape3D" id="1"]
 size = Vector3(130, 20, 130)
@@ -27,18 +28,6 @@ size = Vector3(4.4, 6, 46)
 
 [sub_resource type="BoxShape3D" id="2"]
 size = Vector3(2.5, 2.5, 1)
-
-[sub_resource type="CylinderMesh" id="10"]
-top_radius = 1.8
-bottom_radius = 2.0
-height = 3.5
-
-[sub_resource type="CylinderShape3D" id="11"]
-radius = 1.9
-height = 3.5
-
-[sub_resource type="StandardMaterial3D" id="12"]
-albedo_color = Color(0.88, 0.86, 0.8, 1)
 
 [sub_resource type="SphereShape3D" id="13"]
 radius = 9.0
@@ -106,12 +95,8 @@ script = ExtResource("3_bathroom")
 toilet_data = ExtResource("2_toilet")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 1.75, -5)
 
-[node name="Mesh" type="MeshInstance3D" parent="Toilet" unique_id=100000002]
-material_override = SubResource("12")
-mesh = SubResource("10")
-
-[node name="Collision" type="CollisionShape3D" parent="Toilet" unique_id=100000003]
-shape = SubResource("11")
+[node name="Visual" parent="Toilet" instance=ExtResource("20_bano")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.75, 0)
 
 [node name="StartPoint" type="Node3D" parent="Toilet" unique_id=100000006]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.75, 5)

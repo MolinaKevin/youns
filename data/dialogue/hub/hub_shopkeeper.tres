@@ -12,6 +12,7 @@
 [ext_resource type="Resource" path="res://data/items/vaciador_estomago.tres" id="8_o7hh5"]
 [ext_resource type="Resource" path="res://data/items/semilla_embrujada.tres" id="9_wdqog"]
 [ext_resource type="Resource" path="res://data/items/brebaje_mapuche.tres" id="10_0646g"]
+[ext_resource type="Resource" path="res://data/items/laxante.tres" id="11_laxante"]
 
 [sub_resource type="Resource" id="Resource_nn30h"]
 script = ExtResource("1_jlary")
@@ -50,6 +51,11 @@ script = ExtResource("1_jlary")
 label_key = "world.hub.npc.debug_vaciador"
 give_item = ExtResource("8_o7hh5")
 
+[sub_resource type="Resource" id="Resource_laxante"]
+script = ExtResource("1_jlary")
+label_key = "world.hub.npc.debug_laxante"
+give_item = ExtResource("11_laxante")
+
 [sub_resource type="Resource" id="Resource_7avbd"]
 script = ExtResource("1_jlary")
 give_item = ExtResource("9_wdqog")
@@ -65,4 +71,4 @@ key = "world.hub.npc"
 [resource]
 script = ExtResource("2_4f5fg")
 lines = Array[ExtResource("1_5lpo2")]([SubResource("Resource_y7cla")])
-choices = Array[ExtResource("1_jlary")]([SubResource("Resource_nn30h"), SubResource("Resource_yjfjc"), SubResource("Resource_qrcjm"), SubResource("Resource_oe41e"), SubResource("Resource_emllc"), SubResource("Resource_keeio"), SubResource("Resource_qmpau"), SubResource("Resource_chah5"), SubResource("Resource_7avbd"), SubResource("Resource_dpb5v")])
+choices = Array[ExtResource("1_jlary")]([SubResource("Resource_nn30h"), SubResource("Resource_yjfjc"), SubResource("Resource_qrcjm"), SubResource("Resource_oe41e"), SubResource("Resource_emllc"), SubResource("Resource_keeio"), SubResource("Resource_qmpau"), SubResource("Resource_chah5"), SubResource("Resource_laxante"), SubResource("Resource_7avbd"), SubResource("Resource_dpb5v")])

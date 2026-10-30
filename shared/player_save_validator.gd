@@ -4,7 +4,7 @@ extends RefCounted
 ## Sanea referencias persistidas que pudieron quedar obsoletas tras borrar o
 ## renombrar recursos. Conserva todo lo válido y devuelve los cambios hechos.
 
-const CardCatalog := preload("res://shared/card_catalog.gd")
+const CardCatalogScript := preload("res://shared/card_catalog.gd")
 const FALLBACK_YOUN_PATH := "res://data/youns/nguruvilu.tres"
 const FALLBACK_ZONE_ID := "hub"
 
@@ -41,7 +41,7 @@ static func sanitize(save: PlayerSaveData) -> PackedStringArray:
 
 
 static func _sanitize_card_ids(save: PlayerSaveData, changes: PackedStringArray) -> void:
-	var known := CardCatalog.known_ids()
+	var known := CardCatalogScript.known_ids()
 	var owned := _known_ids(save.owned_card_ids, known)
 	if owned.size() != save.owned_card_ids.size():
 		save.owned_card_ids = owned

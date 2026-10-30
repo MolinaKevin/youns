@@ -11,4 +11,4 @@ craft_time = 1.0
 location = "lab"
 action_type = "upgrade"
 reward = {"type": "max_hp", "value": 25}
-ingredients = []
+ingredients = [{"id":"virus","amount":4}, {"id":"vacuna","amount":5}, {"id":"suero_muy_loco","amount":1}, {"id":"eco_corporal","amount":8}]

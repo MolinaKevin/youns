@@ -29,7 +29,7 @@ extends RefCounted
 ## tienen colisión.
 
 const ForestBuilder := preload("res://features/world/zones/forest_builder.gd")
-const DebugLogging := preload("res://shared/debug_logging.gd")
+const DebugLog := preload("res://shared/debug_logging.gd")
 const Builder := preload("res://features/world/zones/auto_decoration_builder.gd")
 
 enum Kind { FOREST, GROUND, NO_FILL, NO_TREES, WATER }
@@ -132,7 +132,7 @@ func has_guides() -> bool:
 ## WorldBoundary: sólo se consulta para no plantar árboles sobre lo caminable
 ## ni a menos de `clearance` celdas de su borde.
 func build(parent: Node3D, grid: WorldBoundaryGrid, clearance: int, spacing: float, tree_seed: int, build_tree_meshes := true) -> void:
-	if DebugLogging.verbose_enabled():
+	if DebugLog.verbose_enabled():
 		print("[AutoDecoration] Construyendo decoración global…")
 	Builder.build(self, parent, grid, clearance, spacing, tree_seed, build_tree_meshes)
 ## Dónde quedaron los árboles del último build() (para tests y depuración).

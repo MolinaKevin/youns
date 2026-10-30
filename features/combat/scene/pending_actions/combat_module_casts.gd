@@ -1,7 +1,7 @@
 class_name CombatModuleCasts
 extends CombatEffectResolver
 
-const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
+const CombatObstacleScript := preload("res://features/combat/scene/combat_obstacle.gd")
 
 ## El efecto de cada carta de módulo una vez que ya se eligió el módulo (y,
 ## si corresponde, la dirección o el punto de caída) — eso lo resuelve
@@ -10,7 +10,7 @@ const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd"
 ## Romper: destruye el módulo o, si es un árbol, lo tala (ver host._fell_tree).
 func cast_break(played_card: CardActionLine, obs: Dictionary, flow: AsyncFlowToken) -> void:
 	var count := maxi(1, played_card.module_count)
-	if CombatObstacle.type_of(obs) == CombatObstacle.TREE:
+	if CombatObstacleScript.type_of(obs) == CombatObstacleScript.TREE:
 		await host._fell_tree(played_card, obs, flow)
 	else:
 		var broken: int = host.board.obstacles.break_modules(obs, count)

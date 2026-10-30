@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "optimizacion_de_muestreo"
+recipe_name = "Optimización de Muestreo"
+description = "Duplica los Datos generados y abarata cada investigación."
+craft_time = 22.0
+location = "analisis"
+action_type = "upgrade"
+reward = {"type":"lab_efficiency", "data_per_cycle":2, "data_cost_reduction":0.2}
+extra_rewards = [{"type":"unlock_recipe", "id":"nucleo_de_procesamiento"}]
+ingredients = [{"id":"datos","amount":20},{"id":"archivo_campo","amount":1},{"id":"eco_logica","amount":5}]
+needs_research = true

@@ -1,11 +1,11 @@
 extends ZoneBase
 
 const CollisionLayers := preload("res://shared/world_collision_layers.gd")
-const LabMilestone := preload("res://data/lab_milestone.gd")
-const WorldConstruction := preload("res://data/world/world_construction.gd")
-const WorldConstructionCatalog := preload("res://data/world/world_construction_catalog.gd")
+const LabMilestoneScript := preload("res://data/lab_milestone.gd")
+const WorldConstructionData := preload("res://data/world/world_construction.gd")
+const WorldConstructionCatalogScript := preload("res://data/world/world_construction_catalog.gd")
 
-var _construction_catalog := WorldConstructionCatalog.new()
+var _construction_catalog := WorldConstructionCatalogScript.new()
 
 func _ready() -> void:
 	super._ready()
@@ -37,7 +37,7 @@ func _on_lab_warp_entered(body: Node3D) -> void:
 		ZoneManager.enter_interior("res://features/world/lab_interior/lab_interior.tscn")
 
 func _on_recipe_completed(recipe: Resource) -> void:
-	if recipe.id == LabMilestone.BRIDGE_STUDY or recipe.id == LabMilestone.RIVER_BRIDGE:
+	if recipe.id == LabMilestoneScript.BRIDGE_STUDY or recipe.id == LabMilestoneScript.RIVER_BRIDGE:
 		_refresh_demo_bridge_visibility()
 	_refresh_constructions()
 
@@ -52,7 +52,7 @@ func _refresh_constructions() -> void:
 		_refresh_construction(construction)
 
 
-func _refresh_construction(construction: WorldConstruction) -> void:
+func _refresh_construction(construction: WorldConstructionData) -> void:
 	var progress := GameState.save_service.player_save.world_progress if GameState.save_service.player_save else null
 	var built := progress != null and progress.has_construction(construction.id)
 	var blocker := get_node_or_null(construction.blocker_path) as CollisionShape3D
@@ -73,7 +73,7 @@ func _refresh_construction(construction: WorldConstruction) -> void:
 		node.queue_free()
 
 func _refresh_demo_bridge_visibility() -> void:
-	var bridge_researched := LaboratoryState.is_recipe_completed(LabMilestone.BRIDGE_STUDY) \
-		or LaboratoryState.is_recipe_completed(LabMilestone.RIVER_BRIDGE)
+	var bridge_researched := LaboratoryState.is_recipe_completed(LabMilestoneScript.BRIDGE_STUDY) \
+		or LaboratoryState.is_recipe_completed(LabMilestoneScript.RIVER_BRIDGE)
 	$DemoMonzaemon.visible = bridge_researched
 	$DemoMonzaemon.set_active(bridge_researched)

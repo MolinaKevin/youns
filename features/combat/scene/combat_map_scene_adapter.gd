@@ -5,9 +5,9 @@ extends CombatMapScenePort
 var _input: CombatMapInput
 var _actors: CombatActorPresentation
 
-func _init(input: CombatMapInput, actors: CombatActorPresentation) -> void:
-	_input = input
-	_actors = actors
+func _init(input_controller: CombatMapInput, actor_presentation: CombatActorPresentation) -> void:
+	_input = input_controller
+	_actors = actor_presentation
 	self.actors = CombatMapSceneActorsAdapter.new(self)
 	self.presentation = CombatMapScenePresentationAdapter.new(self)
 	self.input = CombatMapSceneInputAdapter.new(self)

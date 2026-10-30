@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "potenciador_de_entrenamiento"
+recipe_name = "Preparar Potenciador de Entrenamiento"
+item_name = "Potenciador de Entrenamiento"
+description = "Consumible: el próximo entrenamiento cuenta como 150%."
+craft_time = 9.0
+location = "bio"
+action_type = "loop"
+reward = {"type":"item", "id":"potenciador_de_entrenamiento", "amount":1}
+ingredients = [{"id":"datos","amount":10},{"id":"virus","amount":2},{"id":"vacuna","amount":1},{"id":"archivo_campo","amount":1},{"id":"eco_corporal","amount":3},{"id":"eco_intrapersonal","amount":2}]
+needs_research = true

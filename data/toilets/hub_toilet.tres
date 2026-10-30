@@ -4,10 +4,11 @@
 
 [resource]
 script = ExtResource("1_script")
-world_position = Vector3(15, 1.75, -5)
-start_point = Vector3(15, 0, 0)
-meeting_distance = 2.0
-entrance_distance = 3.0
+player_start_position = Vector3(15, 0, 0)
+youn_start_position = Vector3(15, 0, -2)
+youn_entrance_position = Vector3(15, 0, -2)
+youn_inside_position = Vector3(15, 1.75, -5)
+camera_focus_position = Vector3(15, 1, -1)
 cam_pivot_height = 1.0
 cam_distance = 8.0
 cam_pitch = 0.6

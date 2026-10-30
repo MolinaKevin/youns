@@ -1,8 +1,8 @@
 extends ItemEffect
 class_name ItemEffectGive
 
-const InventoryService := preload("res://shared/inventory_service.gd")
-const MAX_STACK := InventoryService.MAX_STACK
+const InventoryServiceScript := preload("res://shared/inventory_service.gd")
+const MAX_STACK := InventoryServiceScript.MAX_STACK
 
 enum GiveType { GOLD, CARD, ITEM }
 
@@ -13,7 +13,7 @@ enum GiveType { GOLD, CARD, ITEM }
 ## Ruta al ItemData del item a entregar (solo para GiveType.ITEM)
 @export var item_data_path: String = ""
 
-func apply(save: PlayerSaveData) -> void:
+func apply(save: PlayerSaveData, _context: ItemEffectContext = null) -> void:
 	match give_type:
 		GiveType.GOLD:
 			save.gold += amount
@@ -29,7 +29,7 @@ func apply(save: PlayerSaveData) -> void:
 			apply_item(save.inventory_items, data, save.inventory_slots)
 
 func apply_item(items: Array[Dictionary], data: ItemData, capacity := 999999) -> Dictionary:
-	return InventoryService.add_entry(items, {
+	return InventoryServiceScript.add_entry(items, {
 		"id": data.id,
 		"name": data.name,
 		"icon": data.icon.resource_path if data.icon else "",

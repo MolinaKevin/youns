@@ -1,7 +1,7 @@
 class_name InventoryService
 extends RefCounted
 
-const ItemCatalog := preload("res://shared/item_catalog.gd")
+const ItemCatalogScript := preload("res://shared/item_catalog.gd")
 
 ## Operaciones consistentes sobre el inventario persistido del jugador.
 const MAX_STACK := 20
@@ -18,11 +18,11 @@ static func add_entry(items: Array[Dictionary], entry: Dictionary, capacity: int
 		if str(existing.get("id", "")) != item_id:
 			continue
 		var current := maxi(0, int(existing.get("count", 0)))
-		var added := mini(requested, maxi(0, max_stack - current))
-		if added > 0:
-			existing["count"] = current + added
+		var merged_count := mini(requested, maxi(0, max_stack - current))
+		if merged_count > 0:
+			existing["count"] = current + merged_count
 			items[index] = existing
-		return {"added": added, "remaining": requested - added}
+		return {"added": merged_count, "remaining": requested - merged_count}
 	if items.size() >= maxi(0, capacity):
 		return {"added": 0, "remaining": requested}
 	var added := mini(requested, max_stack)
@@ -58,7 +58,7 @@ static func resolve_item_data(entry: Dictionary) -> ItemData:
 	var data_path := str(entry.get("data_path", ""))
 	if data_path.is_empty():
 		return null
-	return ItemCatalog.by_path(data_path)
+	return ItemCatalogScript.by_path(data_path)
 
 ## Consume hasta `amount` unidades de la entrada en `index` del inventario de
 ## la partida. Devuelve cuántas se sacaron.

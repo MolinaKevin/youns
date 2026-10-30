@@ -4,7 +4,6 @@ const TrainingOverlay := preload("res://features/world/ui/training_overlay.gd")
 
 ## Estación del gym.glb (Station_<nombre>) → estadística que entrena.
 const STATIONS := {
-	"Fuerza":       "fuerza",
 	"Resistencia":  "resistencia",
 	"Agilidad":     "agilidad",
 	"Tecnica":      "tecnica",
@@ -12,8 +11,13 @@ const STATIONS := {
 	"Espiritu":     "espiritu",
 	"Vitalidad":    "constitucion",
 	"Energia":      "mente",
+	## Fuerza: la roca gigante caída al lado de la cascada.
+	"Roca":         "fuerza",
 }
 const INTERACT_RADIUS := 3.0
+## La estación de Resistencia no tiene equipo: el Youn corre el circuito del
+## bosque marcado con los empties Circuito_00, Circuito_01… de gym.glb.
+const CIRCUIT_STAT := "resistencia"
 
 var _prompts: Array[Label3D] = []
 var _near_stat := ""
@@ -69,6 +73,8 @@ func _unhandled_input(event: InputEvent) -> void:
 func _open_training(stat_key: String) -> void:
 	_overlay = TrainingOverlay.new()
 	_overlay.stat_key = stat_key
+	if stat_key == CIRCUIT_STAT:
+		_overlay.circuit_points = _circuit_points()
 	_overlay.tree_exited.connect(func() -> void:
 		_overlay = null
 		if _near_prompt:
@@ -80,3 +86,15 @@ func _open_training(stat_key: String) -> void:
 func _apply_localized_text(_language: String = "") -> void:
 	for prompt in _prompts:
 		prompt.text = LocalizationState.t("world.prompt.train")
+
+
+func _circuit_points() -> Array[Vector3]:
+	var points: Array[Vector3] = []
+	var i := 0
+	while true:
+		var marker := $GymMap.find_child("Circuito_%02d" % i, true, false) as Node3D
+		if marker == null:
+			break
+		points.append(marker.global_position)
+		i += 1
+	return points

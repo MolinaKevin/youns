@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "ensamblar_desbrozadora_de_resonancia"
+recipe_name = "Ensamblar Desbrozadora de Resonancia"
+item_name = "Desbrozadora de Resonancia"
+description = "Construye la herramienta para que el cuidador corte el pasto alto."
+craft_time = 34.0
+location = "limite_lateral"
+action_type = "upgrade"
+reward = {"type":"item", "id":"desbrozadora_de_resonancia", "amount":1}
+ingredients = [{"id":"kit_topografia","amount":1},{"id":"archivo_campo","amount":2},{"id":"datos","amount":72},{"id":"virus","amount":3},{"id":"vacuna","amount":2},{"id":"eco_corporal","amount":4},{"id":"eco_espacial","amount":6}]
+needs_research = true

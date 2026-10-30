@@ -1,7 +1,7 @@
 class_name CombatMapTerrain
 extends "res://features/combat/scene/combat_map_terrain_port.gd"
 
-const CombatObstacle := preload("res://features/combat/scene/combat_obstacle.gd")
+const CombatObstacleScript := preload("res://features/combat/scene/combat_obstacle.gd")
 
 ## Fachada de consultas espaciales para sistemas de combate. Mantiene juntos
 ## terreno, navegación y geometría sin exponer su estructura interna.
@@ -44,7 +44,7 @@ func clamp_to_bounds(pos: Vector2, margin: float = 0.0) -> Vector2:
 	)
 
 func platforms() -> Array[Dictionary]:
-	return logic.obstacles.filter(func(obstacle): return CombatObstacle.type_of(obstacle) == CombatObstacle.PLATFORM)
+	return logic.obstacles.filter(func(obstacle): return CombatObstacleScript.type_of(obstacle) == CombatObstacleScript.PLATFORM)
 
 ## Hasta qué fracción del segmento puede recorrer un cuerpo de radio `margin`
 ## sin abandonar el tablero.

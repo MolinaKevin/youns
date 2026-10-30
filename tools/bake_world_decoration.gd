@@ -7,8 +7,8 @@ extends SceneTree
 ## pero la guarda como escena para que el juego no vuelva a calcularla.
 
 const WorldBoundary := preload("res://features/world/zones/world_boundary.gd")
-const ZoneCatalog := preload("res://data/zones/zone_catalog.gd")
-const WorldLayout := preload("res://data/world/world_layout.tres")
+const ZoneCatalogScript := preload("res://data/zones/zone_catalog.gd")
+const WorldLayoutScript := preload("res://data/world/world_layout.tres")
 const BakeSignature := preload("res://features/world/zones/world_decoration_bake_signature.gd")
 const OUTPUT_PATH := "res://assets/maps/world/baked_world_decoration.scn"
 
@@ -29,7 +29,7 @@ func _bake() -> void:
 	# El horneado sólo necesita la grilla y las mallas que se guardan. Las
 	# paredes y los MultiMeshes de árboles son runtime-only (las posiciones se
 	# guardan como metadato) y no se crean en este proceso headless.
-	boundary.build(ZoneCatalog.new(), true, false, false, false)
+	boundary.build(ZoneCatalogScript.new(), true, false, false, false)
 	var decoration := boundary.get_node_or_null("AutoDecoration") as Node3D
 	if decoration == null:
 		push_error("WorldDecorationBaker: no se generó AutoDecoration.")
@@ -38,7 +38,7 @@ func _bake() -> void:
 		return
 	boundary.remove_child(decoration)
 	decoration.set_meta("tree_positions", boundary.decoration_tree_positions())
-	decoration.set_meta("source_signature", BakeSignature.current(WorldLayout))
+	decoration.set_meta("source_signature", BakeSignature.current(WorldLayoutScript))
 	_remove_runtime_multimeshes(decoration)
 	_set_owner_recursive(decoration, decoration)
 	var packed := PackedScene.new()

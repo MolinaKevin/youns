@@ -69,7 +69,7 @@ func execute_nova(card: CardActionLine) -> void:
 	var away: Vector2 = from + (from - host.map_area.player_pos)
 	var landing: Vector2 = host.board.push.queries.calculate_push_landing(away, host.w(card.cast_range_cells()))
 	host.board.push.execution.push_enemy_to(landing)
-	await host.map_area.enemy_reached_target
+	await host.board.enemy_reached_target
 	if not host.is_flow_active(flow):
 		return
 	await apply_enemy_forced_move(card.name, from, landing, flow)

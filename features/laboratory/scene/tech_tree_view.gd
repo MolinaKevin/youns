@@ -1,9 +1,9 @@
 extends Control
 
-const LabRecipeAction := preload("res://data/lab_recipe_action.gd")
-const TechTreeLayout := preload("res://features/laboratory/scene/tech_tree_layout.gd")
+const LabRecipeActionScript := preload("res://data/lab_recipe_action.gd")
+const TechTreeLayoutScript := preload("res://features/laboratory/scene/tech_tree_layout.gd")
 
-var _layout: TechTreeLayout
+var _layout: TechTreeLayoutScript
 
 func _ready() -> void:
 	LaboratoryState.recipe_unlocked.connect(func(_r): _build())
@@ -20,7 +20,7 @@ func _build() -> void:
 	var recipes := LaboratoryState.all_recipes.filter(
 		func(r): return LaboratoryState.is_recipe_unlocked(r.id) or LaboratoryState.is_recipe_completed(r.id)
 	)
-	_layout = TechTreeLayout.new(recipes)
+	_layout = TechTreeLayoutScript.new(recipes)
 	if recipes.is_empty():
 		queue_redraw()
 		return
@@ -36,7 +36,7 @@ func _create_node(recipe: Resource) -> void:
 
 	var panel := Panel.new()
 	panel.position = pos
-	panel.size = Vector2(TechTreeLayout.NODE_W, TechTreeLayout.NODE_H)
+	panel.size = Vector2(TechTreeLayoutScript.NODE_W, TechTreeLayoutScript.NODE_H)
 
 	var vbox := VBoxContainer.new()
 	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -55,11 +55,11 @@ func _create_node(recipe: Resource) -> void:
 	type_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	type_lbl.add_theme_font_size_override("font_size", 10)
 	match recipe.action_type:
-		LabRecipeAction.UPGRADE:
+		LabRecipeActionScript.UPGRADE:
 			type_lbl.add_theme_color_override("font_color", Color(1.0, 0.8, 0.3))
-		LabRecipeAction.LOOP:
+		LabRecipeActionScript.LOOP:
 			type_lbl.add_theme_color_override("font_color", Color(0.3, 0.9, 0.5))
-		LabRecipeAction.INSTANT:
+		LabRecipeActionScript.INSTANT:
 			type_lbl.add_theme_color_override("font_color", Color(0.4, 0.7, 1.0))
 	vbox.add_child(type_lbl)
 

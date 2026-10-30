@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "ensamblar_resonador_de_fisuras"
+recipe_name = "Ensamblar Resonador de Fisuras"
+item_name = "Resonador de Fisuras"
+description = "Construye el instrumento que el explorador usa en la grieta sellada."
+craft_time = 28.0
+location = "mina_profunda"
+action_type = "upgrade"
+reward = {"type":"item", "id":"resonador_de_fisuras", "amount":1}
+ingredients = [{"id":"kit_topografia","amount":1},{"id":"archivo_campo","amount":1},{"id":"datos","amount":65},{"id":"eco_espacial","amount":6},{"id":"eco_naturalista","amount":3}]
+needs_research = true

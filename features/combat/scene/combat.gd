@@ -66,15 +66,19 @@ var enemy_ai
 var deck_manager: CombatDeckManager
 var turn := _CombatTurnController.new()
 var round_resolver := _CombatRoundResolver.new()
+@warning_ignore("unused_private_class_variable")
 var _combat_finished := false
 var _preview_action: CardActionLine = null
 var wildcards_ui := _CombatWildcardsUI.new()
 var _wildcards: CombatWildcards
+@warning_ignore("unused_private_class_variable")
 var _result_flow: CombatResultFlow
+@warning_ignore("unused_private_class_variable")
 var _damage: CombatDamageResolver
 var _pile_popup: CombatPilePopup
 var _turn_flow: CombatTurnFlow
 var enemy_reveal := _CombatEnemyRevealPresentation.new()
+@warning_ignore("unused_private_class_variable")
 var _player_name := ""
 var _enemy_name := ""
 var _preview_tween: Tween = null

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "compresor_horario"
+recipe_name = "Preparar Compresor Horario"
+item_name = "Compresor Horario"
+description = "Consumible: el próximo entrenamiento de una hora tarda media hora."
+craft_time = 10.0
+location = "sistemas"
+action_type = "loop"
+reward = {"type":"item", "id":"compresor_horario", "amount":1}
+ingredients = [{"id":"datos","amount":12},{"id":"archivo_campo","amount":1},{"id":"eco_logica","amount":3},{"id":"eco_espacial","amount":3}]
+needs_research = true

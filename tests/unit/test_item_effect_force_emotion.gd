@@ -1,6 +1,7 @@
 extends GutTest
 
 const VACIADOR_ESTOMAGO := preload("res://data/items/vaciador_estomago.tres")
+const LAXANTE := preload("res://data/items/laxante.tres")
 
 var save: PlayerSaveData
 var _previous_save: PlayerSaveData
@@ -67,3 +68,12 @@ func test_vaciador_de_estomago_maximiza_hambre_y_fuerza_la_emocion() -> void:
 	VACIADOR_ESTOMAGO.apply_effects(save)
 	assert_eq(save.hambre, 100)
 	assert_true("hungry" in StatsManager.emotion_service.active_states)
+
+
+func test_laxante_activa_ganas_de_bano_sin_accidente() -> void:
+	save.ganas_bano = 0
+	save.poop_pending = 1.5
+	LAXANTE.apply_effects(save)
+	assert_eq(save.ganas_bano, 100)
+	assert_true("bathroom" in StatsManager.emotion_service.active_states)
+	assert_almost_eq(save.poop_pending, 1.5, 0.001)

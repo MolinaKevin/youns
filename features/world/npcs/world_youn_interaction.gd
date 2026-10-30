@@ -22,7 +22,9 @@ func set_active(value: bool) -> void:
 		update_prompt_visibility()
 
 func on_touch_area_body_entered(body: Node3D) -> void:
-	if body != host.player() or host.is_engaging_combat() or not host.active:
+	# El player y las zonas sobreviven al cambio de escena. Al recalcularse las
+	# áreas durante un combate no pueden iniciar encuentros invisibles.
+	if GameState.world_combat.active or body != host.player() or host.is_engaging_combat() or not host.active:
 		return
 	if host.requires_interact:
 		near = true
@@ -38,7 +40,7 @@ func on_touch_area_body_exited(body: Node3D) -> void:
 
 ## Consume el input de interactuar y arranca el encuentro si corresponde.
 func handle_interact_input(event: InputEvent) -> void:
-	if not host.requires_interact or not host.active or not near or host.is_engaging_combat() or Dialogue.is_busy():
+	if GameState.world_combat.active or not host.requires_interact or not host.active or not near or host.is_engaging_combat() or Dialogue.is_busy():
 		return
 	if not InputPresses.is_interact_pressed(event):
 		return

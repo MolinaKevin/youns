@@ -4,11 +4,20 @@
 [ext_resource type="PackedScene" uid="uid://cq54nofj1l3bn" path="res://assets/maps/hub/pradera_derecha.glb" id="2_pradera"]
 [ext_resource type="PackedScene" path="res://features/world/npcs/world_youn.tscn" id="3_world_enemy"]
 [ext_resource type="Resource" uid="uid://ctpvd6ffvqhhm" path="res://data/youns/newen.tres" id="4_agumon_data"]
-[ext_resource type="Resource" path="res://data/youns/monzaemon.tres" id="5_monzaemon_data"]
+[ext_resource type="Resource" path="res://data/youns/nguruvilu.tres" id="5_nguruvilu_data"]
 [ext_resource type="Resource" path="res://data/biomes/pradera.tres" id="biome_pradera"]
+[ext_resource type="Script" path="res://features/world/zones/tall_grass_guide.gd" id="6_tall_grass_script"]
+[ext_resource type="Resource" path="res://data/youns/cuidador_sendero_temporal.tres" id="7_tall_grass_data"]
+[ext_resource type="PackedScene" path="res://assets/maps/hub/barrera_pasto_alto.glb" id="8_tall_grass_visual"]
 
 [sub_resource type="BoxShape3D" id="3"]
 size = Vector3(130, 20, 130)
+
+[sub_resource type="BoxShape3D" id="tall_grass_barrier"]
+size = Vector3(13.5, 5, 11)
+
+[sub_resource type="BoxShape3D" id="tall_grass_warning"]
+size = Vector3(28, 5, 4)
 
 [node name="ZoneCrossroads" type="Node3D" unique_id=81379989]
 script = ExtResource("1")
@@ -21,10 +30,55 @@ transform = Transform3D(0.939693, 0, -0.34202, 0, 1, 0, 0.34202, 0, 0.939693, 60
 youn_data = ExtResource("4_agumon_data")
 world_enemy_id = "pradera_right_newen_01"
 
-[node name="Monzaemon" parent="." unique_id=1903873719 instance=ExtResource("3_world_enemy")]
+[node name="Nguruvilu" parent="." unique_id=1903873719 instance=ExtResource("3_world_enemy")]
 transform = Transform3D(0.819152, 0, 0.573576, 0, 1, 0, -0.573576, 0, 0.819152, 97.46442, 0.35, -68)
-youn_data = ExtResource("5_monzaemon_data")
-world_enemy_id = "pradera_right_monzaemon_01"
+youn_data = ExtResource("5_nguruvilu_data")
+world_enemy_id = "pradera_right_nguruvilu_01"
+
+[node name="NewenWanderer" parent="." instance=ExtResource("3_world_enemy")]
+transform = Transform3D(0.965926, 0, 0.258819, 0, 1, 0, -0.258819, 0, 0.965926, 75, 0.35, -48)
+youn_data = ExtResource("4_agumon_data")
+world_enemy_id = "pradera_right_newen_02"
+wander_radius_override = 7.0
+
+[node name="NguruviluWanderer" parent="." instance=ExtResource("3_world_enemy")]
+transform = Transform3D(0.422618, 0, -0.906308, 0, 1, 0, 0.906308, 0, 0.422618, 84, 0.35, -61)
+youn_data = ExtResource("5_nguruvilu_data")
+world_enemy_id = "pradera_right_nguruvilu_02"
+wander_radius_override = 6.0
+
+[node name="NewenTrailWanderer" parent="." instance=ExtResource("3_world_enemy")]
+transform = Transform3D(0.819152, 0, -0.573576, 0, 1, 0, 0.573576, 0, 0.819152, 104, 0.35, -79)
+youn_data = ExtResource("4_agumon_data")
+world_enemy_id = "pradera_right_newen_03"
+wander_radius_override = 5.0
+
+[node name="TallGrassBarrier" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 45, 0.9, -122)
+
+[node name="Col" type="CollisionShape3D" parent="TallGrassBarrier"]
+transform = Transform3D(-0.769039, 0, 0.639202, 0, 1, 0, -0.639202, 0, -0.769039, -5.514, 0, -1.713)
+shape = SubResource("tall_grass_barrier")
+
+[node name="Visual" parent="TallGrassBarrier" instance=ExtResource("8_tall_grass_visual")]
+
+[node name="TallGrassWarning" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 45, 0.9, -120)
+
+[node name="Col" type="CollisionShape3D" parent="TallGrassWarning"]
+shape = SubResource("tall_grass_warning")
+
+[node name="TallGrassGuide" parent="." instance=ExtResource("3_world_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 49, 0.9, -113)
+script = ExtResource("6_tall_grass_script")
+youn_data = ExtResource("7_tall_grass_data")
+starts_combat = false
+requires_interact = true
+wander_radius_override = 0.0
+detect_range_override = 0.0
+
+[node name="TallGrassGuideTestSpawn" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 68, 0.9, -112)
 
 [node name="SpawnPoint" type="Node3D" parent="." unique_id=1792756140]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 1, -10)

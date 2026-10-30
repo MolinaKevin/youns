@@ -4,7 +4,7 @@ extends RefCounted
 ## Fachada de operaciones de partida que necesitan las pantallas. Evita que
 ## cada UI conozca la estructura de PlayerSaveData o los autoloads de cuidado.
 
-const InventoryService := preload("res://shared/inventory_service.gd")
+const InventoryServiceScript := preload("res://shared/inventory_service.gd")
 
 var _save_provider: Callable
 var _care_action: Callable
@@ -28,28 +28,32 @@ func inventory_items() -> Array:
 
 
 func inventory_item_at(index: int) -> Dictionary:
-	return InventoryService.item_at(_save(), index)
+	return InventoryServiceScript.item_at(_save(), index)
 
 
 ## "used", "combat_only", "invalid" o "missing".
 func use_inventory_item(index: int) -> String:
 	var save := _save()
-	var item := InventoryService.item_at(save, index)
+	var item := InventoryServiceScript.item_at(save, index)
 	if item.is_empty():
 		return "missing"
-	var data := InventoryService.resolve_item_data(item)
+	var data := InventoryServiceScript.resolve_item_data(item)
 	if data == null:
+		return "invalid"
+	# Herramientas de misión se entregan a su NPC; no deben poder gastarse desde
+	# el inventario como si fueran un consumible.
+	if data.effects.is_empty():
 		return "invalid"
 	if data.is_combat_only():
 		return "combat_only"
 	data.apply_effects(save)
 	_status_changed.call()
-	InventoryService.consume_from_save(save, index)
+	InventoryServiceScript.consume_from_save(save, index)
 	return "used"
 
 
 func discard_inventory_item(index: int) -> int:
-	return InventoryService.consume_from_save(_save(), index)
+	return InventoryServiceScript.consume_from_save(_save(), index)
 
 
 func deck_cards() -> Array[CardData]:

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "sintesis_antidoto"
+recipe_name = "Síntesis de Antídoto"
+item_name = "Antídoto"
+description = "Formula un antídoto para tratar la enfermedad del Youn."
+craft_time = 12.0
+location = "bio"
+action_type = "loop"
+reward = {"type":"item", "id":"antidoto", "amount":1}
+ingredients = [{"id":"datos","amount":6},{"id":"virus","amount":1},{"id":"vacuna","amount":4},{"id":"eco_naturalista","amount":3},{"id":"eco_intrapersonal","amount":3}]
+needs_research = true

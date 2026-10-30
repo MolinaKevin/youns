@@ -8,9 +8,9 @@ const SAVE_PATH := "user://player_save.tres"
 const CURRENT_SAVE_VERSION := 4
 const POMBERO_YOUN_PATH := "res://data/youns/pombero.tres"
 const NEWEN_YOUN_PATH := "res://data/youns/newen.tres"
-const WorldConstructionCatalog := preload("res://data/world/world_construction_catalog.gd")
-const CardCatalog := preload("res://shared/card_catalog.gd")
-const PlayerSaveValidator := preload("res://shared/player_save_validator.gd")
+const WorldConstructionCatalogScript := preload("res://data/world/world_construction_catalog.gd")
+const CardCatalogScript := preload("res://shared/card_catalog.gd")
+const PlayerSaveValidatorScript := preload("res://shared/player_save_validator.gd")
 const STARTING_YOUN_PATH := "res://data/youns/nguruvilu.tres"
 const STARTING_OWNED_CARD_IDS: Array[String] = ["step", "dash", "strike", "slash", "block", "barrera", "meditar", "golpe_escudo", "represalia", "tiron", "ancla", "demoler", "carga_explosiva", "muro", "golpe_de_roca", "muro_arcano", "derrumbe", "lanzar_roca", "chispa", "escarcha", "descarga", "aliento", "nova", "ceguera", "lentitud", "raices", "curar", "encantar_arma", "parpadeo", "traslado_charco", "granizada", "diluvio", "lluvia_acida", "trepar", "meteor", "arrow", "snipe", "grenade", "salto_rupestre", "envion", "charco", "charco_fuego", "charco_grasa", "enredadera", "charco_sangre", "charco_veneno", "charco_arena", "emboscada"]
 const STARTING_EQUIPPED_DECK_IDS: Array[String] = ["step", "step", "dash", "arrow", "arrow", "snipe", "grenade", "grenade", "charco_fuego", "charco_fuego", "nova", "nova", "aliento", "aliento", "muro", "demoler", "lanzar_roca", "golpe_de_roca", "derrumbe", "trepar"]
@@ -34,8 +34,8 @@ func _init(bridge: SaveFeatureBridge = null) -> void:
 func make_new_save(total_hours: float) -> PlayerSaveData:
 	var save := PlayerSaveData.new()
 	save.save_version = CURRENT_SAVE_VERSION
-	save.owned_card_ids = CardCatalog.filter_known_ids(STARTING_OWNED_CARD_IDS, "STARTING_OWNED_CARD_IDS")
-	save.equipped_deck_ids = CardCatalog.filter_known_ids(STARTING_EQUIPPED_DECK_IDS, "STARTING_EQUIPPED_DECK_IDS")
+	save.owned_card_ids = CardCatalogScript.filter_known_ids(STARTING_OWNED_CARD_IDS, "STARTING_OWNED_CARD_IDS")
+	save.equipped_deck_ids = CardCatalogScript.filter_known_ids(STARTING_EQUIPPED_DECK_IDS, "STARTING_EQUIPPED_DECK_IDS")
 	save.inventory_slots = 20
 	for item_path in STARTING_ITEM_PATHS:
 		var item := load(item_path) as ItemData
@@ -76,7 +76,7 @@ func load_from_disk(migrate: bool = true) -> PlayerSaveData:
 		return null
 	if migrate:
 		migrate_save(loaded)
-	for change in PlayerSaveValidator.sanitize(loaded):
+	for change in PlayerSaveValidatorScript.sanitize(loaded):
 		push_warning("SaveService: " + change)
 	return loaded
 
@@ -112,7 +112,7 @@ func _migrate_from_1(save: PlayerSaveData) -> void:
 	if save.world_progress == null:
 		save.world_progress = WorldProgressData.new()
 	# Antes de que world_bridge persistiera su id, se derivaba de la receta.
-	WorldConstructionCatalog.new().unlock_completed(save.world_progress, save.completed_recipe_ids)
+	WorldConstructionCatalogScript.new().unlock_completed(save.world_progress, save.completed_recipe_ids)
 
 
 func _migrate_from_2(save: PlayerSaveData) -> void:

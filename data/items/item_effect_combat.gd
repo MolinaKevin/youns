@@ -9,7 +9,7 @@ class_name ItemEffectCombat
 ## Saca los estados negativos del jugador (quemado, veneno, congelado...).
 @export var cleanse: bool = false
 
-func apply(_save: PlayerSaveData) -> void:
+func apply(_save: PlayerSaveData, _context: ItemEffectContext = null) -> void:
 	pass
 
 ## Aplica el efecto al combate. Devuelve lo que pasó, para el log.

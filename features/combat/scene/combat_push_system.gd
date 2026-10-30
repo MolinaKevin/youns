@@ -13,7 +13,7 @@ func start_enemy_cone(push_range: float) -> void:
 	map.presentation.combat_preview.show_push_cone(map.enemy_pos, direction, push_range, 55.0)
 
 func clear_selection() -> void:
-	map.presentation.clear_push_selection()
+	map.presentation.combat_preview.clear_push_selection()
 	map.presentation.targeting.overlay.actors.clear_enemy_highlight()
 	map.presentation.patterns.clear_card_pattern()
 

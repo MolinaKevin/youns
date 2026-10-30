@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1_labrecipe"]
+
+[resource]
+script = ExtResource("1_labrecipe")
+id = "producir_suero_loco"
+recipe_name = "Producir Suero Loco"
+item_name = "Suero Loco"
+description = "Repite la fórmula investigada para preparar más Suero Loco."
+craft_time = 8.0
+location = "lab"
+action_type = "loop"
+reward = {"type": "item", "id": "suero_loco", "amount": 1}
+ingredients = [{"id":"virus","amount":3}, {"id":"vacuna","amount":1}, {"id": "suero_vitalidad", "amount": 1}, {"id": "suero_ataque", "amount": 1}, {"id":"eco_corporal","amount":3}]
+starts_unlocked = false
+needs_research = true

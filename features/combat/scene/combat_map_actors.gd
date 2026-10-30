@@ -87,9 +87,9 @@ func player_priority_animations() -> Array[String]:
 func enemy_priority_animations() -> Array[String]:
 	return ENEMY_PRIORITY_ANIMATIONS
 
-func set_views(player_view: CombatActorView, enemy_view: CombatActorView) -> void:
-	_player_view = player_view
-	_enemy_view = enemy_view
+func set_views(player_actor_view: CombatActorView, enemy_actor_view: CombatActorView) -> void:
+	_player_view = player_actor_view
+	_enemy_view = enemy_actor_view
 	_player_target = Vector3(map.player_pos.x, 0.0, map.player_pos.y)
 	_enemy_target = Vector3(map.enemy_pos.x, 0.0, map.enemy_pos.y)
 	_player_view.position = _player_target

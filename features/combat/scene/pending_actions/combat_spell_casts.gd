@@ -1,6 +1,6 @@
 class_name CombatSpellCasts
 extends CombatEffectResolver
-const CombatEffect := preload("res://features/combat/scene/combat_effect.gd")
+const CombatEffects := preload("res://features/combat/scene/combat_effect.gd")
 
 ## El efecto de cada hechizo una vez que ya se confirmó el punto/dirección/
 ## objetivo (eso lo decide CombatSpellAction). Esta clase no sabe nada de
@@ -12,7 +12,7 @@ func cast_element_bolt(played_card: CardActionLine, cell: Vector2, flow: AsyncFl
 	var radius := host.w(played_card.primary_range_cells())
 	if played_card.pattern != null:
 		host.board.presentation.patterns.show_card_pattern(played_card.pattern, cell, Vector2(0, 1), radius)
-	var from_effects: Array = CombatEffect.ELEMENT_CONVERSIONS.get(played_card.puddle_effect, [])
+	var from_effects: Array = CombatEffects.ELEMENT_CONVERSIONS.get(played_card.puddle_effect, [])
 	var converted: int = host.board.effects.puddle_port.mutation.convert_puddles(cell, radius, from_effects, played_card.puddle_effect)
 	if converted > 0:
 		host.emit_log("combat.log.spell.puddles_converted", [played_card.name, converted])

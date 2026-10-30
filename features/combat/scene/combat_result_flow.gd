@@ -1,7 +1,7 @@
 class_name CombatResultFlow
 extends RefCounted
 
-const ScenePaths := preload("res://shared/scene_paths.gd")
+const ScenePathsScript := preload("res://shared/scene_paths.gd")
 
 ## Qué pasa cuando el combate termina: detecta el HP en 0, dispara la
 ## pantalla de fin de lucha (ganaste/perdiste) y, al continuar, vuelve al
@@ -35,7 +35,7 @@ func check_combat_end() -> bool:
 
 ## Muestra la pantalla de fin de lucha y, al continuar, vuelve al mundo.
 func _show_victory(flow: AsyncFlowToken) -> void:
-	await _prepare_result_screen(flow)
+	await _prepare_result_screen()
 	if not host.is_flow_active(flow):
 		return
 	# Solo los combates del mundo dan recompensa (no el combate rápido del título).
@@ -51,6 +51,11 @@ func _show_victory(flow: AsyncFlowToken) -> void:
 		YounStatRules.reward(GameState.save_service.player_save, Combat.VICTORY_STAT_GAINS,
 			youn.youn_data if is_instance_valid(youn) else null)
 		LaboratoryState.deposit_echoes(host.state.echoes_earned)
+		var recovery := GameState.save_service.player_save.lab_combat_recovery_percent
+		if recovery > 0.0:
+			# Los HP tácticos se reinician en cada combate; la recuperación
+			# persistente entre peleas corresponde a la salud general del Youn.
+			StatsManager.services.care().add_stat("salud", roundi(100.0 * recovery))
 	_leave_combat()
 
 ## [[nombre, cantidad], ...] de VICTORY_STAT_GAINS para la pantalla de victoria.
@@ -70,7 +75,7 @@ func _echo_reward_lines() -> Array:
 ## Provisorio: derrota sin penalidad todavía. Se vuelve al mundo igual que
 ## al ganar (el enemigo del mundo huye, así no te vuelve a atrapar al aparecer).
 func _show_defeat(flow: AsyncFlowToken) -> void:
-	await _prepare_result_screen(flow)
+	await _prepare_result_screen()
 	if not host.is_flow_active(flow):
 		return
 	host.result_screen.show_defeat()
@@ -79,7 +84,7 @@ func _show_defeat(flow: AsyncFlowToken) -> void:
 		return
 	_leave_combat()
 
-func _prepare_result_screen(flow: AsyncFlowToken) -> void:
+func _prepare_result_screen() -> void:
 	host.enemy_reveal.hide()
 	host.wildcards_ui.hide()
 	await host.get_tree().create_timer(Combat.VICTORY_SCREEN_DELAY).timeout
@@ -89,4 +94,4 @@ func _leave_combat() -> void:
 		# Combate abierto directo desde el editor: no hay mundo al que volver.
 		host.get_tree().reload_current_scene()
 		return
-	host.get_tree().change_scene_to_file(ScenePaths.GAME_WORLD)
+	host.get_tree().change_scene_to_file(ScenePathsScript.GAME_WORLD)

@@ -4,7 +4,7 @@ extends RefCounted
 const AutoDecorationScript := preload("res://features/world/zones/auto_decoration.gd")
 const ForestBuilder := preload("res://features/world/zones/forest_builder.gd")
 const BakeSignature := preload("res://features/world/zones/world_decoration_bake_signature.gd")
-const DebugLogging := preload("res://shared/debug_logging.gd")
+const DebugLog := preload("res://shared/debug_logging.gd")
 
 ## La decoración se hornea con tools/bake_world_decoration.gd. El editor usa
 ## el mismo algoritmo procedural una vez; el juego sólo carga la escena lista.
@@ -65,7 +65,7 @@ func _add_baked_world_decoration(parent: Node3D, layout: WorldLayout, tree_seed:
 			_baked_tree_positions.append(position)
 	parent.add_child(baked)
 	_add_baked_trees(baked, tree_seed)
-	if DebugLogging.verbose_enabled():
+	if DebugLog.verbose_enabled():
 		print("[WorldDecorationBuilder] Decoración global horneada cargada (%d árboles)." % _baked_tree_positions.size())
 
 

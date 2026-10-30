@@ -11,6 +11,6 @@ craft_time = 24.0
 location = "infraestructura"
 action_type = "upgrade"
 reward = {"type": "unlock_recipe", "id": "construccion_de_puente"}
-ingredients = [{"id": "datos", "amount": 12}, {"id": "kit_topografia", "amount": 1}]
+ingredients = [{"id": "datos", "amount": 12}, {"id": "kit_topografia", "amount": 1}, {"id":"eco_espacial","amount":4}, {"id":"eco_naturalista","amount":2}]
 starts_unlocked = false
 needs_research = true

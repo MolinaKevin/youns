@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "sintetizar_vacuna"
+recipe_name = "Sintetizar Vacuna"
+item_name = "Vacuna"
+description = "Prepara una vacuna base para cuidado, recuperación y protección."
+craft_time = 4.0
+location = "produccion"
+action_type = "loop"
+reward = {"type":"item", "id":"vacuna", "amount":1}
+starts_unlocked = true

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "estacion_de_recuperacion"
+recipe_name = "Estación de Recuperación"
+description = "Instala un módulo que recupera 10 puntos de salud del Youn tras cada combate."
+craft_time = 30.0
+location = "bio"
+action_type = "upgrade"
+reward = {"type":"combat_recovery", "value":0.1}
+ingredients = [{"id":"datos","amount":32},{"id":"vacuna","amount":7},{"id":"eco_corporal","amount":7},{"id":"eco_intrapersonal","amount":6}]
+needs_research = true

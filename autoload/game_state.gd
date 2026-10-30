@@ -1,6 +1,6 @@
 extends Node
 
-const DebugLogging := preload("res://shared/debug_logging.gd")
+const DebugLog := preload("res://shared/debug_logging.gd")
 
 signal clock_changed(current_hour: float, current_day: int)
 signal twenty_min_ticked
@@ -69,7 +69,7 @@ func _ready() -> void:
 	save_service.player_save = save_service.make_new_save(get_total_hours())
 	# Permite abrir la escena de combate directamente durante desarrollo.
 	world_combat.set_preview_youn(load("res://data/youns/newen.tres") as YounData)
-	if DebugLogging.verbose_enabled():
+	if DebugLog.verbose_enabled():
 		print("GameState loaded")
 	clock_changed.emit(time_of_day_hours, current_day)
 

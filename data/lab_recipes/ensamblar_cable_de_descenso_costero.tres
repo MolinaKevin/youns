@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="LabRecipe" load_steps=2 format=3]
+[ext_resource type="Script" path="res://data/lab_recipe.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "ensamblar_cable_de_descenso_costero"
+recipe_name = "Ensamblar Cable de Descenso Costero"
+item_name = "Cable de Descenso Costero"
+description = "Fabrica el cable que la guardacostas necesita para asegurar el descenso."
+craft_time = 30.0
+location = "costa"
+action_type = "upgrade"
+reward = {"type":"item", "id":"cable_de_descenso_costero", "amount":1}
+ingredients = [{"id":"kit_topografia","amount":1},{"id":"archivo_campo","amount":1},{"id":"datos","amount":52},{"id":"virus","amount":2},{"id":"vacuna","amount":2},{"id":"eco_espacial","amount":5},{"id":"eco_naturalista","amount":3}]
+needs_research = true

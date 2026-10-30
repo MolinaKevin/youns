@@ -5,7 +5,7 @@ extends Node3D
 ## mundo con un fundido desde negro y una pequeña ronda ceremonial de Youns.
 
 const PACHAMAMA_PATH := "res://data/youns/pachamama.tres"
-const YounOrientation := preload("res://shared/youn_orientation.gd")
+const YounOrientationScript := preload("res://shared/youn_orientation.gd")
 const GUEST_PATHS := [
 	"res://data/youns/newen.tres",
 	"res://data/youns/nguruvilu.tres",
@@ -92,8 +92,8 @@ func _build_guests(center: Vector3) -> void:
 		if GameState.save_service.player_save != null and data.resource_path == GameState.save_service.player_save.current_youn_path:
 			continue
 		var angle := TAU * float(index) / float(GUEST_PATHS.size())
-		var position := center + Vector3(sin(angle) * RING_RADIUS, 0.0, -2.3 - cos(angle) * RING_RADIUS)
-		_add_model(data, position, center)
+		var guest_position := center + Vector3(sin(angle) * RING_RADIUS, 0.0, -2.3 - cos(angle) * RING_RADIUS)
+		_add_model(data, guest_position, center)
 
 
 func _add_model(data: YounData, world_position: Vector3, look_target: Vector3, scene_override: PackedScene = null) -> Node3D:
@@ -103,7 +103,7 @@ func _add_model(data: YounData, world_position: Vector3, look_target: Vector3, s
 		return null
 	model.position = world_position + Vector3(0.0, data.mesh_y_offset, 0.0)
 	_guests.add_child(model)
-	YounOrientation.face_target(model, look_target, data)
+	YounOrientationScript.face_target(model, look_target, data)
 	return model
 
 

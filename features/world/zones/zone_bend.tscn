@@ -3,12 +3,42 @@
 [ext_resource type="Script" path="res://features/world/zones/zone_bend.gd" id="1"]
 [ext_resource type="PackedScene" path="res://assets/maps/bend/recodo.glb" id="2_recodo"]
 [ext_resource type="Resource" path="res://data/biomes/pradera.tres" id="biome_pradera"]
+[ext_resource type="PackedScene" path="res://features/world/npcs/world_youn.tscn" id="3_guard_scene"]
+[ext_resource type="Script" path="res://features/world/zones/coastal_descent_guard.gd" id="4_guard_script"]
+[ext_resource type="Resource" path="res://data/youns/guardacostas_temporal.tres" id="5_guard_data"]
+
+[sub_resource type="BoxShape3D" id="coastal_descent_blocker"]
+size = Vector3(5.5, 4.0, 2.0)
+
+[sub_resource type="BoxShape3D" id="coastal_descent_warning"]
+size = Vector3(8.0, 4.0, 3.0)
 
 [node name="ZoneBend" type="Node3D"]
 script = ExtResource("1")
 biome = ExtResource("biome_pradera")
 
 [node name="Recodo" parent="." instance=ExtResource("2_recodo")]
+
+[node name="CoastalDescentBarrier" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35, 0.5, -22)
+
+[node name="Col" type="CollisionShape3D" parent="CoastalDescentBarrier"]
+shape = SubResource("coastal_descent_blocker")
+
+[node name="CoastalDescentWarning" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35, 0.5, -18.5)
+
+[node name="Col" type="CollisionShape3D" parent="CoastalDescentWarning"]
+shape = SubResource("coastal_descent_warning")
+
+[node name="CoastalGuard" parent="." instance=ExtResource("3_guard_scene")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30.5, 1, -14)
+script = ExtResource("4_guard_script")
+youn_data = ExtResource("5_guard_data")
+starts_combat = false
+requires_interact = true
+wander_radius_override = 0.0
+detect_range_override = 0.0
 
 [node name="SpawnPoint" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1, -35)

@@ -39,7 +39,7 @@ func _on_deck() -> void:
 	SceneNavigator.open_from_current(get_tree(), ScenePaths.DECK_BUILDER)
 
 func _on_quit() -> void:
-	get_tree().paused = false
+	close()
 	get_tree().quit()
 
 func _apply_localized_text(_language: String = "") -> void:

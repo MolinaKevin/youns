@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-const DebugLogging := preload("res://shared/debug_logging.gd")
+const DebugLog := preload("res://shared/debug_logging.gd")
 
 ## Servicio global de diálogo. Cada entrada usa las claves `speaker`, `text`
 ## y, opcionalmente, `portrait` (Texture2D).
@@ -165,6 +165,8 @@ func _input(event: InputEvent) -> void:
 
 
 func handle_input(event: InputEvent) -> bool:
+	if _choice_menu_logic.active:
+		return _choice_menu_logic.handle_input(event)
 	if not is_playing():
 		return false
 	if event.is_action_pressed("ui_accept") or event.is_action_pressed("ui_cancel") or event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -215,7 +217,7 @@ func _show_current_line() -> void:
 	_portrait.position = portrait_position
 	_portrait.scale = portrait_scale
 	if DEBUG_LAYOUT and _line_index == 0:
-		if DebugLogging.verbose_enabled():
+		if DebugLog.verbose_enabled():
 			call_deferred("_log_layout", _speaker_label.text, mirrored, portrait_position)
 
 	_visible_characters = 0.0
@@ -274,7 +276,7 @@ func _reset_layout() -> void:
 
 
 func _log_layout(speaker: String, mirrored: bool, portrait_position: Vector2) -> void:
-	if not DebugLogging.verbose_enabled():
+	if not DebugLog.verbose_enabled():
 		return
 	var viewport_rect := get_viewport().get_visible_rect()
 	print("[DialogueLayout] speaker=%s mirrored=%s viewport=%s root=(pos=%s size=%s) box=(rect=%s anchors=(%s,%s,%s,%s)) frame=(rect=%s anchors=(%s,%s,%s,%s)) portrait=(pos=%s scale=%s rect=%s)" % [

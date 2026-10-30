@@ -15,6 +15,13 @@ const TRAININGS := {
 ## Estadística que entrena esta estación (una de YounStats.KEYS).
 var stat_key := ""
 
+## Recorrido opcional en posiciones globales. Si tiene puntos, el Youn lo corre
+## en vez del fundido directo (estación de Resistencia del gimnasio).
+var circuit_points: Array[Vector3] = []
+const RUN_SPEED := 7.0
+## Fracción del recorrido en la que se hace el fundido (el Youn ya está en el bosque).
+const CIRCUIT_FADE_AT := 0.45
+
 var _fade: ColorRect
 var _panel: PanelContainer
 var _title: Label
@@ -108,17 +115,77 @@ func _train(training_id: String) -> void:
 	_busy = true
 	_panel.visible = false
 	var training: Dictionary = TRAININGS[training_id]
+	if circuit_points.size() >= 2 and is_instance_valid(PartyManager.youn):
+		_run_circuit(training)
+		return
 	var tween := create_tween()
 	tween.tween_property(_fade, "color:a", 1.0, FADE_DURATION)
-	tween.tween_callback(func() -> void:
-		GameState.advance_hours(training["hours"])
-		var save := GameState.save_service.player_save
-		if save:
-			YounStatRules.reward(save, {stat_key: training["amount"]}, _party_youn_data())
-		GlobalHUD.show_toast(LocalizationState.t("gym.result", [_stat_name(), training["amount"]])))
+	tween.tween_callback(_apply_training.bind(training))
 	tween.tween_interval(0.3)
 	tween.tween_property(_fade, "color:a", 0.0, FADE_DURATION)
 	tween.tween_callback(_close)
+
+
+## Pasa el tiempo y suma la estadística (con los potenciadores del laboratorio).
+func _apply_training(training: Dictionary) -> void:
+	var save := GameState.save_service.player_save
+	var hours: float = training["hours"]
+	var amount: int = training["amount"]
+	if save and save.training_time_compression_pending:
+		hours *= 0.5
+		save.training_time_compression_pending = false
+	if save and save.training_progress_boost_pending:
+		amount = roundi(float(amount) * 1.5)
+		save.training_progress_boost_pending = false
+	GameState.advance_hours(hours)
+	if save:
+		YounStatRules.reward(save, {stat_key: amount}, _party_youn_data())
+	GlobalHUD.show_toast(LocalizationState.t("gym.result", [_stat_name(), amount]))
+
+
+## Estación con recorrido (Resistencia): el Youn corre por el circuito del
+## bosque; cuando está adentro, fundido a negro y pasa el tiempo; después vuelve
+## corriendo por el resto del recorrido. El jugador se queda esperando.
+func _run_circuit(training: Dictionary) -> void:
+	var youn = PartyManager.youn
+	var cam = PartyManager.camera_rig
+	var previous_target: Node3D = cam.target if cam else null
+	if cam:
+		cam.target = youn
+	var y: float = youn.global_position.y
+	var points: Array[Vector3] = [youn.global_position]
+	for p in circuit_points:
+		points.append(Vector3(p.x, y, p.z))
+	var split := clampi(int(points.size() * CIRCUIT_FADE_AT), 1, points.size() - 1)
+	youn.play_anim("run")
+	await _run_through(youn, points.slice(0, split + 1))
+	var tween := create_tween()
+	tween.tween_property(_fade, "color:a", 1.0, FADE_DURATION)
+	tween.tween_callback(_apply_training.bind(training))
+	tween.tween_interval(0.3)
+	tween.tween_property(_fade, "color:a", 0.0, FADE_DURATION)
+	await tween.finished
+	await _run_through(youn, points.slice(split))
+	if is_instance_valid(youn):
+		youn.play_anim("idle")
+	if cam:
+		cam.target = previous_target if is_instance_valid(previous_target) else PartyManager.player
+	_close()
+
+
+func _run_through(youn: Node3D, points: Array) -> void:
+	for i in range(1, points.size()):
+		if not is_instance_valid(youn):
+			return
+		var a: Vector3 = points[i - 1]
+		var b: Vector3 = points[i]
+		var dist := a.distance_to(b)
+		if dist < 0.05:
+			continue
+		youn.rotation.y = atan2(b.x - a.x, b.z - a.z)
+		var tween := create_tween()
+		tween.tween_property(youn, "global_position", b, dist / RUN_SPEED)
+		await tween.finished
 
 
 func _party_youn_data() -> YounData:

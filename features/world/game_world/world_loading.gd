@@ -3,8 +3,8 @@ extends Control
 ## Escena puente negra entre el menú y el exterior. Mantiene la transición
 ## limpia mientras se construye el mundo, sin mostrar un popup de carga.
 
-const ScenePaths := preload("res://shared/scene_paths.gd")
-const GAME_WORLD := ScenePaths.GAME_WORLD
+const ScenePathsScript := preload("res://shared/scene_paths.gd")
+const GAME_WORLD := ScenePathsScript.GAME_WORLD
 
 func _ready() -> void:
 	GlobalHUD.set_clock_visible(false)

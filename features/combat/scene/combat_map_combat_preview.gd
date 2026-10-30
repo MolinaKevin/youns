@@ -20,6 +20,9 @@ func show_player_range(radius: float) -> void:
 func show_range_at(center: Vector2, radius: float) -> void:
 	renderer.show_disc(overlay.attack_disc, center, radius)
 
-func clear_module_selection() -> void:
+func clear_push_selection() -> void:
 	overlay.attack_disc.visible = false
 	overlay.push_disc.visible = false
+
+func clear_module_selection() -> void:
+	clear_push_selection()

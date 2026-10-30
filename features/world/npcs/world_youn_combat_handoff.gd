@@ -8,11 +8,17 @@ extends RefCounted
 
 var host: WorldYoun
 var waiting := false
+var _modal: ModalScreenContext
 
 func _init(p_host: WorldYoun) -> void:
 	host = p_host
+	_modal = ModalScreenContext.new(ModalScreenHost.from_runtime())
 
 func engage() -> void:
+	# Puede llegar desde una señal de diálogo que se resolvió tarde. Si ya hay
+	# un combate del mundo en curso, este Youn no puede secuestrar el input.
+	if waiting or GameState.world_combat.active:
+		return
 	host.prepare_encounter()
 	host.set_player_combat_locked(true)
 	host.set_physics_process(false)
@@ -26,7 +32,7 @@ func engage() -> void:
 	waiting = true
 	host.process_mode = Node.PROCESS_MODE_ALWAYS
 	PauseMenu.enabled = false
-	host.get_tree().paused = true
+	_modal.enter_overlay(host)
 
 ## true si el evento se consumió (estaba esperando confirmación), haya sido
 ## o no la tecla correcta.
@@ -36,7 +42,7 @@ func handle_input(event: InputEvent) -> bool:
 	if event.is_action_pressed("ui_accept"):
 		waiting = false
 		host.popup_panel.visible = false
-		host.get_tree().paused = false
+		_modal.exit_overlay(host)
 		host.process_mode = Node.PROCESS_MODE_PAUSABLE
 		host.get_viewport().set_input_as_handled()
 		_start_transition()

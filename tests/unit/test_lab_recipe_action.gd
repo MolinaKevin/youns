@@ -1,12 +1,12 @@
 extends GutTest
 
-const LabRecipeAction := preload("res://data/lab_recipe_action.gd")
+const LabRecipeActionScript := preload("res://data/lab_recipe_action.gd")
 
 
 func test_reconoce_los_tipos_de_accion_del_laboratorio() -> void:
-	assert_true(LabRecipeAction.is_known(LabRecipeAction.INSTANT))
-	assert_true(LabRecipeAction.is_known(LabRecipeAction.LOOP))
-	assert_true(LabRecipeAction.is_known(LabRecipeAction.UPGRADE))
-	assert_true(LabRecipeAction.is_known(LabRecipeAction.NEXT))
-	assert_true(LabRecipeAction.is_known(LabRecipeAction.DUNGEON))
-	assert_false(LabRecipeAction.is_known("unknown"))
+	assert_true(LabRecipeActionScript.is_known(LabRecipeActionScript.INSTANT))
+	assert_true(LabRecipeActionScript.is_known(LabRecipeActionScript.LOOP))
+	assert_true(LabRecipeActionScript.is_known(LabRecipeActionScript.UPGRADE))
+	assert_true(LabRecipeActionScript.is_known(LabRecipeActionScript.NEXT))
+	assert_true(LabRecipeActionScript.is_known(LabRecipeActionScript.DUNGEON))
+	assert_false(LabRecipeActionScript.is_known("unknown"))

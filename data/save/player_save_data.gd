@@ -54,6 +54,12 @@ class_name PlayerSaveData
 ## Mejoras permanentes obtenidas en el laboratorio.
 @export var lab_youn_growth_bonus: int = 0
 @export var lab_max_hp_bonus: int = 0
+@export var lab_data_per_cycle: int = 1
+@export_range(0.0, 0.9, 0.01) var lab_data_cost_reduction: float = 0.0
+@export_range(0.0, 1.0, 0.01) var lab_combat_recovery_percent: float = 0.0
+@export var training_progress_boost_pending: bool = false
+@export var training_time_compression_pending: bool = false
+@export var biome_sample_guaranteed: bool = false
 
 # Estadísticas de combate del Youn actual (ver YounStatRules). Distintas de las
 # métricas de cuidado de arriba (p. ej. `energia` de cuidado ≠ "energia" de acá).
