@@ -146,9 +146,15 @@ animations = [{
 "name": &"bathroom",
 "speed": 6.0
 }, {
-"frames": [],
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_xcwae")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_cd714")
+}],
 "loop": true,
-"name": &"bored2",
+"name": &"bored",
 "speed": 5.0
 }, {
 "frames": [],

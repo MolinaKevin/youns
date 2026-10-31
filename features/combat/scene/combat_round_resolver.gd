@@ -16,12 +16,12 @@ func build_events(state: CombatState, map_area: MapArea) -> Array[CombatRoundEve
 		tree_drop.hit = map_area.obstacles.drop_from_tree(state.player_tree_landing)
 		tree_drop.damage = state.player_tree_drop_damage
 		events.append(tree_drop)
-	for hit: Dictionary in map_area.effects.delayed.resolve_delayed_zones():
-		if hit["enemy"]:
+	for hit: CombatDelayedImpact in map_area.effects.delayed.resolve_delayed_zones():
+		if hit.hit_enemy:
 			events.append(_delayed_zone_event("enemy", hit))
-		if hit["player"]:
+		if hit.hit_player:
 			events.append(_delayed_zone_event("player", hit))
-		if not hit["enemy"] and not hit["player"]:
+		if not hit.hit_enemy and not hit.hit_player:
 			events.append(_delayed_zone_event("none", hit))
 	var tick := CombatRoundEvent.new()
 	tick.kind = "tick_map_effects"
@@ -29,7 +29,7 @@ func build_events(state: CombatState, map_area: MapArea) -> Array[CombatRoundEve
 	events.append_array(_status_events(state))
 	return events
 
-func _delayed_zone_event(target: String, hit: Dictionary) -> CombatRoundEvent:
+func _delayed_zone_event(target: String, hit: CombatDelayedImpact) -> CombatRoundEvent:
 	var event := CombatRoundEvent.new()
 	event.kind = "delayed_zone"
 	event.target = target
@@ -37,7 +37,8 @@ func _delayed_zone_event(target: String, hit: Dictionary) -> CombatRoundEvent:
 	return event
 
 func apply_delayed_zone_impact(state: CombatState, event: CombatRoundEvent) -> Array:
-	return zone_effects.apply_direct_impact(state, event.zone_hit["effect"], event.zone_hit["tick_damage"], event.target != "enemy")
+	var hit := event.zone_hit
+	return zone_effects.apply_direct_impact(state, hit.effect, hit.tick_damage, event.target != "enemy")
 
 func finish_status_event(state: CombatState, event: CombatRoundEvent) -> String:
 	var remaining := maxi(0, state.status_value(event.effect, true) - 1)

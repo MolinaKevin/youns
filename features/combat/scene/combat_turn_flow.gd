@@ -12,20 +12,18 @@ const RoundResolverScript := preload("res://features/combat/scene/combat_turn_ro
 
 var host: Combat
 var _round_resolver
+var _deck: CombatDeckFlow
 
 func _init(p_host: Combat) -> void:
 	host = p_host
 	_round_resolver = RoundResolverScript.new(host)
+	_deck = CombatDeckFlow.new(host.state, host.random)
 
 # ── Gestión de mazos ─────────────────────────────────────────────────────────
 
 func setup_draw_pile() -> void:
 	# El mazo propio de la partida (con lo que le cambiaron las evoluciones).
-	var deck_cards := DeckRules.cards(GameState.save_service.player_save)
-	host.state.draw_pile.assign(deck_cards)
-	host.state.draw_pile.shuffle()
-	host.state.discard_pile.clear()
-	host.state.hand.clear()
+	_deck.setup(DeckRules.cards(PlayerSessionAccess.save()))
 
 func refresh_hand() -> void:
 	if host.turn.phase != CombatTurnController.Phase.PLANNING:
@@ -88,7 +86,7 @@ func on_hand_card_selected(index: int) -> void:
 func on_hand_half_selected(index: int, is_top: bool) -> void:
 	var turn := host.turn
 	var selection := turn.select_half(index, is_top, host.state.player_mp, _line_cap(), Combat.WILD_ATTACK, Combat.WILD_MOVE)
-	match selection["kind"]:
+	match selection.kind:
 		"unavailable":
 			return
 		"keep":
@@ -100,7 +98,7 @@ func on_hand_half_selected(index: int, is_top: bool) -> void:
 		"no_lines":
 			host.log_message(LocalizationState.t("combat.no_lines"))
 			return
-	var is_wild: bool = selection["is_wild"]
+	var is_wild := selection.is_wild
 	if is_wild:
 		for line: CardActionLine in turn.playing.lines:
 			line.name = LocalizationState.t("wildcard.name")
@@ -116,12 +114,12 @@ func on_hand_half_selected(index: int, is_top: bool) -> void:
 func _begin_current_line() -> void:
 	var turn := host.turn
 	var next := turn.start_current_line(host.state.player_mp)
-	for _i in next.get("skipped_for_mp", 0):
+	for _i in next.skipped_for_mp:
 		host.log_message(LocalizationState.t("combat.line_no_mp"))
-	if next["kind"] != "line":
+	if next.kind != "line":
 		refresh_hand()
 		return
-	var line: CardActionLine = next["line"]
+	var line := next.line
 	host.state.turn_actions.assign([line])
 	host.player_actions.start_line(line)
 	turn.finish_starting_line()
@@ -148,15 +146,15 @@ func _show_active_line() -> void:
 
 ## Tope de líneas por mitad para la etapa del Youn (DeckRules.line_cap).
 func _line_cap() -> int:
-	return DeckRules.line_cap(YounData.get_active_stage(GameState.save_service.player_save))
+	return DeckRules.line_cap(YounData.get_active_stage(PlayerSessionAccess.save()))
 
 ## "Saltar acción": el controlador gasta la mitad; CombatPlayerActions cancela
 ## la selección y la próxima sincronización avanza a la siguiente línea.
 func on_skip_line_pressed() -> void:
 	var result := host.turn.skip_active_line()
-	if not result["skipped"]:
+	if not result.skipped:
 		return
-	_add_echoes(result.get("echo_card"))
+	_add_echoes(result.echo_card)
 	host.player_actions.cancel_selection()
 
 ## Sincroniza los efectos externos de una transición ya resuelta por el
@@ -167,15 +165,15 @@ func _sync_playing_resolution() -> void:
 		return
 	var line: CardActionLine = turn.playing.lines[turn.playing.index]
 	var result := turn.resolve_playing(host.state.turn_actions.has(line), host.player_actions.has_pending_selection())
-	_add_echoes(result.get("echo_card"))
-	host.state.player_mp -= result.get("mp_cost", 0)
-	match result["kind"]:
+	_add_echoes(result.echo_card)
+	host.state.player_mp -= result.mp_cost
+	match result.kind:
 		"abandoned":
 			host.state.turn_actions.clear()
 		"line_skipped":
 			host.log_message(LocalizationState.t("combat.line_skipped"))
 		"cap_reached":
-			host.log_message(LocalizationState.t("combat.line_cap_reached", [result["cap"]]))
+			host.log_message(LocalizationState.t("combat.line_cap_reached", [result.cap]))
 		"next_line":
 			# CombatPlayerActions todavía puede estar terminando la línea anterior.
 			_begin_current_line.call_deferred()

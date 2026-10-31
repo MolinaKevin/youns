@@ -95,7 +95,11 @@ static func remove_guides(root: Node) -> void:
 
 ## Lee las guías de una escena (.glb) puesta en `offset`.
 func add_map(scene_path: String, offset: Vector3) -> void:
-	var map: Node3D = (load(scene_path) as PackedScene).instantiate()
+	var scene := TypedResourceLoader.packed_scene(scene_path)
+	if scene == null:
+		push_error("AutoDecoration: no se pudo cargar '%s'." % scene_path)
+		return
+	var map := scene.instantiate() as Node3D
 	add_node(map, offset)
 	map.free()
 

@@ -11,6 +11,7 @@ const NEWEN_YOUN_PATH := "res://data/youns/newen.tres"
 const WorldConstructionCatalogScript := preload("res://data/world/world_construction_catalog.gd")
 const CardCatalogScript := preload("res://shared/card_catalog.gd")
 const PlayerSaveValidatorScript := preload("res://shared/player_save_validator.gd")
+const TypedResourceLoaderScript := preload("res://shared/typed_resource_loader.gd")
 const STARTING_YOUN_PATH := "res://data/youns/nguruvilu.tres"
 const STARTING_OWNED_CARD_IDS: Array[String] = ["step", "dash", "strike", "slash", "block", "barrera", "meditar", "golpe_escudo", "represalia", "tiron", "ancla", "demoler", "carga_explosiva", "muro", "golpe_de_roca", "muro_arcano", "derrumbe", "lanzar_roca", "chispa", "escarcha", "descarga", "aliento", "nova", "ceguera", "lentitud", "raices", "curar", "encantar_arma", "parpadeo", "traslado_charco", "granizada", "diluvio", "lluvia_acida", "trepar", "meteor", "arrow", "snipe", "grenade", "salto_rupestre", "envion", "charco", "charco_fuego", "charco_grasa", "enredadera", "charco_sangre", "charco_veneno", "charco_arena", "emboscada"]
 const STARTING_EQUIPPED_DECK_IDS: Array[String] = ["step", "step", "dash", "arrow", "arrow", "snipe", "grenade", "grenade", "charco_fuego", "charco_fuego", "nova", "nova", "aliento", "aliento", "muro", "demoler", "lanzar_roca", "golpe_de_roca", "derrumbe", "trepar"]
@@ -38,7 +39,7 @@ func make_new_save(total_hours: float) -> PlayerSaveData:
 	save.equipped_deck_ids = CardCatalogScript.filter_known_ids(STARTING_EQUIPPED_DECK_IDS, "STARTING_EQUIPPED_DECK_IDS")
 	save.inventory_slots = 20
 	for item_path in STARTING_ITEM_PATHS:
-		var item := load(item_path) as ItemData
+		var item := TypedResourceLoaderScript.item(item_path)
 		if item != null:
 			save.inventory_items.append(item.to_inventory_entry(2))
 		else:
@@ -49,10 +50,10 @@ func make_new_save(total_hours: float) -> PlayerSaveData:
 
 
 func setup_starting_youn(save: PlayerSaveData, total_hours: float, youn_path := STARTING_YOUN_PATH) -> void:
-	var data := load(youn_path) as YounData
+	var data := TypedResourceLoaderScript.youn(youn_path)
 	var resolved_path := youn_path if data != null else STARTING_YOUN_PATH
 	if data == null:
-		data = load(STARTING_YOUN_PATH) as YounData
+		data = TypedResourceLoaderScript.youn(STARTING_YOUN_PATH)
 	save.current_youn_path = resolved_path
 	save.discovered_evolutions[resolved_path.get_file().get_basename()] = []
 	save.youn_stats = data.base_stats.to_dict() if data != null and data.base_stats != null else STARTING_STATS.duplicate()
@@ -74,6 +75,9 @@ func load_from_disk(migrate: bool = true) -> PlayerSaveData:
 	var loaded := ResourceLoader.load(save_path, "", ResourceLoader.CACHE_MODE_IGNORE) as PlayerSaveData
 	if loaded == null or loaded.current_youn_path.is_empty():
 		return null
+	if is_save_from_future(loaded):
+		push_warning("SaveService: la partida fue creada por una versión más nueva del juego y no se cargó.")
+		return null
 	if migrate:
 		migrate_save(loaded)
 	for change in PlayerSaveValidatorScript.sanitize(loaded):
@@ -85,6 +89,9 @@ func load_from_disk(migrate: bool = true) -> PlayerSaveData:
 ## más de una vez: evita que una carga repetida altere el progreso.
 func migrate_save(save: PlayerSaveData) -> void:
 	if save == null:
+		return
+	if is_save_from_future(save):
+		push_warning("SaveService: se evitó migrar una partida de una versión futura (%d > %d)." % [save.save_version, CURRENT_SAVE_VERSION])
 		return
 	var version := maxi(0, save.save_version)
 	while version < CURRENT_SAVE_VERSION:
@@ -99,6 +106,10 @@ func migrate_save(save: PlayerSaveData) -> void:
 				_migrate_from_3(save)
 		version += 1
 	save.save_version = CURRENT_SAVE_VERSION
+
+
+func is_save_from_future(save: PlayerSaveData) -> bool:
+	return save != null and save.save_version > CURRENT_SAVE_VERSION
 
 
 func _migrate_from_0(save: PlayerSaveData) -> void:
@@ -149,6 +160,9 @@ func restore_feature_state() -> void:
 func write(day: int, hour: float) -> Error:
 	if not session_active or player_save == null:
 		return ERR_UNCONFIGURED
+	if is_save_from_future(player_save):
+		push_warning("SaveService: se evitó sobrescribir una partida de una versión futura.")
+		return ERR_INVALID_DATA
 	migrate_save(player_save)
 	player_save.saved_day = day
 	player_save.saved_hour = hour

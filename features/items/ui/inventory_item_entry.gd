@@ -31,7 +31,7 @@ func _ready() -> void:
 
 func setup(item: Dictionary) -> void:
 	var icon_path: String = str(item.get("icon", ""))
-	icon_rect.texture = load(icon_path) as Texture2D if icon_path != "" else null
+	icon_rect.texture = UiAssetCache.texture(icon_path)
 	var item_id := str(item.get("id", ""))
 	name_label.text = LocalizationState.item_name(item_id, str(item.get("name", LocalizationState.t("inventory.item_default"))))
 	var count: int = int(item.get("count", 1))

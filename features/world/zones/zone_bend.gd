@@ -44,5 +44,5 @@ func _refresh_coastal_descent() -> void:
 
 
 func _coastal_descent_open() -> bool:
-	var save := GameState.save_service.player_save
+	var save := PlayerSessionAccess.save()
 	return save != null and save.world_progress != null and save.world_progress.coastal_descent_open

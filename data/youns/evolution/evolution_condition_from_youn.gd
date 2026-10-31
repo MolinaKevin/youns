@@ -12,8 +12,7 @@ func is_met(ctx: Dictionary) -> bool:
 
 func _auto_description() -> String:
 	var name := youn_path.get_file().get_basename()
-	if ResourceLoader.exists(youn_path):
-		var youn := load(youn_path) as YounData
-		if youn != null and not youn.youn_name.is_empty():
-			name = youn.youn_name
+	var youn := TypedResourceLoader.youn(youn_path)
+	if youn != null and not youn.youn_name.is_empty():
+		name = youn.youn_name
 	return LocalizationState.t("evolution.cond.from_youn", [name])

@@ -1,6 +1,8 @@
 class_name YounData
 extends Resource
 
+const TypedResourceLoaderScript := preload("res://shared/typed_resource_loader.gd")
+
 @export var id: String = ""
 @export var youn_name: String = ""
 @export var stage: String = "bebe"
@@ -134,9 +136,7 @@ extends Resource
 static func get_active_stage(save: PlayerSaveData) -> String:
 	if save == null or save.current_youn_path.is_empty():
 		return "bebe"
-	if not ResourceLoader.exists(save.current_youn_path):
-		return "bebe"
-	var data := load(save.current_youn_path) as YounData
+	var data := TypedResourceLoaderScript.youn(save.current_youn_path)
 	if data == null:
 		return "bebe"
 	return data.stage

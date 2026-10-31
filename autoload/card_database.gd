@@ -30,8 +30,7 @@ func get_cards_from_ids(card_ids: Array[String]) -> Array[CardData]:
 	var result: Array[CardData] = []
 
 	if DebugLog.verbose_enabled():
-		print("CardDatabase received ids: ", card_ids)
-		print("cards_by_id keys: ", cards_by_id.keys())
+		print("[CardDatabase] IDs solicitados: %s | catálogo: %d cartas." % [card_ids, cards_by_id.size()])
 
 	for card_id in card_ids:
 		var card := get_card(card_id)

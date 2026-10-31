@@ -1,5 +1,6 @@
 class_name CombatSpellCasts
 extends CombatEffectResolver
+
 const CombatEffects := preload("res://features/combat/scene/combat_effect.gd")
 
 ## El efecto de cada hechizo una vez que ya se confirmó el punto/dirección/

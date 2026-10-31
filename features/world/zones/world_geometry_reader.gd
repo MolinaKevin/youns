@@ -70,7 +70,7 @@ func _instantiate_map(map_path: String) -> Node3D:
 	if not ResourceLoader.exists(map_path):
 		push_error("WorldGeometryReader: no existe el mapa '%s'." % map_path)
 		return null
-	var scene := load(map_path) as PackedScene
+	var scene := TypedResourceLoader.packed_scene(map_path)
 	if scene == null:
 		push_error("WorldGeometryReader: no se pudo cargar el mapa '%s'." % map_path)
 		return null

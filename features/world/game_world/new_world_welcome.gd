@@ -4,18 +4,11 @@ extends Node3D
 ## Segunda mitad de la apertura: ya dentro del hub, presenta al jugador el
 ## mundo con un fundido desde negro y una pequeña ronda ceremonial de Youns.
 
-const PACHAMAMA_PATH := "res://data/youns/pachamama.tres"
+const NarrativeYouns := preload("res://data/youns/narrative_youn_catalog.gd")
+const PACHAMAMA_PATH := NarrativeYouns.PACHAMAMA
 const YounOrientationScript := preload("res://shared/youn_orientation.gd")
-const GUEST_PATHS := [
-	"res://data/youns/newen.tres",
-	"res://data/youns/nguruvilu.tres",
-	"res://data/youns/luzmala.tres",
-	"res://data/youns/tetue.tres",
-	"res://data/youns/agumon.tres",
-	"res://data/youns/arasy.tres",
-	"res://data/youns/kalku.tres",
-	"res://data/youns/mboi_tui.tres",
-]
+const DebugLog := preload("res://shared/debug_logging.gd")
+const GUEST_PATHS := NarrativeYouns.WELCOME_GUESTS
 const RING_RADIUS := 5.5
 
 signal finished
@@ -25,12 +18,14 @@ var _camera: Camera3D
 var _guests := Node3D.new()
 var _pachamama_model: Node3D
 var _center := Vector3.ZERO
+var _flow: AsyncFlowToken
 
 
 func start() -> void:
+	_flow = AsyncFlowToken.new(self)
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	name = "NewWorldWelcome"
-	print("[NewWorldWelcome] Iniciando bienvenida al mundo.")
+	_log("Iniciando bienvenida al mundo.")
 	add_child(_guests)
 	# El filtro global normal vive en la capa base. Esta copia temporal queda
 	# justo debajo del fundido y asegura el mismo look PS1 con la cámara propia
@@ -43,6 +38,7 @@ func start() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_build_black_overlay()
 	await get_tree().process_frame
+	if not _flow.is_active(): return
 	_center = PartyManager.player.global_position
 	# El jugador queda en el centro mirando hacia Pachamama (las 12). No se
 	# teletransporta ni se vuelve a colocar en ningún momento de la ceremonia.
@@ -50,13 +46,16 @@ func start() -> void:
 	_prepare_companion_arrival()
 	_build_cinematic_camera(_center)
 	_build_guests(_center)
-	print("[NewWorldWelcome] Ronda ceremonial construida; revelando el mundo.")
+	_log("Ronda ceremonial construida; revelando el mundo.")
 	var fade := create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	fade.tween_property(_overlay, "color:a", 0.0, 2.0)
 	await fade.finished
+	if not _flow.is_active(): return
 	await _pachamama_arrives()
-	print("[NewWorldWelcome] Pachamama llegó; comienza el diálogo.")
+	if not _flow.is_active(): return
+	_log("Pachamama llegó; comienza el diálogo.")
 	await _speak()
+	if not _flow.is_active(): return
 	_finish()
 
 
@@ -82,14 +81,15 @@ func _build_cinematic_camera(center: Vector3) -> void:
 
 
 func _build_guests(center: Vector3) -> void:
-	var pachamama := load(PACHAMAMA_PATH) as YounData
+	var pachamama := NarrativeYouns.pachamama()
 	if pachamama != null:
 		_pachamama_model = _add_model(pachamama, center + Vector3(0.0, 0.0, -10.0), center, pachamama.scene_walk)
 	for index in GUEST_PATHS.size():
-		var data := load(GUEST_PATHS[index]) as YounData
+		var data := NarrativeYouns.youn(GUEST_PATHS[index])
 		if data == null:
 			continue
-		if GameState.save_service.player_save != null and data.resource_path == GameState.save_service.player_save.current_youn_path:
+		var save := PlayerSessionAccess.save()
+		if save != null and data.resource_path == save.current_youn_path:
 			continue
 		var angle := TAU * float(index) / float(GUEST_PATHS.size())
 		var guest_position := center + Vector3(sin(angle) * RING_RADIUS, 0.0, -2.3 - cos(angle) * RING_RADIUS)
@@ -146,13 +146,14 @@ func _pachamama_arrives() -> void:
 	var arrival := create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	arrival.tween_property(_pachamama_model, "global_position", _center + Vector3(0.0, 0.0, -3.2), 3.8)
 	await arrival.finished
+	if not _flow.is_active(): return
 	_replace_pachamama_with_idle()
 
 
 func _replace_pachamama_with_idle() -> void:
 	if _pachamama_model == null:
 		return
-	var data := load(PACHAMAMA_PATH) as YounData
+	var data := NarrativeYouns.pachamama()
 	if data == null or data.scene_idle == null:
 		return
 	var idle_model := _instantiate_model(data, data.scene_idle)
@@ -180,6 +181,7 @@ func _companion_arrives() -> void:
 	# Las 6: queda centrado abajo del jugador, no al costado (las 5).
 	arrival.tween_property(companion, "global_position", _center + Vector3(0.0, 0.0, 1.7), 2.8)
 	await arrival.finished
+	if not _flow.is_active(): return
 	companion.play_anim("idle")
 
 
@@ -189,43 +191,51 @@ func _turn_player_toward(rotation_y: float) -> void:
 	var turn := create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	turn.tween_property(PartyManager.player, "rotation:y", rotation_y, 0.65)
 	await turn.finished
+	if not _flow.is_active(): return
 
 
 func _speak() -> void:
-	var pachamama := load(PACHAMAMA_PATH) as YounData
+	var pachamama := NarrativeYouns.pachamama()
 	if pachamama == null:
 		return
-	var player_name := GameState.save_service.player_save.player_name if GameState.save_service.player_save != null else "viajero"
+	var save := PlayerSessionAccess.save()
+	var player_name := save.player_name if save != null else LocalizationState.t("welcome.player_fallback")
 	DialogueLines.say_many(pachamama, [
-		"Mirá a tu alrededor, %s." % player_name,
-		"Cada Youn que ves tiene un camino, un vínculo y un corazón propio.",
+		LocalizationState.t("welcome.look_around", [player_name]),
+		LocalizationState.t("welcome.every_youn"),
 	])
 	await Dialogue.dialogue_finished
-	var companion_name := GameState.save_service.player_save.companion_name if GameState.save_service.player_save != null else "tu compañero"
-	DialogueLines.say_many(pachamama, ["Pero hay alguien que ya eligió caminar a tu lado. Conocé a %s." % companion_name])
+	if not _flow.is_active(): return
+	var companion_name := save.companion_name if save != null else LocalizationState.t("welcome.companion_fallback")
+	DialogueLines.say_many(pachamama, [LocalizationState.t("welcome.introduce_companion", [companion_name])])
 	await Dialogue.dialogue_finished
+	if not _flow.is_active(): return
 	await _turn_player_toward(0.0)
 	await _companion_arrives()
 	await _turn_player_toward(PI)
-	DialogueLines.say_many(pachamama, ["Cuiden uno del otro. Desde hoy, este mundo también puede ser su hogar."])
+	DialogueLines.say_many(pachamama, [LocalizationState.t("welcome.care_together")])
 	await Dialogue.dialogue_finished
+	if not _flow.is_active(): return
 	await _fade_guests_away()
 
 
 func _fade_guests_away() -> void:
-	print("[NewWorldWelcome] Fundido de cierre; retirando la ronda ceremonial.")
+	_log("Fundido de cierre; retirando la ronda ceremonial.")
 	var to_black := create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
 	to_black.tween_property(_overlay, "color:a", 1.0, 0.65)
 	await to_black.finished
+	if not _flow.is_active(): return
 	_guests.queue_free()
 	await get_tree().process_frame
+	if not _flow.is_active(): return
 	var from_black := create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 	from_black.tween_property(_overlay, "color:a", 0.0, 0.8)
 	await from_black.finished
+	if not _flow.is_active(): return
 
 
 func _finish() -> void:
-	print("[NewWorldWelcome] Bienvenida terminada; conservando plano para el tutorial.")
+	_log("Bienvenida terminada; conservando plano para el tutorial.")
 	GameState.new_game_ceremony_completed = false
 	# El jugador sigue exactamente donde quedó. Se restablecen físicas para que
 	# apoye en el suelo, pero la cámara cinematográfica se conserva hasta que el
@@ -235,7 +245,7 @@ func _finish() -> void:
 
 
 func restore_gameplay_camera() -> void:
-	print("[NewWorldWelcome] Tutorial cerrado; devolviendo cámara y control.")
+	_log("Tutorial cerrado; devolviendo cámara y control.")
 	PartyManager.unfreeze_camera()
 	if is_instance_valid(PartyManager.camera_rig):
 		var world_camera := PartyManager.camera_rig.get_node_or_null("Camera3D") as Camera3D
@@ -245,3 +255,20 @@ func restore_gameplay_camera() -> void:
 	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	queue_free()
+
+
+func _exit_tree() -> void:
+	if _flow != null:
+		_flow.cancel()
+	# Una salida forzada (carga, combate o cierre) no puede dejar la party ni
+	# las capas persistentes en el estado ceremonial.
+	if is_instance_valid(PartyManager):
+		PartyManager.unfreeze_actors()
+		PartyManager.unfreeze_camera()
+	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
+	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
+
+
+func _log(message: String) -> void:
+	if DebugLog.verbose_enabled():
+		print("[NewWorldWelcome] %s" % message)

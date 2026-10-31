@@ -18,7 +18,7 @@ func warn_tall_grass_blocked() -> void:
 
 
 func _talk(from_barrier: bool) -> void:
-	var save := GameState.save_service.player_save
+	var save := PlayerSessionAccess.save()
 	if save == null:
 		return
 	if save.world_progress.tall_grass_route_open:

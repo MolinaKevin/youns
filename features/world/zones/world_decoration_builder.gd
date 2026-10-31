@@ -54,7 +54,11 @@ func _uses_baked_world_decoration() -> bool:
 
 
 func _add_baked_world_decoration(parent: Node3D, layout: WorldLayout, tree_seed: int) -> void:
-	var baked := (load(BAKED_WORLD_DECORATION) as PackedScene).instantiate() as Node3D
+	var scene := TypedResourceLoader.packed_scene(BAKED_WORLD_DECORATION)
+	if scene == null:
+		push_error("WorldDecorationBuilder: no se pudo cargar %s" % BAKED_WORLD_DECORATION)
+		return
+	var baked := scene.instantiate() as Node3D
 	if baked == null:
 		push_error("WorldDecorationBuilder: no se pudo instanciar %s" % BAKED_WORLD_DECORATION)
 		return

@@ -2,6 +2,7 @@ extends ItemEffect
 class_name ItemEffectGive
 
 const InventoryServiceScript := preload("res://shared/inventory_service.gd")
+const InventoryEntryScript := preload("res://shared/inventory_entry.gd")
 const MAX_STACK := InventoryServiceScript.MAX_STACK
 
 enum GiveType { GOLD, CARD, ITEM }
@@ -23,16 +24,10 @@ func apply(save: PlayerSaveData, _context: ItemEffectContext = null) -> void:
 		GiveType.ITEM:
 			if item_data_path.is_empty():
 				return
-			var data := load(item_data_path) as ItemData
+			var data := TypedResourceLoader.item(item_data_path)
 			if data == null:
 				return
 			apply_item(save.inventory_items, data, save.inventory_slots)
 
 func apply_item(items: Array[Dictionary], data: ItemData, capacity := 999999) -> Dictionary:
-	return InventoryServiceScript.add_entry(items, {
-		"id": data.id,
-		"name": data.name,
-		"icon": data.icon.resource_path if data.icon else "",
-		"data_path": item_data_path,
-		"count": amount,
-	}, capacity, MAX_STACK)
+	return InventoryServiceScript.add_entry(items, InventoryEntryScript.make(data, amount), capacity, MAX_STACK)

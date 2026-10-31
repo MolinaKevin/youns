@@ -27,4 +27,20 @@ static func return_to_session_origin(tree: SceneTree) -> Error:
 ## escena decide su propio estado modal en _ready().
 static func change_scene_resumed(tree: SceneTree, target_scene: String) -> Error:
 	tree.paused = false
+	QuickMenu.cancel_pending_action()
 	return tree.change_scene_to_file(target_scene)
+
+
+## Variante para una escena ya precargada. Mantiene el mismo contrato que las
+## transiciones por ruta: ninguna pausa del origen puede filtrarse al destino.
+static func change_packed_scene_resumed(tree: SceneTree, target_scene: PackedScene) -> Error:
+	tree.paused = false
+	QuickMenu.cancel_pending_action()
+	return tree.change_scene_to_packed(target_scene)
+
+
+## Reinicio pensado para escenas abiertas directamente desde el editor.
+static func reload_current_scene_resumed(tree: SceneTree) -> Error:
+	tree.paused = false
+	QuickMenu.cancel_pending_action()
+	return tree.reload_current_scene()

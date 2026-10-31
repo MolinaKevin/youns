@@ -10,6 +10,11 @@ var _running := false
 var _youn_inside := false
 var _scene3d: CutsceneScene3D
 var _world_lease: WorldTransitionLease
+var _flow: AsyncFlowToken
+var _camera_pivot: Node3D
+var _player: Node3D
+var _youn: Node3D
+var _camera: Node3D
 
 @onready var _area: Area3D = $ToiletArea
 
@@ -39,16 +44,23 @@ func _on_area_exited(body: Node3D) -> void:
 func _try_start() -> void:
 	if _running:
 		return
-	if GameState.save_service.player_save == null or "bathroom" not in StatsManager.services.emotions().active_states:
+	if not PlayerSessionAccess.has_active_save() or not StatsManager.services.emotions().has_state("bathroom"):
 		return
 	_run()
 
 
 func _run() -> void:
 	_running = true
-	var player := PartyManager.player
-	var youn   := PartyManager.youn
-	var cam    := PartyManager.camera_rig
+	_flow = AsyncFlowToken.new(self)
+	_player = PartyManager.player
+	_youn = PartyManager.youn
+	_camera = PartyManager.camera_rig
+	if not is_instance_valid(_player) or not is_instance_valid(_youn) or not is_instance_valid(_camera):
+		_finish()
+		return
+	var player := _player
+	var youn := _youn
+	var cam := _camera
 
 	# ── Marcas explícitas de la cinemática ────────────────────────────────────
 	# Cada baño define estas posiciones en su ToiletData, así la secuencia se
@@ -105,19 +117,25 @@ func _run() -> void:
 	_face_toward(youn, meeting_point)
 	tw.parallel().tween_property(youn, "global_position", meeting_point, dur_youn)
 	await tw.finished
+	if not _flow_is_active():
+		_finish()
+		return
 
 	# Pivot de cámara para encuadrar a ambos en los momentos de mirada
-	var cam_pivot := Node3D.new()
-	add_child(cam_pivot)
-	cam_pivot.global_position = camera_focus + Vector3.UP * td.cam_pivot_height
+	_camera_pivot = Node3D.new()
+	add_child(_camera_pivot)
+	_camera_pivot.global_position = camera_focus + Vector3.UP * td.cam_pivot_height
 
 	# ── 1. Se miran — cámara al centro ───────────────────────────────────────
-	cam.target = cam_pivot
+	cam.target = _camera_pivot
 	youn.play_anim("idle")
 	player.set_anim_base("idle")
 	_face_toward(youn, start_pos)
 	_face_toward(player, meeting_point)
 	await get_tree().create_timer(1.0).timeout
+	if not _flow_is_active():
+		_finish()
+		return
 
 	# ── 2. Youn va al baño — jugador lo sigue con la mirada ──────────────────
 	cam.target = youn
@@ -131,17 +149,26 @@ func _run() -> void:
 		func(t: float): player.rotation.y = lerp_angle(rot_start, rot_target, t),
 		0.0, 1.0, 0.8)
 	await tw.finished
+	if not _flow_is_active():
+		_finish()
+		return
 
 	# Youn entra al cilindro mirando hacia él
 	_face_toward(youn, toilet_pos)
 	tw = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tw.tween_property(youn, "global_position", toilet_pos, 0.5)
 	await tw.finished
+	if not _flow_is_active():
+		_finish()
+		return
 	youn.visible = false
 	youn.play_anim("idle")
 
 	# ── 3. Esperar adentro ────────────────────────────────────────────────────
 	await get_tree().create_timer(td.wait_inside).timeout
+	if not _flow_is_active():
+		_finish()
+		return
 
 	# ── 4. Youn sale y vuelve al meeting point ────────────────────────────────
 	youn.global_position = entrance_pos
@@ -152,13 +179,19 @@ func _run() -> void:
 	tw = create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tw.tween_property(youn, "global_position", meeting_point, 1.0)
 	await tw.finished
+	if not _flow_is_active():
+		_finish()
+		return
 	youn.play_anim("idle")
 
 	# ── 5. Se miran de nuevo — pausa ─────────────────────────────────────────
-	cam.target = cam_pivot
+	cam.target = _camera_pivot
 	_face_toward(youn, start_pos)
 	_face_toward(player, meeting_point)
 	await get_tree().create_timer(0.8).timeout
+	if not _flow_is_active():
+		_finish()
+		return
 
 	# ── 6. Cámara vuelve al jugador — jugador se da vuelta ───────────────────
 	cam.target = player
@@ -172,16 +205,38 @@ func _run() -> void:
 		cam.distance = lerpf(td.cam_distance, cam_dist_start, t),
 		0.0, 1.0, 0.5)
 	await tw.finished
+	if not _flow_is_active():
+		_finish()
+		return
 
-	# Restaurar todo
-	_world_lease.release()
-	cam_pivot.queue_free()
-	_running = false
+	_finish()
 
 
 func _exit_tree() -> void:
+	if _flow:
+		_flow.cancel()
+	_finish()
+
+
+func _flow_is_active() -> bool:
+	return _flow != null and _flow.is_active()
+
+
+## Ruta única de salida: una cancelación no puede dejar el mundo congelado ni
+## al Youn invisible si la zona sigue viva.
+func _finish() -> void:
+	if is_instance_valid(_youn):
+		_youn.visible = true
+	if is_instance_valid(_camera) and is_instance_valid(_player):
+		_camera.target = _player
+	if is_instance_valid(_camera_pivot):
+		_camera_pivot.queue_free()
+	_camera_pivot = null
 	if _world_lease:
 		_world_lease.release()
+	_world_lease = null
+	_flow = null
+	_running = false
 
 
 ## Igual que CutsceneScene3D.face(), pero sin tocar la rotación si ya está

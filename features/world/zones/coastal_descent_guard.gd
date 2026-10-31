@@ -56,19 +56,19 @@ func _play_lines(keys: Array[String]) -> void:
 
 
 func _progress() -> WorldProgressData:
-	var save := GameState.save_service.player_save
+	var save := PlayerSessionAccess.save()
 	return save.world_progress if save != null else null
 
 
 func _has_cable() -> bool:
-	var save := GameState.save_service.player_save
+	var save := PlayerSessionAccess.save()
 	if save == null:
 		return false
 	return save.inventory_items.any(func(entry: Dictionary) -> bool: return str(entry.get("id", "")) == CABLE_ITEM_ID)
 
 
 func _consume_cable() -> void:
-	var save := GameState.save_service.player_save
+	var save := PlayerSessionAccess.save()
 	if save == null:
 		return
 	for index in save.inventory_items.size():

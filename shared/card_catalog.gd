@@ -13,17 +13,8 @@ static func load_all() -> Array[CardData]:
 	if _loaded:
 		return _cards
 	_loaded = true
-	var paths := DirAccess.get_files_at(CARDS_DIR)
-	paths.sort()
-	for filename in paths:
-		if not filename.ends_with(".tres"):
-			continue
-		var path := CARDS_DIR.path_join(filename)
-		var card := load(path) as CardData
-		if card == null:
-			push_error("CardCatalog: no se pudo cargar %s como CardData." % path)
-			continue
-		_cards.append(card)
+	for resource in ResourceCatalogLoader.resources(CARDS_DIR, CardData):
+		_cards.append(resource as CardData)
 	return _cards
 
 

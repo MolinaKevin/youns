@@ -28,13 +28,13 @@ func line_of_sight_clear(from: Vector2, to: Vector2, block_rocks: bool, block_br
 		if obstacle_type == CombatObstacleScript.PLATFORM:
 			if from_elevation > 0 or to_elevation > 0:
 				continue
-			if segment_hits_box(from, to, obstacle["pos"], obstacle["box"] * 0.5):
+			if segment_hits_box(from, to, CombatObstacleScript.position_of(obstacle), CombatObstacleScript.box_of(obstacle) * 0.5):
 				return false
 			continue
-		if obstacle.has("box"):
-			if segment_hits_box(from, to, obstacle["pos"], obstacle["box"] * 0.5):
+		if CombatObstacleScript.has_box(obstacle):
+			if segment_hits_box(from, to, CombatObstacleScript.position_of(obstacle), CombatObstacleScript.box_of(obstacle) * 0.5):
 				return false
-		elif segment_hits_circle(from, to, obstacle["pos"], obstacle["radius"]):
+		elif segment_hits_circle(from, to, CombatObstacleScript.position_of(obstacle), CombatObstacleScript.radius_of(obstacle)):
 			return false
 	return true
 
@@ -43,7 +43,7 @@ func clip_path_at_obstacle(from: Vector2, to: Vector2) -> Vector2:
 	for obstacle: Dictionary in map.terrain.geometry.collision.obstacles():
 		if CombatObstacleScript.type_of(obstacle) == CombatObstacleScript.ROCK:
 			continue
-		var hit_time := segment_hit_time_box(from, to, obstacle["pos"], obstacle["box"] * 0.5) if obstacle.has("box") else segment_hit_time_circle(from, to, obstacle["pos"], obstacle["radius"])
+		var hit_time := segment_hit_time_box(from, to, CombatObstacleScript.position_of(obstacle), CombatObstacleScript.box_of(obstacle) * 0.5) if CombatObstacleScript.has_box(obstacle) else segment_hit_time_circle(from, to, CombatObstacleScript.position_of(obstacle), CombatObstacleScript.radius_of(obstacle))
 		if hit_time >= 0.0 and hit_time < closest_time:
 			closest_time = hit_time
 	return from + (to - from) * maxf(0.0, closest_time - 0.05) if closest_time < 1.0 else to
@@ -112,11 +112,11 @@ func is_player_in_circle(center: Vector2, radius: float) -> bool:
 	return center.distance_to(map.player_pos) <= radius + map.actors.state.geometry.player_radius()
 
 static func obstacle_edge_distance(obstacle: Dictionary, pos: Vector2) -> float:
-	var center: Vector2 = obstacle["pos"]
-	if obstacle.has("box"):
-		var half_size: Vector2 = obstacle["box"] * 0.5
+	var center := CombatObstacleScript.position_of(obstacle)
+	if CombatObstacleScript.has_box(obstacle):
+		var half_size := CombatObstacleScript.box_of(obstacle) * 0.5
 		return Vector2(maxf(absf(pos.x - center.x) - half_size.x, 0.0), maxf(absf(pos.y - center.y) - half_size.y, 0.0)).length()
-	return maxf(0.0, pos.distance_to(center) - float(obstacle["radius"]))
+	return maxf(0.0, pos.distance_to(center) - CombatObstacleScript.radius_of(obstacle))
 
 static func segment_hits_box(a: Vector2, b: Vector2, center: Vector2, half: Vector2) -> bool:
 	return segment_hit_time_box(a, b, center, half) >= 0.0

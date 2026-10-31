@@ -1,5 +1,7 @@
 extends Node
 
+const PlayerSessionAccessScript: GDScript = preload("res://shared/player_session_access.gd")
+
 ## Reacciones a los eventos de vida del Youn (sueño, baño, evolución,
 ## reencarnación). A diferencia de game_world.gd (que se destruye y recrea en
 ## cada combate), esto es un autoload: se conecta una sola vez a
@@ -20,20 +22,23 @@ const EVOLUTION_SCENE  := preload("res://features/world/evolution/evolution_scen
 const EvolutionScreen  := preload("res://features/world/evolution/evolution_screen.gd")
 const EvolutionDiscoveryScreen := preload("res://features/world/evolution/evolution_discovery_screen.gd")
 const ReincarnationSequence := preload("res://features/world/reincarnation/reincarnation_sequence.gd")
+const TypedResourceLoaderScript := preload("res://shared/typed_resource_loader.gd")
+const YounSleepEventsScript := preload("res://shared/youn_sleep_events.gd")
 
 ## Lo registra game_world.gd en su _ready() (cada vez que esa escena se crea,
 ## p. ej. al volver de un combate) — la cinemática de evolución la necesita
 ## para apagar el sol / poner fondo negro.
 var world_lighting: WorldLighting
 
-var _sleep_penalty_applied := false
-var _was_in_sleep_range := false
-var _slept_this_cycle := false
-var _sleep_tracking_initialized := false
-var _sick_sleep_count := 0
+var _sleep_events = YounSleepEventsScript.new()
 ## Solo una espera de evolución puede llegar a iniciar una cinemática. El token
 ## evita que una espera vieja continúe después de restaurar/cambiar de mundo.
 var _evolution_delay: AsyncFlowToken
+var _presentation := LifeEventPresentationHost.from_runtime()
+var _active_evolution: EvolutionScene
+var _active_reincarnation: Node
+var _evolution_saved_environment: Environment
+var _evolution_presentation_active := false
 
 ## Máximo de cacas en el suelo: al pasarlo se borra la más vieja.
 const MAX_POOPS := 10
@@ -41,16 +46,16 @@ var _poops: Array[Node3D] = []
 
 
 func _ready() -> void:
-	GameState.clock_changed.connect(_check_sleep_penalty)
-	GameState.clock_changed.connect(_check_end_of_night)
+	GameState.clock_changed.connect(_on_clock_changed)
 	StatsManager.bathroom_accident.connect(_on_bathroom_accident)
-	StatsManager.evolution_triggered.connect(_on_evolution_triggered)
-	StatsManager.reincarnation_triggered.connect(_on_reincarnation_triggered)
+
+## Permite usar un host falso en pruebas o un host alternativo en otra escena.
+func set_presentation_host(host: LifeEventPresentationHost) -> void:
+	_presentation = host if host != null else LifeEventPresentationHost.from_runtime()
 
 
 func _current_zone_node() -> Node:
-	var zone: Node = ZoneManager.get_current_zone_node()
-	return zone if zone else self
+	return _presentation.zone_or(self)
 
 
 # ── Sueño ─────────────────────────────────────────────────────────────────────
@@ -58,52 +63,11 @@ func _current_zone_node() -> Node:
 ## Lo llama game_world.gd cuando el jugador elige dormir desde el menú: marca
 ## que durmió esta noche y, si estaba enfermo, cuenta para la curación.
 func mark_player_slept() -> void:
-	_slept_this_cycle = true
-	if GameState.save_service.player_save != null and GameState.save_service.player_save.enfermo:
-		_sick_sleep_count += 1
-		if _sick_sleep_count >= 2:
-			_sick_sleep_count = 0
-			StatsManager.services.care().set_sick(false)
-			StatsManager.services.care().add_care_mistake(1)
+	_sleep_events.mark_player_slept()
 
-func _check_sleep_penalty(hour: float, _day: int) -> void:
-	var youn_node = PartyManager.youn if PartyManager else null
-	if not is_instance_valid(youn_node) or youn_node.youn_data == null:
-		return
-	var data: YounData = youn_node.youn_data
-	if not _hour_in_range(hour, data.sleep_hour, data.wake_hour):
-		_sleep_penalty_applied = false
-		return
-	if _sleep_penalty_applied:
-		return
-	var penalty_h := (data.sleep_hour + 1) % 24
-	if _hour_in_range(hour, penalty_h, data.wake_hour):
-		_sleep_penalty_applied = true
-		StatsManager.services.care().add_care_mistake(1)
 
-func _check_end_of_night(hour: float, _day: int) -> void:
-	var youn_node = PartyManager.youn if PartyManager else null
-	if not is_instance_valid(youn_node) or youn_node.youn_data == null:
-		return
-	var data: YounData = youn_node.youn_data
-	var in_sleep := _hour_in_range(hour, data.sleep_hour, data.wake_hour)
-	if not _sleep_tracking_initialized:
-		_was_in_sleep_range = in_sleep
-		_sleep_tracking_initialized = true
-		return
-	if in_sleep and not _was_in_sleep_range:
-		_slept_this_cycle = false
-	if not in_sleep and _was_in_sleep_range:
-		if not _slept_this_cycle:
-			StatsManager.services.care().add_stat("salud", -20)
-			if GameState.save_service.player_save != null and GameState.save_service.player_save.energia < 20:
-				StatsManager.services.care().set_sick(true)
-	_was_in_sleep_range = in_sleep
-
-func _hour_in_range(hour: float, from_h: int, to_h: int) -> bool:
-	if from_h > to_h:
-		return hour >= float(from_h) or hour < float(to_h)
-	return hour >= float(from_h) and hour < float(to_h)
+func _on_clock_changed(hour: float, _day: int) -> void:
+	_sleep_events.on_clock_changed(hour, PartyManager.youn if PartyManager else null)
 
 
 # ── Baño ──────────────────────────────────────────────────────────────────────
@@ -142,22 +106,32 @@ func _ground_below(pos: Vector3) -> Vector3:
 # ── Reencarnación ─────────────────────────────────────────────────────────────
 
 ## Fin de la vida del Youn: muerte, carta heredada, huevo y bebé.
-func _on_reincarnation_triggered(from_data: YounData, cause: String) -> void:
+## La capa de mundo llama esto al recibir la señal. Mantener las reglas de
+## StatsManager libres de escenas 3D permite probarlas sin renderer.
+func present_reincarnation(from_data: YounData, cause: String) -> void:
+	if is_instance_valid(_active_reincarnation):
+		return
 	var sequence := ReincarnationSequence.new()
+	_active_reincarnation = sequence
 	sequence.setup(from_data, cause)
+	sequence.tree_exiting.connect(func() -> void:
+		if _active_reincarnation == sequence:
+			_active_reincarnation = null
+	, CONNECT_ONE_SHOT)
 	add_child(sequence)
 
 ## Partida cargada en medio de una muerte: se retoma desde el principio. Lo
 ## llama game_world.gd en su _ready() (partida nueva/cargada o vuelta de combate).
 func restore_pending_reincarnation() -> void:
-	if not "dying" in StatsManager.services.emotions().active_states:
+	var emotions := StatsManager.services.emotions()
+	if not emotions.has_state("dying"):
 		return
-	var ps := GameState.save_service.player_save
+	var ps: PlayerSaveData = PlayerSessionAccessScript.save() as PlayerSaveData
 	var from_data: YounData = null
-	if ps and not ps.current_youn_path.is_empty() and ResourceLoader.exists(ps.current_youn_path):
-		from_data = load(ps.current_youn_path) as YounData
-	var cause: String = StatsManager.services.emotions().active_states["dying"].get("cause", ReincarnationRules.CAUSE_AGE)
-	call_deferred("_on_reincarnation_triggered", from_data, cause)
+	if ps and not ps.current_youn_path.is_empty():
+		from_data = TypedResourceLoaderScript.youn(ps.current_youn_path)
+	var cause := EmotionStateEntry.cause_of(emotions.state_entry("dying"), ReincarnationRules.CAUSE_AGE)
+	present_reincarnation(from_data, cause)
 
 
 # ── Evolución ─────────────────────────────────────────────────────────────────
@@ -165,28 +139,27 @@ func restore_pending_reincarnation() -> void:
 ## Partida cargada en medio de una evolución: se retoma desde el principio.
 ## Lo llama game_world.gd en su _ready() (partida nueva/cargada o vuelta de combate).
 func restore_pending_evolution() -> void:
-	if not "evolving" in StatsManager.services.emotions().active_states:
+	var emotions := StatsManager.services.emotions()
+	if not emotions.has_state("evolving"):
 		return
-	var target_path: String = StatsManager.services.emotions().active_states["evolving"].get("target_youn_path", "")
+	var target_path := EmotionStateEntry.target_path_of(emotions.state_entry("evolving"))
 	if target_path.is_empty():
 		return
-	var ps := GameState.save_service.player_save
+	var ps: PlayerSaveData = PlayerSessionAccessScript.save() as PlayerSaveData
 	var from_data: YounData = null
-	if ps and not ps.current_youn_path.is_empty() and ResourceLoader.exists(ps.current_youn_path):
-		from_data = load(ps.current_youn_path) as YounData
-	var to_data: YounData = null
-	if ResourceLoader.exists(target_path):
-		to_data = load(target_path) as YounData
-	call_deferred("_on_evolution_triggered", from_data, to_data)
+	if ps and not ps.current_youn_path.is_empty():
+		from_data = TypedResourceLoaderScript.youn(ps.current_youn_path)
+	var to_data := TypedResourceLoaderScript.youn(target_path)
+	present_evolution(from_data, to_data)
 
-func _on_evolution_triggered(from_data: YounData, to_data: YounData) -> void:
+func present_evolution(from_data: YounData, to_data: YounData) -> void:
 	# StatsManager también emite esta señal durante tests y fuera del mundo 3D.
 	# En ese caso la evolución queda pendiente en el save y game_world la retoma
 	# con restore_pending_evolution() cuando ya existen cámara, party e iluminación.
-	if not ZoneManager.is_world_initialized() or not is_instance_valid(world_lighting):
+	if not _presentation.world_ready(world_lighting):
 		return
-	if _evolution_delay:
-		_evolution_delay.cancel()
+	if is_instance_valid(_active_evolution) or _evolution_delay != null:
+		return
 	# world_lighting pertenece a game_world: si esa escena se descarga durante
 	# la espera, el token se invalida antes de que la continuación toque nodos
 	# viejos.
@@ -194,33 +167,36 @@ func _on_evolution_triggered(from_data: YounData, to_data: YounData) -> void:
 	_evolution_delay = flow
 	await get_tree().create_timer(4.0).timeout
 	if not flow.is_active() or _evolution_delay != flow:
+		if _evolution_delay == flow:
+			_evolution_delay = null
 		return
 	_evolution_delay = null
-	if not ZoneManager.is_world_initialized() or not is_instance_valid(world_lighting):
+	if not _presentation.world_ready(world_lighting):
 		return
-	if not is_instance_valid(PartyManager.youn) or get_viewport().get_camera_3d() == null:
+	if not is_instance_valid(_presentation.youn()) or not _presentation.has_camera(get_viewport()):
 		return
 	var cam_transform := get_viewport().get_camera_3d().global_transform
-	PartyManager.freeze_camera()
-	PartyManager.freeze_actors()
-	GlobalHUD.set_clock_paused(true)
+	_presentation.freeze_party()
+	_presentation.set_clock_paused(true)
+	_evolution_presentation_active = true
+	_evolution_saved_environment = world_lighting.world_env.environment
 
 	var evo := EVOLUTION_SCENE.instantiate()
+	_active_evolution = evo
+	evo.tree_exiting.connect(_on_evolution_scene_exiting.bind(evo), CONNECT_ONE_SHOT)
 	_current_zone_node().add_child(evo)
-	evo.global_position = PartyManager.youn.global_position
+	evo.global_position = _presentation.youn().global_position
 
-	var saved_env := world_lighting.world_env.environment
 	evo.approach_finished.connect(func():
 		if not flow.is_active() or not is_instance_valid(world_lighting):
 			return
 		world_lighting.freeze_transition()
-		ZoneManager.set_world_visible(false)
-		PartyManager.player.visible = false
-		var bubble = PartyManager.youn.get_node_or_null("EmotionBubble")
+		_presentation.set_world_visible(false)
+		_presentation.player().visible = false
+		var bubble = _presentation.youn().get_node_or_null("EmotionBubble")
 		if bubble:
 			bubble.freeze()
-		GlobalHUD.set_clock_visible(false)
-		GlobalHUD.set_youns_status_visible(false)
+		_presentation.hide_hud()
 		world_lighting.sun.light_energy = 4.0
 		world_lighting.sun.light_color = Color(1.0, 0.95, 0.9)
 		world_lighting.sun.shadow_enabled = false
@@ -240,15 +216,17 @@ func _on_evolution_triggered(from_data: YounData, to_data: YounData) -> void:
 	evo.finished.connect(func() -> void:
 		if not flow.is_active() or not is_instance_valid(world_lighting):
 			return
-		world_lighting.world_env.environment = saved_env
+		world_lighting.world_env.environment = _evolution_saved_environment
 		world_lighting.reapply_current_period()
+		_evolution_presentation_active = false
+		_active_evolution = null
 		var result := StatsManager.services.life().complete_evolution()
-		if to_data and PartyManager.youn.has_method("load_youn"):
-			PartyManager.youn.load_youn(to_data)
+		if to_data and _presentation.youn().has_method("load_youn"):
+			_presentation.youn().load_youn(to_data)
 		evo.queue_free()
-		ZoneManager.set_world_visible(true)
-		PartyManager.player.visible = true
-		PartyManager.set_party_visible(true)
+		_presentation.set_world_visible(true)
+		_presentation.player().visible = true
+		_presentation.set_party_visible(true)
 		# Pantalla de evolución: el jugador sigue quieto y el reloj parado hasta
 		# que toca "Terminar".
 		var screen := EvolutionScreen.new()
@@ -257,6 +235,37 @@ func _on_evolution_triggered(from_data: YounData, to_data: YounData) -> void:
 		add_child(screen)
 	)
 	evo.start(from_data, to_data, cam_transform)
+
+
+func _on_evolution_scene_exiting(evo: EvolutionScene) -> void:
+	if _active_evolution != evo:
+		return
+	_active_evolution = null
+	_restore_interrupted_evolution()
+
+
+## No existe cancelación por parte del jugador. Esta ruta sólo cubre que la
+## escena se destruya por una transición técnica mientras ya congelamos mundo,
+## cámara y HUD.
+func _restore_interrupted_evolution() -> void:
+	if not _evolution_presentation_active:
+		return
+	_evolution_presentation_active = false
+	if is_instance_valid(world_lighting):
+		world_lighting.world_env.environment = _evolution_saved_environment
+		world_lighting.reapply_current_period()
+	_presentation.set_world_visible(true)
+	if is_instance_valid(_presentation.player()):
+		_presentation.player().visible = true
+	_presentation.set_party_visible(true)
+	_presentation.restore_party()
+	_presentation.set_clock_paused(false)
+	_presentation.restore_hud()
+	var youn := _presentation.youn()
+	if is_instance_valid(youn):
+		var bubble = youn.get_node_or_null("EmotionBubble")
+		if bubble:
+			bubble.unfreeze()
 
 ## "¡Evolución desbloqueada!" y la condición descubierta, después de la
 ## pantalla de evolución.
@@ -274,11 +283,9 @@ func _end_evolution(flow: AsyncFlowToken) -> void:
 		return
 	flow.cancel()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	PartyManager.unfreeze_camera()
-	PartyManager.unfreeze_actors()
-	GlobalHUD.set_clock_paused(false)
-	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
-	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
-	var bubble = PartyManager.youn.get_node_or_null("EmotionBubble")
+	_presentation.restore_party()
+	_presentation.set_clock_paused(false)
+	_presentation.restore_hud()
+	var bubble = _presentation.youn().get_node_or_null("EmotionBubble")
 	if bubble:
 		bubble.unfreeze()

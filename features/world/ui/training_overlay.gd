@@ -30,6 +30,7 @@ var _bonus_btn: Button
 var _cancel_btn: Button
 var _busy := false
 var _world_lease: WorldTransitionLease
+var _flow: AsyncFlowToken
 
 
 func _ready() -> void:
@@ -39,6 +40,7 @@ func _ready() -> void:
 	_apply_text()
 	LocalizationState.language_changed.connect(_apply_text)
 	_world_lease = WorldTransitionLease.new(ModalScreenHost.from_runtime(), PartyManager)
+	_flow = AsyncFlowToken.new(self)
 	_normal_btn.grab_focus()
 
 
@@ -128,7 +130,7 @@ func _train(training_id: String) -> void:
 
 ## Pasa el tiempo y suma la estadística (con los potenciadores del laboratorio).
 func _apply_training(training: Dictionary) -> void:
-	var save := GameState.save_service.player_save
+	var save := PlayerSessionAccess.save()
 	var hours: float = training["hours"]
 	var amount: int = training["amount"]
 	if save and save.training_time_compression_pending:
@@ -159,13 +161,19 @@ func _run_circuit(training: Dictionary) -> void:
 	var split := clampi(int(points.size() * CIRCUIT_FADE_AT), 1, points.size() - 1)
 	youn.play_anim("run")
 	await _run_through(youn, points.slice(0, split + 1))
+	if not _flow.is_active():
+		return
 	var tween := create_tween()
 	tween.tween_property(_fade, "color:a", 1.0, FADE_DURATION)
 	tween.tween_callback(_apply_training.bind(training))
 	tween.tween_interval(0.3)
 	tween.tween_property(_fade, "color:a", 0.0, FADE_DURATION)
 	await tween.finished
+	if not _flow.is_active():
+		return
 	await _run_through(youn, points.slice(split))
+	if not _flow.is_active():
+		return
 	if is_instance_valid(youn):
 		youn.play_anim("idle")
 	if cam:
@@ -186,6 +194,8 @@ func _run_through(youn: Node3D, points: Array) -> void:
 		var tween := create_tween()
 		tween.tween_property(youn, "global_position", b, dist / RUN_SPEED)
 		await tween.finished
+		if not _flow.is_active():
+			return
 
 
 func _party_youn_data() -> YounData:
@@ -200,5 +210,11 @@ func _close() -> void:
 
 
 func _exit_tree() -> void:
+	if _flow:
+		_flow.cancel()
+	if is_instance_valid(PartyManager.youn):
+		PartyManager.youn.play_anim("idle")
+	if is_instance_valid(PartyManager.camera_rig):
+		PartyManager.camera_rig.target = PartyManager.player
 	if _world_lease:
 		_world_lease.release()

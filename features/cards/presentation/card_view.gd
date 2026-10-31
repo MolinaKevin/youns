@@ -242,7 +242,10 @@ func _get_drag_data_fw(_at: Vector2) -> Variant:
 	if drag_payload == null or card_button.disabled:
 		return null
 	var preview := Control.new()
-	var ghost = load("res://features/cards/presentation/card_view.tscn").instantiate()
+	var ghost_scene := UiAssetCache.packed_scene("res://features/cards/presentation/card_view.tscn")
+	if ghost_scene == null:
+		return null
+	var ghost = ghost_scene.instantiate()
 	ghost.hover_enabled = false
 	ghost.set_card(card_data)
 	ghost.scale = Vector2(0.6, 0.6)

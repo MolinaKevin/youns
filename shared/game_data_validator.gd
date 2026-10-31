@@ -33,14 +33,10 @@ static func card_errors(cards: Array[CardData]) -> PackedStringArray:
 	return errors
 
 
-static func recipe_errors(recipes: Array[Resource]) -> PackedStringArray:
+static func recipe_errors(recipes: Array[LabRecipe]) -> PackedStringArray:
 	var errors := PackedStringArray()
 	var ids := {}
-	for resource in recipes:
-		var recipe := resource as LabRecipe
-		if recipe == null:
-			errors.append("Recurso de laboratorio inválido: %s" % resource.resource_path)
-			continue
+	for recipe in recipes:
 		var path := recipe.resource_path
 		if recipe.id.is_empty():
 			errors.append("Receta sin id: %s" % path)
@@ -56,6 +52,11 @@ static func recipe_errors(recipes: Array[Resource]) -> PackedStringArray:
 		for reward in [recipe.reward] + recipe.extra_rewards:
 			if not LabRewardScript.is_known(reward):
 				errors.append("Recompensa inválida en %s" % path)
+				continue
+			var reward_type := LabRewardScript.type_of(reward)
+			for field in LabRewardScript.expected_fields(reward_type):
+				if not reward.has(field):
+					errors.append("Recompensa %s sin campo '%s' en %s" % [reward_type, field, path])
 	return errors
 
 

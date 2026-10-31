@@ -22,11 +22,11 @@ const NEXT_STAGE := {
 const END_OF_LIFE_STAGES := ["campeon", "ultimate"]
 
 
-static func try_evolve(save: PlayerSaveData, youn_data: YounData) -> String:
+static func try_evolve(save: PlayerSaveData, youn_data: YounData, random: RandomSource = null) -> String:
 	if save == null or youn_data == null:
 		return ""
 
-	var target := check_conditions(save, youn_data)
+	var target := check_conditions(save, youn_data, random)
 	if not target.is_empty():
 		return target
 
@@ -44,26 +44,26 @@ static func try_evolve(save: PlayerSaveData, youn_data: YounData) -> String:
 		return REINCARNATE
 
 	if not youn_data.evolves_to.is_empty():
-		return pick_target(youn_data.evolves_to, make_context(save, youn_data))
+		return pick_target(youn_data.evolves_to, make_context(save, youn_data), random)
 
 	# Rookie: va al campeón con MIN_CONDITIONS cumplidas (a cualquiera, como
 	# DW1); si no llega a ninguno, al comodín.
 	var next_stage: String = NEXT_STAGE.get(youn_data.stage, "")
-	var champion := pick_by_conditions(stage_candidates(next_stage), make_context(save, youn_data))
+	var champion := pick_by_conditions(stage_candidates(next_stage), make_context(save, youn_data), random)
 	return champion if not champion.is_empty() else _find_wildcard(next_stage)
 
 
 ## Evolución inmediata al cumplir condiciones: un campeón pasa a uno de sus
 ## ultimates (evolves_to) en cuanto cumple MIN_CONDITIONS de sus condiciones.
-static func check_conditions(save: PlayerSaveData, youn_data: YounData) -> String:
+static func check_conditions(save: PlayerSaveData, youn_data: YounData, random: RandomSource = null) -> String:
 	if save == null or youn_data == null or youn_data.stage != "campeon" or youn_data.evolves_to.is_empty():
 		return ""
-	return pick_by_conditions(youn_data.evolves_to, make_context(save, youn_data))
+	return pick_by_conditions(youn_data.evolves_to, make_context(save, youn_data), random)
 
 ## Entre los candidatos, el que cumple al menos MIN_CONDITIONS. Si varios: el
 ## de más condiciones; si empatan, el que cumple la de inteligencia; si siguen
 ## empatados, al azar. Vacío si ninguno llega.
-static func pick_by_conditions(candidates: Array, ctx: Dictionary) -> String:
+static func pick_by_conditions(candidates: Array, ctx: Dictionary, random: RandomSource = null) -> String:
 	var best: Array[String] = []
 	var best_score := -1
 	for path in candidates:
@@ -80,7 +80,7 @@ static func pick_by_conditions(candidates: Array, ctx: Dictionary) -> String:
 			best_score = score
 		elif score == best_score:
 			best.append(path)
-	return best.pick_random() if not best.is_empty() else ""
+	return (random.pick(best) if random != null else best.pick_random()) if not best.is_empty() else ""
 
 static func _meets_intelligence(data: YounData, ctx: Dictionary) -> bool:
 	for condition in data.evolution_conditions:
@@ -109,7 +109,7 @@ static func make_context(save: PlayerSaveData, from: YounData) -> Dictionary:
 ## - Si tienen dominant_stats (niño → rookie): va al dueño de la stat más alta.
 ## - Si no: gana el que cumple más condiciones.
 ## Si nadie gana o hay empate, va el de por defecto.
-static func pick_target(candidates: Array[String], ctx: Dictionary) -> String:
+static func pick_target(candidates: Array[String], ctx: Dictionary, _random: RandomSource = null) -> String:
 	if candidates.is_empty():
 		return ""
 	var datas: Array[YounData] = []

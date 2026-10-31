@@ -1,17 +1,11 @@
 class_name DialogueLines
 extends RefCounted
 
+const DialogueLineDataScript := preload("res://shared/dialogue_line_data.gd")
+
 ## Arma el Dictionary de línea que espera Dialogue.start() a partir de un YounData.
 static func line_for(data: YounData, text: String, mirrored := false) -> Dictionary:
-	return {
-		"speaker": data.youn_name,
-		"text": text,
-		"portrait": data.portrait,
-		"portrait_position": data.dialogue_portrait_position,
-		"portrait_scale": data.portrait_scale,
-		"nameplate_side": data.dialogue_nameplate_side,
-		"mirrored": mirrored,
-	}
+	return DialogueLineDataScript.make(data, text, mirrored)
 
 ## Conversación de varias líneas: cada entrada es un texto suelto o un
 ## Dictionary con "text", "mirrored" y, opcionalmente, "youn_data_path" para
@@ -27,7 +21,7 @@ static func build(default_data: YounData, entries: Array, default_mirrored := fa
 			line_mirrored = bool(entry.get("mirrored", line_mirrored))
 			var youn_data_path := str(entry.get("youn_data_path", ""))
 			if not youn_data_path.is_empty():
-				var loaded_data := load(youn_data_path) as YounData
+				var loaded_data := TypedResourceLoader.youn(youn_data_path)
 				if loaded_data != null:
 					line_data = loaded_data
 		lines.append(line_for(line_data, line_text, line_mirrored))

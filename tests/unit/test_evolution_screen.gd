@@ -36,6 +36,7 @@ func _screen(colors: Dictionary, lines: int) -> CanvasLayer:
 	for i in lines:
 		to.granted_lines.append(_line())
 	var screen: CanvasLayer = EvolutionScreen.new()
+	screen.logic_only = true
 	screen.setup({"to": to, "stat_changes": {}})
 	add_child_autofree(screen)
 	return screen

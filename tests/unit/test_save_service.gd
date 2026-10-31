@@ -80,3 +80,23 @@ func test_migrar_v3_renombra_pombero_a_newen() -> void:
 	assert_eq(save.pending_evolution_path, "res://data/youns/newen.tres")
 	assert_eq(save.discovered_evolutions["newen"], [1, 2])
 	assert_false(save.discovered_evolutions.has("pombero"))
+
+
+func test_partida_de_una_version_futura_no_se_degrada_al_migrar() -> void:
+	var future := PlayerSaveData.new()
+	future.save_version = SaveService.CURRENT_SAVE_VERSION + 1
+	future.current_youn_path = SaveService.STARTING_YOUN_PATH
+
+	_service.migrate_save(future)
+
+	assert_eq(future.save_version, SaveService.CURRENT_SAVE_VERSION + 1)
+	assert_true(_service.is_save_from_future(future))
+
+
+func test_partida_de_una_version_futura_no_se_sobrescribe() -> void:
+	var future := PlayerSaveData.new()
+	future.save_version = SaveService.CURRENT_SAVE_VERSION + 1
+	_service.player_save = future
+	_service.session_active = true
+
+	assert_eq(_service.write(1, 8.0), ERR_INVALID_DATA)

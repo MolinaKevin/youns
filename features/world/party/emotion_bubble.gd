@@ -57,20 +57,17 @@ func _ready() -> void:
 func _load_frames() -> void:
 	var bubble_frames: SpriteFrames
 	if ResourceLoader.exists(BUBBLE_FRAMES_PATH):
-		bubble_frames = load(BUBBLE_FRAMES_PATH)
+		bubble_frames = TypedResourceLoader.sprite_frames(BUBBLE_FRAMES_PATH)
 	else:
 		bubble_frames = _build_bubble_frames()
-		ResourceSaver.save(bubble_frames, BUBBLE_FRAMES_PATH)
 
 	var icon_frames: SpriteFrames
 	if ResourceLoader.exists(ICON_FRAMES_PATH):
-		icon_frames = load(ICON_FRAMES_PATH)
+		icon_frames = TypedResourceLoader.sprite_frames(ICON_FRAMES_PATH)
 		if not icon_frames.has_animation("evolving"):
 			_patch_emotion_frames(icon_frames)
-			ResourceSaver.save(icon_frames, ICON_FRAMES_PATH)
 	else:
 		icon_frames = _build_emotion_frames()
-		ResourceSaver.save(icon_frames, ICON_FRAMES_PATH)
 
 	sprite_frames       = bubble_frames
 	_icon.sprite_frames = icon_frames
@@ -83,13 +80,13 @@ func _build_bubble_frames() -> SpriteFrames:
 	sf.add_animation("idle")
 	sf.set_animation_speed("idle", 1.0)
 	sf.set_animation_loop("idle", true)
-	sf.add_frame("idle", load("res://assets/emotions/bubble.png"))
+	sf.add_frame("idle", UiAssetCache.texture("res://assets/emotions/bubble.png"))
 
 	# pop: frames placeholder — ajustar en el editor con bubble_frames.tres
 	sf.add_animation("pop")
 	sf.set_animation_speed("pop", 10.0)
 	sf.set_animation_loop("pop", false)
-	var tex: Texture2D = load("res://assets/emotions/mixed.png")
+	var tex := UiAssetCache.texture("res://assets/emotions/mixed.png")
 	for region in [Rect2(296, 58, 80, 58), Rect2(385, 58, 62, 58), Rect2(383, 0, 66, 58)]:
 		var atlas := AtlasTexture.new()
 		atlas.atlas = tex
@@ -103,7 +100,7 @@ func _patch_emotion_frames(sf: SpriteFrames) -> void:
 	const CELL_W   := 40
 	const CELL_H   := 58
 	const OFFSET_X := 15
-	var tex: Texture2D = load("res://assets/emotions/mixed.png")
+	var tex := UiAssetCache.texture("res://assets/emotions/mixed.png")
 	sf.add_animation("evolving")
 	sf.set_animation_speed("evolving", 4.0)
 	sf.set_animation_loop("evolving", true)
@@ -136,7 +133,7 @@ func _build_emotion_frames() -> SpriteFrames:
 		["evolving", 4.0, true, [[4,0],[5,0],[6,0]]],  # placeholder: mismas frames que tired
 	]
 
-	var tex: Texture2D = load("res://assets/emotions/mixed.png")
+	var tex := UiAssetCache.texture("res://assets/emotions/mixed.png")
 	var sf := SpriteFrames.new()
 	for entry in defs:
 		var anim_name: String = entry[0]
@@ -183,8 +180,9 @@ func _process(delta: float) -> void:
 
 
 func _on_stat_changed() -> void:
+	var emotions := StatsManager.services.emotions()
 	var new_queue := EmotionDisplayQueue.build(
-		StatsManager.services.emotions().active_states, StatsManager.services.emotions().is_blocked(), _icon.sprite_frames)
+		emotions.active_states_snapshot(), emotions.is_blocked(), _icon.sprite_frames)
 	if new_queue.is_empty():
 		return
 	if _state == State.HIDDEN or _state == State.PAUSING:
@@ -247,7 +245,7 @@ func _on_pop_finished() -> void:
 
 func _start_cycle() -> void:
 	_queue = EmotionDisplayQueue.build(
-		StatsManager.services.emotions().active_states, StatsManager.services.emotions().is_blocked(), _icon.sprite_frames)
+		StatsManager.services.emotions().active_states_snapshot(), StatsManager.services.emotions().is_blocked(), _icon.sprite_frames)
 	if not _queue.is_empty():
 		show_emotion(_queue.pop_front())
 	else:

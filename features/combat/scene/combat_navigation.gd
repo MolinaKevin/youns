@@ -4,6 +4,7 @@ extends RefCounted
 ## Estado y algoritmos de navegación del tablero. Depende sólo del terreno y
 ## de los límites configurados; no conoce MapArea ni guarda estado de actores.
 const PATH_SLACK := 1.0824
+const CombatMovePlanScript := preload("res://features/combat/scene/combat_move_plan.gd")
 
 var terrain: CombatTerrain
 var world_width := 30.0
@@ -80,7 +81,7 @@ func find_toward(from_pos: Vector2, target: Vector2, max_range: float, elevation
 			best_cost = cost
 	if best == start:
 		return {}
-	return {"destination": CombatGrid.to_world(best), "path": CombatGrid.path_to(reach, best)}
+	return CombatMovePlanScript.make(CombatGrid.to_world(best), CombatGrid.path_to(reach, best)).to_dictionary()
 
 func _grid_reach(from_pos: Vector2, max_range: float, elevation: int, radius: float, other_pos: Vector2, other_radius: float) -> Dictionary:
 	var start := CombatGrid.to_cell(from_pos)

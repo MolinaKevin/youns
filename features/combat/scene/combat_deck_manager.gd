@@ -4,9 +4,11 @@ extends RefCounted
 signal reshuffled
 
 var _state: CombatState
+var _random: RandomSource
 
-func setup(p_state: CombatState) -> void:
+func setup(p_state: CombatState, random: RandomSource = null) -> void:
 	_state = p_state
+	_random = random if random != null else RandomSource.new()
 
 func draw_cards(n: int) -> void:
 	for i in n:
@@ -14,7 +16,7 @@ func draw_cards(n: int) -> void:
 			if _state.discard_pile.is_empty():
 				break
 			_state.draw_pile.assign(_state.discard_pile)
-			_state.draw_pile.shuffle()
+			_random.shuffle(_state.draw_pile)
 			_state.discard_pile.clear()
 			reshuffled.emit()
 		_state.hand.append(_state.draw_pile.pop_back())

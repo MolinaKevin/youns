@@ -16,6 +16,7 @@ extends Node
 signal finished
 
 const CARD_SCENE := preload("res://features/cards/presentation/card_view.tscn")
+const TypedResourceLoaderScript := preload("res://shared/typed_resource_loader.gd")
 const CARD_SIZE := Vector2(195, 293)
 const GRID_SCALE := 0.6
 
@@ -26,6 +27,7 @@ var _flash: ColorRect
 var _scene3d: CutsceneScene3D
 var _msg: CutsceneMessageBox
 var _world_lease: WorldTransitionLease
+var _flow: AsyncFlowToken
 
 func setup(from_data: YounData, cause := ReincarnationRules.CAUSE_AGE) -> void:
 	_from = from_data
@@ -38,6 +40,7 @@ func add_message_panel(root: Control) -> void:
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_flow = AsyncFlowToken.new(self)
 	_scene3d = CutsceneScene3D.new(self)
 	_msg = CutsceneMessageBox.new(self)
 	_ui = CanvasLayer.new()
@@ -51,6 +54,8 @@ func _ready() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
+	if not _flow.is_active():
+		return
 	var player := PartyManager.player
 	var youn := PartyManager.youn
 	var youn_name := _from.youn_name if _from != null else "?"
@@ -71,53 +76,72 @@ func _run() -> void:
 	if by_health:
 		# Muy débil: se acerca despacio, sin carta.
 		await _scene3d.tween(youn, "global_position", youn_spot, 1.6)
+		if not _flow.is_active(): return
 		_scene3d.face(youn, player.global_position)
 		await _msg.message(LocalizationState.t("reincarnation.weak", [youn_name]))
+		if not _flow.is_active(): return
 	else:
 		var bang := _scene3d.mark(youn, "!", 1.6)
 		await _scene3d.tween(youn, "global_position", youn_spot, 0.8)
+		if not _flow.is_active(): return
 		_scene3d.face(youn, player.global_position)
 		await _scene3d.bounce(bang)
+		if not _flow.is_active(): return
 
 		# 2. El jugador lo mira, confundido.
 		var target_rot := _scene3d.yaw_toward(player.global_position, youn.global_position)
 		await _scene3d.tween(player, "rotation:y", lerp_angle(player.rotation.y, target_rot, 1.0), 0.5)
+		if not _flow.is_active(): return
 		var question := _scene3d.mark(player, "?", 2.3)
 		await _scene3d.bounce(question)
+		if not _flow.is_active(): return
 		await _msg.message(LocalizationState.t("reincarnation.look"))
+		if not _flow.is_active(): return
 
 		# 3. Elige una carta. El Youn muere.
 		card = await _choose_card()
+		if not _flow.is_active(): return
 		_scene3d.clear_marks()
 	await _scene3d.tween(_flash, "color:a", 1.0, 0.6)
+	if not _flow.is_active(): return
 	youn.visible = false
 	await _scene3d.tween(_flash, "color:a", 0.0, 0.6)
+	if not _flow.is_active(): return
 	await _msg.message(LocalizationState.t("reincarnation.gone", [youn_name]))
+	if not _flow.is_active(): return
 	if by_health:
 		# Las vidas solo se ven acá. Se descuentan al nacer el bebé.
-		var lives := maxi(0, GameState.save_service.player_save.lives - 1)
+		var save := PlayerSessionAccess.save()
+		var lives := maxi(0, save.lives - 1) if save != null else 0
 		await _msg.message(LocalizationState.t("reincarnation.life_lost"), _msg.hearts(lives, ReincarnationRules.MAX_LIVES))
+		if not _flow.is_active(): return
 
 	# 4. Elige un huevo.
 	var baby: YounData = await _choose_egg(card)
+	if not _flow.is_active() or baby == null: return
 
 	# 5. Nace el bebé con la carta.
 	await _scene3d.tween(_flash, "color:a", 1.0, 0.4)
+	if not _flow.is_active(): return
 	if youn.has_method("load_youn"):
 		youn.load_youn(baby)
 	youn.global_position = youn_spot
 	_scene3d.face(youn, player.global_position)
 	youn.visible = true
 	await _scene3d.tween(_flash, "color:a", 0.0, 0.8)
-	var first_unlock := not GameState.save_service.player_save.reincarnated_cards_unlocked
+	if not _flow.is_active(): return
+	var save := PlayerSessionAccess.save()
+	var first_unlock := save != null and not save.reincarnated_cards_unlocked
 	if card != null:
 		var card_name := LocalizationState.card_name(card.id, card.name)
 		await _msg.message(LocalizationState.t("reincarnation.born", [baby.youn_name, card_name]))
 	else:
 		await _msg.message(LocalizationState.t("reincarnation.born_no_card", [baby.youn_name]))
 	StatsManager.services.life().complete_reincarnation(baby, card)
-	if first_unlock and GameState.save_service.player_save.reincarnated_cards_unlocked:
+	if not _flow.is_active(): return
+	if first_unlock and save.reincarnated_cards_unlocked:
 		await _msg.message(LocalizationState.t("reincarnation.cards_unlocked"))
+		if not _flow.is_active(): return
 	_finish()
 
 func _finish() -> void:
@@ -129,6 +153,12 @@ func _finish() -> void:
 
 
 func _exit_tree() -> void:
+	if _flow != null:
+		_flow.cancel()
+	if is_instance_valid(PartyManager.youn):
+		PartyManager.youn.visible = true
+	if _scene3d != null:
+		_scene3d.finish_camera()
 	if _world_lease:
 		_world_lease.release()
 
@@ -153,7 +183,7 @@ func _choose_card() -> CardData:
 	confirm.disabled = true
 	var selected: Array = [null]
 	var views: Array = []
-	for card in DeckRules.cards(GameState.save_service.player_save):
+	for card in DeckRules.cards(PlayerSessionAccess.save()):
 		var holder := Control.new()
 		holder.custom_minimum_size = CARD_SIZE * GRID_SCALE
 		grid.add_child(holder)
@@ -170,6 +200,8 @@ func _choose_card() -> CardData:
 				v.modulate = Color.WHITE if v.card_data == c else Color(1, 1, 1, 0.45))
 	column.add_child(confirm)
 	await confirm.pressed
+	if not _flow.is_active():
+		return null
 	parts[0].queue_free()
 	return selected[0]
 
@@ -208,7 +240,7 @@ func _choose_egg(card: CardData) -> YounData:
 			b.add_theme_stylebox_override(state, st)
 		if available:
 			b.pressed.connect(func() -> void:
-				chosen[0] = load(egg["youn"]) as YounData
+				chosen[0] = TypedResourceLoaderScript.youn(str(egg["youn"]))
 				picked.pressed.emit())
 		eggs.add_child(b)
 	if card != null:
@@ -226,5 +258,7 @@ func _choose_egg(card: CardData) -> YounData:
 		view.set_disabled(true)
 	column.add_child(picked)
 	await picked.pressed
+	if not _flow.is_active():
+		return null
 	parts[0].queue_free()
 	return chosen[0]

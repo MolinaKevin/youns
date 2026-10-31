@@ -47,17 +47,17 @@ func resolve_event(event: CombatRoundEvent, flow: AsyncFlowToken) -> bool:
 	return false
 
 func resolve_delayed_zone(event: CombatRoundEvent, flow: AsyncFlowToken) -> bool:
-	var hit: Dictionary = event.zone_hit
+	var hit := event.zone_hit
 	var on_enemy := event.target == "enemy"
 	if event.target == "none":
-		host.log_message(LocalizationState.t("combat.delayed_zone.miss", [hit["name"], hit["damage"]]))
+		host.log_message(LocalizationState.t("combat.delayed_zone.miss", [hit.display_name, hit.damage]))
 		return false
 	var target_name := "enemy" if on_enemy else "player"
-	host.log_message(LocalizationState.t("combat.delayed_zone.%s_hit" % target_name, [hit["name"], hit["damage"]]))
+	host.log_message(LocalizationState.t("combat.delayed_zone.%s_hit" % target_name, [hit.display_name, hit.damage]))
 	if on_enemy:
-		await host._damage.deal_to_enemy(hit["damage"], true, CombatState.MAGICO)
+		await host._damage.deal_to_enemy(hit.damage, true, CombatState.MAGICO)
 	else:
-		await host._damage.deal_to_player(hit["damage"], true, CombatState.MAGICO)
+		await host._damage.deal_to_player(hit.damage, true, CombatState.MAGICO)
 	if not host.is_flow_active(flow) or host._result_flow.check_combat_end(): return true
 	log_delayed_impact(host.round_resolver.apply_delayed_zone_impact(host.state, event), on_enemy)
 	return false

@@ -125,7 +125,7 @@ func build(catalog: ZoneCatalog, force_procedural_decoration := false, build_wal
 func _load_baked_boundary(build_walls: bool) -> bool:
 	if not ResourceLoader.exists(BAKED_GRID) or (build_walls and not ResourceLoader.exists(BAKED_WALLS)):
 		return false
-	var baked := load(BAKED_GRID) as WorldBoundaryBakeData
+	var baked := ResourceLoader.load(BAKED_GRID) as WorldBoundaryBakeData
 	if baked == null or baked.width <= 0 or baked.height <= 0:
 		return false
 	if OS.is_debug_build() and baked.source_signature != BoundaryBakeSignature.current(_layout):
@@ -133,7 +133,10 @@ func _load_baked_boundary(build_walls: bool) -> bool:
 		return false
 	_grid = baked.to_grid()
 	if build_walls:
-		var walls := (load(BAKED_WALLS) as PackedScene).instantiate() as Node3D
+		var walls_scene := TypedResourceLoader.packed_scene(BAKED_WALLS)
+		if walls_scene == null:
+			return false
+		var walls := walls_scene.instantiate() as Node3D
 		if walls == null:
 			return false
 		add_child(walls)

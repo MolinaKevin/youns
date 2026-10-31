@@ -1,6 +1,8 @@
 class_name CombatMapMovement
 extends "res://features/combat/scene/combat_map_movement_port.gd"
 
+const CombatMovePlanScript := preload("res://features/combat/scene/combat_move_plan.gd")
+
 ## Coordina las rutas de navegación con el estado lógico y los waypoints de
 ## los actores. CombatNavigation calcula caminos; CombatActorMover los anima.
 var map: CombatMapArea
@@ -34,13 +36,14 @@ func path_cost() -> float:
 func move_enemy_toward(target: Vector2, move_range: float) -> bool:
 	var route: Dictionary = map.terrain.navigation.find_toward(map.enemy_pos, target, move_range, map.enemy_elevation,
 		map.actors.state.geometry.enemy_radius(), map.player_pos, map.actors.state.geometry.player_radius())
-	if route.is_empty():
+	var plan := CombatMovePlanScript.parse(route)
+	if plan == null:
 		return false
 	map.actors.movement.clear_enemy_waypoints()
-	for cell in CombatGrid.corners(route["path"]).slice(1):
+	for cell in CombatGrid.corners(plan.path).slice(1):
 		var world := CombatGrid.to_world(cell)
 		map.actors.movement.add_enemy_waypoint(Vector3(world.x, map.terrain.geometry.bounds.elevation_height(map.terrain.geometry.bounds.elevation_at(world)), world.y))
-	map.enemy_pos = route["destination"]
+	map.enemy_pos = plan.destination
 	map.enemy_elevation = map.terrain.geometry.bounds.elevation_at(map.enemy_pos)
 	map.actors.state.targets.sync_targets()
 	return true

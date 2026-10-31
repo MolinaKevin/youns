@@ -24,6 +24,6 @@ func zone_effects_along(_from: Vector2, _to: Vector2, _margin: float = 0.0) -> D
 func tick_puddles() -> void: pass
 func place_delayed_zone(pos: Vector2, radius: float, damage: int, _name: String, rounds: int = 1, effect: String = "", turns: int = 0) -> void:
 	owner.place_delayed_zone_calls.append({"pos": pos, "radius": radius, "damage": damage, "delay": rounds, "effect": effect, "duration": turns})
-func resolve_delayed_zones() -> Array: return []
-func delayed_zones() -> Array[Dictionary]: return []
+func resolve_delayed_zones() -> Array[CombatDelayedImpact]: return []
+func delayed_zones() -> Array[CombatDelayedZone]: return []
 func blink_player_to(pos: Vector2) -> void: owner.blink_calls.append(pos)

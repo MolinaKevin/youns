@@ -17,15 +17,17 @@ var _show_emotion: Callable
 var _clear_emotion: Callable
 var _find_emotion_rule: Callable
 var _bathroom_accident: Callable
+var _random: RandomSource
 
 
-func _init(session: CareSessionContext, queue_changed: Callable, show_emotion: Callable, clear_emotion: Callable, find_rule: Callable, bathroom_accident: Callable) -> void:
+func _init(session: CareSessionContext, queue_changed: Callable, show_emotion: Callable, clear_emotion: Callable, find_rule: Callable, bathroom_accident: Callable, random: RandomSource = null) -> void:
 	_session = session
 	_queue_changed = queue_changed
 	_show_emotion = show_emotion
 	_clear_emotion = clear_emotion
 	_find_emotion_rule = find_rule
 	_bathroom_accident = bathroom_accident
+	_random = random if random != null else RandomSource.new()
 	_configs = _load_configs()
 
 
@@ -115,7 +117,7 @@ func on_bathroom_used(rng: RandomNumberGenerator = null) -> void:
 	var save := _session.player_save()
 	if save == null:
 		return
-	var random_factor := rng.randf() if rng else randf()
+	var random_factor := rng.randf() if rng else _random.randf()
 	set_weight(save.weight - save.poop_pending - random_factor * save.weight * 0.1)
 	save.poop_pending = 0.0
 
@@ -237,21 +239,12 @@ func _check_sick_chance() -> void:
 		return
 	var t := clampf((80.0 - float(save.salud)) / 75.0, 0.0, 1.0)
 	var probability := 0.60 * (exp(3.5 * t) - 1.0) / (exp(3.5) - 1.0)
-	if randf() < probability:
+	if _random.randf() < probability:
 		set_sick(true)
 
 
 func _load_configs() -> Array[StatConfig]:
 	var result: Array[StatConfig] = []
-	var dir := DirAccess.open(STATS_DIR)
-	if dir == null:
-		return result
-	dir.list_dir_begin()
-	var file := dir.get_next()
-	while file != "":
-		if file.ends_with(".tres"):
-			var config = load(STATS_DIR + file)
-			if config is StatConfig:
-				result.append(config)
-		file = dir.get_next()
+	for config in ResourceCatalogLoader.resources(STATS_DIR, StatConfig):
+		result.append(config as StatConfig)
 	return result

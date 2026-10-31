@@ -4,8 +4,9 @@ extends "res://tests/helpers/graphical_integration_test_case.gd"
 # pisar la partida real.
 
 const TEST_PATH := "user://test_player_save.tres"
+const GameSessionSnapshotScript := preload("res://tests/helpers/game_session_snapshot.gd")
 
-var _backup := {}
+var _session_snapshot: GameSessionSnapshot
 
 
 func before_all() -> void:
@@ -13,15 +14,7 @@ func before_all() -> void:
 
 
 func before_each() -> void:
-	_backup = {
-		"save": GameState.save_service.player_save, "path": GameState.save_service.save_path,
-		"session": GameState.save_service.session_active, "day": GameState.current_day,
-		"hour": GameState.time_of_day_hours, "intro": GameState.save_service.world_intro_seen,
-		"states": StatsManager.emotion_service.active_states.duplicate(true),
-		"player_pos": PartyManager.player.global_position,
-		"zone": ZoneManager.current_zone,
-		"north_trail_open": ZoneManager.north_trail_open,
-	}
+	_session_snapshot = GameSessionSnapshotScript.capture()
 	GameState.save_service.save_path = TEST_PATH
 	if FileAccess.file_exists(TEST_PATH):
 		DirAccess.remove_absolute(TEST_PATH)
@@ -30,19 +23,7 @@ func before_each() -> void:
 func after_each() -> void:
 	if FileAccess.file_exists(TEST_PATH):
 		DirAccess.remove_absolute(TEST_PATH)
-	GameState.save_service.player_save = _backup["save"]
-	GameState.save_service.save_path = _backup["path"]
-	GameState.save_service.session_active = _backup["session"]
-	GameState.current_day = _backup["day"]
-	GameState.time_of_day_hours = _backup["hour"]
-	GameState.save_service.world_intro_seen = _backup["intro"]
-	StatsManager.emotion_service.active_states = _backup["states"]
-	while StatsManager.emotion_service.is_blocked():
-		StatsManager.emotion_service.unblock()
-	GameState.world_entry.clear()
-	ZoneManager.set_north_trail_open(_backup["north_trail_open"])
-	LaboratoryState.pause_active_recipe()
-	PartyManager.place_at(_backup["player_pos"])
+	_session_snapshot.restore()
 
 
 func test_sin_partida_empezada_no_se_guarda_nada() -> void:

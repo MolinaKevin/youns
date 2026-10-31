@@ -22,6 +22,7 @@ var _style_normal: StyleBoxFlat
 var _style_selected: StyleBoxFlat
 var _modal: ModalScreenContext
 var _session: PlayerSessionService
+var _action_generation := 0
 
 
 func _ready() -> void:
@@ -85,7 +86,7 @@ func _make_panel(dir: String) -> PanelContainer:
 	icon_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	icon_rect.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon_rect.texture = load(data.icon) as Texture2D
+	icon_rect.texture = UiAssetCache.texture(data.icon)
 	vbox.add_child(icon_rect)
 
 	var label := Label.new()
@@ -168,6 +169,18 @@ func close() -> void:
 ## El efecto de cada acción sobre las stats vive en CareStatsService, no acá.
 func activate_selected() -> void:
 	var dir := _selected
+	var source_scene := get_tree().current_scene
+	_action_generation += 1
+	var generation := _action_generation
 	close()
 	await YounInteraction.run(ITEMS[dir].anim)
+	# QuickMenu es un autoload: puede sobrevivir a un cambio de escena mientras
+	# la animación esperaba. No aplicar cuidado sobre una partida ya reemplazada.
+	if generation != _action_generation or get_tree().current_scene != source_scene:
+		return
 	_session.care({"up": "reward", "down": "punish", "left": "deny", "right": "play"}[dir])
+
+
+## Invalida una acción que todavía está esperando la animación.
+func cancel_pending_action() -> void:
+	_action_generation += 1

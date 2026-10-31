@@ -6,7 +6,7 @@ extends RefCounted
 ## Ambas usan por ahora la misma notificación flotante.
 
 static func grant_mission(mission_id: String, title_key: String) -> bool:
-	var save := GameState.save_service.player_save
+	var save := PlayerSessionAccess.save()
 	if save == null or mission_id.is_empty() or save.world_progress.has_mission(mission_id):
 		return false
 	save.world_progress.start_mission(mission_id)
@@ -15,7 +15,7 @@ static func grant_mission(mission_id: String, title_key: String) -> bool:
 
 
 static func grant_recipe(recipe_id: String) -> bool:
-	if GameState.save_service.player_save == null or recipe_id.is_empty() or LaboratoryState.is_recipe_unlocked(recipe_id):
+	if PlayerSessionAccess.save() == null or recipe_id.is_empty() or LaboratoryState.is_recipe_unlocked(recipe_id):
 		return false
 	LaboratoryState.unlock_recipe(recipe_id)
 	var recipe := LaboratoryState.get_recipe_by_id(recipe_id)

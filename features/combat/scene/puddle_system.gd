@@ -100,37 +100,30 @@ func place_puddle(pos: Vector2, radius: float, effect: String = "wet", turns: in
 
 	for i in range(zones.size()):
 		var existing: Dictionary = zones[i]
-		var r1: float  = existing["radius"]
-		var c1: Vector2 = existing["pos"]
+		var r1 := CombatPuddleZone.radius_of(existing)
+		var c1 := CombatPuddleZone.position_of(existing)
 		var dist: float = c1.distance_to(pos)
 		if dist >= r1 + r2:
 			continue
-		var combined := _puddle_interaction(existing.get("effect", "wet"), effect)
+		var combined := _puddle_interaction(CombatPuddleZone.effect_of(existing), effect)
 		if combined == "":
 			continue
 
 		# El charco existente se redibuja sin la parte que ocupa el nuevo.
-		existing["excl"].append(new_id)
+		CombatPuddleZone.exclusions_of(existing).append(new_id)
 		to_rebuild.append(i)
 
 		# Zona de interacción en forma de lente
 		var ipos: Vector2  = c1.lerp(pos, r1 / (r1 + r2))
 		var ir: float      = maxf(0.5, (r1 + r2 - dist) * 0.5)
-		zones.append({
-			"id": _next_id, "pos": ipos, "radius": ir, "effect": combined,
-			"turns": _shorter_turns(existing["turns"], turns),
-			"damage": maxi(existing["damage"], damage), "lens": true, "excl": [],
-			"parents": [existing["id"], new_id],
-		})
+		zones.append(CombatPuddleZone.make(_next_id, ipos, ir, combined,
+			_shorter_turns(CombatPuddleZone.turns_of(existing), turns), maxi(CombatPuddleZone.damage_of(existing), damage), true, [], [CombatPuddleZone.id_of(existing), new_id]))
 		_next_id += 1
 		_add_puddle_visual_lens(c1, r1, pos, r2, combined)
 
-		new_excl.append(existing["id"])
+		new_excl.append(CombatPuddleZone.id_of(existing))
 
-	zones.append({
-		"id": new_id, "pos": pos, "radius": r2, "effect": effect,
-		"turns": turns, "damage": damage, "lens": false, "excl": new_excl,
-	})
+	zones.append(CombatPuddleZone.make(new_id, pos, r2, effect, turns, damage, false, new_excl))
 	_visuals.append(_make_puddle_visual(pos, r2, effect, _puddle_exclusions(zones.back())))
 	for i in to_rebuild:
 		_rebuild_puddle_visual(i)
@@ -144,19 +137,19 @@ func place_puddle(pos: Vector2, radius: float, effect: String = "wet", turns: in
 func tick_puddles() -> void:
 	var removed: Array = []
 	for zone in zones:
-		if zone["turns"] > 0:
-			zone["turns"] -= 1
-			if zone["turns"] == 0:
-				removed.append(zone["id"])
+		if CombatPuddleZone.turns_of(zone) > 0:
+			CombatPuddleZone.set_turns(zone, CombatPuddleZone.turns_of(zone) - 1)
+			if CombatPuddleZone.turns_of(zone) == 0:
+				removed.append(CombatPuddleZone.id_of(zone))
 	if removed.is_empty():
 		return
 	for i in range(zones.size() - 1, -1, -1):
-		if zones[i]["id"] in removed:
+		if CombatPuddleZone.id_of(zones[i]) in removed:
 			_visuals[i].queue_free()
 			_visuals.remove_at(i)
 			zones.remove_at(i)
 	for i in zones.size():
-		var excl: Array = zones[i]["excl"]
+		var excl := CombatPuddleZone.exclusions_of(zones[i])
 		var kept := excl.filter(func(id): return not id in removed)
 		if kept.size() != excl.size():
 			zones[i]["excl"] = kept
@@ -165,25 +158,25 @@ func tick_puddles() -> void:
 ## El charco (no combinado) que hay en `pos`, o {} si no hay.
 func get_puddle_at(pos: Vector2) -> Dictionary:
 	for zone in zones:
-		if not zone.get("lens", false) and pos.distance_to(zone["pos"]) <= float(zone["radius"]) + map.CLICK_MARGIN * 0.5:
+		if not CombatPuddleZone.is_lens(zone) and pos.distance_to(CombatPuddleZone.position_of(zone)) <= CombatPuddleZone.radius_of(zone) + map.CLICK_MARGIN * 0.5:
 			return zone
 	return {}
 
 ## Saca un charco del mapa, con sus zonas combinadas; los que lo recortaban se
 ## redibujan enteros.
 func remove_puddle(zone: Dictionary) -> void:
-	var id: int = zone["id"]
+	var id := CombatPuddleZone.id_of(zone)
 	var removed: Array = [id]
 	for other in zones:
-		if other.get("lens", false) and id in other.get("parents", []):
-			removed.append(other["id"])
+		if CombatPuddleZone.is_lens(other) and id in CombatPuddleZone.parents_of(other):
+			removed.append(CombatPuddleZone.id_of(other))
 	for i in range(zones.size() - 1, -1, -1):
-		if zones[i]["id"] in removed:
+		if CombatPuddleZone.id_of(zones[i]) in removed:
 			_visuals[i].queue_free()
 			_visuals.remove_at(i)
 			zones.remove_at(i)
 	for i in zones.size():
-		var excl: Array = zones[i]["excl"]
+		var excl := CombatPuddleZone.exclusions_of(zones[i])
 		var kept := excl.filter(func(e): return not e in removed)
 		if kept.size() != excl.size():
 			zones[i]["excl"] = kept
@@ -193,9 +186,9 @@ func remove_puddle(zone: Dictionary) -> void:
 ## efecto, radio, rondas que le quedan y daño. Devuelve el charco nuevo.
 func move_puddle(zone: Dictionary, to: Vector2) -> Dictionary:
 	remove_puddle(zone)
-	place_puddle(to, zone["radius"], zone["effect"], zone["turns"], zone["damage"])
+	place_puddle(to, CombatPuddleZone.radius_of(zone), CombatPuddleZone.effect_of(zone), CombatPuddleZone.turns_of(zone), CombatPuddleZone.damage_of(zone))
 	for i in range(zones.size() - 1, -1, -1):
-		if not zones[i].get("lens", false):
+		if not CombatPuddleZone.is_lens(zones[i]):
 			return zones[i]
 	return {}
 

@@ -18,9 +18,12 @@ static var _colors: Dictionary = {}
 static func _ensure_loaded() -> void:
 	if not _colors.is_empty():
 		return
+	for data in ResourceCatalogLoader.resources(DIR, IntelligenceData):
+		var intelligence := data as IntelligenceData
+		_colors[intelligence.id] = intelligence.color
 	for id in IDS:
-		var data := load(DIR + id + ".tres") as IntelligenceData
-		_colors[id] = data.color if data else Color.GRAY
+		if not _colors.has(id):
+			_colors[id] = Color.GRAY
 
 ## Color vivo de la inteligencia (chips, etiquetas).
 static func color(id: String) -> Color:

@@ -61,8 +61,8 @@ func test_meteoro_cae_al_resolver_y_le_pega_a_quien_siga_ahi() -> void:
 	map.effects.delayed.place_delayed_zone(Vector2(15, 5), 1.5, 120, "Meteoro")
 	var hits: Array = map.effects.delayed.resolve_delayed_zones()
 	assert_eq(hits.size(), 2)
-	assert_true(hits[0]["enemy"])
-	assert_false(hits[1]["enemy"])
+	assert_true(hits[0].hit_enemy)
+	assert_false(hits[1].hit_enemy)
 	assert_true(map.effects.delayed.delayed_zones().is_empty())
 	map.free()
 
@@ -75,8 +75,8 @@ func test_hechizo_retardado_cae_a_las_2_rondas_y_deja_su_charco() -> void:
 	assert_true(map.effects.puddle_port.queries.puddles().is_empty())
 	var hits: Array = map.effects.delayed.resolve_delayed_zones()
 	assert_eq(hits.size(), 1)
-	assert_true(hits[0]["enemy"])
-	assert_eq(hits[0]["tick_damage"], 30)  # 25 % del daño
+	assert_true(hits[0].hit_enemy)
+	assert_eq(hits[0].tick_damage, 30)  # 25 % del daño
 	assert_eq(map.effects.puddle_port.queries.puddles().size(), 1)
 	assert_eq(map.effects.puddle_port.queries.puddles()[0]["effect"], "fire")
 	assert_eq(map.effects.puddle_port.queries.puddles()[0]["turns"], 3)

@@ -12,7 +12,7 @@ func set_cards(cards: Array[CardData]) -> void:
 		child.queue_free()
 
 	if DebugLog.verbose_enabled():
-		print("set_cards: ", cards.size())
+		print("[CardGrid] Mostrando %d cartas." % cards.size())
 
 	for card_data in cards:
 		# La carta tiene un diseño fijo de 195x293: se escala en vez de achicarla.

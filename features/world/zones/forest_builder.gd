@@ -17,7 +17,11 @@ const TREE_TEMPLATES := [0, 1, 5, 12]
 static func tree_templates(map: Node = null) -> Array:
 	var own := map == null
 	if own:
-		map = (load(TREE_SOURCE) as PackedScene).instantiate()
+		var scene := TypedResourceLoader.packed_scene(TREE_SOURCE)
+		if scene == null:
+			push_error("ForestBuilder: no se pudo cargar %s." % TREE_SOURCE)
+			return []
+		map = scene.instantiate()
 	var templates := []
 	for i in TREE_TEMPLATES:
 		var trunk := map.find_child("gym_tree_trunk_%d" % i, true, false) as MeshInstance3D
@@ -38,7 +42,10 @@ static func tree_templates(map: Node = null) -> Array:
 static func library_templates(group := "Bosque") -> Array:
 	if not ResourceLoader.exists(TREE_LIBRARY):
 		return tree_templates()
-	var lib: Node = (load(TREE_LIBRARY) as PackedScene).instantiate()
+	var scene := TypedResourceLoader.packed_scene(TREE_LIBRARY)
+	if scene == null:
+		return tree_templates()
+	var lib: Node = scene.instantiate()
 	var templates := []
 	var prefix := "Arbol_%s_" % group
 	for root in lib.find_children(prefix + "*", "Node3D", true, false):

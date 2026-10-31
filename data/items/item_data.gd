@@ -2,6 +2,7 @@ extends Resource
 class_name ItemData
 
 const ItemEffectRuntimeScript := preload("res://shared/item_effect_runtime.gd")
+const InventoryEntryScript := preload("res://shared/inventory_entry.gd")
 
 @export var id: String = ""
 @export var name: String = ""
@@ -47,10 +48,4 @@ func apply_in_combat(state: CombatState) -> Dictionary:
 	return total
 
 func to_inventory_entry(count: int = 1) -> Dictionary:
-	return {
-		"id": id,
-		"name": name,
-		"icon": icon.resource_path if icon else "",
-		"data_path": resource_path,
-		"count": count,
-	}
+	return InventoryEntryScript.make(self, count)

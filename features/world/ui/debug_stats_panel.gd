@@ -1,5 +1,7 @@
 extends PanelContainer
 
+const PlayerSessionAccessScript: GDScript = preload("res://shared/player_session_access.gd")
+
 const METRICS := [
 	["discipline",   "status.discipline"],
 	["felicidad",    "status.felicidad"],
@@ -206,7 +208,7 @@ func _refresh() -> void:
 		else:
 			_anim_player_val.text = "-"
 	_refresh_position()
-	var ps: PlayerSaveData = game_state.save_service.player_save if game_state else null
+	var ps: PlayerSaveData = PlayerSessionAccessScript.save() as PlayerSaveData
 	if ps == null:
 		return
 	for key in _value_labels:
@@ -236,8 +238,9 @@ func _get_current_states() -> Array[String]:
 	if StatsManager == null:
 		return result
 	var game_state = GameState if GameState else null
-	for emotion_name in StatsManager.services.emotions().active_states:
-		var since_hour: float = StatsManager.services.emotions().active_states[emotion_name].get("hour", 0.0)
+	var emotions := StatsManager.services.emotions()
+	for emotion_name in emotions.active_state_names():
+		var since_hour := EmotionStateEntry.hour_of(emotions.state_entry(emotion_name))
 		if game_state:
 			var elapsed := game_state.get_total_hours() - since_hour
 			result.append("%s (%.1fh)" % [emotion_name, elapsed])

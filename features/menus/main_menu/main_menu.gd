@@ -65,7 +65,7 @@ func _build_items() -> void:
 			continue
 		var item := MenuItem.instantiate()
 		grid.add_child(item)
-		var tex := load(data.icon) as Texture2D if data.icon != "" else null
+		var tex := UiAssetCache.texture(data.icon)
 		item.setup(LocalizationState.t(data.name_key), tex)
 		_items.append(item)
 		_visible_menu_items.append(data)
@@ -78,7 +78,8 @@ func _build_items() -> void:
 func _is_item_unlocked(data: Dictionary) -> bool:
 	match data.get("unlock", ""):
 		"reincarnated_cards":
-			return GameState.save_service.player_save != null and GameState.save_service.player_save.reincarnated_cards_unlocked
+			var save := PlayerSessionAccess.save()
+			return save != null and save.reincarnated_cards_unlocked
 	return true
 
 func _input(event: InputEvent) -> void:
@@ -107,10 +108,11 @@ func _update_selection() -> void:
 		_items[i].set_selected(i == _selected)
 
 func _refresh_gold() -> void:
-	if GameState.save_service.player_save == null:
+	var save := PlayerSessionAccess.save()
+	if save == null:
 		gold_label.text = LocalizationState.t("main_menu.gold", [0])
 		return
-	gold_label.text = LocalizationState.t("main_menu.gold", [GameState.save_service.player_save.gold])
+	gold_label.text = LocalizationState.t("main_menu.gold", [save.gold])
 
 func _apply_localized_text(_language: String = "") -> void:
 	for index in _items.size():

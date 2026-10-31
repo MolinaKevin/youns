@@ -3,7 +3,7 @@ extends VBoxContainer
 ## Zona donde se ubican las 2 cartas elegidas en la planificación.
 ## Espacio 0 (izquierda): define la iniciativa. Espacio 1 (derecha): segunda carta.
 ## Qué mitad se usa de cada una se elige después, en la fase de acción.
-## Acepta drops con payload {"source": "hand" | "slot", "index": int}.
+## Acepta PlanSlotPayload desde la mano o desde otro slot.
 
 signal slot_clicked(slot: int)
 signal slot_dropped(slot: int, data: Dictionary)
@@ -12,6 +12,7 @@ signal confirm_pressed
 signal initiative_shift_requested(delta: int)
 
 const CARD_SCENE := preload("res://features/cards/presentation/card_view.tscn")
+const PlanSlotPayloadScript := preload("res://features/combat/scene/plan_slot_payload.gd")
 const CARD_SIZE := Vector2(195, 293)
 const CARD_SCALE := 0.6
 
@@ -108,7 +109,7 @@ func _fill_slot(k: int, card: CardData) -> void:
 	var view = CARD_SCENE.instantiate()
 	view.hover_enabled = false
 	view.scale = Vector2(CARD_SCALE, CARD_SCALE)
-	view.drag_payload = {"source": "slot", "index": k}
+	view.drag_payload = PlanSlotPayloadScript.make(PlanSlotPayloadScript.SLOT, k)
 	view.can_drop_callback = func(data): return _accepts(data)
 	view.drop_callback = func(data): slot_dropped.emit(k, data)
 	view.card_pressed.connect(func(_c): slot_clicked.emit(k))
@@ -116,7 +117,7 @@ func _fill_slot(k: int, card: CardData) -> void:
 	view.set_card(card)
 
 func _accepts(data: Variant) -> bool:
-	return data is Dictionary and data.get("source", "") in ["hand", "slot"]
+	return PlanSlotPayloadScript.parse(data) != null
 
 func _can_drop_on_slot(_at: Vector2, data: Variant) -> bool:
 	return _accepts(data)

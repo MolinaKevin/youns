@@ -1,9 +1,9 @@
 extends GutTest
 
 const DialogueChoiceMenuScript := preload("res://features/dialogue/dialogue_choice_menu.gd")
+const DialogueChoiceHostPortScript := preload("res://shared/dialogue_choice_host_port.gd")
 
-class ChoiceHost extends Node:
-	signal choice_made(index: int)
+class ChoiceHost extends DialogueChoiceHostPortScript:
 
 	var opened := 0
 	var closed := 0
@@ -38,7 +38,6 @@ func _pressed_action(action: String) -> InputEventAction:
 
 func _host() -> ChoiceHost:
 	var host := ChoiceHost.new()
-	add_child_autofree(host)
 	return host
 
 
@@ -82,3 +81,13 @@ func test_lista_vacia_no_abre_el_menu() -> void:
 	await get_tree().process_frame
 	assert_eq(_result, -1)
 	assert_eq(host.opened, 0)
+
+
+func test_cancelar_despierta_a_quien_espera_la_eleccion() -> void:
+	var host := _host()
+	var menu := DialogueChoiceMenuScript.new(host)
+	_wait_for_choice(menu, ["Primera"])
+	menu.cancel()
+	await get_tree().process_frame
+	assert_eq(_result, -1)
+	assert_eq(host.closed, 1)

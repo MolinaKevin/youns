@@ -4,8 +4,8 @@ extends RefCounted
 ## Carga e indexa recetas. La progresión, el guardado y las señales siguen en
 ## LaboratoryState; esta clase sólo conoce el formato de los recursos.
 
-static func load_all(directory_path: String) -> Array[Resource]:
-	var recipes: Array[Resource] = []
+static func load_all(directory_path: String) -> Array[LabRecipe]:
+	var recipes: Array[LabRecipe] = []
 	var dir := DirAccess.open(directory_path)
 	if dir == null:
 		return recipes
@@ -19,14 +19,14 @@ static func load_all(directory_path: String) -> Array[Resource]:
 			elif file.ends_with(".tres.remap"):
 				path = directory_path + file.trim_suffix(".remap")
 			if path != "":
-				var recipe := load(path) as Resource
+				var recipe := TypedResourceLoader.lab_recipe(path)
 				if recipe != null:
 					recipes.append(recipe)
 		file = dir.get_next()
 	dir.list_dir_end()
 	return recipes
 
-static func index_by_ingredient(recipes: Array[Resource]) -> Dictionary:
+static func index_by_ingredient(recipes: Array[LabRecipe]) -> Dictionary:
 	var index: Dictionary = {}
 	for recipe in recipes:
 		for ingredient in recipe.ingredients:

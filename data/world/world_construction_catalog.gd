@@ -9,14 +9,10 @@ var _load_errors := PackedStringArray()
 
 
 func _init() -> void:
-	var paths := DirAccess.get_files_at(CONSTRUCTIONS_DIR)
-	paths.sort()
-	for filename in paths:
-		if not filename.ends_with(".tres"):
-			continue
-		var construction := load(CONSTRUCTIONS_DIR.path_join(filename)) as WorldConstructionData
+	for resource in ResourceCatalogLoader.resources(CONSTRUCTIONS_DIR, WorldConstructionData):
+		var construction := resource as WorldConstructionData
 		if construction == null or construction.id.is_empty():
-			_load_errors.append("Construcción inválida '%s'." % filename)
+			_load_errors.append("Construcción inválida '%s'." % construction.resource_path)
 			continue
 		if _by_id.has(construction.id):
 			_load_errors.append("Id de construcción duplicado '%s'." % construction.id)

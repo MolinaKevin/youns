@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 const DebugLog := preload("res://shared/debug_logging.gd")
+const DialogueChoiceHostAdapterScript := preload("res://shared/dialogue_choice_host_adapter.gd")
 
 ## Servicio global de diálogo. Cada entrada usa las claves `speaker`, `text`
 ## y, opcionalmente, `portrait` (Texture2D).
@@ -47,7 +48,7 @@ func _ready() -> void:
 	_root.hide()
 	_dialogue_modal = ModalScreenContext.new(ModalScreenHost.from_runtime())
 	_choice_modal = ModalScreenContext.new(ModalScreenHost.from_runtime())
-	_choice_menu_logic = DialogueChoiceMenu.new(self)
+	_choice_menu_logic = DialogueChoiceMenu.new(DialogueChoiceHostAdapterScript.new(self))
 	_toast_notifier = DialogueToast.new(self)
 
 
@@ -72,6 +73,7 @@ func say(speaker: String, text: String, portrait: Texture2D = null) -> void:
 
 
 func finish() -> void:
+	_choice_menu_logic.cancel()
 	var was_playing := is_playing()
 	_lines.clear()
 	_line_index = -1

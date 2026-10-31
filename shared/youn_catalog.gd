@@ -41,7 +41,7 @@ static func _ensure_loaded() -> void:
 		if not filename.ends_with(".tres"):
 			continue
 		var path := YOUNS_DIR.path_join(filename)
-		var data := load(path) as YounData
+		var data := TypedResourceLoader.youn(path)
 		if data == null:
 			push_error("YounCatalog: no se pudo cargar %s como YounData." % path)
 			continue

@@ -5,13 +5,16 @@ extends Node3D
 ## fondo negro. No instancia zonas ni el tutorial para que la apertura no deje
 ## el mapa visible detrás del diálogo.
 
-const PACHAMAMA_PATH := "res://data/youns/pachamama.tres"
+const NarrativeYouns := preload("res://data/youns/narrative_youn_catalog.gd")
+const PACHAMAMA_PATH := NarrativeYouns.PACHAMAMA
 const WORLD_LOADING := "res://features/world/game_world/world_loading.tscn"
 const GAME_WORLD := "res://features/world/game_world/game_world.tscn"
 const HUB_SCENE := "res://features/world/zones/zone_hub.tscn"
-const NEWEN_PATH := "res://data/youns/newen.tres"
-const NGURUVILU_PATH := "res://data/youns/nguruvilu.tres"
+const NEWEN_PATH := NarrativeYouns.NEWEN
+const NGURUVILU_PATH := NarrativeYouns.NGURUVILU
 const Preloader := preload("res://features/world/game_world/new_game_ceremony_preloader.gd")
+const CeremonyNameInput := preload("res://features/world/game_world/ceremony_name_input.gd")
+const DebugLog := preload("res://shared/debug_logging.gd")
 const ENTRANCE_SECONDS := 6.5
 ## Mantiene el ciclo de caminata sincronizado con el mismo modelo en el mundo.
 const WALK_ANIMATION_SPEED := 1.0
@@ -22,14 +25,16 @@ var _data: YounData
 var _model: Node3D
 var _sequence_completed := false
 var _entering_world := false
-var _player_name := "Viajero"
+var _player_name := ""
 var _companion_name := ""
 var _preloader := Preloader.new()
+var _flow: AsyncFlowToken
 
 
 func _ready() -> void:
+	_flow = AsyncFlowToken.new(self)
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	print("[NewGameCeremony:%s] _ready: aislando la escena." % get_instance_id())
+	_log("_ready: aislando la escena.")
 	# ZoneManager y PartyManager son autoloads: pueden conservar nodos y una
 	# cámara de una sesión anterior. La ceremonia debe aislarse por completo.
 	ZoneManager.set_world_visible(false)
@@ -37,14 +42,14 @@ func _ready() -> void:
 	GlobalHUD.set_clock_visible(false)
 	GlobalHUD.set_clock_paused(true)
 	GlobalHUD.set_youns_status_visible(false)
-	_data = load(PACHAMAMA_PATH) as YounData
+	_data = NarrativeYouns.pachamama()
 	if _data == null:
 		push_error("[NewGameCeremony:%s] No se pudo cargar Pachamama." % get_instance_id())
 		return
-	print("[NewGameCeremony:%s] Pachamama cargada: id=%s." % [get_instance_id(), _data.id])
+	_log("Pachamama cargada: id=%s." % _data.id)
 	_build_black_stage()
 	_request_world_preload()
-	print("[NewGameCeremony:%s] Escenario negro, cámara y modelo construidos; difiriendo secuencia." % get_instance_id())
+	_log("Escenario negro, cámara y modelo construidos; difiriendo secuencia.")
 	_run.call_deferred()
 
 
@@ -120,22 +125,28 @@ func _instantiate_model(scene: PackedScene, animation_speed := 1.0) -> Node3D:
 
 
 func _run() -> void:
-	print("[NewGameCeremony:%s] Inicio de secuencia; Pachamama entra en escena." % get_instance_id())
+	_log("Inicio de secuencia; Pachamama entra en escena.")
 	if _model != null:
 		var tween := create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 		tween.tween_property(_model, "position:x", 0.0, ENTRANCE_SECONDS)
 		await tween.finished
+		if not _flow.is_active(): return
 		_settle_facing_camera()
-	print("[NewGameCeremony:%s] Entrada terminada; primer diálogo." % get_instance_id())
-	await _say(["Mari mari, extraño.", "¿Quién eres?"])
-	_player_name = await _ask_name("¿Quién eres?", "Viajero", false)
-	print("[NewGameCeremony:%s] Saludo terminado; afinidad del compañero." % get_instance_id())
-	var partner_choice := await _ask("¿Preferís caminar por el bosque o relajarte en un lago?", ["Caminar por el bosque.", "Relajarme en un lago."], false)
+	_log("Entrada terminada; primer diálogo.")
+	await _say([LocalizationState.t("ceremony.greeting"), LocalizationState.t("ceremony.player_question")])
+	if not _flow.is_active(): return
+	_player_name = await _ask_name(LocalizationState.t("ceremony.player_question"), LocalizationState.t("ceremony.player_placeholder"), false)
+	if not _flow.is_active(): return
+	_log("Saludo terminado; afinidad del compañero.")
+	var partner_choice := await _ask(LocalizationState.t("ceremony.path_question"), [LocalizationState.t("ceremony.path_forest"), LocalizationState.t("ceremony.path_lake")], false)
+	if not _flow.is_active(): return
 	_apply_starting_youn(NEWEN_PATH if partner_choice == 0 else NGURUVILU_PATH)
-	await _ask("¿Preferís rodearte de muchas personas o la introspección en soledad?", ["Rodearme de muchas personas.", "La introspección en soledad."], false)
-	_companion_name = await _ask_name("¿Cómo se llama tu compañero?", _starting_youn_name())
+	await _ask(LocalizationState.t("ceremony.social_question"), [LocalizationState.t("ceremony.social_people"), LocalizationState.t("ceremony.social_solitude")], false)
+	if not _flow.is_active(): return
+	_companion_name = await _ask_name(LocalizationState.t("ceremony.companion_question"), _starting_youn_name())
+	if not _flow.is_active(): return
 	_save_ceremony_names()
-	print("[NewGameCeremony:%s] Preguntas y nombres terminados; pasando a la ciudad." % get_instance_id())
+	_log("Preguntas y nombres terminados; pasando a la ciudad.")
 	_sequence_completed = true
 	_enter_world()
 
@@ -155,44 +166,47 @@ func _settle_facing_camera() -> void:
 	# Con la orientación propia de este modelo, 0 es mirar a la cámara.
 	turn.tween_property(_model, "rotation:y", 0.0, 0.55)
 	await turn.finished
+	if not _flow.is_active(): return
 
 
 func _say(lines: Array[String]) -> void:
-	print("[NewGameCeremony:%s] Dialogue.start: %s" % [get_instance_id(), " | ".join(lines)])
+	_log("Dialogue.start: %s" % " | ".join(lines))
 	DialogueLines.say_many(_data, lines)
 	await Dialogue.dialogue_finished
-	print("[NewGameCeremony:%s] Dialogue.finished." % get_instance_id())
+	if not _flow.is_active(): return
+	_log("Dialogue.finished.")
 
 
 func _ask(question: String, options: Array[String], confirm_choice := true) -> int:
-	print("[NewGameCeremony:%s] Pregunta: %s" % [get_instance_id(), question])
+	_log("Pregunta: %s" % question)
 	await _say([question])
-	print("[NewGameCeremony:%s] Abriendo opciones: %s" % [get_instance_id(), " | ".join(options)])
+	_log("Abriendo opciones: %s" % " | ".join(options))
 	var choice: int = await Dialogue.ask(options)
-	print("[NewGameCeremony:%s] Opción recibida: %s" % [get_instance_id(), choice])
+	if not _flow.is_active(): return -1
+	_log("Opción recibida: %s" % choice)
 	if confirm_choice and choice >= 0 and choice < options.size():
-		await _say(["Comprendo. Elegís: %s" % options[choice]])
+		await _say([LocalizationState.t("ceremony.choice_confirmed", [options[choice]])])
 	return choice
 
 
 func _apply_starting_youn(path: String) -> void:
-	var save := GameState.save_service.player_save
+	var save := PlayerSessionAccess.save()
 	if save == null:
 		return
 	GameState.save_service.setup_starting_youn(save, GameState.get_total_hours(), path)
-	print("[NewGameCeremony:%s] Youn inicial elegido: %s." % [get_instance_id(), path])
+	_log("Youn inicial elegido: %s." % path)
 
 
 func _starting_youn_name() -> String:
-	var save := GameState.save_service.player_save
+	var save := PlayerSessionAccess.save()
 	if save == null:
-		return "Compañero"
-	var data := load(save.current_youn_path) as YounData
-	return data.youn_name if data != null else "Compañero"
+		return LocalizationState.t("ceremony.companion_placeholder")
+	var data := NarrativeYouns.youn(save.current_youn_path)
+	return data.youn_name if data != null else LocalizationState.t("ceremony.companion_placeholder")
 
 
 func _save_ceremony_names() -> void:
-	var save := GameState.save_service.player_save
+	var save := PlayerSessionAccess.save()
 	if save == null:
 		return
 	save.player_name = _player_name
@@ -202,146 +216,8 @@ func _save_ceremony_names() -> void:
 func _ask_name(prompt: String, placeholder: String, announce_prompt := true) -> String:
 	if announce_prompt:
 		await _say([prompt])
-	print("[NewGameCeremony:%s] Abriendo teclado virtual para: %s" % [get_instance_id(), prompt])
-	var layer := CanvasLayer.new()
-	layer.layer = 90
-	add_child(layer)
-	var panel := PanelContainer.new()
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	panel.size = Vector2(720, 530)
-	panel.position -= panel.size * 0.5
-	layer.add_child(panel)
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 24)
-	margin.add_theme_constant_override("margin_top", 20)
-	margin.add_theme_constant_override("margin_right", 24)
-	margin.add_theme_constant_override("margin_bottom", 20)
-	panel.add_child(margin)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation", 12)
-	margin.add_child(column)
-	var label := Label.new()
-	label.text = prompt
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 22)
-	column.add_child(label)
-	var input := LineEdit.new()
-	input.placeholder_text = placeholder
-	input.max_length = 24
-	input.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	input.add_theme_font_size_override("font_size", 22)
-	column.add_child(input)
-	var help := Label.new()
-	help.text = "Cruceta: mover · Aceptar: elegir · Cancelar: borrar"
-	help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	help.add_theme_font_size_override("font_size", 16)
-	column.add_child(help)
-	var grid := GridContainer.new()
-	grid.columns = 7
-	grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid.add_theme_constant_override("h_separation", 8)
-	grid.add_theme_constant_override("v_separation", 8)
-	column.add_child(grid)
-
-	# El teclado es deliberadamente propio: así funciona con mando aun cuando la
-	# plataforma no expone el teclado nativo del sistema a Godot.
-	var keys: Array[String] = [
-		"A", "B", "C", "D", "E", "F", "G",
-		"H", "I", "J", "K", "L", "M", "N",
-		"Ñ", "O", "P", "Q", "R", "S", "T",
-		"U", "V", "W", "X", "Y", "Z",
-		"MAYÚS", "ESPACIO", "BORRAR", "LISTO",
-	]
-	var key_buttons: Array[Button] = []
-	for key in keys:
-		var key_button := Button.new()
-		key_button.text = key
-		key_button.custom_minimum_size = Vector2(82, 48)
-		key_button.add_theme_font_size_override("font_size", 18 if key.length() == 1 else 14)
-		grid.add_child(key_button)
-		key_buttons.append(key_button)
-
-	# Las lambdas de GDScript capturan variables locales por valor. Este estado
-	# compartido permite que los botones y el bucle de navegación vean el mismo
-	# valor de selección, mayúsculas y confirmación.
-	var keyboard_state := {
-		"selected": 0,
-		"uppercase": true,
-		"submitted": false,
-	}
-	var input_unlocked := false
-	var refresh_key_labels := func() -> void:
-		for key_index in keys.size():
-			var key := keys[key_index]
-			if key.length() == 1:
-				key_buttons[key_index].text = key.to_upper() if keyboard_state["uppercase"] else key.to_lower()
-			elif key == "MAYÚS":
-				key_buttons[key_index].text = "MINÚS" if keyboard_state["uppercase"] else "MAYÚS"
-			else:
-				key_buttons[key_index].text = key
-	input.grab_focus()
-	var try_submit := func() -> void:
-		if input.text.strip_edges().is_empty():
-			help.text = "Elegí un nombre antes de continuar."
-			return
-		keyboard_state["submitted"] = true
-	var select_key := func(index: int) -> void:
-		keyboard_state["selected"] = posmod(index, key_buttons.size())
-		for button_index in key_buttons.size():
-			key_buttons[button_index].modulate = Color(1.0, 0.88, 0.42) if button_index == keyboard_state["selected"] else Color.WHITE
-	select_key.call(keyboard_state["selected"])
-	var activate_key := func(index: int) -> void:
-		match keys[index]:
-			"MAYÚS":
-				keyboard_state["uppercase"] = not keyboard_state["uppercase"]
-				refresh_key_labels.call()
-			"ESPACIO":
-				if input.text.length() < input.max_length:
-					input.text += " "
-			"BORRAR":
-				if not input.text.is_empty():
-					input.text = input.text.substr(0, input.text.length() - 1)
-			"LISTO":
-				try_submit.call()
-			_:
-				if input.text.length() < input.max_length:
-					input.text += (keys[index].to_upper() if keyboard_state["uppercase"] else keys[index].to_lower())
-		input.caret_column = input.text.length()
-		input.grab_focus()
-	for button_index in key_buttons.size():
-		key_buttons[button_index].pressed.connect(activate_key.bind(button_index))
-	while not keyboard_state["submitted"]:
-		await get_tree().process_frame
-		# El mismo Enter/A que termina el diálogo anterior puede seguir pulsado
-		# durante el primer frame del teclado. Esperamos su liberación para que
-		# nunca confirme un nombre accidentalmente.
-		if not input_unlocked:
-			if not Input.is_action_pressed("ui_accept") and not Input.is_key_pressed(KEY_ENTER) and not Input.is_key_pressed(KEY_KP_ENTER):
-				input_unlocked = true
-			continue
-		# Enter pertenece al teclado físico: confirma el texto completo. ui_accept
-		# queda reservado al botón de aceptar del mando dentro de la grilla.
-		if Input.is_key_pressed(KEY_ENTER) or Input.is_key_pressed(KEY_KP_ENTER):
-			try_submit.call()
-		elif Input.is_physical_key_pressed(KEY_SPACE):
-			# El LineEdit enfocado recibe el espacio del teclado físico.
-			pass
-		elif Input.is_action_just_pressed("ui_left"):
-			select_key.call(keyboard_state["selected"] - 1)
-		elif Input.is_action_just_pressed("ui_right"):
-			select_key.call(keyboard_state["selected"] + 1)
-		elif Input.is_action_just_pressed("ui_up"):
-			select_key.call(keyboard_state["selected"] - 7)
-		elif Input.is_action_just_pressed("ui_down"):
-			select_key.call(keyboard_state["selected"] + 7)
-		elif Input.is_action_just_pressed("ui_cancel"):
-			activate_key.call(keys.find("BORRAR"))
-		elif Input.is_action_just_pressed("ui_accept"):
-			activate_key.call(keyboard_state["selected"])
-	var result := input.text.strip_edges()
-	layer.queue_free()
-	print("[NewGameCeremony:%s] Nombre confirmado: %s" % [get_instance_id(), result if not result.is_empty() else placeholder])
-	return result if not result.is_empty() else placeholder
+	_log("Abriendo teclado virtual.")
+	return await CeremonyNameInput.new(self, _flow).ask(prompt, placeholder)
 
 
 func _enter_world() -> void:
@@ -350,14 +226,26 @@ func _enter_world() -> void:
 	if _entering_world:
 		return
 	_entering_world = true
-	print("[NewGameCeremony:%s] _enter_world: preparando entrada al mundo." % get_instance_id())
+	_log("_enter_world: preparando entrada al mundo.")
 	GameState.new_game_ceremony_completed = true
 	call_deferred("_change_to_world")
 
 
 func _change_to_world() -> void:
-	print("[NewGameCeremony:%s] change_scene_to_file(WorldLoading)." % get_instance_id())
+	if _flow == null or not _flow.is_active():
+		return
+	_log("change_scene_to_file(WorldLoading).")
 	_collect_preloaded_world()
 	var result := SceneNavigator.change_scene_resumed(get_tree(), WORLD_LOADING)
 	if result != OK:
 		push_error("NewGameCeremony: no se pudo cargar WorldLoading (%s)." % result)
+
+
+func _exit_tree() -> void:
+	if _flow != null:
+		_flow.cancel()
+
+
+func _log(message: String) -> void:
+	if DebugLog.verbose_enabled():
+		print("[NewGameCeremony:%s] %s" % [get_instance_id(), message])

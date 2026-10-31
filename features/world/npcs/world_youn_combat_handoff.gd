@@ -9,15 +9,17 @@ extends RefCounted
 var host: WorldYoun
 var waiting := false
 var _modal: ModalScreenContext
+var _combat_runtime: WorldCombatRuntime
 
 func _init(p_host: WorldYoun) -> void:
 	host = p_host
 	_modal = ModalScreenContext.new(ModalScreenHost.from_runtime())
+	_combat_runtime = WorldCombatRuntime.from_runtime()
 
 func engage() -> void:
 	# Puede llegar desde una señal de diálogo que se resolvió tarde. Si ya hay
 	# un combate del mundo en curso, este Youn no puede secuestrar el input.
-	if waiting or GameState.world_combat.active:
+	if waiting or _combat_runtime.is_active():
 		return
 	host.prepare_encounter()
 	host.set_player_combat_locked(true)
@@ -49,12 +51,9 @@ func handle_input(event: InputEvent) -> bool:
 	return true
 
 func _start_transition() -> void:
-	GameState.world_combat.begin(
+	_combat_runtime.begin(
 		host.combat_start_position(),
 		host.world_enemy_id,
 		host.youn_data,
-		ZoneManager.get_current_biome(),
 	)
-	if GameState.save_service.player_save != null and "bathroom" in StatsManager.services.emotions().active_states:
-		GameState.save_service.player_save.bathroom_pending_after_combat = true
-	host.get_tree().change_scene_to_file("res://features/combat/scene/combat.tscn")
+	SceneNavigator.change_scene_resumed(host.get_tree(), ScenePaths.COMBAT)

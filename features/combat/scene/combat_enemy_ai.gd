@@ -23,10 +23,12 @@ var _had_los: bool = false
 
 var _card_ai: CombatEnemyCardAi
 var _strategy_ai: CombatEnemyStrategyAi
+var random: RandomSource
 
 var deal_damage_to_enemy: Callable
 var deal_damage_to_player: Callable
 var check_combat_end: Callable
+var is_flow_active: Callable
 
 signal log_requested(text: String)
 signal ui_update_requested()
@@ -37,18 +39,20 @@ signal card_action_started(index: int)
 func emit_log(key: String, args: Array = []) -> void:
 	CombatLog.emit_requested(log_requested, key, args)
 
-func _init() -> void:
+func _init(p_random: RandomSource = null) -> void:
+	random = p_random if p_random != null else RandomSource.new()
 	_card_ai = CombatEnemyCardAi.new(self)
 	_strategy_ai = CombatEnemyStrategyAi.new(self)
 
 ## Entrada nueva de la IA: recibe sólo el puerto de tablero que utiliza.
-func setup_with_board(p_state: CombatState, p_board: CombatEnemyBoardPort, strategy: AiStrategy, p_damage_enemy: Callable, p_damage_player: Callable, p_check_end: Callable) -> void:
+func setup_with_board(p_state: CombatState, p_board: CombatEnemyBoardPort, strategy: AiStrategy, p_damage_enemy: Callable, p_damage_player: Callable, p_check_end: Callable, p_is_flow_active: Callable = Callable()) -> void:
 	state = p_state
 	board = p_board
 	_strategy_ai.configure(strategy)
 	deal_damage_to_enemy = p_damage_enemy
 	deal_damage_to_player = p_damage_player
 	check_combat_end = p_check_end
+	is_flow_active = p_is_flow_active
 
 # ── Mazo de cartas ────────────────────────────────────────────────────────────
 
@@ -65,10 +69,12 @@ func execute_card(card: MonsterCard) -> void:
 # ── Turn ──────────────────────────────────────────────────────────────────────
 
 func take_turn() -> void:
+	if not _flow_active():
+		return
 	if state.enemy_burning_turns > 0:
 		emit_log("combat.log.enemy.burning_damage", [state.enemy_burn_damage])
 		await deal_damage_to_enemy.call(state.enemy_burn_damage, true, CombatState.BURN_DAMAGE_TYPE)
-		if check_combat_end.call(): return
+		if check_combat_end.call() or not _flow_active(): return
 		state.enemy_burning_turns -= 1
 		if state.enemy_burning_turns == 0:
 			emit_log("combat.log.enemy.burning_expired")
@@ -76,7 +82,7 @@ func take_turn() -> void:
 	if state.enemy_bleeding_turns > 0:
 		emit_log("combat.log.enemy.bleeding_damage", [state.enemy_bleed_damage])
 		await deal_damage_to_enemy.call(state.enemy_bleed_damage, true, CombatState.BLEED_DAMAGE_TYPE)
-		if check_combat_end.call(): return
+		if check_combat_end.call() or not _flow_active(): return
 		state.enemy_bleeding_turns -= 1
 		if state.enemy_bleeding_turns == 0:
 			emit_log("combat.log.enemy.bleeding_expired")
@@ -85,7 +91,7 @@ func take_turn() -> void:
 		var pdmg: int = state.enemy_poison_stacks * state.enemy_poison_damage
 		emit_log("combat.log.enemy.poison_damage", [pdmg])
 		await deal_damage_to_enemy.call(pdmg, true, CombatState.POISON_DAMAGE_TYPE)
-		if check_combat_end.call(): return
+		if check_combat_end.call() or not _flow_active(): return
 		state.enemy_poison_stacks -= 1
 		if state.enemy_poison_stacks == 0:
 			emit_log("combat.log.enemy.poison_expired")
@@ -120,18 +126,22 @@ func take_turn() -> void:
 	if trap_dmg > 0:
 		await deal_damage_to_enemy.call(trap_dmg)
 		emit_log("combat.log.enemy.trap_triggered", [trap_dmg])
-		if check_combat_end.call():
+		if check_combat_end.call() or not _flow_active():
 			return
 
 	update_tracking()
 	if current_card != null:
 		await execute_card(current_card)
+		if not _flow_active():
+			return
 		ui_update_requested.emit()
 		return
 	evaluate_transitions()
 	var action: AiAction = pick_action()
 	if action:
 		await execute_action(action)
+		if not _flow_active():
+			return
 	else:
 		var center := board.state.world_center()
 		if board.state.enemy_position().distance_to(center) > 0.5:
@@ -139,6 +149,10 @@ func take_turn() -> void:
 			emit_log("combat.log.enemy.wanders_to_center")
 
 	ui_update_requested.emit()
+
+
+func _flow_active() -> bool:
+	return not is_flow_active.is_valid() or bool(is_flow_active.call())
 
 # ── Tracking ──────────────────────────────────────────────────────────────────
 

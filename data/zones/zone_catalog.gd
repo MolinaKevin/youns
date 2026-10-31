@@ -9,17 +9,13 @@ var _load_errors := PackedStringArray()
 
 
 func _init() -> void:
-	var paths := DirAccess.get_files_at("res://data/zones/definitions")
-	paths.sort()
-	for path in paths:
-		if not path.ends_with(".tres"):
-			continue
-		var zone_definition := load("res://data/zones/definitions/" + path) as ZoneDefinition
+	for resource in ResourceCatalogLoader.resources("res://data/zones/definitions", ZoneDefinition):
+		var zone_definition := resource as ZoneDefinition
 		if zone_definition == null or zone_definition.id.is_empty():
-			_load_errors.append("Definición inválida '%s'." % path)
+			_load_errors.append("Definición inválida '%s'." % zone_definition.resource_path)
 			continue
 		if _definitions.has(zone_definition.id):
-			_load_errors.append("Id de zona duplicado '%s' (%s)." % [zone_definition.id, path])
+			_load_errors.append("Id de zona duplicado '%s' (%s)." % [zone_definition.id, zone_definition.resource_path])
 			continue
 		_definitions[zone_definition.id] = zone_definition
 

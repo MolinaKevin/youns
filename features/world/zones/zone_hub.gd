@@ -53,14 +53,15 @@ func _refresh_constructions() -> void:
 
 
 func _refresh_construction(construction: WorldConstructionData) -> void:
-	var progress := GameState.save_service.player_save.world_progress if GameState.save_service.player_save else null
+	var save := PlayerSessionAccess.save()
+	var progress := save.world_progress if save != null else null
 	var built := progress != null and progress.has_construction(construction.id)
 	var blocker := get_node_or_null(construction.blocker_path) as CollisionShape3D
 	if blocker != null:
 		blocker.disabled = built
 	var node := get_node_or_null(construction.node_name)
 	if built and node == null:
-		var scene := load(construction.scene_path) as PackedScene
+		var scene := TypedResourceLoader.packed_scene(construction.scene_path)
 		if scene == null:
 			push_error("ZoneHub: no se pudo cargar construcción '%s'." % construction.id)
 			return

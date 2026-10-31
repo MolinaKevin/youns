@@ -15,19 +15,19 @@ func obstacles() -> Array[Dictionary]:
 	return terrain.obstacles
 
 func add_solid(pos: Vector2, radius: float) -> void:
-	terrain.add({"pos": pos, "radius": radius, "type": CombatObstacleScript.SOLID})
+	terrain.add(CombatObstacleScript.circle(pos, radius))
 
 func add_solid_box(pos: Vector2, size: Vector2) -> void:
-	terrain.add({"pos": pos, "box": size, "type": CombatObstacleScript.SOLID})
+	terrain.add(CombatObstacleScript.box(pos, size))
 
 func add_rock(pos: Vector2, radius: float, module: bool = true) -> void:
-	terrain.add({"pos": pos, "radius": radius, "type": CombatObstacleScript.ROCK, "module": module})
+	terrain.add(CombatObstacleScript.rock(pos, radius, module))
 
 func add_bridge(pos: Vector2, size: Vector2) -> void:
-	terrain.add({"pos": pos, "box": size, "type": CombatObstacleScript.BRIDGE})
+	terrain.add(CombatObstacleScript.box(pos, size, CombatObstacleScript.BRIDGE))
 
 func add_tree(pos: Vector2, radius: float = 0.6) -> void:
-	terrain.add({"pos": pos, "radius": radius, "type": CombatObstacleScript.TREE})
+	terrain.add(CombatObstacleScript.circle(pos, radius, CombatObstacleScript.TREE))
 
 func add_platform(pos: Vector2, size: Vector2, ramps: Array[Dictionary] = []) -> void:
-	terrain.add({"pos": pos, "box": size, "type": CombatObstacleScript.PLATFORM, "ramps": ramps.duplicate(true)})
+	terrain.add(CombatObstacleScript.platform(pos, size, ramps))

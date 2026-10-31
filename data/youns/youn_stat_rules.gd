@@ -1,6 +1,8 @@
 class_name YounStatRules
 extends RefCounted
 
+const TypedResourceLoaderScript := preload("res://shared/typed_resource_loader.gd")
+
 ## Reglas de las 8 estadísticas (YounStats.KEYS) de la partida.
 ##
 ## - PlayerSaveData.youn_stats: valor ACTUAL de cada estadística. De acá lee
@@ -111,8 +113,8 @@ static func migrate_keys(save: PlayerSaveData) -> void:
 static func ensure_initialized(save: PlayerSaveData, fallback: YounData = null) -> void:
 	if save == null or not save.youn_stats.is_empty():
 		return
-	if not save.current_youn_path.is_empty() and ResourceLoader.exists(save.current_youn_path):
-		start_life(save, load(save.current_youn_path) as YounData)
+	if not save.current_youn_path.is_empty():
+		start_life(save, TypedResourceLoaderScript.youn(save.current_youn_path))
 	elif fallback != null:
 		start_life(save, fallback)
 

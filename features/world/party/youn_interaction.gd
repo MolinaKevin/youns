@@ -35,6 +35,9 @@ static func run(action_anim: String) -> void:
 	tw.tween_method(func(t: float) -> void: player.rotation.y = lerp_angle(rot_from, rot_to, t),
 		0.0, 1.0, TURN_TIME)
 	await tw.finished
+	if not _actors_are_valid(player, youn):
+		_finish()
+		return
 
 	# 2. El Youn se acerca y queda mirándolo.
 	var meet := player.global_position + dir * MEET_DISTANCE
@@ -46,16 +49,34 @@ static func run(action_anim: String) -> void:
 		tw = youn.create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 		tw.tween_property(youn, "global_position", meet, clampf(dist / YOUN_SPEED, 0.2, 3.0))
 		await tw.finished
+		if not _actors_are_valid(player, youn):
+			_finish()
+			return
 	youn.play_anim("idle")
 	_face_toward(youn, player.global_position)
 	await player.get_tree().create_timer(FACE_PAUSE, false).timeout
+	if not _actors_are_valid(player, youn):
+		_finish()
+		return
 
 	# 3. La animación del jugador.
 	var length: float = player.play_action(action_anim)
 	await player.get_tree().create_timer(length, false).timeout
+	if not _actors_are_valid(player, youn):
+		_finish()
+		return
 	player.stop_action()
 
-	PartyManager.unfreeze_actors()
+	_finish()
+
+
+static func _actors_are_valid(player: Node3D, youn: Node3D) -> bool:
+	return is_instance_valid(player) and is_instance_valid(youn)
+
+
+static func _finish() -> void:
+	if PartyManager:
+		PartyManager.unfreeze_actors()
 	running = false
 
 

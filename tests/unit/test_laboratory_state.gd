@@ -7,7 +7,7 @@ extends GutTest
 var _previous_save: PlayerSaveData
 var _previous_pending_output: Dictionary
 var _previous_unlocked_columns: Array
-var _previous_all_recipes: Array[Resource]
+var _previous_all_recipes: Array[LabRecipe]
 var _previous_recipes_by_ingredient: Dictionary
 var _previous_active_recipe_id := ""
 var _previous_recipe_progress: Dictionary

@@ -6,7 +6,7 @@ extends RefCounted
 const DELAYED_PUDDLE_TICK_FRACTION := 0.25
 
 var map: CombatMapArea
-var delayed_zones: Array[Dictionary] = []
+var delayed_zones: Array[CombatDelayedZone] = []
 
 func start_selection(spell_range: float) -> void:
 	map.presentation.combat_preview.show_player_range(spell_range)
@@ -27,40 +27,31 @@ func place_delayed_zone(pos: Vector2, radius: float, damage: int, zone_name: Str
 	label.outline_size = 12
 	label.position = Vector3(pos.x, 0.6, pos.y)
 	map.add_child(label)
-	var zone: Dictionary = {
-		"pos": pos, "radius": radius, "damage": damage, "name": zone_name,
-		"rounds": maxi(1, rounds), "effect": effect, "puddle_turns": puddle_turns,
-		"node": marker, "label": label,
-	}
+	var zone := CombatDelayedZone.new(pos, radius, damage, zone_name, rounds, effect,
+		puddle_turns, marker, label)
 	_update_label(zone)
 	delayed_zones.append(zone)
 
 ## Pasa una ronda y devuelve las zonas que acaban de caer.
-func resolve_delayed_zones() -> Array:
-	var results: Array = []
+func resolve_delayed_zones() -> Array[CombatDelayedImpact]:
+	var results: Array[CombatDelayedImpact] = []
 	for i in range(delayed_zones.size() - 1, -1, -1):
-		var zone: Dictionary = delayed_zones[i]
-		zone["rounds"] -= 1
-		if zone["rounds"] > 0:
+		var zone := delayed_zones[i]
+		zone.rounds -= 1
+		if zone.rounds > 0:
 			_update_label(zone)
 			continue
-		var tick := roundi(float(zone["damage"]) * DELAYED_PUDDLE_TICK_FRACTION)
-		results.push_front({
-			"name": zone["name"], "damage": zone["damage"], "effect": zone["effect"], "tick_damage": tick,
-			"enemy": map.queries.areas.is_enemy_in_area_circle(zone["pos"], zone["radius"]),
-			"player": map.queries.areas.is_player_in_area_circle(zone["pos"], zone["radius"]),
-		})
-		if zone["effect"] != "":
-			var puddle_damage := tick if zone["effect"] in ["fire", "poison", "blood"] else 0
-			map.placement.puddles.place_puddle(zone["pos"], zone["radius"], zone["effect"], zone["puddle_turns"], puddle_damage)
-		for key in ["node", "label"]:
-			var node = zone.get(key)
-			if is_instance_valid(node):
-				node.queue_free()
+		var tick := roundi(float(zone.damage) * DELAYED_PUDDLE_TICK_FRACTION)
+		results.push_front(CombatDelayedImpact.new(zone.display_name, zone.damage, zone.effect, tick,
+			map.queries.areas.is_enemy_in_area_circle(zone.position, zone.radius),
+			map.queries.areas.is_player_in_area_circle(zone.position, zone.radius)))
+		if zone.effect != "":
+			var puddle_damage := tick if zone.effect in ["fire", "poison", "blood"] else 0
+			map.placement.puddles.place_puddle(zone.position, zone.radius, zone.effect, zone.puddle_turns, puddle_damage)
+		zone.dispose()
 		delayed_zones.remove_at(i)
 	return results
 
-func _update_label(zone: Dictionary) -> void:
-	var label = zone.get("label")
-	if is_instance_valid(label):
-		label.text = str(zone["rounds"])
+func _update_label(zone: CombatDelayedZone) -> void:
+	if is_instance_valid(zone.label):
+		zone.label.text = str(zone.rounds)

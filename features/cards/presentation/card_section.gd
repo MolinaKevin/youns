@@ -16,7 +16,7 @@ const FAN_RADIUS  := 800.0
 const HOVER_RISE  := 130.0
 const HOVER_SECS  := 0.12
 
-## Si no está vacío, las cartas se pueden arrastrar con payload {"source": drag_source, "index": i}.
+## Si no está vacío, las cartas se arrastran con PlanSlotPayload ({source,index}).
 var drag_source := ""
 ## Si es true, cada mitad de la carta se toca por separado (emite half_selected).
 var halves_mode := false
@@ -59,7 +59,7 @@ func set_cards(cards: Array) -> void:
 		card_view.halves_selectable = halves_mode
 		card_view.half_pressed.connect(func(_c, is_top): half_selected.emit(i, is_top))
 		if drag_source != "":
-			card_view.drag_payload = {"source": drag_source, "index": i}
+			card_view.drag_payload = PlanSlotPayload.make(drag_source, i)
 		card_view.card_pressed.connect(_on_card_pressed.bind(i))
 		card_view.hover_entered.connect(_on_card_hover_enter.bind(wrapper))
 		card_view.hover_exited.connect(_on_card_hover_exit.bind(wrapper))

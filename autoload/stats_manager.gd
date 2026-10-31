@@ -17,7 +17,7 @@ var services: StatsServicesPort
 
 func _ready() -> void:
 	var session := CareSessionContext.new(
-		func() -> PlayerSaveData: return GameState.save_service.player_save,
+		PlayerSessionAccess.save,
 		func() -> YounData:
 			var youn := PartyManager.youn
 			return youn.get("youn_data") as YounData if youn else null,
@@ -39,9 +39,8 @@ func _ready() -> void:
 		_queue_stat_changed,
 	)
 	life_stage = StatsLifeStage.new(
-		func() -> Dictionary: return emotion_service.active_states,
-		emotion_service.block,
-		emotion_service.unblock,
+		PlayerSessionAccess.save,
+		emotion_service,
 		care_service.reset,
 		_queue_stat_changed,
 		emit_evolution_triggered,

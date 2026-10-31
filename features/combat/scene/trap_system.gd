@@ -14,7 +14,7 @@ extends Node3D
 ## Asignado por MapArea antes de add_child(self) — ver MapArea._init().
 var map: CombatMapArea
 
-var zones: Array = []
+var zones: Array[CombatTrapData] = []
 var _visuals: Array = []
 var _range := 0.0
 
@@ -59,7 +59,7 @@ func update_hover_preview(pos: Vector2) -> void:
 		Color(0.8, 0.2, 0.8, 0.22), Color(1.0, 0.5, 1.0, 0.60))
 
 func place_trap(pos: Vector2, radius: float, damage: int, card_name: String) -> void:
-	zones.append({"pos": pos, "radius": float(radius), "damage": damage, "name": card_name})
+	zones.append(CombatTrapData.new(pos, radius, damage, card_name))
 	_add_trap_visual(pos, float(radius))
 
 func _add_trap_visual(pos: Vector2, radius: float) -> void:
@@ -72,10 +72,10 @@ func _add_trap_visual(pos: Vector2, radius: float) -> void:
 
 func check_and_trigger_traps(unit_pos: Vector2, contact_margin: float = 0.0) -> int:
 	var total := 0
-	var triggered: Array = []
-	for trap in zones:
-		if map.terrain.geometry.spatial.movement_distance(trap["pos"], unit_pos) <= trap["radius"] + contact_margin:
-			total += trap["damage"]
+	var triggered: Array[CombatTrapData] = []
+	for trap: CombatTrapData in zones:
+		if map.terrain.geometry.spatial.movement_distance(trap.position, unit_pos) <= trap.radius + contact_margin:
+			total += trap.damage
 			triggered.append(trap)
 	for t in triggered:
 		var idx := zones.find(t)
@@ -90,10 +90,10 @@ func check_and_trigger_traps_along_path(_from: Vector2, to: Vector2, contact_mar
 
 func check_traps_along_segment(from: Vector2, to: Vector2, contact_margin: float = 0.0) -> int:
 	var total := 0
-	var triggered: Array = []
-	for trap in zones:
-		if CombatMapQueries.segment_point_distance(from, to, trap["pos"]) <= trap["radius"] + contact_margin:
-			total += trap["damage"]
+	var triggered: Array[CombatTrapData] = []
+	for trap: CombatTrapData in zones:
+		if CombatMapQueries.segment_point_distance(from, to, trap.position) <= trap.radius + contact_margin:
+			total += trap.damage
 			triggered.append(trap)
 	for trap in triggered:
 		var idx: int = zones.find(trap)

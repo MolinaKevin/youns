@@ -3,6 +3,7 @@ extends Node3D
 const SleepOverlay    := preload("res://features/world/ui/sleep_overlay.gd")
 const YounInteraction := preload("res://features/world/party/youn_interaction.gd")
 const NewWorldWelcomeScript := preload("res://features/world/game_world/new_world_welcome.gd")
+const TypedResourceLoaderScript := preload("res://shared/typed_resource_loader.gd")
 
 @onready var menu: Control = $MenuLayer/MainMenu
 @onready var pause_overlay: ColorRect = $MenuLayer/PauseOverlay
@@ -12,6 +13,7 @@ const NewWorldWelcomeScript := preload("res://features/world/game_world/new_worl
 var _sleeping := false
 var _sleep_start_hour := 0.0
 var _menu_modal: ModalScreenContext
+var _session := WorldSessionCoordinator.new()
 
 func _ready() -> void:
 	_menu_modal = ModalScreenContext.new(ModalScreenHost.from_runtime())
@@ -32,6 +34,7 @@ func _ready() -> void:
 	_restore_saved_location()
 	_restore_after_combat()
 	YounLifeEvents.world_lighting = world_lighting
+	_connect_life_event_signals()
 	YounLifeEvents.restore_pending_evolution()
 	YounLifeEvents.restore_pending_reincarnation()
 	menu.sleep_requested.connect(_on_sleep_requested)
@@ -53,16 +56,17 @@ func _start_new_world_welcome() -> void:
 ## El Youn del grupo es el de la partida: al cargar una en la que ya evolucionó,
 ## el modelo tiene que ser el del Youn actual (party.tscn trae el inicial).
 func _sync_party_youn() -> void:
-	var ps := GameState.save_service.player_save
+	var ps := PlayerSessionAccess.save()
 	var youn := PartyManager.youn
 	if ps == null or not is_instance_valid(youn) or ps.current_youn_path.is_empty():
 		return
-	if not ResourceLoader.exists(ps.current_youn_path):
+	var data := TypedResourceLoaderScript.youn(ps.current_youn_path)
+	if data == null:
 		return
 	if youn.youn_data != null and youn.youn_data.resource_path == ps.current_youn_path:
 		return
 	if youn.has_method("load_youn"):
-		youn.load_youn(load(ps.current_youn_path) as YounData)
+		youn.load_youn(data)
 
 ## Después de "Nueva partida" o "Continuar": el jugador aparece al inicio o
 ## donde estaba al guardar.
@@ -108,22 +112,27 @@ func _toggle_menu() -> void:
 		PartyManager.unfreeze_camera()
 
 func _restore_after_combat() -> void:
-	if not GameState.world_combat.active:
-		return
-	var pos := GameState.world_combat.return_position
-	PartyManager.player.global_position = pos
-	PartyManager.player.velocity = Vector3.ZERO
-	PartyManager.youn.global_position = pos + Vector3(1.5, 0, 1.5)
-	PartyManager.youn.velocity = Vector3.ZERO
-	GameState.world_combat.resolve_victory(get_tree())
-	StatsManager.services.care().add_stat("hambre", 30)  # combate ganado: esfuerzo físico
-	if GameState.save_service.player_save != null and GameState.save_service.player_save.bathroom_pending_after_combat:
-		GameState.save_service.player_save.bathroom_pending_after_combat = false
-		StatsManager.services.care().apply_bathroom_accident()
+	_session.restore_after_combat(GameState.world_combat, PartyManager.player, PartyManager.youn,
+		get_tree(), StatsManager.services.care(), PlayerSessionAccess.save())
 
 
 func _exit_tree() -> void:
+	_disconnect_life_event_signals()
 	PauseMenu.enabled = false
+
+
+func _connect_life_event_signals() -> void:
+	if not StatsManager.evolution_triggered.is_connected(YounLifeEvents.present_evolution):
+		StatsManager.evolution_triggered.connect(YounLifeEvents.present_evolution)
+	if not StatsManager.reincarnation_triggered.is_connected(YounLifeEvents.present_reincarnation):
+		StatsManager.reincarnation_triggered.connect(YounLifeEvents.present_reincarnation)
+
+
+func _disconnect_life_event_signals() -> void:
+	if StatsManager.evolution_triggered.is_connected(YounLifeEvents.present_evolution):
+		StatsManager.evolution_triggered.disconnect(YounLifeEvents.present_evolution)
+	if StatsManager.reincarnation_triggered.is_connected(YounLifeEvents.present_reincarnation):
+		StatsManager.reincarnation_triggered.disconnect(YounLifeEvents.present_reincarnation)
 
 
 func _on_sleep_requested() -> void:
@@ -134,9 +143,7 @@ func _on_sleep_requested() -> void:
 	var overlay := SleepOverlay.new()
 	overlay.tree_exiting.connect(func():
 		_sleeping = false
-		var sleep_duration := GameState.get_total_hours() - _sleep_start_hour
-		StatsManager.services.care().add_stat("hambre", 20)
-		StatsManager.services.emotions().on_wake_up(sleep_duration)
+		_session.finish_sleep(_sleep_start_hour, GameState.get_total_hours(), StatsManager.services.care(), StatsManager.services.emotions())
 		if overlay.save_requested:
 			var save_error := GameState.save_player_save()
 			GlobalHUD.show_toast(LocalizationState.t("game.saved") if save_error == OK else LocalizationState.t("game.save_failed"))

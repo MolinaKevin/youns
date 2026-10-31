@@ -29,7 +29,7 @@ func draw_card() -> MonsterCard:
 		return null
 	if _card_pile.size() < ROUND_OPTIONS:
 		_card_pile.assign(host.monster_deck.cards)
-		_card_pile.shuffle()
+		host.random.shuffle(_card_pile)
 	var count := mini(ROUND_OPTIONS, _card_pile.size())
 	host.round_options.assign(_card_pile.slice(_card_pile.size() - count))
 	host.current_card = choose_card(host.round_options)
@@ -40,19 +40,28 @@ func draw_card() -> MonsterCard:
 ## Elige la carta de la ronda entre las opciones. PROVISORIO: al azar. Acá va a
 ## ir la inteligencia de los enemigos.
 func choose_card(options: Array[MonsterCard]) -> MonsterCard:
-	return options.pick_random()
+	return host.random.pick(options) as MonsterCard
 
 func execute_card(card: MonsterCard) -> void:
 	CombatLog.emit_requested(host.log_requested, "combat.log.enemy_card.played", [LocalizationState.t("combat.enemy"), card.card_name])
 	for i in card.actions.size():
+		if not _flow_active():
+			return
 		host.card_action_started.emit(i)
 		await _execute_card_action(card, i)
+		if not _flow_active():
+			return
 		if host.check_combat_end.call():
 			return
 		host.ui_update_requested.emit()
 		if host.action_delay > 0.0:
 			await (Engine.get_main_loop() as SceneTree).create_timer(host.action_delay).timeout
+			if not _flow_active():
+				return
 	host.card_action_started.emit(-1)
+
+func _flow_active() -> bool:
+	return host.is_flow_active.call() if host.is_flow_active.is_valid() else true
 
 func _execute_card_action(card: MonsterCard, index: int) -> void:
 	var action: MonsterCardAction = card.actions[index]

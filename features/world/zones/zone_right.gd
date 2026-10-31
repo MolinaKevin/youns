@@ -8,7 +8,8 @@ func _ready() -> void:
 	refresh_tall_grass_route()
 
 func refresh_tall_grass_route() -> void:
-	var progress := GameState.save_service.player_save.world_progress if GameState.save_service.player_save else null
+	var save := PlayerSessionAccess.save()
+	var progress := save.world_progress if save != null else null
 	var open := progress != null and progress.tall_grass_route_open
 	$TallGrassBarrier/Col.disabled = open
 	$TallGrassBarrier.visible = not open

@@ -9,14 +9,16 @@ var return_position := Vector3.ZERO
 var world_enemy_id := ""
 var wild_youn_data: YounData
 var biome: BiomeData
+var combat_seed: int = -1
 
 
-func begin(position: Vector3, enemy_id: String, youn_data: YounData, combat_biome: BiomeData) -> void:
+func begin(position: Vector3, enemy_id: String, youn_data: YounData, combat_biome: BiomeData, seed: int = -1) -> void:
 	active = true
 	return_position = position
 	world_enemy_id = enemy_id
 	wild_youn_data = youn_data
 	biome = combat_biome
+	combat_seed = seed if seed >= 0 else int(Time.get_ticks_usec() & 0x7fffffff)
 
 
 ## El combate toma el dato al inicializarse. El resto del contexto sigue vivo
@@ -50,3 +52,4 @@ func clear() -> void:
 	world_enemy_id = ""
 	wild_youn_data = null
 	biome = null
+	combat_seed = -1

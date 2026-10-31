@@ -10,17 +10,23 @@ const InventoryServiceScript := preload("res://shared/inventory_service.gd")
 ## instancia.
 
 var host: WorldYoun
+var _flow: AsyncFlowToken
 
 func _init(p_host: WorldYoun) -> void:
 	host = p_host
+	_flow = AsyncFlowToken.new(host)
 
 func play() -> void:
+	if not _flow.is_active():
+		return
 	host.prepare_encounter()
 	if not Dialogue.dialogue_finished.is_connected(_on_finished):
 		Dialogue.dialogue_finished.connect(_on_finished, CONNECT_ONE_SHOT)
 	DialogueLines.say_many(host.youn_data, host.conversation.to_entries())
 
 func _on_finished() -> void:
+	if not _flow.is_active():
+		return
 	if host.conversation.choices.is_empty():
 		if host.starts_combat:
 			host.begin_combat_handoff()
@@ -34,7 +40,9 @@ func _open_choices() -> void:
 	for choice in host.conversation.choices:
 		labels.append(choice.label())
 	var index: int = await Dialogue.ask(labels)
-	var choice: NpcChoice = host.conversation.choices[index] if index >= 0 else null
+	if not _flow.is_active() or not is_instance_valid(host):
+		return
+	var choice: NpcChoice = host.conversation.choices[index] if index >= 0 and index < host.conversation.choices.size() else null
 	if choice != null:
 		_apply_choice(choice)
 	if choice != null and choice.starts_combat:
@@ -46,13 +54,13 @@ func _apply_choice(choice: NpcChoice) -> void:
 	if choice.give_item != null:
 		_give_item(choice.give_item)
 	if choice.restore_energy:
-		var ps := GameState.save_service.player_save
+		var ps := PlayerSessionAccess.save()
 		if ps:
 			ps.energia = 100
 			GlobalHUD.notify_youns_status_changed()
 
 func _give_item(item: ItemData) -> void:
-	var ps := GameState.save_service.player_save
+	var ps := PlayerSessionAccess.save()
 	if ps == null:
 		return
 	var display_name := LocalizationState.item_name(item.id, item.name)

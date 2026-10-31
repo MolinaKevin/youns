@@ -2,6 +2,7 @@ extends Control
 
 const InventoryServiceScript := preload("res://shared/inventory_service.gd")
 const LabRecipeActionScript := preload("res://data/lab_recipe_action.gd")
+const PlayerSessionAccessScript := preload("res://shared/player_session_access.gd")
 
 signal close_requested
 
@@ -19,6 +20,9 @@ const ACTION_TYPES := LabRecipeActionScript.TYPES
 @onready var close_button = $RootVBox/TopBar/CloseButton
 @onready var columns_container = $RootVBox/ContentHBox/MainArea/Columns
 @onready var tech_tree_view = $RootVBox/ContentHBox/MainArea/TechTreeView
+@onready var output_panel: Control = $RootVBox/ContentHBox/OutputPanel
+@onready var location_panel: Control = $RootVBox/ContentHBox/LocationPanel
+@onready var output_header: Label = $RootVBox/ContentHBox/OutputPanel/VBox/Header
 @onready var columns := {
 	LabRecipeActionScript.INSTANT: $RootVBox/ContentHBox/MainArea/Columns/InstantColumn,
 	LabRecipeActionScript.LOOP:    $RootVBox/ContentHBox/MainArea/Columns/LoopColumn,
@@ -30,8 +34,10 @@ const ACTION_TYPES := LabRecipeActionScript.TYPES
 var selected_location := ""
 var location_buttons: Dictionary = {}  # location -> Button
 var notified_locations: Array = []
+var _flow: AsyncFlowToken
 
 func _ready() -> void:
+	_flow = AsyncFlowToken.new(self)
 	if standalone_mode:
 		ModalScreenContext.enter_fullscreen(ModalScreenHost.from_runtime())
 		interaction_enabled = false
@@ -53,6 +59,8 @@ func _ready() -> void:
 
 func _load_and_refresh() -> void:
 	await LaboratoryState.ensure_loaded()
+	if not _flow.is_active():
+		return
 	_refresh_after_load()
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -70,8 +78,8 @@ func _set_view(view: String) -> void:
 	tech_tree_view.visible = not is_recipes
 	recipes_button.button_pressed = is_recipes
 	tech_tree_button.button_pressed = not is_recipes
-	$RootVBox/ContentHBox/OutputPanel.visible = is_recipes
-	$RootVBox/ContentHBox/LocationPanel.visible = is_recipes
+	output_panel.visible = is_recipes
+	location_panel.visible = is_recipes
 
 func _refresh_after_load() -> void:
 	_build_location_sidebar()
@@ -150,22 +158,22 @@ func _refresh_columns() -> void:
 			if interaction_enabled:
 				entry.activate_requested.connect(_on_activate_requested)
 
-			if recipe.id == LaboratoryState.active_recipe_id:
+			if recipe.id == LaboratoryState.active_recipe():
 				entry.set_active()
-			elif LaboratoryState.recipe_progress.has(recipe.id):
-				entry.set_paused(LaboratoryState.recipe_progress[recipe.id])
+			elif LaboratoryState.has_paused_progress(recipe.id):
+				entry.set_paused(LaboratoryState.paused_progress(recipe.id))
 
 # ── Eventos ───────────────────────────────────────────────────────────────────
 
-func _on_activate_requested(recipe: Resource) -> void:
+func _on_activate_requested(recipe: LabRecipe) -> void:
 	LaboratoryState.activate_recipe(recipe)
 	_refresh_columns()
 
-func _on_recipe_completed(_recipe: Resource) -> void:
+func _on_recipe_completed(_recipe: LabRecipe) -> void:
 	_refresh_columns()
 	_sync_pending_output()
 
-func _on_recipe_unlocked(recipe: Resource) -> void:
+func _on_recipe_unlocked(recipe: LabRecipe) -> void:
 	if not location_buttons.has(recipe.location):
 		_add_location_button(recipe.location)
 		if selected_location == "":
@@ -177,8 +185,8 @@ func _on_recipe_unlocked(recipe: Resource) -> void:
 func _sync_pending_output() -> void:
 	for child in output_list.get_children():
 		child.queue_free()
-	for item_id in LaboratoryState.pending_output:
-		var entry: Dictionary = LaboratoryState.pending_output[item_id]
+	for item_id in LaboratoryState.output_entries():
+		var entry := LaboratoryState.output_entry(item_id)
 		var label := Label.new()
 		var localized_item_id := str(entry.get("id", item_id))
 		label.text = LocalizationState.t(
@@ -192,7 +200,10 @@ func _on_take_all() -> void:
 	if not interaction_enabled:
 		return
 	var taken := LaboratoryState.take_all_output()
-	var save := GameState.save_service.player_save
+	var save: PlayerSaveData = PlayerSessionAccessScript.save() as PlayerSaveData
+	if save == null:
+		LaboratoryState.restore_output(taken)
+		return
 	var remaining := {}
 	for item_id in taken:
 		var entry: Dictionary = taken[item_id]
@@ -213,7 +224,7 @@ func _apply_localized_text(_language: String = "") -> void:
 	recipes_button.text = LocalizationState.t("lab.recipes")
 	tech_tree_button.text = LocalizationState.t("lab.tech_tree")
 	close_button.text = LocalizationState.t("lab.close")
-	$RootVBox/ContentHBox/OutputPanel/VBox/Header.text = LocalizationState.t("lab.generated")
+	output_header.text = LocalizationState.t("lab.generated")
 	_apply_mode_state()
 	for action_type in ACTION_TYPES:
 		columns[action_type].title = LocalizationState.action_type_name(action_type)

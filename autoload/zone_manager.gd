@@ -3,6 +3,7 @@ extends Node
 const WorldBoundary := preload("res://features/world/zones/world_boundary.gd")
 const ScenePathsScript := preload("res://shared/scene_paths.gd")
 const GameDataValidatorScript := preload("res://shared/game_data_validator.gd")
+const DebugLog := preload("res://shared/debug_logging.gd")
 const TITLE_MENU_SCENE := ScenePathsScript.TITLE_MENU
 
 signal zone_changed(previous_zone: String, current_zone: String)
@@ -68,7 +69,7 @@ func initialize_world() -> void:
 	add_child(_boundary)
 	var boundary_started_at := Time.get_ticks_msec()
 	_boundary.build(catalog)
-	print("[ZoneManager] WorldBoundary.build: %d ms." % (Time.get_ticks_msec() - boundary_started_at))
+	_log("WorldBoundary.build: %d ms." % (Time.get_ticks_msec() - boundary_started_at))
 	_boundary.set_north_trail_open(north_trail_open)
 	_streaming = ZoneStreamingController.new()
 	add_child(_streaming)
@@ -89,12 +90,12 @@ func initialize_world() -> void:
 	# El hub se carga de forma bloqueante: el jugador aparece ahí.
 	var hub_started_at := Time.get_ticks_msec()
 	_streaming.load_now("hub")
-	print("[ZoneManager] Carga e instancia de hub: %d ms." % (Time.get_ticks_msec() - hub_started_at))
+	_log("Carga e instancia de hub: %d ms." % (Time.get_ticks_msec() - hub_started_at))
 	_streaming.activate("hub")
 	# Posicionar party en el spawn del hub
 	call_deferred("_initial_spawn")
 	_world_initialized = true
-	print("[ZoneManager] initialize_world total: %d ms." % (Time.get_ticks_msec() - initialization_started_at))
+	_log("initialize_world total: %d ms." % (Time.get_ticks_msec() - initialization_started_at))
 
 func is_world_initialized() -> bool:
 	return _world_initialized
@@ -104,7 +105,12 @@ func _initial_spawn() -> void:
 		return
 	var spawn_started_at := Time.get_ticks_msec()
 	PartyManager.place_at_spawn(get_zone_node("hub"))
-	print("[ZoneManager] Spawn inicial de party: %d ms." % (Time.get_ticks_msec() - spawn_started_at))
+	_log("Spawn inicial de party: %d ms." % (Time.get_ticks_msec() - spawn_started_at))
+
+
+func _log(message: String) -> void:
+	if DebugLog.verbose_enabled():
+		print("[ZoneManager] %s" % message)
 
 ## Abre (o vuelve a cerrar) el sendero norte: árboles y pared del hub, y el
 ## camino de tierra de WorldBoundary.

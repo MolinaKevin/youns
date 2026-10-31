@@ -28,11 +28,13 @@ static func _ensure_loaded() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	for filename in DirAccess.get_files_at(ITEMS_DIR):
+	var filenames := DirAccess.get_files_at(ITEMS_DIR)
+	filenames.sort()
+	for filename in filenames:
 		if not filename.ends_with(".tres"):
 			continue
 		var path := ITEMS_DIR.path_join(filename)
-		var item := load(path) as ItemData
+		var item := TypedResourceLoader.item(path)
 		if item == null:
 			push_error("ItemCatalog: no se pudo cargar %s como ItemData." % path)
 			continue

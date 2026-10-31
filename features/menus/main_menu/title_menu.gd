@@ -1,14 +1,15 @@
 extends Control
 
-const WORLD_LOADING := "res://features/world/game_world/world_loading.tscn"
-const NEW_GAME_CEREMONY := "res://features/world/game_world/new_game_ceremony.tscn"
+const ScenePathsScript := preload("res://shared/scene_paths.gd")
+const WORLD_LOADING := ScenePathsScript.WORLD_LOADING
+const NEW_GAME_CEREMONY := ScenePathsScript.NEW_GAME_CEREMONY
 
 const MENU_OPTIONS: Array[Dictionary] = [
 	{"label_key": "title.menu.continue", "scene": "", "action": "continue"},
 	{"label_key": "title.menu.new_game", "scene": "", "action": "new_game"},
-	{"label_key": "title.menu.quick_battle", "scene": "res://features/combat/scene/combat.tscn"},
-	{"label_key": "title.menu.lab", "scene": "res://features/laboratory/scene/laboratory.tscn"},
-	{"label_key": "title.menu.deck_builder", "scene": "res://features/deck_builder/ui/deck_builder_screen.tscn"},
+	{"label_key": "title.menu.quick_battle", "scene": ScenePathsScript.COMBAT},
+	{"label_key": "title.menu.lab", "scene": ScenePathsScript.LABORATORY},
+	{"label_key": "title.menu.deck_builder", "scene": ScenePathsScript.DECK_BUILDER},
 	{"label_key": "title.menu.language", "scene": "", "action": "language"},
 	{"label_key": "title.menu.exit", "scene": "", "action": "exit"},
 ]
@@ -160,7 +161,7 @@ func _on_option_pressed(index: int) -> void:
 
 	if action == "continue":
 		if GameState.load_game():
-			get_tree().change_scene_to_file(WORLD_LOADING)
+			SceneNavigator.change_scene_resumed(get_tree(), WORLD_LOADING)
 		return
 	if action == "new_game":
 		if GameState.has_saved_game():
@@ -177,11 +178,11 @@ func _on_option_pressed(index: int) -> void:
 		return
 
 	if scene_path != "":
-		get_tree().change_scene_to_file(scene_path)
+		SceneNavigator.change_scene_resumed(get_tree(), scene_path)
 
 func _start_new_game() -> void:
 	GameState.start_new_game()
-	get_tree().change_scene_to_file(NEW_GAME_CEREMONY)
+	SceneNavigator.change_scene_resumed(get_tree(), NEW_GAME_CEREMONY)
 
 ## Hay una partida guardada: la nueva la va a pisar al guardar.
 func _confirm_new_game() -> void:

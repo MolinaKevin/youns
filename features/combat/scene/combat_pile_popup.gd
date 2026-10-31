@@ -29,7 +29,7 @@ func show_discard_pile() -> void:
 func close() -> void:
 	host.pile_popup.visible = false
 	source = ""
-	host.turn.keep_half = {}
+	host.turn.keep_half = null
 	host.wildcards_ui.close_keep_picker()
 
 ## Lo llama Combat._apply_localized_text() al cambiar de idioma.

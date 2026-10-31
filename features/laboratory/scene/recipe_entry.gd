@@ -2,7 +2,7 @@ extends PanelContainer
 
 const LabRecipeActionScript := preload("res://data/lab_recipe_action.gd")
 
-signal activate_requested(recipe: Resource)
+signal activate_requested(recipe: LabRecipe)
 
 @onready var fill: ColorRect = $Fill
 @onready var name_label = $Content/VBox/TopRow/NameLabel
@@ -10,7 +10,7 @@ signal activate_requested(recipe: Resource)
 @onready var description_label = $Content/VBox/DescriptionLabel
 @onready var ingredients_label = $Content/VBox/IngredientsLabel
 
-var _recipe: Resource = null
+var _recipe: LabRecipe = null
 var _tracking_progress := false
 var _shader_mat: ShaderMaterial
 var _interactive := true
@@ -38,7 +38,7 @@ func _set_fill_color(color: Color) -> void:
 func _set_progress(value: float) -> void:
 	_shader_mat.set_shader_parameter("progress", value)
 
-func setup(recipe: Resource, interactive := true) -> void:
+func setup(recipe: LabRecipe, interactive := true) -> void:
 	_recipe = recipe
 	_interactive = interactive
 	name_label.text = LocalizationState.recipe_name(recipe.id, recipe.recipe_name)
@@ -74,7 +74,7 @@ func _gui_input(event: InputEvent) -> void:
 			activate_requested.emit(_recipe)
 
 func _is_available() -> bool:
-	return LaboratoryState.recipe_progress.has(_recipe.id) or LaboratoryState.has_ingredients(_recipe)
+	return LaboratoryState.has_paused_progress(_recipe.id) or LaboratoryState.has_ingredients(_recipe)
 
 func _update_availability() -> void:
 	if _recipe == null or _recipe.ingredients.is_empty():

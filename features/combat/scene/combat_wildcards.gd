@@ -52,7 +52,7 @@ func _keep_candidates() -> Array[int]:
 func start_keep(card_index: int, is_top: bool) -> void:
 	if host.player_actions.has_pending_selection():
 		host.player_actions.cancel_selection()
-	host.turn.keep_half = {"card": card_index, "is_top": is_top}
+	host.turn.keep_half = CombatHalfSelection.make(card_index, is_top)
 	host._pile_popup.source = ""
 	var cards: Array[CardData] = []
 	for i in _keep_candidates():
@@ -60,16 +60,16 @@ func start_keep(card_index: int, is_top: bool) -> void:
 	host.wildcards_ui.show_keep_picker(cards)
 
 func on_pile_card_selected(card: CardData) -> void:
-	if host.turn.keep_half.is_empty():
+	if host.turn.keep_half == null:
 		return
 	for i in _keep_candidates():
 		if host.state.hand[i] == card:
 			host.turn.kept_indices.append(i)
 			break
-	if host.turn.keep_half["is_top"]:
-		host.turn.used_top = host.turn.keep_half["card"]
+	if host.turn.keep_half.is_top:
+		host.turn.used_top = host.turn.keep_half.card_index
 	else:
-		host.turn.used_bottom = host.turn.keep_half["card"]
+		host.turn.used_bottom = host.turn.keep_half.card_index
 	host.log_message(LocalizationState.t("combat.kept", [LocalizationState.card_name(card.id, card.name)]))
 	host._pile_popup.close()
 	disarm()
@@ -78,15 +78,12 @@ func on_pile_card_selected(card: CardData) -> void:
 ## Ítems del inventario que se pueden usar en combate: [{"index", "data", "count"}].
 func _combat_items() -> Array:
 	var result := []
-	var save: PlayerSaveData = GameState.save_service.player_save
+	var save := PlayerSessionAccess.save()
 	if save == null:
 		return result
 	for i in save.inventory_items.size():
 		var entry: Dictionary = save.inventory_items[i]
-		var path: String = entry.get("data_path", "")
-		if path.is_empty() or not ResourceLoader.exists(path):
-			continue
-		var data := load(path) as ItemData
+		var data := InventoryService.resolve_item_data(entry)
 		if data != null and data.is_combat_item():
 			result.append({"index": i, "data": data, "count": int(entry.get("count", 1))})
 	return result
@@ -94,17 +91,17 @@ func _combat_items() -> Array:
 func start_item(card_index: int, is_top: bool) -> void:
 	if host.player_actions.has_pending_selection():
 		host.player_actions.cancel_selection()
-	host.turn.item_half = {"card": card_index, "is_top": is_top}
+	host.turn.item_half = CombatHalfSelection.make(card_index, is_top)
 	host.wildcards_ui.show_item_picker(_combat_items())
 
 func close_item_picker() -> void:
-	host.turn.item_half = {}
+	host.turn.item_half = null
 	host.wildcards_ui.close_item_picker()
 
 ## Usa el ítem: aplica su efecto al combate, lo saca del inventario y gasta la
 ## mitad elegida.
 func use_item(inventory_index: int, data: ItemData) -> void:
-	if host.turn.item_half.is_empty():
+	if host.turn.item_half == null:
 		return
 	var result := data.apply_in_combat(host.state)
 	_consume_inventory_item(inventory_index)
@@ -117,16 +114,19 @@ func use_item(inventory_index: int, data: ItemData) -> void:
 		parts.append(LocalizationState.t("combat.item_cleansed"))
 	host.log_message(LocalizationState.t("combat.item_used", [LocalizationState.item_name(data.id, data.name)])
 		+ (" " + ", ".join(parts) + "." if not parts.is_empty() else ""))
-	if host.turn.item_half["is_top"]:
-		host.turn.used_top = host.turn.item_half["card"]
+	if host.turn.item_half.is_top:
+		host.turn.used_top = host.turn.item_half.card_index
 	else:
-		host.turn.used_bottom = host.turn.item_half["card"]
+		host.turn.used_bottom = host.turn.item_half.card_index
 	close_item_picker()
 	disarm()
 	host.update_ui()
 	host.refresh_hand()
 
 func _consume_inventory_item(index: int) -> void:
-	var items: Array = GameState.save_service.player_save.inventory_items
+	var save := PlayerSessionAccess.save()
+	if save == null:
+		return
+	var items: Array = save.inventory_items
 	InventoryServiceScript.consume_at(items, index)
-	GameState.save_service.player_save.inventory_items = items
+	save.inventory_items = items

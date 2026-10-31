@@ -9,14 +9,14 @@ extends RefCounted
 const COLOR_NORMAL := Color(0.96, 0.93, 0.84, 1)
 const COLOR_SELECTED := Color(0.96, 0.86, 0.62, 1)
 
-var host
+var host: DialogueChoiceHostPort
 
 var options: Array[String] = []
 var buttons: Array[Button] = []
 var index := 0
 var active := false
 
-func _init(p_host) -> void:
+func _init(p_host: DialogueChoiceHostPort) -> void:
 	host = p_host
 
 ## Muestra `p_options` como menú vertical navegable y devuelve el índice
@@ -31,6 +31,12 @@ func ask(p_options: Array[String]) -> int:
 	_build_buttons()
 	highlight(0)
 	return await host.choice_made
+
+
+## Cierra una elección que quedó en pantalla y despierta a quien la esperaba.
+func cancel() -> void:
+	if active:
+		resolve(-1)
 
 func _build_buttons() -> void:
 	_clear_buttons()

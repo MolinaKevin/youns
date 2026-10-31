@@ -37,6 +37,7 @@ const Phase = _CombatTurnController.Phase
 const Wild = _CombatTurnController.Wild
 
 @onready var player_stats = $UI/MainVBox/TopBar/PlayerStats
+@onready var ui_root: Control = $UI
 @onready var move_mode_button = $UI/MainVBox/TopBar/MoveModeButton
 @onready var end_turn_button = $UI/MainVBox/TopBar/EndTurnButton
 @onready var message_log = $UI/MainVBox/MiddleRow/SidePanel/MessageLog
@@ -86,6 +87,7 @@ var _flow_token: AsyncFlowToken
 var board: CombatBoardContext
 var _scene_bootstrap: CombatSceneBootstrap
 var _runtime_bootstrap: CombatRuntimeBootstrap
+var random := RandomSource.new(GameState.world_combat.combat_seed)
 
 func _enter_tree() -> void:
 	_scene_bootstrap = _CombatSceneBootstrap.new(self)
@@ -97,7 +99,6 @@ func _ready() -> void:
 		_scene_bootstrap = _CombatSceneBootstrap.new(self)
 	_scene_bootstrap.ready_environment()
 	LocalizationState.language_changed.connect(_apply_localized_text)
-	randomize()
 	_runtime_bootstrap = _CombatRuntimeBootstrap.new()
 	_runtime_bootstrap.setup(self)
 
@@ -117,7 +118,7 @@ func _ready() -> void:
 	hand_section.card_index_selected.connect(_turn_flow.on_hand_card_selected)
 	hand_section.half_selected.connect(_turn_flow.on_hand_half_selected)
 	_wildcards = CombatWildcards.new(self)
-	wildcards_ui.setup(hand_section, $UI, pile_popup, pile_popup_title, pile_popup_grid, {
+	wildcards_ui.setup(hand_section, ui_root, pile_popup, pile_popup_title, pile_popup_grid, {
 		"none": Wild.NONE, "attack": Wild.ATTACK, "move": Wild.MOVE,
 		"keep": Wild.KEEP, "item": Wild.ITEM,
 	})
@@ -127,7 +128,7 @@ func _ready() -> void:
 	wildcards_ui.keep_card_selected.connect(_wildcards.on_pile_card_selected)
 	wildcards_ui.item_selected.connect(_wildcards.use_item)
 	wildcards_ui.item_cancelled.connect(_wildcards.close_item_picker)
-	enemy_reveal.setup($UI, monster_card_view)
+	enemy_reveal.setup(ui_root, monster_card_view)
 	plan_zone.slot_clicked.connect(_turn_flow.on_plan_slot_clicked)
 	plan_zone.slot_dropped.connect(_turn_flow.on_plan_slot_dropped)
 	plan_zone.confirm_pressed.connect(func(): _turn_flow.commit_plan(turn.plan_slots[0], turn.plan_slots[1]))
@@ -144,8 +145,9 @@ func _ready() -> void:
 
 	log_message(LocalizationState.t("combat.started", [_enemy_name]))
 	# Salud baja: las cartas rinden menos (ver CardScaling.health_penalty).
-	if GameState.save_service.player_save != null:
-		var penalty := CardScaling.health_penalty(GameState.save_service.player_save.salud)
+	var save := PlayerSessionAccess.save()
+	if save != null:
+		var penalty := CardScaling.health_penalty(save.salud)
 		if penalty > 0.0:
 			log_message(LocalizationState.t("combat.low_health", [roundi(penalty * 100)]))
 	_turn_flow.start_planning()

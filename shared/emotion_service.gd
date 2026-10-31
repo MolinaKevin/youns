@@ -13,18 +13,41 @@ var _session: CareSessionContext
 var _apply_expire_penalty: Callable
 var _apply_bathroom_accident: Callable
 var _queue_stat_changed: Callable
+var _random: RandomSource
 
 
-func _init(session: CareSessionContext, expire_penalty: Callable, bathroom_accident: Callable, stat_changed: Callable) -> void:
+func _init(session: CareSessionContext, expire_penalty: Callable, bathroom_accident: Callable, stat_changed: Callable, random: RandomSource = null) -> void:
 	_session = session
 	_apply_expire_penalty = expire_penalty
 	_apply_bathroom_accident = bathroom_accident
 	_queue_stat_changed = stat_changed
+	_random = random if random != null else RandomSource.new()
 	_rules = _load_rules()
 
 
 func is_blocked() -> bool:
 	return _block_count > 0
+
+
+## Consultas de sólo lectura para UI, mundo y guardado. Mantienen las claves
+## serializadas dentro de este servicio en vez de exponerlas a cada consumidor.
+func has_state(emotion_name: String) -> bool:
+	return emotion_name in active_states
+
+
+func state_entry(emotion_name: String) -> Dictionary:
+	return active_states.get(emotion_name, {}).duplicate(true)
+
+
+func active_state_names() -> PackedStringArray:
+	var names := PackedStringArray()
+	for emotion_name in active_states:
+		names.append(str(emotion_name))
+	return names
+
+
+func active_states_snapshot() -> Dictionary:
+	return active_states.duplicate(true)
 
 
 func block() -> void:
@@ -59,11 +82,47 @@ func show(emotion_name: String) -> void:
 		var raw = save.get(rule.stat_key)
 		if raw != null:
 			stat_value = float(raw)
-	active_states[emotion_name] = {"hour": _session.total_hours(), "stat_value": stat_value}
+	active_states[emotion_name] = EmotionStateEntry.make(_session.total_hours(), stat_value)
 
 
 func clear(emotion_name: String) -> void:
 	active_states.erase(emotion_name)
+
+
+## Las transiciones de vida son excluyentes: mientras una está activa no deben
+## sobrevivir emociones de juego ni quedar el contador de bloqueo desbalanceado.
+## StatsLifeStage usa esta API en vez de editar el diccionario serializado.
+func transition_active() -> bool:
+	return has_state("evolving") or has_state("dying")
+
+
+func begin_reincarnation(cause: String) -> void:
+	active_states.clear()
+	active_states["dying"] = {
+		"hour": _session.total_hours(), "stat_value": 100.0, "cause": cause,
+	}
+	block()
+
+
+func begin_evolution(target_youn_path: String) -> void:
+	active_states.clear()
+	active_states["evolving"] = {
+		"hour": _session.total_hours(), "stat_value": 100.0,
+		"target_youn_path": target_youn_path,
+	}
+	block()
+
+
+func transition_entry(name: String) -> Dictionary:
+	return state_entry(name)
+
+
+func finish_transition(name: String, clear_all: bool = false) -> void:
+	if clear_all:
+		active_states.clear()
+	else:
+		clear(name)
+	unblock()
 
 
 func check_expirations() -> void:
@@ -72,7 +131,7 @@ func check_expirations() -> void:
 		var rule := find_rule(emotion_name)
 		if rule == null or rule.max_duration_hours <= 0.0:
 			continue
-		var since_hour: float = active_states[emotion_name].get("hour", 0.0)
+		var since_hour := EmotionStateEntry.hour_of(active_states[emotion_name])
 		if total_h - since_hour < rule.max_duration_hours:
 			continue
 		if emotion_name == "bathroom":
@@ -86,7 +145,7 @@ func evaluate_rules() -> void:
 	var ps := _session.player_save()
 	if ps == null or _rules.is_empty() or is_blocked():
 		return
-	var ctx := {"save": ps, "youn_data": _session.youn_data(), "active": active_states.keys()}
+	var ctx := {"save": ps, "youn_data": _session.youn_data(), "active": active_states.keys(), "random": _random}
 	for emotion_name in EmotionEngine.evaluate(_rules, ctx):
 		show(emotion_name)
 	for emotion_name in active_states.keys():
@@ -102,7 +161,7 @@ func evaluate_rules() -> void:
 		if rule.stat_key.is_empty():
 			continue
 		var current_val = ps.get(rule.stat_key)
-		if current_val != null and rule.improved_since(float(active_states[emotion_name].get("stat_value", 100.0)), float(current_val)) and randf() >= rule.evaluate(ctx):
+		if current_val != null and rule.improved_since(EmotionStateEntry.stat_value_of(active_states[emotion_name]), float(current_val)) and _random.randf() >= rule.evaluate(ctx):
 			clear(emotion_name)
 
 
@@ -117,14 +176,14 @@ func on_wake_up(sleep_duration_hours: float) -> void:
 	clear("sleep")
 	var bathroom_rule := find_rule("bathroom")
 	if "bathroom" in active_states and bathroom_rule:
-		var elapsed := _session.total_hours() - float(active_states["bathroom"].get("hour", 0.0))
+		var elapsed := _session.total_hours() - EmotionStateEntry.hour_of(active_states["bathroom"])
 		if elapsed >= bathroom_rule.max_duration_hours * 0.5:
 			_apply_bathroom_accident.call()
 		else:
-			active_states["bathroom"]["hour"] += sleep_duration_hours
+			EmotionStateEntry.set_hour(active_states["bathroom"], EmotionStateEntry.hour_of(active_states["bathroom"]) + sleep_duration_hours)
 	for emotion_name in active_states.keys():
 		if emotion_name != "bathroom":
-			active_states[emotion_name]["hour"] += sleep_duration_hours
+			EmotionStateEntry.set_hour(active_states[emotion_name], EmotionStateEntry.hour_of(active_states[emotion_name]) + sleep_duration_hours)
 
 
 func find_rule(emotion_name: String) -> EmotionRule:
@@ -136,15 +195,6 @@ func find_rule(emotion_name: String) -> EmotionRule:
 
 func _load_rules() -> Array[EmotionRule]:
 	var result: Array[EmotionRule] = []
-	var dir := DirAccess.open(RULES_DIR)
-	if dir == null:
-		return result
-	dir.list_dir_begin()
-	var file := dir.get_next()
-	while file != "":
-		if file.ends_with(".tres"):
-			var rule = load(RULES_DIR + file)
-			if rule is EmotionRule:
-				result.append(rule)
-		file = dir.get_next()
+	for rule in ResourceCatalogLoader.resources(RULES_DIR, EmotionRule):
+		result.append(rule as EmotionRule)
 	return result

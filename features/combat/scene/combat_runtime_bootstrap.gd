@@ -7,6 +7,7 @@ extends RefCounted
 const _CombatState = preload("res://features/combat/scene/combat_state.gd")
 const _CombatPlayerActions = preload("res://features/combat/scene/combat_player_actions.gd")
 const _CombatEnemyAI = preload("res://features/combat/scene/combat_enemy_ai.gd")
+const TypedResourceLoaderScript = preload("res://shared/typed_resource_loader.gd")
 
 func setup(host) -> void:
 	host.state = _CombatState.new()
@@ -19,7 +20,7 @@ func setup(host) -> void:
 	host._turn_flow = CombatTurnFlow.new(host)
 
 	host.deck_manager = CombatDeckManager.new()
-	host.deck_manager.setup(host.state)
+	host.deck_manager.setup(host.state, host.random)
 	host.deck_manager.reshuffled.connect(func(): host.log_message(LocalizationState.t("combat.reshuffle")))
 
 	host.player_actions = _CombatPlayerActions.new()
@@ -44,15 +45,16 @@ func setup(host) -> void:
 func _setup_enemy(host) -> void:
 	var wild_youn: YounData = GameState.world_combat.take_wild_youn_data()
 	if wild_youn == null:
-		wild_youn = load("res://data/youns/newen.tres")
+		wild_youn = TypedResourceLoaderScript.youn("res://data/youns/newen.tres")
 	host.state.enemy_hp = wild_youn.combat_max_hp()
 	host.state.enemy_max_hp = host.state.enemy_hp
 	if wild_youn.base_stats != null:
 		host.state.enemy_status_reduction = YounStatRules.status_reduction(wild_youn.base_stats.to_dict())
 	host.map_area.scene.actors.setup_enemy(wild_youn)
-	host.enemy_ai = _CombatEnemyAI.new()
+	host.enemy_ai = _CombatEnemyAI.new(host.random)
 	host.enemy_ai.setup_with_board(host.state, CombatEnemyBoardMapAdapter.new(host.map_area), wild_youn.strategy,
-		host._damage.deal_to_enemy, host._damage.deal_to_player, host._result_flow.check_combat_end)
+		host._damage.deal_to_enemy, host._damage.deal_to_player, host._result_flow.check_combat_end,
+		func() -> bool: return host.is_flow_active(host.current_flow()))
 	host.enemy_ai.initiative = host.DEFAULT_ENEMY_INITIATIVE
 	host.enemy_ai.set_monster_deck(wild_youn.monster_deck)
 	host.enemy_ai.log_requested.connect(host.log_message)
@@ -66,7 +68,8 @@ func _setup_player(host) -> void:
 		host.map_area.scene.actors.setup_player(youn.youn_data)
 		host._player_name = youn.youn_data.youn_name
 	var player_stat_values := CardScaling.player_stats()
-	var lab_hp_bonus := GameState.save_service.player_save.lab_max_hp_bonus if GameState.save_service.player_save else 0
+	var save := PlayerSessionAccess.save()
+	var lab_hp_bonus := save.lab_max_hp_bonus if save else 0
 	host.state.player_hp = YounStatRules.max_hp(player_stat_values, lab_hp_bonus)
 	host.state.player_max_hp = host.state.player_hp
 	host.state.player_max_mp = YounStatRules.max_mp(player_stat_values)

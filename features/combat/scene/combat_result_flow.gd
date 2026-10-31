@@ -46,12 +46,16 @@ func _show_victory(flow: AsyncFlowToken) -> void:
 	if not host.is_flow_active(flow):
 		return
 	if rewarded:
-		GameState.save_service.player_save.gold += gold
+		var save := PlayerSessionAccess.save()
+		if save == null:
+			_leave_combat()
+			return
+		save.gold += gold
 		var youn = PartyManager.youn
-		YounStatRules.reward(GameState.save_service.player_save, Combat.VICTORY_STAT_GAINS,
+		YounStatRules.reward(save, Combat.VICTORY_STAT_GAINS,
 			youn.youn_data if is_instance_valid(youn) else null)
 		LaboratoryState.deposit_echoes(host.state.echoes_earned)
-		var recovery := GameState.save_service.player_save.lab_combat_recovery_percent
+		var recovery := save.lab_combat_recovery_percent
 		if recovery > 0.0:
 			# Los HP tácticos se reinician en cada combate; la recuperación
 			# persistente entre peleas corresponde a la salud general del Youn.
@@ -92,6 +96,6 @@ func _prepare_result_screen() -> void:
 func _leave_combat() -> void:
 	if not GameState.world_combat.active:
 		# Combate abierto directo desde el editor: no hay mundo al que volver.
-		host.get_tree().reload_current_scene()
+		SceneNavigator.reload_current_scene_resumed(host.get_tree())
 		return
-	host.get_tree().change_scene_to_file(ScenePathsScript.GAME_WORLD)
+	SceneNavigator.change_scene_resumed(host.get_tree(), ScenePathsScript.GAME_WORLD)

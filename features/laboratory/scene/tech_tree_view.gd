@@ -4,13 +4,17 @@ const LabRecipeActionScript := preload("res://data/lab_recipe_action.gd")
 const TechTreeLayoutScript := preload("res://features/laboratory/scene/tech_tree_layout.gd")
 
 var _layout: TechTreeLayoutScript
+var _flow: AsyncFlowToken
 
 func _ready() -> void:
+	_flow = AsyncFlowToken.new(self)
 	LaboratoryState.recipe_unlocked.connect(func(_r): _build())
 	call_deferred("_load_and_build")
 
 func _load_and_build() -> void:
 	await LaboratoryState.ensure_loaded()
+	if not _flow.is_active():
+		return
 	_build()
 
 func _build() -> void:
@@ -31,7 +35,7 @@ func _build() -> void:
 
 	queue_redraw()
 
-func _create_node(recipe: Resource) -> void:
+func _create_node(recipe: LabRecipe) -> void:
 	var pos: Vector2 = _layout.positions.get(recipe.id, Vector2.ZERO)
 
 	var panel := Panel.new()

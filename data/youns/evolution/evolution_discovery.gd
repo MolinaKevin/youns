@@ -33,7 +33,7 @@ static func met_indices(target: YounData, ctx: Dictionary) -> Array[int]:
 ## revela la condición que corresponda. Devuelve:
 ## {"first_time": bool, "revealed": índice o -1, "revealed_met": bool
 ##  (si la revelada se había cumplido), "known": [índices conocidos]}.
-static func discover(save: PlayerSaveData, target: YounData, met: Array[int]) -> Dictionary:
+static func discover(save: PlayerSaveData, target: YounData, met: Array[int], random: RandomSource = null) -> Dictionary:
 	var result := {"first_time": false, "revealed": -1, "revealed_met": false, "known": []}
 	if save == null or target == null:
 		return result
@@ -54,14 +54,14 @@ static func discover(save: PlayerSaveData, target: YounData, met: Array[int]) ->
 	if target.stage in ONLY_MET_STAGES:
 		# Niños y rookies: solo la cumplida (una sola si empatan), siempre.
 		if not met_unknown.is_empty():
-			revealed = met_unknown.pick_random()
+			revealed = random.pick(met_unknown) if random != null else met_unknown.pick_random()
 	elif first_time:
 		# La primera vez solo se revela la inteligencia, y solo si se cumplió.
 		revealed = _intelligence_in(target, met_unknown)
 	elif not met_unknown.is_empty():
-		revealed = _pick(target, met_unknown)
+		revealed = _pick(target, met_unknown, random)
 	elif not unmet_unknown.is_empty():
-		revealed = _pick(target, unmet_unknown)
+		revealed = _pick(target, unmet_unknown, random)
 	if revealed >= 0:
 		known.append(revealed)
 		result["revealed"] = revealed
@@ -71,9 +71,9 @@ static func discover(save: PlayerSaveData, target: YounData, met: Array[int]) ->
 	return result
 
 ## La de inteligencia si está entre las candidatas; si no, una al azar.
-static func _pick(target: YounData, candidates: Array) -> int:
+static func _pick(target: YounData, candidates: Array, random: RandomSource = null) -> int:
 	var intelligence := _intelligence_in(target, candidates)
-	return intelligence if intelligence >= 0 else candidates.pick_random()
+	return intelligence if intelligence >= 0 else (random.pick(candidates) if random != null else candidates.pick_random())
 
 static func _intelligence_in(target: YounData, candidates: Array) -> int:
 	for i in candidates:

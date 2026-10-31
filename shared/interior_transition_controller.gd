@@ -1,6 +1,8 @@
 class_name InteriorTransitionController
 extends Node
 
+const TypedResourceLoaderScript := preload("res://shared/typed_resource_loader.gd")
+
 ## Maneja la escena efímera de un interior sin mezclarla con la carga de zonas
 ## exteriores. Es hijo de ZoneManager: los interiores se agregan a ese mismo
 ## árbol para conservar las rutas y grupos que ya espera el juego.
@@ -31,7 +33,7 @@ func should_show_exterior() -> bool:
 
 
 func enter(interior_scene_path: String, spawn_name := "SpawnPoint") -> void:
-	var packed_scene := load(interior_scene_path) as PackedScene
+	var packed_scene := TypedResourceLoaderScript.packed_scene(interior_scene_path)
 	if packed_scene == null:
 		push_error("InteriorTransitionController: no se pudo cargar '%s'." % interior_scene_path)
 		return

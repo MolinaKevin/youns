@@ -4,6 +4,7 @@ const DebugLog := preload("res://shared/debug_logging.gd")
 
 signal clock_changed(current_hour: float, current_day: int)
 signal twenty_min_ticked
+signal save_ready(save: PlayerSaveData)
 
 const HOURS_PER_DAY := 24.0
 ## Un ciclo completo de 24 horas del juego dura veinticuatro minutos reales.
@@ -67,10 +68,11 @@ func _ready() -> void:
 	clock.clock_changed.connect(func(hour: float, day: int): clock_changed.emit(hour, day))
 	clock.twenty_min_ticked.connect(func(): twenty_min_ticked.emit())
 	save_service.player_save = save_service.make_new_save(get_total_hours())
+	save_ready.emit(save_service.player_save)
 	# Permite abrir la escena de combate directamente durante desarrollo.
-	world_combat.set_preview_youn(load("res://data/youns/newen.tres") as YounData)
+	world_combat.set_preview_youn(TypedResourceLoader.youn("res://data/youns/newen.tres"))
 	if DebugLog.verbose_enabled():
-		print("GameState loaded")
+		print("[GameState] Estado de partida inicializado.")
 	clock_changed.emit(time_of_day_hours, current_day)
 
 func _process(delta: float) -> void:
@@ -141,6 +143,7 @@ func start_new_game() -> void:
 	clock.set_time(1, 8.0, false)
 	_reset_session()
 	save_service.start_new_session(get_total_hours())
+	save_ready.emit(save_service.player_save)
 	world_entry.request_start()
 
 ## Carga la partida guardada. false si no hay o no se pudo leer.
@@ -153,6 +156,7 @@ func load_game() -> bool:
 	clock.set_time(loaded.saved_day, loaded.saved_hour, false)
 	_reset_session()
 	save_service.activate_loaded_session(loaded)
+	save_ready.emit(save_service.player_save)
 	ZoneManager.set_north_trail_open(loaded.world_progress.north_trail_open)
 	if loaded.has_saved_position:
 		world_entry.request_restore(loaded.saved_zone, loaded.saved_position, loaded.saved_interior)

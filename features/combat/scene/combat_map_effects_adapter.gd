@@ -43,8 +43,8 @@ func tick_puddles() -> void: _puddle_system.tick_puddles()
 
 func place_delayed_zone(pos: Vector2, radius: float, damage: int, name: String, rounds: int = 1, effect: String = "", puddle_turns: int = 0) -> void:
 	_spell_system.place_delayed_zone(pos, radius, damage, name, rounds, effect, puddle_turns)
-func resolve_delayed_zones() -> Array: return _spell_system.resolve_delayed_zones()
-func delayed_zones() -> Array[Dictionary]: return _spell_system.delayed_zones
+func resolve_delayed_zones() -> Array[CombatDelayedImpact]: return _spell_system.resolve_delayed_zones()
+func delayed_zones() -> Array[CombatDelayedZone]: return _spell_system.delayed_zones
 func blink_player_to(pos: Vector2) -> void:
 	_map.player_pos = pos
 	_map.player_elevation = _map.terrain.geometry.bounds.elevation_at(pos)

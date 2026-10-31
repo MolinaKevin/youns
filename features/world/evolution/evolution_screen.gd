@@ -17,7 +17,7 @@ signal finished
 
 const Intelligences := preload("res://data/youns/intelligences.gd")
 const CardViewScript := preload("res://features/cards/presentation/card_view.gd")
-const PendingRules := preload("res://features/world/evolution/evolution_pending_rules.gd")
+const EvolutionDraftScript := preload("res://features/world/evolution/evolution_draft.gd")
 const SectionRenderer := preload("res://features/world/evolution/evolution_section_renderer.gd")
 const CARD_SCENE := preload("res://features/cards/presentation/card_view.tscn")
 const CARD_SIZE := Vector2(195, 293)
@@ -30,40 +30,34 @@ enum Section { STATS, COLORS, CARDS, ACTIONS }
 
 var _result: Dictionary
 var _to: YounData
-var _deck: Array[CardData] = []
+var _draft: EvolutionDraft
 
-var _section := Section.STATS
 var _section_buttons := {}
 var _content: VBoxContainer
 var _hint: Label
 var _finish_button: Button
 var _pending_label: Label
 
-## Colores que quedan por usar: {"musical": 1, ...}
-var _remaining_colors := {}
-var _selected_color := ""
-## Líneas que ya se pusieron (por índice en granted_lines).
-var _used_lines: Array[bool] = []
-var _selected_line := -1
-## Cambios hechos, para deshacer: {"type": "color"|"line", "card", "action", ...}
-var _history: Array[Dictionary] = []
 ## Vista de cada carta en la grilla del mazo, para redibujarla al cambiarla.
 var _card_views := {}
+## La lógica de reparto no depende de CardView. Las pruebas y herramientas que
+## sólo ejercitan esa lógica pueden evitar instanciar la presentación pesada.
+var render_deck_views := true
+## Ejecuta sólo el estado de la evolución, sin construir controles. Mantiene la
+## lógica verificable en tests de unidad y deja la presentación como detalle.
+var logic_only := false
 
 func setup(result: Dictionary) -> void:
 	_result = result
 	_to = result.get("to")
-	_deck = DeckRules.cards(GameState.save_service.player_save)
-	if _to != null:
-		for id in _to.color_changes:
-			_remaining_colors[id] = _to.color_changes[id]
-		_used_lines.resize(_to.granted_lines.size())
-		_used_lines.fill(false)
+	_draft = EvolutionDraftScript.new(_to, DeckRules.cards(PlayerSessionAccess.save()))
 
 func _ready() -> void:
 	layer = 90
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	if logic_only:
+		return
 	_build()
 	_show_section(Section.STATS)
 	_refresh_pending()
@@ -72,21 +66,20 @@ func _ready() -> void:
 
 ## Muestra una de las cuatro secciones de la pantalla.
 func show_section(section: Section) -> void:
+	if logic_only:
+		_draft.show_section(section)
+		return
 	_show_section(section)
 
 ## Elige el color que se aplicará al pulsar una mitad de carta.
 func select_color(id: String) -> void:
-	if _section != Section.COLORS or _remaining_colors.get(id, 0) <= 0:
-		return
-	_selected_color = id
-	_rebuild_keeping_selection()
+	if _draft.select_color(id):
+		_state_changed()
 
 ## Elige una línea concedida para agregar al pulsar una mitad de carta.
 func select_line(index: int) -> void:
-	if _section != Section.ACTIONS or index < 0 or index >= _used_lines.size() or _used_lines[index]:
-		return
-	_selected_line = index
-	_rebuild_keeping_selection()
+	if _draft.select_line(index):
+		_state_changed()
 
 ## Aplica la selección actual a la mitad indicada de una carta del mazo.
 func apply_to_half(card: CardData, is_top: bool) -> void:
@@ -102,15 +95,15 @@ func undo_line() -> void:
 
 ## Cartas sobre las que se pueden aplicar los cambios de evolución.
 func deck_cards() -> Array[CardData]:
-	return _deck
+	return _draft.deck
 
 ## Indica si el botón Terminar está habilitado para el jugador.
 func is_finish_enabled() -> bool:
-	return PendingRules.can_finish(_remaining_colors, _deck, _used_lines)
+	return _draft.can_finish()
 
 ## Intenta terminar la evolución. Devuelve si la pantalla se pudo cerrar.
 func finish() -> bool:
-	if not PendingRules.can_finish(_remaining_colors, _deck, _used_lines):
+	if not _draft.can_finish():
 		return false
 	finished.emit()
 	queue_free()
@@ -212,11 +205,9 @@ func _youn_name(data: YounData) -> String:
 	return data.youn_name if data != null else "?"
 
 func _show_section(section: Section) -> void:
-	_section = section
+	_draft.show_section(section)
 	for s in _section_buttons:
 		_section_buttons[s].set_pressed_no_signal(s == section)
-	_selected_color = ""
-	_selected_line = -1
 	_card_views.clear()
 	for child in _content.get_children():
 		_content.remove_child(child)
@@ -244,7 +235,7 @@ func _build_cards() -> void:
 # ── Cambio de color ─────────────────────────────────────────────────────────
 
 func _build_colors() -> void:
-	if _remaining_colors.is_empty():
+	if _draft.remaining_colors.is_empty():
 		_hint.text = ""
 		_content.add_child(_note(LocalizationState.t("evolution.no_changes")))
 		return
@@ -252,7 +243,7 @@ func _build_colors() -> void:
 	var bar := HBoxContainer.new()
 	bar.add_theme_constant_override("separation", 10)
 	_content.add_child(bar)
-	for id in _remaining_colors:
+	for id in _draft.remaining_colors:
 		var chip := Button.new()
 		chip.toggle_mode = true
 		chip.custom_minimum_size = Vector2(0, 40)
@@ -269,34 +260,37 @@ func _build_colors() -> void:
 		chip.add_theme_stylebox_override("hover", chip_style)
 		chip.add_theme_stylebox_override("pressed", pressed_style)
 		chip.add_theme_stylebox_override("disabled", chip_style)
-		chip.text = "%s  ×%d" % [Intelligences.display_name(id), _remaining_colors[id]]
-		chip.disabled = _remaining_colors[id] <= 0
-		chip.button_pressed = id == _selected_color
+		chip.text = "%s  ×%d" % [Intelligences.display_name(id), _draft.remaining_colors[id]]
+		chip.disabled = _draft.remaining_colors[id] <= 0
+		chip.button_pressed = id == _draft.selected_color
 		chip.pressed.connect(func() -> void:
 			if chip.button_pressed:
 				select_color(id)
 			else:
-				_selected_color = ""
-				_rebuild_keeping_selection())
+				_draft.clear_color_selection()
+				_state_changed())
 		bar.add_child(chip)
 	bar.add_child(_undo_button("color"))
 	_content.add_child(_deck_grid())
 
 ## Redibuja la sección actual (colores o acciones) sin perder lo elegido.
 func _rebuild_keeping_selection() -> void:
-	var keep_color := _selected_color
-	var keep_line := _selected_line
 	for child in _content.get_children():
 		_content.remove_child(child)
 		child.queue_free()
 	_card_views.clear()
-	_selected_color = keep_color
-	_selected_line = keep_line
-	if _section == Section.COLORS:
+	if _draft.section == Section.COLORS:
 		_build_colors()
 	else:
 		_build_actions()
 	_refresh_pending()
+
+
+## Actualiza la vista sólo cuando existe; el estado se modifica antes de llegar
+## aquí y por eso el mismo flujo puede usarse sin UI.
+func _state_changed() -> void:
+	if not logic_only:
+		_rebuild_keeping_selection()
 
 # ── Acciones agregadas ──────────────────────────────────────────────────────
 
@@ -315,21 +309,21 @@ func _build_actions() -> void:
 		var b := Button.new()
 		b.toggle_mode = true
 		b.custom_minimum_size = Vector2(110, 44)
-		b.disabled = _used_lines[i]
-		b.button_pressed = i == _selected_line
+		b.disabled = _draft.used_lines[i]
+		b.button_pressed = i == _draft.selected_line
 		b.tooltip_text = line.description
 		var row: HBoxContainer = CardViewScript.line_row(line.resolved(stats), "")
 		row.set_anchors_preset(Control.PRESET_FULL_RECT)
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		if _used_lines[i]:
+		if _draft.used_lines[i]:
 			row.modulate.a = 0.35
 		b.add_child(row)
 		b.pressed.connect(func() -> void:
 			if b.button_pressed:
 				select_line(i)
 			else:
-				_selected_line = -1
-				_rebuild_keeping_selection())
+				_draft.clear_line_selection()
+				_state_changed())
 		bar.add_child(b)
 	bar.add_child(_undo_button("line"))
 	_content.add_child(_deck_grid())
@@ -347,10 +341,12 @@ func _deck_grid() -> ScrollContainer:
 	grid.add_theme_constant_override("h_separation", 10)
 	grid.add_theme_constant_override("v_separation", 10)
 	scroll.add_child(grid)
-	for card in _deck:
+	for card in _draft.deck:
 		var holder := Control.new()
 		holder.custom_minimum_size = CARD_SIZE * GRID_CARD_SCALE
 		grid.add_child(holder)
+		if not render_deck_views:
+			continue
 		var view = CARD_SCENE.instantiate()
 		view.hover_enabled = false
 		view.scale = Vector2.ONE * GRID_CARD_SCALE
@@ -362,26 +358,12 @@ func _deck_grid() -> ScrollContainer:
 	return scroll
 
 func _on_half_pressed(card: CardData, is_top: bool) -> void:
-	var action: CardAction = card.top if is_top else card.bottom
-	if action == null:
+	var result := _draft.apply_to_half(card, is_top)
+	if result == "half_full" and not logic_only:
+		_hint.text = LocalizationState.t("evolution.half_full", [DeckRules.MAX_LINES_PER_HALF])
 		return
-	if _section == Section.COLORS and _selected_color != "" and _remaining_colors.get(_selected_color, 0) > 0:
-		_history.append({"type": "color", "card": card, "action": action,
-			"prev_intelligence": action.intelligence, "id": _selected_color})
-		DeckRules.recolor(action, _selected_color)
-		_remaining_colors[_selected_color] -= 1
-		if _remaining_colors[_selected_color] <= 0:
-			_selected_color = ""
-		_rebuild_keeping_selection()
-	elif _section == Section.ACTIONS and _selected_line >= 0:
-		if not DeckRules.can_add_line(action):
-			_hint.text = LocalizationState.t("evolution.half_full", [DeckRules.MAX_LINES_PER_HALF])
-			return
-		DeckRules.add_line(action, _to.granted_lines[_selected_line])
-		_history.append({"type": "line", "card": card, "action": action, "index": _selected_line})
-		_used_lines[_selected_line] = true
-		_selected_line = -1
-		_rebuild_keeping_selection()
+	if result == "":
+		_state_changed()
 
 # ── Deshacer ────────────────────────────────────────────────────────────────
 
@@ -389,40 +371,28 @@ func _undo_button(type: String) -> Button:
 	var b := Button.new()
 	b.text = LocalizationState.t("evolution.undo")
 	b.custom_minimum_size = Vector2(0, 40)
-	b.disabled = not _history.any(func(op: Dictionary) -> bool: return op["type"] == type)
+	b.disabled = not _draft.history.any(func(op: Dictionary) -> bool: return op["type"] == type)
 	b.pressed.connect(_undo.bind(type))
 	return b
 
 ## Deshace el último cambio de ese tipo (color o línea).
 func _undo(type: String) -> void:
-	for i in range(_history.size() - 1, -1, -1):
-		var op: Dictionary = _history[i]
-		if op["type"] != type:
-			continue
-		var action: CardAction = op["action"]
-		if type == "color":
-			action.intelligence = op["prev_intelligence"]
-			_remaining_colors[op["id"]] += 1
-		else:
-			DeckRules.remove_last_line(action)
-			_used_lines[op["index"]] = false
-		_history.remove_at(i)
-		break
-	_rebuild_keeping_selection()
+	if _draft.undo(type):
+		_state_changed()
 
 # ── Pendientes ──────────────────────────────────────────────────────────────
 
 ## Colores que quedan por poner.
 func pending_colors() -> int:
-	return PendingRules.pending_colors(_remaining_colors)
+	return _draft.pending_colors()
 
 ## Acciones que quedan por poner. Si ya no queda ninguna mitad con lugar, no
 ## cuentan (si no, no se podría terminar nunca).
 func pending_lines() -> int:
-	return PendingRules.pending_lines(_deck, _used_lines)
+	return _draft.pending_lines()
 
 func can_finish() -> bool:
-	return PendingRules.can_finish(_remaining_colors, _deck, _used_lines)
+	return _draft.can_finish()
 
 ## Marca en el menú lo que falta y habilita "Terminar" cuando no falta nada.
 func _refresh_pending() -> void:

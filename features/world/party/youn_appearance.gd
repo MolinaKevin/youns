@@ -60,7 +60,7 @@ func load_model(data: YounData) -> void:
 		_anim_bodies["idle"].visible = false
 		host.add_child(_anim_bodies["idle"])
 	if DebugLog.verbose_enabled():
-		print("YounAppearance loaded bodies: ", _anim_bodies.keys())
+		print("[YounAppearance] Cuerpos cargados: %s" % _anim_bodies.keys())
 	switch_anim("idle")
 
 func switch_anim(anim_key: String) -> void:

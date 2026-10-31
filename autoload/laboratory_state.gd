@@ -8,15 +8,19 @@ const RewardService := preload("res://shared/laboratory_reward_service.gd")
 const RecipeRuntime := preload("res://shared/laboratory_recipe_runtime.gd")
 const RECIPES_PATH := "res://data/lab_recipes/"
 
-signal recipe_completed(recipe: Resource)
-signal recipe_unlocked(recipe: Resource)
+signal recipe_completed(recipe: LabRecipe)
+signal recipe_unlocked(recipe: LabRecipe)
 signal pending_output_changed
+signal recipes_loaded
 
-var all_recipes: Array[Resource] = []
+var all_recipes: Array[LabRecipe] = []
 var active_recipe_id := ""
-var recipe_progress: Dictionary = {}  
+## Compatibilidad temporal de guardado/tests. El runtime usa los métodos de
+## progreso de abajo; consumidores nuevos no deben mutar este Dictionary.
+var recipe_progress: Dictionary = {}
 var active_timer: Timer = null
-var pending_output: Dictionary = {}  
+## Compatibilidad temporal de guardado/tests. Usar output_* y restore_output.
+var pending_output: Dictionary = {}
 var recipes_by_ingredient: Dictionary = {} 
 
 var unlocked_columns: Array = []
@@ -24,6 +28,7 @@ var _loading := true
 var _echoes: LaboratoryEchoes
 var _rewards: RewardService
 var _runtime: RecipeRuntime
+var _progress: LaboratoryProgress
 
 var is_loaded: bool:
 	get:
@@ -31,21 +36,25 @@ var is_loaded: bool:
 
 func _ready() -> void:
 	_echoes = LaboratoryEchoes.new(self)
-	_rewards = RewardService.new(self)
+	_rewards = RewardService.new(self, GlobalHUD.sync_overworld_ui_visibility)
 	_runtime = RecipeRuntime.new(self)
-	call_deferred("_load_recipes_when_ready")
+	_progress = LaboratoryProgress.new(PlayerSessionAccess.save)
+	if PlayerSessionAccess.has_active_save():
+		_load_recipes()
+	else:
+		GameState.save_ready.connect(_on_player_save_ready)
 
-func _load_recipes_when_ready() -> void:
-	while GameState.save_service.player_save == null:
-		await get_tree().process_frame
-	_load_recipes()
+
+func _on_player_save_ready(_save: PlayerSaveData) -> void:
+	if _loading:
+		_load_recipes()
 
 ## Espera a que el catálogo esté disponible para consumidores de UI o mundo.
 ## La inicialización sigue siendo responsabilidad del autoload; los
 ## consumidores no necesitan suscribirse a una señal técnica.
 func ensure_loaded() -> void:
-	while _loading:
-		await get_tree().process_frame
+	if _loading:
+		await recipes_loaded
 
 # ── Carga ─────────────────────────────────────────────────────────────────────
 
@@ -54,13 +63,14 @@ func _load_recipes() -> void:
 	recipes_by_ingredient = RecipeCatalog.index_by_ingredient(all_recipes)
 	unlocked_columns.clear()
 	for recipe in all_recipes:
-		if GameState.save_service.player_save.unlocked_recipe_ids.has(recipe.id):
+		if _progress.is_unlocked(recipe.id):
 			_unlock_column(recipe.location, recipe.action_type)
-		if recipe.starts_unlocked and not GameState.save_service.player_save.unlocked_recipe_ids.has(recipe.id):
+		if recipe.starts_unlocked and not _progress.is_unlocked(recipe.id):
 			unlock_recipe(recipe.id)
 	for error_text in GameDataValidatorScript.recipe_errors(all_recipes):
 		push_error("LaboratoryState: " + error_text)
 	_loading = false
+	recipes_loaded.emit()
 
 # ── Guardado ─────────────────────────────────────────────────────────────────
 
@@ -73,12 +83,31 @@ func write_to_save(save: PlayerSaveData) -> void:
 	save.lab_recipe_progress = progress
 	save.lab_active_recipe_id = active_recipe_id
 
+
+## API de runtime. Los campos siguen públicos por compatibilidad con partidas
+## guardadas y tests antiguos, pero el ciclo de recetas no los toca directo.
+func active_recipe() -> String:
+	return active_recipe_id
+
+
+func set_active_recipe(recipe_id: String) -> void:
+	active_recipe_id = recipe_id
+
+
+func runtime_timer() -> Timer:
+	return active_timer
+
+
+func replace_runtime_timer(timer: Timer) -> void:
+	if active_timer != null and active_timer != timer:
+		active_timer.stop()
+		active_timer.queue_free()
+	active_timer = timer
+
 ## Deja el laboratorio como el de la partida (nueva o cargada).
 func restore_from_save(save: PlayerSaveData) -> void:
-	if active_timer:
-		active_timer.queue_free()
-		active_timer = null
-	active_recipe_id = ""
+	replace_runtime_timer(null)
+	set_active_recipe("")
 	pending_output = save.lab_pending_output.duplicate(true)
 	recipe_progress = save.lab_recipe_progress.duplicate()
 	_loading = true
@@ -89,7 +118,7 @@ func restore_from_save(save: PlayerSaveData) -> void:
 		_start_recipe(active)
 	pending_output_changed.emit()
 
-func get_recipe_by_id(id: String) -> Resource:
+func get_recipe_by_id(id: String) -> LabRecipe:
 	for r in all_recipes:
 		if r.id == id:
 			return r
@@ -97,7 +126,7 @@ func get_recipe_by_id(id: String) -> Resource:
 
 # ── Activar / pausar ──────────────────────────────────────────────────────────
 
-func activate_recipe(recipe: Resource) -> void:
+func activate_recipe(recipe: LabRecipe) -> void:
 	if recipe.action_type == LabRecipeActionScript.UPGRADE and is_recipe_completed(recipe.id):
 		return
 	if recipe.action_type == LabRecipeActionScript.INSTANT:
@@ -120,33 +149,34 @@ func activate_recipe(recipe: Resource) -> void:
 	_pause_current()
 	_start_recipe(recipe)
 
-func has_ingredients(recipe: Resource) -> bool:
-	if GameState.save_service.player_save != null and GameState.save_service.player_save.gold < recipe.gold_cost:
+func has_ingredients(recipe: LabRecipe) -> bool:
+	if not _progress.has_gold(recipe.gold_cost):
 		return false
 	return _has_enough_ingredients(recipe.ingredients)
 
 func _has_enough_ingredients(ingredients: Array) -> bool:
 	for ing in ingredients:
-		if pending_output.get(ing["id"], {}).get("count", 0) < _ingredient_amount(ing):
+		if output_count(str(ing["id"])) < _ingredient_amount(ing):
 			return false
 	return true
 
-func consume_ingredients(recipe: Resource) -> void:
-	if recipe.gold_cost > 0 and GameState.save_service.player_save != null:
-		GameState.save_service.player_save.gold = max(0, GameState.save_service.player_save.gold - recipe.gold_cost)
+func consume_ingredients(recipe: LabRecipe) -> void:
+	_progress.spend_gold(recipe.gold_cost)
 	for ing in recipe.ingredients:
 		var item_id: String = ing["id"]
-		var new_count: int = pending_output[item_id]["count"] - _ingredient_amount(ing)
+		var new_count := output_count(item_id) - _ingredient_amount(ing)
 		if new_count <= 0:
 			pending_output.erase(item_id)
 		else:
-			pending_output[item_id]["count"] = new_count
+			var entry: Dictionary = pending_output[item_id]
+			entry[LaboratoryOutputEntry.COUNT] = new_count
 	pending_output_changed.emit()
 
 func _ingredient_amount(ingredient: Dictionary) -> int:
 	var amount := int(ingredient.get("amount", 0))
-	if str(ingredient.get("id", "")) == "datos" and GameState.save_service.player_save != null:
-		amount = ceili(float(amount) * (1.0 - GameState.save_service.player_save.lab_data_cost_reduction))
+	var save := progress().save()
+	if str(ingredient.get("id", "")) == "datos" and save != null:
+		amount = ceili(float(amount) * (1.0 - save.lab_data_cost_reduction))
 	return maxi(1, amount)
 
 ## Pausa la receta activa y guarda su avance en memoria. La UI y los cambios
@@ -160,11 +190,11 @@ func _pause_current() -> void:
 	_ensure_runtime()
 	_runtime.pause()
 
-func _start_recipe(recipe: Resource) -> void:
+func _start_recipe(recipe: LabRecipe) -> void:
 	_ensure_runtime()
 	_runtime.start(recipe)
 
-func _on_recipe_complete(recipe: Resource) -> void:
+func _on_recipe_complete(recipe: LabRecipe) -> void:
 	_ensure_runtime()
 	_runtime.complete(recipe)
 
@@ -180,14 +210,11 @@ func deposit_echoes(counts: Dictionary) -> void:
 
 
 func add_output_item(item_id: String, item_name: String, amount: int, limit: int) -> void:
-	var current_count: int = pending_output.get(item_id, {}).get("count", 0)
+	var current_count := output_count(item_id)
 	if current_count >= limit or amount <= 0:
 		return
-	pending_output[item_id] = {
-		"id": item_id,
-		"name": item_name,
-		"count": mini(current_count + amount, limit),
-	}
+	pending_output[item_id] = LaboratoryOutputEntry.make(item_id, item_name, mini(current_count + amount, limit),
+		output_data_path(item_id))
 	pending_output_changed.emit()
 
 # ── Output ────────────────────────────────────────────────────────────────────
@@ -196,15 +223,51 @@ func get_current_progress(recipe_id: String) -> float:
 	_ensure_runtime()
 	return _runtime.progress(recipe_id)
 
+func has_paused_progress(recipe_id: String) -> bool:
+	return recipe_progress.has(recipe_id)
+
+func paused_progress(recipe_id: String) -> float:
+	return float(recipe_progress.get(recipe_id, 0.0))
+
+
+func set_paused_progress(recipe_id: String, value: float) -> void:
+	recipe_progress[recipe_id] = clampf(value, 0.0, 1.0)
+
+
+func clear_paused_progress(recipe_id: String) -> void:
+	recipe_progress.erase(recipe_id)
+
 func _ensure_runtime() -> void:
 	if _runtime == null:
 		_runtime = RecipeRuntime.new(self)
+
+func progress() -> LaboratoryProgress:
+	if _progress == null:
+		_progress = LaboratoryProgress.new(PlayerSessionAccess.save)
+	return _progress
 
 func take_all_output() -> Dictionary:
 	var result := pending_output.duplicate()
 	pending_output.clear()
 	pending_output_changed.emit()
 	return result
+
+func output_entries() -> Dictionary:
+	return pending_output.duplicate(true)
+
+func output_entry(item_id: String) -> Dictionary:
+	return pending_output.get(item_id, {}).duplicate(true)
+
+func output_count(item_id: String) -> int:
+	return LaboratoryOutputEntry.count_of(pending_output.get(item_id, {}))
+
+func output_data_path(item_id: String) -> String:
+	return LaboratoryOutputEntry.data_path_of(pending_output.get(item_id, {}))
+
+func set_output_data_path(item_id: String, path: String) -> void:
+	if not pending_output.has(item_id):
+		return
+	pending_output[item_id][LaboratoryOutputEntry.DATA_PATH] = path
 
 ## Devuelve al depósito lo que no pudo entrar al inventario del jugador.
 func restore_output(entries: Dictionary) -> void:
@@ -223,9 +286,8 @@ func _unlock_column(_location: String, action_type: String) -> void:
 # ── Desbloqueo de recetas ─────────────────────────────────────────────────────
 
 func unlock_recipe(recipe_id: String) -> void:
-	if GameState.save_service.player_save.unlocked_recipe_ids.has(recipe_id):
+	if not _progress.unlock(recipe_id):
 		return
-	GameState.save_service.player_save.unlocked_recipe_ids.append(recipe_id)
 	var recipe := get_recipe_by_id(recipe_id)
 	if recipe:
 		_unlock_column(recipe.location, recipe.action_type)
@@ -233,17 +295,15 @@ func unlock_recipe(recipe_id: String) -> void:
 			recipe_unlocked.emit(recipe)
 
 func is_recipe_unlocked(recipe_id: String) -> bool:
-	return GameState.save_service.player_save.unlocked_recipe_ids.has(recipe_id)
+	return _progress.is_unlocked(recipe_id)
 
 # ── Completado de upgrades ────────────────────────────────────────────────────
 
 func is_recipe_completed(recipe_id: String) -> bool:
-	return GameState.save_service.player_save.completed_recipe_ids.has(recipe_id)
+	return _progress.is_completed(recipe_id)
 
 func complete_recipe(recipe_id: String) -> void:
-	if GameState.save_service.player_save.completed_recipe_ids.has(recipe_id):
-		return
-	GameState.save_service.player_save.completed_recipe_ids.append(recipe_id)
+	_progress.complete(recipe_id)
 
 # ── Desbloqueo indirecto ──────────────────────────────────────────────────────
 

@@ -9,6 +9,7 @@ signal youns_status_visibility_changed(visible: bool)
 const DAY_CLOCK_SCENE: PackedScene = preload("res://features/world/ui/day_clock.tscn")
 const YOUNS_STATUS_SCENE: PackedScene = preload("res://features/world/ui/youns_status_panel.tscn")
 const DEBUG_STATS_SCRIPT: GDScript = preload("res://features/world/ui/debug_stats_panel.gd")
+const PlayerSessionAccessScript: GDScript = preload("res://shared/player_session_access.gd")
 
 var clock_visible := true
 var clock_style := 0
@@ -49,19 +50,22 @@ func set_youns_status_visible(visible: bool) -> void:
 	youns_status_visibility_changed.emit(visible)
 
 func has_persistent_clock_ui() -> bool:
-	return DebugSettings.developer_tools_enabled or (GameState.save_service.player_save != null and GameState.save_service.player_save.clock_ui_unlocked)
+	var save: PlayerSaveData = PlayerSessionAccessScript.save() as PlayerSaveData
+	return DebugSettings.developer_tools_enabled or (save != null and save.clock_ui_unlocked)
 
 func has_persistent_care_ui() -> bool:
-	return GameState.save_service.player_save != null and GameState.save_service.player_save.care_ui_unlocked
+	var save: PlayerSaveData = PlayerSessionAccessScript.save() as PlayerSaveData
+	return save != null and save.care_ui_unlocked
 
 func sync_overworld_ui_visibility() -> void:
 	set_clock_visible(has_persistent_clock_ui())
 	set_youns_status_visible(has_persistent_care_ui())
 
 func notify_youns_status_changed() -> void:
-	if GameState.save_service.player_save == null:
+	var save: PlayerSaveData = PlayerSessionAccessScript.save() as PlayerSaveData
+	if save == null:
 		return
-	youns_status_changed.emit(GameState.save_service.player_save.discipline, GameState.save_service.player_save.care_mistakes)
+	youns_status_changed.emit(save.discipline, save.care_mistakes)
 
 func _ensure_day_clock_ui() -> void:
 	if is_instance_valid(_day_clock_ui):
