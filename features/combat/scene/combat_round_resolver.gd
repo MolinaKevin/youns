@@ -41,8 +41,7 @@ func apply_delayed_zone_impact(state: CombatState, event: CombatRoundEvent) -> A
 	return zone_effects.apply_direct_impact(state, hit.effect, hit.tick_damage, event.target != "enemy")
 
 func finish_status_event(state: CombatState, event: CombatRoundEvent) -> String:
-	var remaining := maxi(0, state.status_value(event.effect, true) - 1)
-	state.set_status_value(event.effect, true, remaining)
+	var remaining := state.decrement_status(event.effect, true)
 	return event.expired_log_key if remaining == 0 else ""
 
 func _status_events(state: CombatState) -> Array[CombatRoundEvent]:

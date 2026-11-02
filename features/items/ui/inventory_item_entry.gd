@@ -8,25 +8,8 @@ var _normal_style: StyleBoxFlat
 var _selected_style: StyleBoxFlat
 
 func _ready() -> void:
-	_normal_style = StyleBoxFlat.new()
-	_normal_style.bg_color = Color(0.09, 0.1, 0.12, 0.96)
-	_normal_style.corner_radius_top_left = 6
-	_normal_style.corner_radius_top_right = 6
-	_normal_style.corner_radius_bottom_right = 6
-	_normal_style.corner_radius_bottom_left = 6
-	_normal_style.content_margin_left = 0
-	_normal_style.content_margin_top = 0
-	_normal_style.content_margin_right = 0
-	_normal_style.content_margin_bottom = 0
-
-	_selected_style = _normal_style.duplicate()
-	_selected_style.bg_color = Color(0.16, 0.18, 0.22, 1.0)
-	_selected_style.border_width_left = 2
-	_selected_style.border_width_top = 2
-	_selected_style.border_width_right = 2
-	_selected_style.border_width_bottom = 2
-	_selected_style.border_color = Color(0.82, 0.86, 0.92, 0.95)
-
+	_normal_style = SelectionChipStyle.normal(Color(0.09, 0.1, 0.12, 0.96), 6, 0.0)
+	_selected_style = SelectionChipStyle.selected(Color(0.16, 0.18, 0.22, 1.0), Color(0.82, 0.86, 0.92, 0.95), 6, 2, 0.0)
 	set_selected(false)
 
 func setup(item: Dictionary) -> void:

@@ -1,5 +1,8 @@
 class_name StatsServicesAdapter
-extends StatsServicesPort
+extends RefCounted
+
+## Punto de entrada pequeño para los servicios de cuidado, emociones y etapa.
+## Los consumidores no necesitan conocer el ensamblado interno de StatsManager.
 
 var _care: CareStatsService
 var _emotions: EmotionService

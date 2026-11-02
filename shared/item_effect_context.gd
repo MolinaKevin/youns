@@ -5,10 +5,10 @@ extends RefCounted
 ## datos no conocen los autoloads: la sesión les entrega este contexto al usar
 ## un ítem.
 
-var _services: StatsServicesPort
+var _services: StatsServicesAdapter
 var _check_status: Callable
 
-func _init(services: StatsServicesPort = null, check_status_callback: Callable = Callable()) -> void:
+func _init(services: StatsServicesAdapter = null, check_status_callback: Callable = Callable()) -> void:
 	_services = services
 	_check_status = check_status_callback
 

@@ -108,27 +108,7 @@ func _add_model(data: YounData, world_position: Vector3, look_target: Vector3, s
 
 
 func _instantiate_model(data: YounData, scene: PackedScene) -> Node3D:
-	if scene == null:
-		return null
-	var model := scene.instantiate() as Node3D
-	if model == null:
-		return null
-	model.scale = Vector3.ONE * data.mesh_scale * 1.2
-	if data.texture != null:
-		var material := StandardMaterial3D.new()
-		material.albedo_texture = data.texture
-		material.cull_mode = BaseMaterial3D.CULL_DISABLED
-		for mesh in Node3DSearch.find_meshes(model):
-			mesh.material_override = material
-	var animation_player := Node3DSearch.find_anim_player(model)
-	if animation_player != null:
-		var animations := animation_player.get_animation_list()
-		if not animations.is_empty():
-			var animation := animation_player.get_animation(animations[0])
-			if animation != null:
-				animation.loop_mode = Animation.LOOP_LINEAR
-			animation_player.play(animations[0])
-	return model
+	return YounModelBuilder.instantiate(data, scene, 1.2)
 
 
 func _prepare_companion_arrival() -> void:
@@ -251,8 +231,7 @@ func restore_gameplay_camera() -> void:
 		var world_camera := PartyManager.camera_rig.get_node_or_null("Camera3D") as Camera3D
 		if world_camera != null:
 			world_camera.make_current()
-	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
-	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
+	GlobalHUD.sync_overworld_ui_visibility()
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	queue_free()
 
@@ -265,8 +244,7 @@ func _exit_tree() -> void:
 	if is_instance_valid(PartyManager):
 		PartyManager.unfreeze_actors()
 		PartyManager.unfreeze_camera()
-	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
-	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
+	GlobalHUD.sync_overworld_ui_visibility()
 
 
 func _log(message: String) -> void:

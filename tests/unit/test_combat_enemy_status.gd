@@ -66,12 +66,18 @@ func test_enemy_move_penalty_suma_mojado_y_engrasado() -> void:
 	var s := CombatState.new()
 	s.enemy_wet_turns = 1
 	s.enemy_greasy_turns = 1
-	assert_eq(_make_ai_full(s).move_penalty(), 3)
+	assert_almost_eq(_make_ai_full(s).move_penalty(), 3.2, 0.001)
 
 
 func test_enemy_move_penalty_cero_sin_estados() -> void:
 	var s := CombatState.new()
-	assert_eq(_make_ai_full(s).move_penalty(), 0)
+	assert_almost_eq(_make_ai_full(s).move_penalty(), 0.0, 0.001)
+
+
+func test_enemy_move_penalty_coincide_con_el_jugador() -> void:
+	var s := CombatState.new()
+	s.enemy_wet_turns = 1
+	assert_almost_eq(_make_ai_full(s).move_penalty(), CombatMovePenalty.world_units(true, false), 0.001)
 
 
 # ── Estados — inmovilización (enredado / congelado) del enemigo ─────────────

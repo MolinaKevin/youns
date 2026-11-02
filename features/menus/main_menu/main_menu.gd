@@ -137,9 +137,7 @@ func _is_sleep_time() -> bool:
 		return false
 	var data: YounData = youn_node.youn_data
 	var hour: float = GameState.time_of_day_hours
-	if data.sleep_hour > data.wake_hour:
-		return hour >= data.sleep_hour or hour < data.wake_hour
-	return hour >= data.sleep_hour and hour < data.wake_hour
+	return HourRange.contains(hour, data.sleep_hour, data.wake_hour)
 
 func _update_sleep_state() -> void:
 	for index in _visible_menu_items.size():

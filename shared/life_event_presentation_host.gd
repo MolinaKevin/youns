@@ -44,5 +44,4 @@ func hide_hud() -> void:
 	GlobalHUD.set_youns_status_visible(false)
 
 func restore_hud() -> void:
-	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
-	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
+	GlobalHUD.sync_overworld_ui_visibility()

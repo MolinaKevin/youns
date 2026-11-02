@@ -33,7 +33,7 @@ func refresh_north_trail() -> void:
 		(col as CollisionShape3D).disabled = open
 
 func _on_lab_warp_entered(body: Node3D) -> void:
-	if body.name == "Player":
+	if body == PartyManager.player:
 		ZoneManager.enter_interior("res://features/world/lab_interior/lab_interior.tscn")
 
 func _on_recipe_completed(recipe: Resource) -> void:

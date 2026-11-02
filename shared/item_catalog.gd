@@ -28,16 +28,11 @@ static func _ensure_loaded() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	var filenames := DirAccess.get_files_at(ITEMS_DIR)
-	filenames.sort()
-	for filename in filenames:
-		if not filename.ends_with(".tres"):
+	_by_path = ResourceCatalogLoader.load_typed_by_path(ITEMS_DIR, TypedResourceLoader.item, "ItemCatalog")
+	for item in _by_path.values():
+		if item.id.is_empty():
 			continue
-		var path := ITEMS_DIR.path_join(filename)
-		var item := TypedResourceLoader.item(path)
-		if item == null:
-			push_error("ItemCatalog: no se pudo cargar %s como ItemData." % path)
+		if _by_id.has(item.id):
+			push_error("ItemCatalog: id duplicado '%s'." % item.id)
 			continue
-		_by_path[path] = item
-		if not item.id.is_empty():
-			_by_id[item.id] = item
+		_by_id[item.id] = item

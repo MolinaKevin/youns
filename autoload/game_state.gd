@@ -176,6 +176,12 @@ func load_game() -> bool:
 func save_player_save() -> Error:
 	return save_service.write(current_day, time_of_day_hours)
 
+## Guarda y avisa el resultado con un toast. Lo usan la estación de guardado
+## y el diálogo de dormir, los dos únicos lugares donde el jugador guarda.
+func save_player_save_and_notify() -> void:
+	var save_error := save_player_save()
+	GlobalHUD.show_toast(LocalizationState.t("game.saved") if save_error == OK else LocalizationState.t("game.save_failed"))
+
 func _reset_session() -> void:
 	world_combat.clear()
 	discard_pending_ticks()

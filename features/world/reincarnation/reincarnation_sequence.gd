@@ -15,9 +15,7 @@ extends Node
 
 signal finished
 
-const CARD_SCENE := preload("res://features/cards/presentation/card_view.tscn")
 const TypedResourceLoaderScript := preload("res://shared/typed_resource_loader.gd")
-const CARD_SIZE := Vector2(195, 293)
 const GRID_SCALE := 0.6
 
 var _from: YounData
@@ -184,14 +182,7 @@ func _choose_card() -> CardData:
 	var selected: Array = [null]
 	var views: Array = []
 	for card in DeckRules.cards(PlayerSessionAccess.save()):
-		var holder := Control.new()
-		holder.custom_minimum_size = CARD_SIZE * GRID_SCALE
-		grid.add_child(holder)
-		var view = CARD_SCENE.instantiate()
-		view.hover_enabled = false
-		view.scale = Vector2.ONE * GRID_SCALE
-		holder.add_child(view)
-		view.setup(card)
+		var view := CardGridEntry.build(grid, card, GRID_SCALE)
 		views.append(view)
 		view.card_pressed.connect(func(c: CardData) -> void:
 			selected[0] = c
@@ -247,14 +238,7 @@ func _choose_egg(card: CardData) -> YounData:
 		column.add_child(_msg.label(LocalizationState.t("reincarnation.egg_card"), 16))
 		var center := CenterContainer.new()
 		column.add_child(center)
-		var holder := Control.new()
-		holder.custom_minimum_size = CARD_SIZE * GRID_SCALE
-		center.add_child(holder)
-		var view = CARD_SCENE.instantiate()
-		view.hover_enabled = false
-		view.scale = Vector2.ONE * GRID_SCALE
-		holder.add_child(view)
-		view.setup(card)
+		var view := CardGridEntry.build(center, card, GRID_SCALE)
 		view.set_disabled(true)
 	column.add_child(picked)
 	await picked.pressed

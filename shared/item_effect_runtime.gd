@@ -10,5 +10,5 @@ static func context() -> ItemEffectContext:
 	var stats_manager := tree.root.get_node_or_null("StatsManager") if tree != null else null
 	if stats_manager == null:
 		return ContextScript.new() as ItemEffectContext
-	return ContextScript.new(stats_manager.get("services") as StatsServicesPort,
+	return ContextScript.new(stats_manager.get("services") as StatsServicesAdapter,
 		Callable(stats_manager, "check_status")) as ItemEffectContext

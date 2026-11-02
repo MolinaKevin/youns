@@ -17,11 +17,7 @@ func _init(p_host: WorldYoun) -> void:
 ## Instancia los cuerpos de `host.youn_data` dentro de `host.body_root`.
 func setup() -> void:
 	var youn_data := host.youn_data
-	var mat: StandardMaterial3D = null
-	if youn_data.texture:
-		mat = StandardMaterial3D.new()
-		mat.albedo_texture = youn_data.texture
-		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var mat: StandardMaterial3D = YounModelBuilder.material_for(youn_data)
 
 	for key in ["idle", "walk", "run"]:
 		var packed: PackedScene = youn_data.get("scene_" + key)
@@ -32,9 +28,7 @@ func setup() -> void:
 		body.position.y = 0.0
 		body.rotation.y = youn_data.mesh_rotation_y
 		body.visible = false
-		if mat:
-			for mi in Node3DSearch.find_meshes(body):
-				mi.material_override = mat
+		YounModelBuilder.apply_material(body, mat)
 		host.body_root.add_child(body)
 		_anim_bodies[key] = body
 
@@ -43,8 +37,7 @@ func setup() -> void:
 		mi.mesh = youn_data.mesh
 		mi.scale = Vector3.ONE * youn_data.mesh_scale
 		mi.position.y = youn_data.mesh_y_offset
-		if mat:
-			mi.material_override = mat
+		YounModelBuilder.apply_material(mi, mat)
 		host.body_root.add_child(mi)
 	else:
 		switch_anim("idle")

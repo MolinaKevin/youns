@@ -6,6 +6,7 @@ const GameDataValidatorScript := preload("res://shared/game_data_validator.gd")
 const RecipeCatalog := preload("res://shared/laboratory_recipe_catalog.gd")
 const RewardService := preload("res://shared/laboratory_reward_service.gd")
 const RecipeRuntime := preload("res://shared/laboratory_recipe_runtime.gd")
+const RecipeRules := preload("res://shared/laboratory_recipe_rules.gd")
 const RECIPES_PATH := "res://data/lab_recipes/"
 
 signal recipe_completed(recipe: LabRecipe)
@@ -29,6 +30,7 @@ var _echoes: LaboratoryEchoes
 var _rewards: RewardService
 var _runtime: RecipeRuntime
 var _progress: LaboratoryProgress
+var _rules: RecipeRules
 
 var is_loaded: bool:
 	get:
@@ -39,6 +41,7 @@ func _ready() -> void:
 	_rewards = RewardService.new(self, GlobalHUD.sync_overworld_ui_visibility)
 	_runtime = RecipeRuntime.new(self)
 	_progress = LaboratoryProgress.new(PlayerSessionAccess.save)
+	_rules = RecipeRules.new(self)
 	if PlayerSessionAccess.has_active_save():
 		_load_recipes()
 	else:
@@ -64,7 +67,7 @@ func _load_recipes() -> void:
 	_unlocked_columns.clear()
 	for recipe in _all_recipes:
 		if _progress.is_unlocked(recipe.id):
-			_unlock_column(recipe.location, recipe.action_type)
+			unlock_column(recipe.location, recipe.action_type)
 		if recipe.starts_unlocked and not _progress.is_unlocked(recipe.id):
 			unlock_recipe(recipe.id)
 	for error_text in GameDataValidatorScript.recipe_errors(_all_recipes):
@@ -155,34 +158,21 @@ func activate_recipe(recipe: LabRecipe) -> void:
 	_start_recipe(recipe)
 
 func has_ingredients(recipe: LabRecipe) -> bool:
-	if not _progress.has_gold(recipe.gold_cost):
-		return false
-	return _has_enough_ingredients(recipe.ingredients)
-
-func _has_enough_ingredients(ingredients: Array) -> bool:
-	for ing in ingredients:
-		if output_count(str(ing["id"])) < _ingredient_amount(ing):
-			return false
-	return true
+	return _rules.has_ingredients(recipe)
 
 func consume_ingredients(recipe: LabRecipe) -> void:
-	_progress.spend_gold(recipe.gold_cost)
-	for ing in recipe.ingredients:
-		var item_id: String = ing["id"]
-		var new_count := output_count(item_id) - _ingredient_amount(ing)
-		if new_count <= 0:
-			_pending_output.erase(item_id)
-		else:
-			var entry: Dictionary = _pending_output[item_id]
-			entry[LaboratoryOutputEntry.COUNT] = new_count
+	_rules.consume_ingredients(recipe)
 	pending_output_changed.emit()
 
-func _ingredient_amount(ingredient: Dictionary) -> int:
-	var amount := int(ingredient.get("amount", 0))
-	var save := progress().save()
-	if str(ingredient.get("id", "")) == "datos" and save != null:
-		amount = ceili(float(amount) * (1.0 - save.lab_data_cost_reduction))
-	return maxi(1, amount)
+## Único punto de mutación de _pending_output por consumo de ingredientes;
+## lo usa LaboratoryRecipeRules para no tocar la colección privada directo.
+func reduce_output(item_id: String, amount: int) -> void:
+	var new_count := output_count(item_id) - amount
+	if new_count <= 0:
+		_pending_output.erase(item_id)
+	else:
+		var entry: Dictionary = _pending_output[item_id]
+		entry[LaboratoryOutputEntry.COUNT] = new_count
 
 ## Pausa la receta activa y guarda su avance en memoria. La UI y los cambios
 ## de partida pueden usarlo sin depender del temporizador interno.
@@ -288,20 +278,16 @@ func restore_output(entries: Dictionary) -> void:
 func is_column_unlocked(_location: String, action_type: String) -> bool:
 	return _unlocked_columns.has(action_type)
 
-func _unlock_column(_location: String, action_type: String) -> void:
+## Único punto de mutación de _unlocked_columns; lo usan _load_recipes() acá
+## y LaboratoryRecipeRules al desbloquear una receta.
+func unlock_column(_location: String, action_type: String) -> void:
 	if not _unlocked_columns.has(action_type):
 		_unlocked_columns.append(action_type)
 
 # ── Desbloqueo de recetas ─────────────────────────────────────────────────────
 
 func unlock_recipe(recipe_id: String) -> void:
-	if not _progress.unlock(recipe_id):
-		return
-	var recipe := get_recipe_by_id(recipe_id)
-	if recipe:
-		_unlock_column(recipe.location, recipe.action_type)
-		if not _loading:
-			recipe_unlocked.emit(recipe)
+	_rules.unlock_recipe(recipe_id)
 
 func is_recipe_unlocked(recipe_id: String) -> bool:
 	return _progress.is_unlocked(recipe_id)
@@ -317,12 +303,10 @@ func complete_recipe(recipe_id: String) -> void:
 # ── Desbloqueo indirecto ──────────────────────────────────────────────────────
 
 func check_indirect_unlocks(produced_item_id: String) -> void:
-	var candidates: Array = _recipes_by_ingredient.get(produced_item_id, [])
-	for recipe in candidates:
-		if recipe.needs_research or is_recipe_unlocked(recipe.id) or is_recipe_completed(recipe.id):
-			continue
-		if _has_enough_ingredients(recipe.ingredients):
-			unlock_recipe(recipe.id)
+	_rules.check_indirect_unlocks(produced_item_id)
+
+func recipes_for_ingredient(item_id: String) -> Array:
+	return _recipes_by_ingredient.get(item_id, [])
 
 # ── Soporte de tests ──────────────────────────────────────────────────────────
 # Única puerta explícita para que los tests reemplacen el estado interno sin

@@ -66,10 +66,7 @@ func on_pile_card_selected(card: CardData) -> void:
 		if host.state.hand[i] == card:
 			host.turn.kept_indices.append(i)
 			break
-	if host.turn.keep_half.is_top:
-		host.turn.used_top = host.turn.keep_half.card_index
-	else:
-		host.turn.used_bottom = host.turn.keep_half.card_index
+	host.turn.consume_wildcard_half(host.turn.keep_half.is_top, host.turn.keep_half.card_index)
 	host.log_message(LocalizationState.t("combat.kept", [LocalizationState.card_name(card.id, card.name)]))
 	host._pile_popup.close()
 	disarm()
@@ -114,10 +111,7 @@ func use_item(inventory_index: int, data: ItemData) -> void:
 		parts.append(LocalizationState.t("combat.item_cleansed"))
 	host.log_message(LocalizationState.t("combat.item_used", [LocalizationState.item_name(data.id, data.name)])
 		+ (" " + ", ".join(parts) + "." if not parts.is_empty() else ""))
-	if host.turn.item_half.is_top:
-		host.turn.used_top = host.turn.item_half.card_index
-	else:
-		host.turn.used_bottom = host.turn.item_half.card_index
+	host.turn.consume_wildcard_half(host.turn.item_half.is_top, host.turn.item_half.card_index)
 	close_item_picker()
 	disarm()
 	host.update_ui()

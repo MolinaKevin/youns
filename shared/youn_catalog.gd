@@ -35,15 +35,6 @@ static func _ensure_loaded() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	var filenames := DirAccess.get_files_at(YOUNS_DIR)
-	filenames.sort()
-	for filename in filenames:
-		if not filename.ends_with(".tres"):
-			continue
-		var path := YOUNS_DIR.path_join(filename)
-		var data := TypedResourceLoader.youn(path)
-		if data == null:
-			push_error("YounCatalog: no se pudo cargar %s como YounData." % path)
-			continue
+	_by_path = ResourceCatalogLoader.load_typed_by_path(YOUNS_DIR, TypedResourceLoader.youn, "YounCatalog")
+	for data in _by_path.values():
 		_all.append(data)
-		_by_path[path] = data

@@ -4,9 +4,6 @@ extends Control
 ## (PlayerSaveData.saved_cards). Se desbloquea con la primera reencarnación y
 ## se abre desde el menú del juego.
 
-const CARD_SCENE := preload("res://features/cards/presentation/card_view.tscn")
-const CARD_SIZE := Vector2(195, 293)
-
 func _ready() -> void:
 	ModalScreenContext.enter_fullscreen(ModalScreenHost.from_runtime())
 	_build()
@@ -60,13 +57,7 @@ func _build() -> void:
 	grid.add_theme_constant_override("v_separation", 14)
 	scroll.add_child(grid)
 	for card in cards:
-		var holder := Control.new()
-		holder.custom_minimum_size = CARD_SIZE
-		grid.add_child(holder)
-		var view = CARD_SCENE.instantiate()
-		view.hover_enabled = false
-		holder.add_child(view)
-		view.setup(card)
+		var view := CardGridEntry.build(grid, card)
 		view.set_disabled(true)
 	column.add_child(back)
 

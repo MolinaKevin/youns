@@ -63,30 +63,30 @@ func _toggle_lab() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if showing else Input.MOUSE_MODE_CAPTURED
 
 func _on_interact_entered(body: Node3D) -> void:
-	if body.name == "Player":
+	if body == PartyManager.player:
 		_near_monzaemon = true
 		prompt.visible = true
 
 func _on_interact_exited(body: Node3D) -> void:
-	if body.name == "Player":
+	if body == PartyManager.player:
 		_near_monzaemon = false
 		prompt.visible = false
 		if lab_ui.visible:
 			_toggle_lab()
 
 func _on_terminal_entered(body: Node3D) -> void:
-	if body.name == "Player" and analysis_terminal.visible:
+	if body == PartyManager.player and analysis_terminal.visible:
 		_near_terminal = true
 		terminal_prompt.visible = true
 
 func _on_terminal_exited(body: Node3D) -> void:
-	if body.name == "Player":
+	if body == PartyManager.player:
 		_near_terminal = false
 		terminal_prompt.visible = false
 		_toggle_terminal_clock(false)
 
 func _on_exit_warp_entered(body: Node3D) -> void:
-	if body.name == "Player":
+	if body == PartyManager.player:
 		ZoneManager.exit_interior("SpawnFromLab")
 
 func _on_recipe_completed(recipe: Resource) -> void:

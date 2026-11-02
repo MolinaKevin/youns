@@ -13,7 +13,7 @@ var emotion_service: EmotionService
 var care_service: CareStatsService
 
 var life_stage: StatsLifeStage
-var services: StatsServicesPort
+var services: StatsServicesAdapter
 
 func _ready() -> void:
 	var session := CareSessionContext.new(

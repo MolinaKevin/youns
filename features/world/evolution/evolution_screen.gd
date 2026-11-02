@@ -19,8 +19,6 @@ const Intelligences := preload("res://data/youns/intelligences.gd")
 const CardViewScript := preload("res://features/cards/presentation/card_view.gd")
 const EvolutionDraftScript := preload("res://features/world/evolution/evolution_draft.gd")
 const SectionRenderer := preload("res://features/world/evolution/evolution_section_renderer.gd")
-const CARD_SCENE := preload("res://features/cards/presentation/card_view.tscn")
-const CARD_SIZE := Vector2(195, 293)
 const GRID_CARD_SCALE := 0.6
 const PANEL_BG := Color(0.04, 0.09, 0.14, 0.97)
 const BORDER := EvolutionPalette.ACCENT
@@ -342,16 +340,12 @@ func _deck_grid() -> ScrollContainer:
 	grid.add_theme_constant_override("v_separation", 10)
 	scroll.add_child(grid)
 	for card in _draft.deck:
-		var holder := Control.new()
-		holder.custom_minimum_size = CARD_SIZE * GRID_CARD_SCALE
-		grid.add_child(holder)
 		if not render_deck_views:
+			var holder := Control.new()
+			holder.custom_minimum_size = CardGridEntry.CARD_SIZE * GRID_CARD_SCALE
+			grid.add_child(holder)
 			continue
-		var view = CARD_SCENE.instantiate()
-		view.hover_enabled = false
-		view.scale = Vector2.ONE * GRID_CARD_SCALE
-		holder.add_child(view)
-		view.setup(card)
+		var view := CardGridEntry.build(grid, card, GRID_CARD_SCALE)
 		view.halves_selectable = true
 		view.half_pressed.connect(apply_to_half)
 		_card_views[card] = view

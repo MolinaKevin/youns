@@ -1,8 +1,6 @@
 class_name EvolutionSectionRenderer
 extends RefCounted
 
-const CARD_SCENE := preload("res://features/cards/presentation/card_view.tscn")
-const CARD_SIZE := Vector2(195, 293)
 const GAIN := Color(0.5, 1.0, 0.55)
 const LOSS := Color(1.0, 0.45, 0.4)
 
@@ -36,13 +34,7 @@ static func build_card(content: VBoxContainer, card: CardData) -> void:
 	var center := CenterContainer.new()
 	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content.add_child(center)
-	var holder := Control.new()
-	holder.custom_minimum_size = CARD_SIZE
-	center.add_child(holder)
-	var view = CARD_SCENE.instantiate()
-	view.hover_enabled = false
-	holder.add_child(view)
-	view.setup(card)
+	CardGridEntry.build(center, card)
 
 static func _note(text: String) -> Label:
 	var label := Label.new()

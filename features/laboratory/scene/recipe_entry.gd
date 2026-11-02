@@ -24,11 +24,17 @@ void fragment() {
 }
 """
 
+## Compartido entre todas las instancias: las columnas del laboratorio
+## recrean sus RecipeEntry en cada refresh, y compilar el shader de nuevo en
+## cada una era trabajo repetido e innecesario.
+static var _shared_shader: Shader
+
 func _ready() -> void:
-	var shader := Shader.new()
-	shader.code = FILL_SHADER
+	if _shared_shader == null:
+		_shared_shader = Shader.new()
+		_shared_shader.code = FILL_SHADER
 	_shader_mat = ShaderMaterial.new()
-	_shader_mat.shader = shader
+	_shader_mat.shader = _shared_shader
 	fill.material = _shader_mat
 	_set_fill_color(Color(0.2, 0.55, 0.2, 0.35))
 

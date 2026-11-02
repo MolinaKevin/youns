@@ -158,11 +158,16 @@ func mark_playing_started() -> CardData:
 	if playing == null or playing.started:
 		return null
 	playing.started = true
-	if playing.is_top:
-		used_top = playing.card
-	else:
-		used_bottom = playing.card
+	consume_wildcard_half(playing.is_top, playing.card)
 	return turn_cards[playing.card] if not playing.wild else null
+
+## Gasta una mitad fuera de la línea en curso (comodines "Mantener"/"Ítem"):
+## mismo punto único de escritura que mark_playing_started().
+func consume_wildcard_half(is_top: bool, card_index: int) -> void:
+	if is_top:
+		used_top = card_index
+	else:
+		used_bottom = card_index
 
 func skip_active_line() -> CombatTurnResult:
 	if phase != Phase.ACTING or playing == null or not playing.active:

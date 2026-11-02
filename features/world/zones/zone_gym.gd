@@ -53,12 +53,12 @@ func _add_station_interaction(station_name: String, stat_key: String) -> void:
 	_prompts.append(prompt)
 
 	area.body_entered.connect(func(body: Node3D) -> void:
-		if body.name == "Player":
+		if body == PartyManager.player:
 			_near_stat = stat_key
 			_near_prompt = prompt
 			prompt.visible = _overlay == null)
 	area.body_exited.connect(func(body: Node3D) -> void:
-		if body.name == "Player" and _near_prompt == prompt:
+		if body == PartyManager.player and _near_prompt == prompt:
 			_near_stat = ""
 			_near_prompt = null
 			prompt.visible = false)

@@ -21,9 +21,8 @@ func _ready() -> void:
 	# WorldLoading y ya tiene ambos autoloads inicializados.
 	PartyManager.initialize_party()
 	ZoneManager.initialize_world()
-	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
+	GlobalHUD.sync_overworld_ui_visibility()
 	GlobalHUD.set_clock_paused(false)
-	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
 	PauseMenu.enabled = false
 	ZoneManager.set_world_visible(true)
 	PartyManager.set_party_visible(true)
@@ -107,8 +106,7 @@ func _toggle_menu() -> void:
 		PartyManager.freeze_camera()
 	else:
 		_menu_modal.exit_overlay(self)
-		GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
-		GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
+		GlobalHUD.sync_overworld_ui_visibility()
 		PartyManager.unfreeze_camera()
 
 func _restore_after_combat() -> void:
@@ -145,7 +143,6 @@ func _on_sleep_requested() -> void:
 		_sleeping = false
 		_session.finish_sleep(_sleep_start_hour, GameState.get_total_hours(), StatsManager.services.care(), StatsManager.services.emotions())
 		if overlay.save_requested:
-			var save_error := GameState.save_player_save()
-			GlobalHUD.show_toast(LocalizationState.t("game.saved") if save_error == OK else LocalizationState.t("game.save_failed"))
+			GameState.save_player_save_and_notify()
 	)
 	add_child(overlay)

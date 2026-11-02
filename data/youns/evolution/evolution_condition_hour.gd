@@ -14,6 +14,4 @@ func is_met(ctx: Dictionary) -> bool:
 	var hour := float(ctx.get("hour", -1.0))
 	if hour < 0.0:
 		return false
-	if from_hour <= to_hour:
-		return hour >= from_hour and hour < to_hour
-	return hour >= from_hour or hour < to_hour
+	return HourRange.contains(hour, from_hour, to_hour)

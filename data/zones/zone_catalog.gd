@@ -9,15 +9,9 @@ var _load_errors := PackedStringArray()
 
 
 func _init() -> void:
-	for resource in ResourceCatalogLoader.resources("res://data/zones/definitions", ZoneDefinition):
-		var zone_definition := resource as ZoneDefinition
-		if zone_definition == null or zone_definition.id.is_empty():
-			_load_errors.append("Definición inválida '%s'." % zone_definition.resource_path)
-			continue
-		if _definitions.has(zone_definition.id):
-			_load_errors.append("Id de zona duplicado '%s' (%s)." % [zone_definition.id, zone_definition.resource_path])
-			continue
-		_definitions[zone_definition.id] = zone_definition
+	var loaded := ResourceCatalogIndex.load_by_id("res://data/zones/definitions", ZoneDefinition, "zona")
+	_definitions = loaded["by_id"]
+	_load_errors = loaded["errors"]
 
 
 static func from_definitions(definitions: Array[ZoneDefinition]) -> ZoneCatalog:

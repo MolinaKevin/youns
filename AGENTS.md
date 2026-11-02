@@ -35,4 +35,24 @@ Antes de agregar un `*_port.gd` nuevo en `features/combat/scene/`, o de
 justifica si un mock de test lo sustituye de verdad; si no, un solo archivo
 alcanza. Incluye la lista de los que sí deben seguir separados.
 
+## Separar lógica de una escena en una clase nueva
+
+Antes de partir un script de escena (`Control`/`CanvasLayer` con `@onready`)
+en varias clases "porque tiene muchas líneas", o de copiarle el patrón
+port/adapter de combate a otra feature:
+
+- El port/adapter (contrato vacío + implementación en archivos separados)
+  **solo** se justifica si un mock de test necesita sustituir la
+  implementación real — ver [docs/combate_ports.md](docs/combate_ports.md).
+  En el resto del proyecto no se usa, y no hace falta empezar a usarlo.
+- Para separar lógica de dominio de la presentación alcanza con una clase
+  `RefCounted` propia que la escena construye en `_ready()` y a la que
+  delega (ej. `EvolutionDraft`, `DialogueChoiceMenu`, `DialogueToast`,
+  `DialogueLayout`) — sin contrato ni mock de por medio.
+- Que un script de escena orqueste varios widgets de una sola pantalla
+  (sidebar, columnas, notificaciones) no es "mezclar responsabilidades": es
+  su trabajo. No partirlo solo por el tamaño del archivo — partirlo cuando
+  dos de esas partes tengan lógica de dominio real que valga la pena probar
+  sin construir toda la UI.
+
 Otros documentos: `docs/patrones_modulares.md`, `docs/sistema_movimiento.md`, `docs/TODO.md`.

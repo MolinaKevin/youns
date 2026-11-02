@@ -5,7 +5,6 @@ const _DIRECT_EMOTIONS := "StatsManager." + "emotion_service"
 const _DIRECT_LIFE := "StatsManager." + "life_stage"
 
 func test_stats_manager_expone_el_puerto_de_servicios() -> void:
-	assert_is(StatsManager.services, StatsServicesPort)
 	assert_is(StatsManager.services, StatsServicesAdapter)
 	assert_eq(StatsManager.services.care(), StatsManager.care_service)
 	assert_eq(StatsManager.services.emotions(), StatsManager.emotion_service)

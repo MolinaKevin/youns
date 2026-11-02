@@ -96,28 +96,7 @@ func _build_black_stage() -> void:
 
 
 func _instantiate_model(scene: PackedScene, animation_speed := 1.0) -> Node3D:
-	if scene == null:
-		return null
-	var model := scene.instantiate() as Node3D
-	if model == null:
-		return null
-	model.scale = Vector3.ONE * _data.mesh_scale * MODEL_SCALE_MULTIPLIER
-	if _data.texture != null:
-		var material := StandardMaterial3D.new()
-		material.albedo_texture = _data.texture
-		material.cull_mode = BaseMaterial3D.CULL_DISABLED
-		for mesh in Node3DSearch.find_meshes(model):
-			mesh.material_override = material
-	var animation_player := Node3DSearch.find_anim_player(model)
-	if animation_player != null:
-		animation_player.speed_scale = animation_speed
-		var animations := animation_player.get_animation_list()
-		if not animations.is_empty():
-			var animation := animation_player.get_animation(animations[0])
-			if animation != null:
-				animation.loop_mode = Animation.LOOP_LINEAR
-			animation_player.play(animations[0])
-	return model
+	return YounModelBuilder.instantiate(_data, scene, MODEL_SCALE_MULTIPLIER, animation_speed)
 
 
 func _run() -> void:

@@ -135,9 +135,7 @@ func test_start_move_selection_penaliza_rango_por_mojado_y_engrasado() -> void:
 	s.player_greasy_turns = 1
 	var pa := _make_player_actions(s)
 	pa.start_move_selection("hand", 0, 50, "Test")
-	assert_eq(pa.active_selection_range_cells(), 50 \
-		- CardActionLine.cells_for_modules(CombatPlayerActions.WET_MOVE_PENALTY_MODULES) \
-		- CardActionLine.cells_for_modules(CombatPlayerActions.GREASY_MOVE_PENALTY_MODULES))
+	assert_eq(pa.active_selection_range_cells(), 50 - CombatMovePenalty.cells(true, true))
 
 
 # ── CombatPlayerActions — ceguera reduce rango de ataque ─────────────────────

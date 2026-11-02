@@ -61,18 +61,9 @@ func _build_ui() -> void:
 	_message.add_theme_font_size_override("font_size", 14)
 	vbox.add_child(_message)
 
-	var hbox := HBoxContainer.new()
-	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	hbox.add_theme_constant_override("separation", 12)
-	vbox.add_child(hbox)
-
-	_yes_btn = Button.new()
-	_yes_btn.pressed.connect(_on_yes)
-	hbox.add_child(_yes_btn)
-
-	_no_btn = Button.new()
-	_no_btn.pressed.connect(_on_no)
-	hbox.add_child(_no_btn)
+	var buttons := ConfirmButtonsRow.build(vbox, _on_yes, _on_no)
+	_yes_btn = buttons["yes"]
+	_no_btn = buttons["no"]
 
 
 func _apply_text(_lang: String = "") -> void:

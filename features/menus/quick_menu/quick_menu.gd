@@ -35,18 +35,8 @@ func _ready() -> void:
 
 
 func _build_styles() -> void:
-	_style_normal = StyleBoxFlat.new()
-	_style_normal.bg_color = Color(0.15, 0.15, 0.2, 0.85)
-	for corner in ["top_left", "top_right", "bottom_left", "bottom_right"]:
-		_style_normal.set("corner_radius_" + corner, 4)
-
-	_style_selected = StyleBoxFlat.new()
-	_style_selected.bg_color = Color(0.6, 0.5, 0.1, 0.95)
-	_style_selected.border_color = Color(1.0, 0.85, 0.2)
-	for side in ["left", "right", "top", "bottom"]:
-		_style_selected.set("border_width_" + side, 2)
-	for corner in ["top_left", "top_right", "bottom_left", "bottom_right"]:
-		_style_selected.set("corner_radius_" + corner, 4)
+	_style_normal = SelectionChipStyle.normal()
+	_style_selected = SelectionChipStyle.selected()
 
 
 func _build_cross() -> void:

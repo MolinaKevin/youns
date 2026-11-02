@@ -157,6 +157,14 @@ func set_status_value(effect: String, on_player: bool, value: int) -> void:
 			if on_player: player_frozen_turns = value
 			else: enemy_frozen_turns = value
 
+## Descuenta un turno a un estado (sin bajar de 0) y devuelve lo que queda,
+## ya aplicado. Comparten este descuento CombatRoundResolver (jugador) y
+## CombatEnemyAI (enemigo), que antes lo repetían a mano por estado.
+func decrement_status(effect: String, on_player: bool) -> int:
+	var remaining := maxi(0, status_value(effect, on_player) - 1)
+	set_status_value(effect, on_player, remaining)
+	return remaining
+
 ## Daño por turno de un estado para quien lo recibe (lo fija el charco que lo
 ## causó). Sin efecto para estados que no dañan por turno.
 func set_status_damage(effect: String, on_player: bool, value: int) -> void:

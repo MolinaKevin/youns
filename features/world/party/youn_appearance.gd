@@ -22,11 +22,7 @@ func load_model(data: YounData) -> void:
 	_anim_bodies.clear()
 	_anim_current = ""
 
-	var mat: StandardMaterial3D = null
-	if data.texture:
-		mat = StandardMaterial3D.new()
-		mat.albedo_texture = data.texture
-		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var mat: StandardMaterial3D = YounModelBuilder.material_for(data)
 
 	var scene_map: Dictionary = {
 		"idle":    data.scene_idle,
@@ -49,9 +45,7 @@ func load_model(data: YounData) -> void:
 		body.rotation.y = data.mesh_rotation_y
 		body.visible = false
 		host.add_child(body)
-		if mat:
-			for mesh in Node3DSearch.find_meshes(body):
-				mesh.material_override = mat
+		YounModelBuilder.apply_material(body, mat)
 		_anim_bodies[key] = body
 
 	# Youn sin modelo todavía: uno de primitivas (PlaceholderModel), para que se vea.

@@ -9,15 +9,9 @@ var _load_errors := PackedStringArray()
 
 
 func _init() -> void:
-	for resource in ResourceCatalogLoader.resources(CONSTRUCTIONS_DIR, WorldConstructionData):
-		var construction := resource as WorldConstructionData
-		if construction == null or construction.id.is_empty():
-			_load_errors.append("Construcción inválida '%s'." % construction.resource_path)
-			continue
-		if _by_id.has(construction.id):
-			_load_errors.append("Id de construcción duplicado '%s'." % construction.id)
-			continue
-		_by_id[construction.id] = construction
+	var loaded := ResourceCatalogIndex.load_by_id(CONSTRUCTIONS_DIR, WorldConstructionData, "construcción")
+	_by_id = loaded["by_id"]
+	_load_errors = loaded["errors"]
 
 
 func for_zone(target_zone_id: String) -> Array[WorldConstructionData]:

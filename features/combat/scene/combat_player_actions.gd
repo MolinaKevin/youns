@@ -11,8 +11,6 @@ const MOVE_MODE_MODULES   := 5    # "Mover" con cualquier mitad
 ## Alcance fijo de contacto: no escala con estadísticas.
 const MELEE_RANGE_MODULES := 2
 const NEARBY_TRAP_MODULES := 2    # trampa colocada "cerca"
-const WET_MOVE_PENALTY_MODULES := 2
-const GREASY_MOVE_PENALTY_MODULES := 3
 const BLINDED_RANGE_MODULES := 2  # rango máximo estando cegado
 
 var state: CombatState
@@ -147,8 +145,7 @@ func w(cells: int) -> float:
 	return CombatGrid.world_for(cells)
 
 func _move_penalty() -> int:
-	return (CardActionLine.cells_for_modules(WET_MOVE_PENALTY_MODULES) if state.player_wet_turns > 0 else 0) \
-		+ (CardActionLine.cells_for_modules(GREASY_MOVE_PENALTY_MODULES) if state.player_greasy_turns > 0 else 0)
+	return CombatMovePenalty.cells(state.player_wet_turns > 0, state.player_greasy_turns > 0)
 
 # ── Card selection ────────────────────────────────────────────────────────────
 

@@ -97,30 +97,15 @@ func take_turn() -> void:
 			emit_log("combat.log.enemy.poison_expired")
 
 
-	if state.enemy_wet_turns > 0:
-		state.enemy_wet_turns -= 1
-		if state.enemy_wet_turns == 0:
-			emit_log("combat.log.enemy.wet_expired")
-
-	if state.enemy_greasy_turns > 0:
-		state.enemy_greasy_turns -= 1
-		if state.enemy_greasy_turns == 0:
-			emit_log("combat.log.enemy.greasy_expired")
-
-	if state.enemy_entangled_turns > 0:
-		state.enemy_entangled_turns -= 1
-		if state.enemy_entangled_turns == 0:
-			emit_log("combat.log.enemy.entangled_expired")
-
-	if state.enemy_blinded_turns > 0:
-		state.enemy_blinded_turns -= 1
-		if state.enemy_blinded_turns == 0:
-			emit_log("combat.log.enemy.blinded_expired")
-
-	if state.enemy_frozen_turns > 0:
-		state.enemy_frozen_turns -= 1
-		if state.enemy_frozen_turns == 0:
-			emit_log("combat.log.enemy.frozen_expired")
+	for status in [
+		[CombatEffect.WET, "combat.log.enemy.wet_expired"],
+		[CombatEffect.SLOW, "combat.log.enemy.greasy_expired"],
+		[CombatEffect.ENTANGLE, "combat.log.enemy.entangled_expired"],
+		[CombatEffect.BLIND, "combat.log.enemy.blinded_expired"],
+		[CombatEffect.FREEZE, "combat.log.enemy.frozen_expired"],
+	]:
+		if state.status_value(status[0], false) > 0 and state.decrement_status(status[0], false) == 0:
+			emit_log(status[1])
 
 	var trap_dmg: int = board.effects.trigger_enemy_traps()
 	if trap_dmg > 0:
@@ -199,9 +184,11 @@ func apply_zone_effects(from_pos: Vector2) -> void:
 	for event in zone_effects.apply_path_effects(state, fx, zone_dmg, false):
 		zone_effects.log_zone_effect(event, "combat.log.enemy.zone", CombatZoneEffectResolver.ENEMY_LOG_TURNS, emit_log)
 
-## En unidades de mundo (1 unidad = 12,5 casillas), como el rango que recibe _move_enemy.
-func move_penalty() -> int:
-	return (1 if state.enemy_wet_turns > 0 else 0) + (2 if state.enemy_greasy_turns > 0 else 0)
+## En unidades de mundo, como el rango que recibe _move_enemy. Misma fórmula
+## que el jugador (CombatMovePenalty): antes esta versión hardcodeaba 1/2 y
+## no coincidía con la penalización real del jugador (1,28/1,92).
+func move_penalty() -> float:
+	return CombatMovePenalty.world_units(state.enemy_wet_turns > 0, state.enemy_greasy_turns > 0)
 
 ## Mueve al enemigo hacia target aplicando estados (enredado, congelado,
 ## mojado, engrasado), efectos de zona y la vigilancia del jugador.
@@ -210,7 +197,7 @@ func _move_enemy(target: Vector2, move_range: float, log_key: String, log_args: 
 		emit_log("combat.log.enemy.cannot_move")
 		return
 	var from_pos: Vector2 = board.state.enemy_position()
-	var eff_range := maxf(CombatGrid.CELL, move_range - float(move_penalty()))
+	var eff_range := maxf(CombatGrid.CELL, move_range - move_penalty())
 	board.movement.move_enemy_toward(target, eff_range)
 	apply_zone_effects(from_pos)
 	var ow_dmg: int = state.player_overwatch_damage

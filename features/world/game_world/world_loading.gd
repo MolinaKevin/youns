@@ -44,8 +44,7 @@ func _handle_scene_change(result: Error) -> void:
 		return
 	push_error("WorldLoading: no se pudo abrir GameWorld (%s)." % result)
 	GlobalHUD.set_clock_paused(false)
-	GlobalHUD.set_clock_visible(GlobalHUD.has_persistent_clock_ui())
-	GlobalHUD.set_youns_status_visible(GlobalHUD.has_persistent_care_ui())
+	GlobalHUD.sync_overworld_ui_visibility()
 	SceneNavigator.change_scene_resumed(get_tree(), ScenePathsScript.TITLE_MENU)
 
 

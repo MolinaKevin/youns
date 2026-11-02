@@ -6,24 +6,10 @@ extends RefCounted
 
 static func load_all(directory_path: String) -> Array[LabRecipe]:
 	var recipes: Array[LabRecipe] = []
-	var dir := DirAccess.open(directory_path)
-	if dir == null:
-		return recipes
-	dir.list_dir_begin()
-	var file := dir.get_next()
-	while file != "":
-		if not dir.current_is_dir():
-			var path := ""
-			if file.ends_with(".tres"):
-				path = directory_path + file
-			elif file.ends_with(".tres.remap"):
-				path = directory_path + file.trim_suffix(".remap")
-			if path != "":
-				var recipe := TypedResourceLoader.lab_recipe(path)
-				if recipe != null:
-					recipes.append(recipe)
-		file = dir.get_next()
-	dir.list_dir_end()
+	for path in ResourceCatalogLoader.resource_paths(directory_path):
+		var recipe := TypedResourceLoader.lab_recipe(path)
+		if recipe != null:
+			recipes.append(recipe)
 	return recipes
 
 static func index_by_ingredient(recipes: Array[LabRecipe]) -> Dictionary:

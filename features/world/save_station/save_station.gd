@@ -26,11 +26,11 @@ func _ready() -> void:
 	area.add_child(col)
 	add_child(area)
 	area.body_entered.connect(func(body: Node3D) -> void:
-		if body.name == "Player":
+		if body == PartyManager.player:
 			_near = true
 			_prompt.visible = _dialog == null)
 	area.body_exited.connect(func(body: Node3D) -> void:
-		if body.name == "Player":
+		if body == PartyManager.player:
 			_near = false
 			_prompt.visible = false)
 
@@ -134,18 +134,11 @@ func open_dialog() -> void:
 	message.text = LocalizationState.t("save_station.question")
 	message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(message)
-	var buttons := HBoxContainer.new()
-	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
-	buttons.add_theme_constant_override("separation", 12)
-	column.add_child(buttons)
-	var yes := Button.new()
+	var buttons := ConfirmButtonsRow.build(column, _on_save, close_dialog)
+	var yes: Button = buttons["yes"]
 	yes.text = LocalizationState.t("sleep.yes")
-	yes.pressed.connect(_on_save)
-	buttons.add_child(yes)
-	var no := Button.new()
+	var no: Button = buttons["no"]
 	no.text = LocalizationState.t("sleep.no")
-	no.pressed.connect(close_dialog)
-	buttons.add_child(no)
 	# Esc también cierra.
 	var cancel_catcher := _CancelCatcher.new()
 	cancel_catcher.cancelled.connect(close_dialog)
@@ -155,8 +148,7 @@ func open_dialog() -> void:
 	yes.grab_focus()
 
 func _on_save() -> void:
-	var save_error := GameState.save_player_save()
-	GlobalHUD.show_toast(LocalizationState.t("game.saved") if save_error == OK else LocalizationState.t("game.save_failed"))
+	GameState.save_player_save_and_notify()
 	close_dialog()
 
 func close_dialog() -> void:

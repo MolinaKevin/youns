@@ -26,10 +26,10 @@ func on_clock_changed(hour: float, youn: CharacterBody3D) -> void:
 	if not is_instance_valid(youn) or youn.youn_data == null:
 		return
 	var data: YounData = youn.youn_data
-	var in_sleep := _hour_in_range(hour, data.sleep_hour, data.wake_hour)
+	var in_sleep := HourRange.contains(hour, data.sleep_hour, data.wake_hour)
 	if not in_sleep:
 		_penalty_applied = false
-	elif not _penalty_applied and _hour_in_range(hour, (data.sleep_hour + 1) % 24, data.wake_hour):
+	elif not _penalty_applied and HourRange.contains(hour, (data.sleep_hour + 1) % 24, data.wake_hour):
 		_penalty_applied = true
 		StatsManager.services.care().add_care_mistake(1)
 	if not _tracking_initialized:
@@ -44,7 +44,3 @@ func on_clock_changed(hour: float, youn: CharacterBody3D) -> void:
 		if save != null and save.energia < 20:
 			StatsManager.services.care().set_sick(true)
 	_was_in_sleep_range = in_sleep
-
-
-func _hour_in_range(hour: float, from_h: int, to_h: int) -> bool:
-	return hour >= float(from_h) or hour < float(to_h) if from_h > to_h else hour >= float(from_h) and hour < float(to_h)
