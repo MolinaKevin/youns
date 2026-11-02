@@ -1,8 +1,12 @@
 class_name CombatMapActorStateAdapter
-extends CombatMapActorStatePort
+extends RefCounted
+
+var geometry: CombatMapActorGeometryAdapter
+var targets: CombatMapActorTargetsAdapter
+var configuration: CombatMapActorConfigurationAdapter
 
 var source: CombatMapActors
-func _init(value: CombatMapActors) -> void:
+func _init(value: CombatMapActors = null) -> void:
 	source = value
 	geometry = CombatMapActorGeometryAdapter.new(self)
 	targets = CombatMapActorTargetsAdapter.new(self)

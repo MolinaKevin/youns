@@ -8,11 +8,12 @@ const CombatEffects := preload("res://features/combat/scene/combat_effect.gd")
 ## celda, etc.).
 ##
 ## Vive como hijo de MapArea, que se asigna a sí mismo en `map` antes de
-## agregarlo al árbol (ver MapArea._init()) — lo necesita para las mallas
-## compartidas (make_mat, build_tile_disc, show_disc_with_los,
-## apply_two_surface_mesh, tile_in_obstacle, la
-## constante CLICK_MARGIN) y para prender/apagar los árboles cercanos
-## (is_tree_near, ignite_trees_in_circle, extinguish_trees_in_circle,
+## agregarlo al árbol (ver MapArea._init()) — lo necesita para la constante
+## CLICK_MARGIN, para pedir los MeshInstance3D de cada charco a
+## `map.presentation.puddle` (CombatMapPuddleVisualPort — este sistema no
+## conoce los nodos, solo las zonas), para el disco de preview de colocación
+## (`map.presentation.overlay_port`) y para prender/apagar los árboles
+## cercanos (is_tree_near, ignite_trees_in_circle, extinguish_trees_in_circle,
 ## TREE_VINE_REACH, TREE_VINE_RADIUS_MULT), expuestos por MapArea y sus
 ## colaboradores.
 
@@ -124,7 +125,7 @@ func place_puddle(pos: Vector2, radius: float, effect: String = "wet", turns: in
 		new_excl.append(CombatPuddleZone.id_of(existing))
 
 	zones.append(CombatPuddleZone.make(new_id, pos, r2, effect, turns, damage, false, new_excl))
-	_visuals.append(_make_puddle_visual(pos, r2, effect, _puddle_exclusions(zones.back())))
+	_visuals.append(map.presentation.puddle.show_puddle(pos, r2, effect, _puddle_exclusions(zones.back())))
 	for i in to_rebuild:
 		_rebuild_puddle_visual(i)
 	if effect == CombatEffects.FIRE:
@@ -145,7 +146,7 @@ func tick_puddles() -> void:
 		return
 	for i in range(zones.size() - 1, -1, -1):
 		if CombatPuddleZone.id_of(zones[i]) in removed:
-			_visuals[i].queue_free()
+			map.presentation.puddle.remove_visual(_visuals[i])
 			_visuals.remove_at(i)
 			zones.remove_at(i)
 	for i in zones.size():
@@ -172,7 +173,7 @@ func remove_puddle(zone: Dictionary) -> void:
 			removed.append(CombatPuddleZone.id_of(other))
 	for i in range(zones.size() - 1, -1, -1):
 		if CombatPuddleZone.id_of(zones[i]) in removed:
-			_visuals[i].queue_free()
+			map.presentation.puddle.remove_visual(_visuals[i])
 			_visuals.remove_at(i)
 			zones.remove_at(i)
 	for i in zones.size():
@@ -222,62 +223,11 @@ func _puddle_exclusions(zone: Dictionary) -> Array:
 
 func _rebuild_puddle_visual(i: int) -> void:
 	var zone: Dictionary = zones[i]
-	_visuals[i].queue_free()
-	_visuals[i] = _make_puddle_visual(zone["pos"], zone["radius"], zone["effect"], _puddle_exclusions(zone))
-
-func _make_puddle_visual(pos: Vector2, radius: float, effect: String = "wet", exclusions: Array = []) -> MeshInstance3D:
-	var mi := MeshInstance3D.new()
-	var base := _puddle_base_color(effect)
-	mi.set_meta("fill_mat", map.presentation.overlay_port.make_material(Color(base.r, base.g, base.b, 0.35)))
-	mi.set_meta("bord_mat", map.presentation.overlay_port.make_material(Color(
-		minf(base.r + 0.2, 1.0), minf(base.g + 0.2, 1.0), minf(base.b + 0.2, 1.0), 0.80)))
-	add_child(mi)
-	map.presentation.overlay_port.build_tile_disc(mi, pos, radius, 0.0, 0.013, exclusions)
-	return mi
+	map.presentation.puddle.remove_visual(_visuals[i])
+	_visuals[i] = map.presentation.puddle.show_puddle(zone["pos"], zone["radius"], zone["effect"], _puddle_exclusions(zone))
 
 func _add_puddle_visual_lens(c1: Vector2, r1: float, c2: Vector2, r2: float, effect: String) -> void:
-	var mi := MeshInstance3D.new()
-	var base := _puddle_base_color(effect)
-	mi.set_meta("fill_mat", map.presentation.overlay_port.make_material(Color(base.r, base.g, base.b, 1.0)))
-	mi.set_meta("bord_mat", map.presentation.overlay_port.make_material(Color(
-		minf(base.r + 0.15, 1.0), minf(base.g + 0.15, 1.0), minf(base.b + 0.15, 1.0), 1.0)))
-	add_child(mi)
-	_build_lens_disc(mi, c1, r1, c2, r2, 0.016)
-	_visuals.append(mi)
-
-func _build_lens_disc(mi: MeshInstance3D, c1: Vector2, r1: float, c2: Vector2, r2: float, y: float) -> void:
-	const BORDER := 0.010
-	var cell     := CombatGrid.CELL
-	var half     := cell * 0.5
-	var fill_v   := PackedVector3Array(); var fill_i := PackedInt32Array()
-	var bord_v   := PackedVector3Array(); var bord_i := PackedInt32Array()
-	var min_x := maxf(c1.x - r1, c2.x - r2)
-	var max_x := minf(c1.x + r1, c2.x + r2)
-	var min_y := maxf(c1.y - r1, c2.y - r2)
-	var max_y := minf(c1.y + r1, c2.y + r2)
-	for gx in range(int(floor(min_x / cell)), int(ceil(max_x / cell)) + 1):
-		for gy in range(int(floor(min_y / cell)), int(ceil(max_y / cell)) + 1):
-			var cx := (gx + 0.5) * cell
-			var cy := (gy + 0.5) * cell
-			if Vector2(cx, cy).distance_to(c1) > r1: continue
-			if Vector2(cx, cy).distance_to(c2) > r2: continue
-			var fi := fill_v.size()
-			fill_v.append(Vector3(cx-half+BORDER, y,       cy-half+BORDER))
-			fill_v.append(Vector3(cx+half-BORDER, y,       cy-half+BORDER))
-			fill_v.append(Vector3(cx+half-BORDER, y,       cy+half-BORDER))
-			fill_v.append(Vector3(cx-half+BORDER, y,       cy+half-BORDER))
-			fill_i.append_array([fi, fi+1, fi+2, fi, fi+2, fi+3])
-			for s: Array in [
-				[cx-half, cy-half,        cx+half,        cy-half+BORDER],
-				[cx-half, cy+half-BORDER, cx+half,        cy+half],
-				[cx-half, cy-half+BORDER, cx-half+BORDER, cy+half-BORDER],
-				[cx+half-BORDER, cy-half+BORDER, cx+half, cy+half-BORDER],
-			]:
-				var bi := bord_v.size()
-				bord_v.append(Vector3(s[0], y+0.001, s[1])); bord_v.append(Vector3(s[2], y+0.001, s[1]))
-				bord_v.append(Vector3(s[2], y+0.001, s[3])); bord_v.append(Vector3(s[0], y+0.001, s[3]))
-				bord_i.append_array([bi, bi+1, bi+2, bi, bi+2, bi+3])
-	map.presentation.overlay_port.apply_two_surface_mesh(mi, fill_v, fill_i, bord_v, bord_i)
+	_visuals.append(map.presentation.puddle.show_lens(c1, r1, c2, r2, effect))
 
 func is_segment_in_puddle(from: Vector2, to: Vector2) -> bool:
 	if zones.is_empty():

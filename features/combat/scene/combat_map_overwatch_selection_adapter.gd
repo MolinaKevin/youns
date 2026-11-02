@@ -1,5 +1,5 @@
 class_name CombatMapOverwatchSelectionAdapter
-extends CombatMapOverwatchSelectionPort
+extends RefCounted
 var source
 func _init(value: CombatMapSelectionActionsPort) -> void: source = value
 func start_overwatch_selection(value: float, angle: float) -> void: source.start_overwatch_selection(value, angle)

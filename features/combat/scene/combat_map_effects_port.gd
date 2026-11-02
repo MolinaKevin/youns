@@ -1,9 +1,9 @@
 class_name CombatMapEffectsPort
 extends RefCounted
 
-var traps: CombatMapTrapEffectsPort = CombatMapTrapEffectsPort.new()
-var puddle_port: CombatMapPuddleEffectsPort = CombatMapPuddleEffectsPort.new()
-var delayed: CombatMapDelayedEffectsPort = CombatMapDelayedEffectsPort.new()
+var traps: CombatMapTrapEffectsAdapter
+var puddle_port: CombatMapPuddleEffectsAdapter
+var delayed: CombatMapDelayedEffectsAdapter
 
 
 ## Efectos persistentes o transitorios del tablero que consumen las acciones.

@@ -1,8 +1,12 @@
 class_name CombatMapTargetingOverlayAdapter
-extends CombatMapTargetingOverlayPort
+extends RefCounted
+
+var ranges: CombatMapTargetingRangeAdapter
+var path: CombatMapTargetingPathAdapter
+var actors: CombatMapTargetingActorHighlightsAdapter
 
 var source: CombatMapTargetingPresentation
-func _init(value: CombatMapTargetingPresentation) -> void:
+func _init(value: CombatMapTargetingPresentation = null) -> void:
 	source = value
 	ranges = CombatMapTargetingRangeAdapter.new(self)
 	path = CombatMapTargetingPathAdapter.new(self)

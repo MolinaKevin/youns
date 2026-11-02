@@ -11,12 +11,12 @@ func before_each() -> void:
 	_tree_was_paused = get_tree().paused
 	_clock_was_paused = GameState.clock_paused
 	get_tree().paused = false
-	GameState.set_clock_paused(false)
+	GameState.clock_paused = false
 
 
 func after_each() -> void:
 	get_tree().paused = false
-	GameState.set_clock_paused(_clock_was_paused)
+	GameState.clock_paused = _clock_was_paused
 	get_tree().paused = _tree_was_paused
 
 
@@ -24,7 +24,7 @@ func test_menu_rapido_restaura_las_pausas_que_encontro() -> void:
 	var menu := QuickMenuScene.instantiate()
 	add_child_autofree(menu)
 	get_tree().paused = true
-	GameState.set_clock_paused(true)
+	GameState.clock_paused = true
 
 	menu.open()
 	menu.close()
@@ -38,7 +38,7 @@ func test_estacion_de_guardado_restaura_las_pausas_que_encontro() -> void:
 	station.set_script(SaveStationScript)
 	add_child_autofree(station)
 	get_tree().paused = true
-	GameState.set_clock_paused(true)
+	GameState.clock_paused = true
 
 	station.open_dialog()
 	station.close_dialog()

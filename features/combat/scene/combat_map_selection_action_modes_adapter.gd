@@ -1,6 +1,5 @@
 class_name CombatMapSelectionActionModesAdapter
-extends CombatMapSelectionActionModesPort
-
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func start_module_selection(value: float) -> void: source.start_module_selection(value)

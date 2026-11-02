@@ -10,13 +10,9 @@ func apply(save: PlayerSaveData, context: ItemEffectContext = null) -> void:
 	match status_key:
 		"enfermo":
 			runtime_context(context).set_sick(value)
+		"clock_ui_unlocked":
+			save.clock_ui_unlocked = value
+		"care_ui_unlocked":
+			save.care_ui_unlocked = value
 		_:
-			if _save_has_property(save, status_key):
-				save.set(status_key, value)
-
-
-func _save_has_property(save: PlayerSaveData, property_name: String) -> bool:
-	for property: Dictionary in save.get_property_list():
-		if property.get("name", "") == property_name:
-			return true
-	return false
+			push_warning("ItemEffectStatus: status_key desconocido '%s'." % status_key)

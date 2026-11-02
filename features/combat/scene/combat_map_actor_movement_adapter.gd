@@ -1,8 +1,8 @@
 class_name CombatMapActorMovementAdapter
-extends CombatMapActorMovementPort
+extends RefCounted
 
 var source: CombatMapActors
-func _init(value: CombatMapActors) -> void: source = value
+func _init(value: CombatMapActors = null) -> void: source = value
 func clear_player_waypoints() -> void: source.clear_player_waypoints()
 func add_player_waypoint(waypoint: Vector3) -> void: source.add_player_waypoint(waypoint)
 func has_player_waypoints() -> bool: return source.has_player_waypoints()

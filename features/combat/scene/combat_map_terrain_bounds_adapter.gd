@@ -1,8 +1,8 @@
 class_name CombatMapTerrainBoundsAdapter
-extends CombatMapTerrainBoundsPort
+extends RefCounted
 
 var source: CombatMapTerrain
-func _init(value: CombatMapTerrain) -> void: source = value
+func _init(value: CombatMapTerrain = null) -> void: source = value
 func is_inside_bounds(pos: Vector2, margin: float = 0.0) -> bool: return source.is_inside_bounds(pos, margin)
 func clamp_to_bounds(pos: Vector2, margin: float = 0.0) -> Vector2: return source.clamp_to_bounds(pos, margin)
 func bounds_travel_fraction(from: Vector2, to: Vector2, margin: float) -> float: return source.bounds_travel_fraction(from, to, margin)

@@ -236,7 +236,7 @@ func _fade_guests_away() -> void:
 
 func _finish() -> void:
 	_log("Bienvenida terminada; conservando plano para el tutorial.")
-	GameState.new_game_ceremony_completed = false
+	GameState.set_new_game_ceremony_completed(false)
 	# El jugador sigue exactamente donde quedó. Se restablecen físicas para que
 	# apoye en el suelo, pero la cámara cinematográfica se conserva hasta que el
 	# usuario cierre el tutorial; así no hay un salto visual al spawn antiguo.

@@ -1,6 +1,5 @@
 class_name CombatMapPuddleMutationAdapter
-extends CombatMapPuddleMutationPort
-
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func move_puddle(zone: Dictionary, to: Vector2) -> Dictionary: return source.move_puddle(zone, to)

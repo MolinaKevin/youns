@@ -1,8 +1,8 @@
 class_name CombatMapActorPresentationAdapter
-extends CombatMapActorPresentationPort
+extends RefCounted
 
 var source: CombatMapActors
-func _init(value: CombatMapActors) -> void: source = value
+func _init(value: CombatMapActors = null) -> void: source = value
 func play_player_animation(animation: String) -> void: source.play_player_animation(animation)
 func play_enemy_animation(animation: String) -> void: source.play_enemy_animation(animation)
 func refresh_shadows() -> void: source.refresh_shadows()

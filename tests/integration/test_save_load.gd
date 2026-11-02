@@ -124,13 +124,13 @@ func test_restore_location_pone_al_grupo_en_la_zona_y_posicion() -> void:
 func test_la_investigacion_en_curso_sigue_al_cargar() -> void:
 	GameState.start_new_game()
 	var recipe := LaboratoryState.get_recipe_by_id("producir_datos")
-	LaboratoryState.recipe_progress["producir_datos"] = 0.5
+	LaboratoryState.set_paused_progress("producir_datos", 0.5)
 	LaboratoryState.activate_recipe(recipe)
-	assert_eq(LaboratoryState.active_recipe_id, "producir_datos")
+	assert_eq(LaboratoryState.active_recipe(), "producir_datos")
 	GameState.save_player_save()
 	LaboratoryState.pause_active_recipe()
-	LaboratoryState.recipe_progress.clear()
+	LaboratoryState.clear_all_paused_progress()
 	GameState.save_service.player_save = PlayerSaveData.new()
 	assert_true(GameState.load_game())
-	assert_eq(LaboratoryState.active_recipe_id, "producir_datos")
+	assert_eq(LaboratoryState.active_recipe(), "producir_datos")
 	assert_gt(LaboratoryState.get_current_progress("producir_datos"), 0.45)

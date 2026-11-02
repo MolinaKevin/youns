@@ -1,6 +1,5 @@
 class_name CombatMapSceneActorsAdapter
-extends CombatMapSceneActorsPort
-
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func setup_actors() -> void: source.setup_actors()

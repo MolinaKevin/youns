@@ -15,13 +15,8 @@ func enter_tree() -> void:
 		combat_map.setup_biome(GameState.world_combat.biome)
 
 func ready_environment() -> void:
-	GlobalHUD.set_clock_visible(false)
-	GlobalHUD.set_clock_paused(true)
-	GlobalHUD.set_youns_status_visible(false)
+	ModalScreenContext.enter_fullscreen(ModalScreenHost.from_runtime())
 	GlobalHUD.set_debug_stats_visible(false)
-	ZoneManager.set_world_visible(false)
-	PartyManager.set_party_visible(false)
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var cam: Camera3D = host.get_node("CombatWorld/Camera3D")
 	cam.look_at_from_position(Vector3(-5.0, 18.0, 39.0), Vector3(15.0, 0.0, 15.0), Vector3.UP)
 	var env := Environment.new()

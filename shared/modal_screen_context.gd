@@ -18,37 +18,27 @@ static func enter_fullscreen(host: ModalScreenHost) -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 ## Overlays que se agregan/sacan de encima del mundo sin cambiar de escena
-## (menú rápido, pausa): guardar el estado previo en enter_overlay() y
-## restaurarlo simétricamente en exit_overlay(), una instancia por overlay.
-var _clock_was_visible := true
-var _status_was_visible := false
-var _clock_was_paused := false
-var _tree_was_paused := false
-var _mouse_was_mode := Input.MOUSE_MODE_CAPTURED
+## (menú rápido, pausa): WorldTransitionLease hace el snapshot/restore real;
+## esto solo lo parametriza con las opciones que un overlay necesita (nunca
+## congela party/cámara ni oculta el mundo, a diferencia de otros usos del
+## lease).
 var _host: ModalScreenHostPort
+var _lease: WorldTransitionLease
 
 
 func _init(host: ModalScreenHostPort) -> void:
 	_host = host
 
-func enter_overlay(node: Node, hide_clock := false, hide_status := false, show_mouse := false) -> void:
-	_clock_was_visible = _host.clock_visible()
-	_status_was_visible = _host.youns_status_visible()
-	_clock_was_paused = _host.clock_paused()
-	_tree_was_paused = node.get_tree().paused
-	_mouse_was_mode = Input.mouse_mode
-	if hide_clock:
-		_host.set_clock_visible(false)
-	_host.set_clock_paused(true)
-	if hide_status:
-		_host.set_youns_status_visible(false)
-	node.get_tree().paused = true
-	if show_mouse:
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+func enter_overlay(_node: Node, hide_clock := false, hide_status := false, show_mouse := false) -> void:
+	_lease = WorldTransitionLease.new(_host, PartyManager, {
+		"freeze_actors": false,
+		"freeze_camera": false,
+		"pause_tree": true,
+		"hide_clock": hide_clock,
+		"hide_status": hide_status,
+		"show_mouse": show_mouse,
+	})
 
-func exit_overlay(node: Node) -> void:
-	_host.set_clock_paused(_clock_was_paused)
-	_host.set_clock_visible(_clock_was_visible)
-	_host.set_youns_status_visible(_status_was_visible)
-	node.get_tree().paused = _tree_was_paused
-	Input.mouse_mode = _mouse_was_mode
+func exit_overlay(_node: Node) -> void:
+	if _lease:
+		_lease.release()

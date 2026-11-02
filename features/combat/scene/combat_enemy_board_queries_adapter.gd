@@ -1,5 +1,5 @@
 class_name CombatEnemyBoardQueriesAdapter
-extends CombatEnemyBoardQueriesPort
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func has_line_of_sight(from: Vector2, to: Vector2) -> bool: return source.has_line_of_sight(from, to)

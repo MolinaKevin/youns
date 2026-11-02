@@ -1,5 +1,9 @@
 class_name CombatMapPuddleEffectsAdapter
-extends CombatMapPuddleEffectsPort
+extends RefCounted
+
+var queries: CombatMapPuddleQueriesAdapter
+var mutation: CombatMapPuddleMutationAdapter
+var zones: CombatMapPuddleZoneEffectsAdapter
 
 var source
 func _init(value: CombatMapEffectsPort) -> void:

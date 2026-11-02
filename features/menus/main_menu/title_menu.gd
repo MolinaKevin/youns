@@ -38,9 +38,7 @@ var _language_selected_index := 0
 var _confirm_open := false
 
 func _ready() -> void:
-	GlobalHUD.set_clock_visible(false)
-	GlobalHUD.set_clock_paused(true)
-	GlobalHUD.set_youns_status_visible(false)
+	ModalScreenContext.enter_fullscreen(ModalScreenHost.from_runtime())
 	spanish_button.pressed.connect(func(): _set_language("es"))
 	english_button.pressed.connect(func(): _set_language("en"))
 	LocalizationState.language_changed.connect(_apply_localized_text)
@@ -130,11 +128,8 @@ func _style_button(button: Button) -> void:
 	button.add_theme_stylebox_override("disabled", disabled)
 
 func _move_selection(delta: int) -> void:
-	# Saltea las opciones deshabilitadas.
-	for i in _buttons.size():
-		_selected_index = wrapi(_selected_index + delta, 0, _buttons.size())
-		if not _buttons[_selected_index].disabled:
-			break
+	_selected_index = MenuNavigation.next_index(_selected_index, delta, _buttons.size(), true,
+		func(i: int) -> bool: return _buttons[i].disabled)
 	_update_selection()
 
 func _update_selection() -> void:
@@ -235,7 +230,7 @@ func _set_language_overlay_visible(shown: bool) -> void:
 		_sync_language_buttons()
 
 func _move_language_selection(delta: int) -> void:
-	_language_selected_index = wrapi(_language_selected_index + delta, 0, _language_options.size())
+	_language_selected_index = MenuNavigation.next_index(_language_selected_index, delta, _language_options.size(), true)
 	_sync_language_buttons()
 
 func _confirm_language_selection() -> void:

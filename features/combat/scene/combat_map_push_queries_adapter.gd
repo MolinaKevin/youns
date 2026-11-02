@@ -1,5 +1,5 @@
 class_name CombatMapPushQueriesAdapter
-extends CombatMapPushQueriesPort
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func is_pos_in_push_cone(pos: Vector2, reach: float) -> bool: return source.is_pos_in_push_cone(pos, reach)

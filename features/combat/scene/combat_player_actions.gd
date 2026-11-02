@@ -203,37 +203,38 @@ func start_range_attack_selection(index: int, card: CardActionLine, range_overri
 	_attack_action.start(index, card, range_override)
 	_current_action = _attack_action
 
+## Arranque común a las acciones cuyo `start(index, card)` no necesita
+## parámetros extra ni valida nada antes: granada, auto-selección, empuje,
+## guardia, charco y hechizos.
+func _start_selection(action: CombatPendingAction, index: int, card: CardActionLine) -> void:
+	action.start(index, card)
+	_current_action = action
+
 func start_grenade_selection(index: int, card: CardActionLine) -> void:
-	_grenade_action.start(index, card)
-	_current_action = _grenade_action
+	_start_selection(_grenade_action, index, card)
 
 func start_trap_selection(index: int, card: CardActionLine, nearby: bool) -> void:
 	_trap_action.start(index, card, nearby)
 	_current_action = _trap_action
 
 func start_self_selection(index: int, card: CardActionLine) -> void:
-	_self_action.start(index, card)
-	_current_action = _self_action
+	_start_selection(_self_action, index, card)
 
 func start_push_selection(index: int, card: CardActionLine) -> void:
-	_push_action.start(index, card)
-	_current_action = _push_action
+	_start_selection(_push_action, index, card)
 
 func start_overwatch_selection(index: int, card: CardActionLine) -> void:
-	_overwatch_action.start(index, card)
-	_current_action = _overwatch_action
+	_start_selection(_overwatch_action, index, card)
 
 func start_puddle_selection(index: int, card: CardActionLine) -> void:
-	_puddle_action.start(index, card)
-	_current_action = _puddle_action
+	_start_selection(_puddle_action, index, card)
 
 func start_rock_jump_selection(index: int, card: CardActionLine) -> void:
 	if _jump_action.start(index, card):
 		_current_action = _jump_action
 
 func _start_spell_selection(index: int, card: CardActionLine) -> void:
-	_spell_action.start(index, card)
-	_current_action = _spell_action
+	_start_selection(_spell_action, index, card)
 
 # ── Map tile selected & confirm popup ─────────────────────────────────────────
 

@@ -10,11 +10,6 @@ signal dialogue_finished
 signal choice_made(index: int)
 
 const CHARACTERS_PER_SECOND := 55.0
-const NAMEPLATE_WIDTH := 360.0
-const NAMEPLATE_INSET := 32.0
-const PORTRAIT_CANVAS_SIZE := Vector2(2400.0, 2400.0)
-const PORTRAIT_FRAME_LEFT_INSET := -36.0
-const PORTRAIT_FRAME_TOP_RATIO := 0.3
 const DEBUG_LAYOUT := false
 
 @onready var _root: Control = $Root
@@ -42,6 +37,7 @@ var _choice_modal: ModalScreenContext
 
 var _choice_menu_logic: DialogueChoiceMenu
 var _toast_notifier: DialogueToast
+var _layout: DialogueLayout
 
 
 func _ready() -> void:
@@ -50,6 +46,7 @@ func _ready() -> void:
 	_choice_modal = ModalScreenContext.new(ModalScreenHost.from_runtime())
 	_choice_menu_logic = DialogueChoiceMenu.new(DialogueChoiceHostAdapterScript.new(self))
 	_toast_notifier = DialogueToast.new(self)
+	_layout = DialogueLayout.new(_root, _dialogue_box, _portrait, _portrait_frame, _speaker_plate, _text_margin)
 
 
 func start(lines: Array[Dictionary], mirrored := false) -> void:
@@ -196,31 +193,20 @@ func advance() -> void:
 func _show_current_line() -> void:
 	var line := _lines[_line_index]
 	var mirrored := bool(line.get("mirrored", false))
-	_reset_layout()
+	_layout.reset()
 	_speaker_label.text = str(line.get("speaker", ""))
 	_speaker_label.visible = not _speaker_label.text.is_empty()
-	_set_mirrored_layout(mirrored)
-	_set_nameplate_side(_mirrored_side(str(line.get("nameplate_side", "left"))) if mirrored else str(line.get("nameplate_side", "left")))
+	_layout.apply_mirrored(mirrored)
+	_layout.set_nameplate_side(_mirrored_side(str(line.get("nameplate_side", "left"))) if mirrored else str(line.get("nameplate_side", "left")))
 	_text_label.text = str(line.get("text", ""))
 
 	var portrait_texture := line.get("portrait") as Texture2D
 	var portrait_position: Vector2 = line.get("portrait_position", Vector2(-145, -70))
 	var portrait_scale: Vector2 = line.get("portrait_scale", Vector2(0.36, 0.36))
-	if mirrored:
-		var normal_left := PORTRAIT_FRAME_LEFT_INSET + portrait_position.x
-		var portrait_width := PORTRAIT_CANVAS_SIZE.x * portrait_scale.x
-		portrait_position.x = _root.size.x - normal_left - portrait_width
-		portrait_position.y = _root.size.y * PORTRAIT_FRAME_TOP_RATIO + portrait_position.y
-	_portrait.texture = portrait_texture
-	_portrait.visible = portrait_texture != null
-	_portrait.flip_h = mirrored
-	_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_portrait.size = PORTRAIT_CANVAS_SIZE
-	_portrait.position = portrait_position
-	_portrait.scale = portrait_scale
+	_layout.apply_portrait(portrait_texture, mirrored, portrait_position, portrait_scale)
 	if DEBUG_LAYOUT and _line_index == 0:
 		if DebugLog.verbose_enabled():
-			call_deferred("_log_layout", _speaker_label.text, mirrored, portrait_position)
+			call_deferred("_log_layout", _speaker_label.text, mirrored, _portrait.position)
 
 	_visible_characters = 0.0
 	_text_label.visible_characters = 0
@@ -230,51 +216,6 @@ func _show_current_line() -> void:
 	if not _typing:
 		_continue_hint.modulate.a = 1.0
 	line_changed.emit(_line_index)
-
-
-func _set_nameplate_side(side: String) -> void:
-	if side == "right":
-		_speaker_plate.anchor_left = 1.0
-		_speaker_plate.anchor_right = 1.0
-		_speaker_plate.offset_left = -NAMEPLATE_WIDTH - NAMEPLATE_INSET
-		_speaker_plate.offset_right = -NAMEPLATE_INSET
-		return
-	_speaker_plate.anchor_left = 0.0
-	_speaker_plate.anchor_right = 0.0
-	_speaker_plate.offset_left = NAMEPLATE_INSET
-	_speaker_plate.offset_right = NAMEPLATE_WIDTH + NAMEPLATE_INSET
-
-
-func _set_mirrored_layout(mirrored: bool) -> void:
-	_dialogue_box.anchor_left = 0.08 if mirrored else 0.22
-	_dialogue_box.anchor_right = 0.78 if mirrored else 0.92
-	if mirrored:
-		_portrait_frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	else:
-		_portrait_frame.anchor_left = 0.0
-		_portrait_frame.anchor_right = 0.37
-		_portrait_frame.offset_left = PORTRAIT_FRAME_LEFT_INSET
-		_portrait_frame.offset_right = 36.0
-	if mirrored:
-		_text_margin.offset_right = -300.0
-		return
-	_text_margin.offset_right = -54.0
-
-
-func _reset_layout() -> void:
-	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_dialogue_box.anchor_top = 0.65
-	_dialogue_box.anchor_bottom = 0.95
-	_dialogue_box.offset_top = 0.0
-	_dialogue_box.offset_bottom = 0.0
-	_portrait_frame.anchor_top = PORTRAIT_FRAME_TOP_RATIO
-	_portrait_frame.anchor_bottom = 1.0
-	_portrait_frame.offset_top = 0.0
-	_portrait_frame.offset_bottom = 0.0
-	_speaker_plate.anchor_top = 0.0
-	_speaker_plate.anchor_bottom = 0.0
-	_speaker_plate.offset_top = -26.0
-	_speaker_plate.offset_bottom = 28.0
 
 
 func _log_layout(speaker: String, mirrored: bool, portrait_position: Vector2) -> void:

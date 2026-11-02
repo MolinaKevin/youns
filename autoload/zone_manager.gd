@@ -244,7 +244,7 @@ func teleport_to_zone_spawn(zone_id: String, spawn_name := "SpawnPoint") -> bool
 	if zone == null or zone.get_node_or_null(NodePath(spawn_name)) == null:
 		return false
 	_set_current_zone(zone_id)
-	PartyManager.next_spawn = spawn_name
+	PartyManager.set_next_spawn(spawn_name)
 	PartyManager.place_at_spawn(zone)
 	refresh_current_zone()
 	return true
@@ -266,10 +266,6 @@ func get_zone_node(zone_id: String) -> Node3D:
 
 func has_loaded_zone(zone_id: String) -> bool:
 	return _streaming.has_loaded_zone(zone_id) if _world_initialized else false
-
-
-func get_loaded_zone_ids() -> Array[String]:
-	return _streaming.loaded_zone_ids() if _world_initialized else []
 
 
 func get_loaded_zone_nodes() -> Array[Node3D]:

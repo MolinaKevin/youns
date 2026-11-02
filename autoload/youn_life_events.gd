@@ -37,7 +37,6 @@ var _evolution_delay: AsyncFlowToken
 var _presentation := LifeEventPresentationHost.from_runtime()
 var _active_evolution: EvolutionScene
 var _active_reincarnation: Node
-var _evolution_saved_environment: Environment
 var _evolution_presentation_active := false
 
 ## Máximo de cacas en el suelo: al pasarlo se borra la más vieja.
@@ -67,7 +66,7 @@ func mark_player_slept() -> void:
 
 
 func _on_clock_changed(hour: float, _day: int) -> void:
-	_sleep_events.on_clock_changed(hour, PartyManager.youn if PartyManager else null)
+	_sleep_events.on_clock_changed(hour, _presentation.youn())
 
 
 # ── Baño ──────────────────────────────────────────────────────────────────────
@@ -77,7 +76,7 @@ func _on_clock_changed(hour: float, _day: int) -> void:
 ## Al agregar una animación: EmotionService.block() al inicio,
 ## EmotionService.unblock() en el callback de fin de animación.
 func _on_bathroom_accident() -> void:
-	var youn := PartyManager.youn
+	var youn := _presentation.youn()
 	if not is_instance_valid(youn):
 		return
 	var poop: Node3D = Poop.new()
@@ -97,9 +96,9 @@ func _on_bathroom_accident() -> void:
 		_poops.pop_front().queue_free()
 
 func _ground_below(pos: Vector3) -> Vector3:
-	var query := PhysicsRayQueryParameters3D.create(pos + Vector3.UP, pos + Vector3.DOWN * 5.0)
-	query.exclude = [PartyManager.youn.get_rid(), PartyManager.player.get_rid()]
-	var hit := PartyManager.youn.get_world_3d().direct_space_state.intersect_ray(query)
+	var youn := _presentation.youn()
+	var hit := GroundRaycast.hit_below(youn.get_world_3d().direct_space_state, pos,
+		1.0, 5.0, [youn.get_rid(), _presentation.player().get_rid()])
 	return hit["position"] if not hit.is_empty() else pos
 
 
@@ -179,7 +178,6 @@ func present_evolution(from_data: YounData, to_data: YounData) -> void:
 	_presentation.freeze_party()
 	_presentation.set_clock_paused(true)
 	_evolution_presentation_active = true
-	_evolution_saved_environment = world_lighting.world_env.environment
 
 	var evo := EVOLUTION_SCENE.instantiate()
 	_active_evolution = evo
@@ -190,34 +188,16 @@ func present_evolution(from_data: YounData, to_data: YounData) -> void:
 	evo.approach_finished.connect(func():
 		if not flow.is_active() or not is_instance_valid(world_lighting):
 			return
-		world_lighting.freeze_transition()
 		_presentation.set_world_visible(false)
 		_presentation.player().visible = false
 		var bubble = _presentation.youn().get_node_or_null("EmotionBubble")
 		if bubble:
 			bubble.freeze()
 		_presentation.hide_hud()
-		world_lighting.sun.light_energy = 4.0
-		world_lighting.sun.light_color = Color(1.0, 0.95, 0.9)
-		world_lighting.sun.shadow_enabled = false
-		world_lighting.fill.light_energy = 2.5
-		world_lighting.fill.light_color = Color(0.85, 0.9, 1.0)
-		var black_env := Environment.new()
-		black_env.background_mode = Environment.BG_COLOR
-		black_env.background_color = world_lighting.world_env.environment.background_color
-		black_env.fog_enabled = false
-		black_env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-		black_env.ambient_light_color = Color(1.0, 1.0, 1.0)
-		black_env.ambient_light_energy = 1.0
-		world_lighting.world_env.environment = black_env
-		var bg_tw := create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
-		bg_tw.tween_property(black_env, "background_color", Color.BLACK, 0.5)
 	)
 	evo.finished.connect(func() -> void:
 		if not flow.is_active() or not is_instance_valid(world_lighting):
 			return
-		world_lighting.world_env.environment = _evolution_saved_environment
-		world_lighting.reapply_current_period()
 		_evolution_presentation_active = false
 		_active_evolution = null
 		var result := StatsManager.services.life().complete_evolution()
@@ -234,7 +214,7 @@ func present_evolution(from_data: YounData, to_data: YounData) -> void:
 		screen.finished.connect(_show_evolution_discovery.bind(result, flow))
 		add_child(screen)
 	)
-	evo.start(from_data, to_data, cam_transform)
+	evo.start(from_data, to_data, cam_transform, world_lighting)
 
 
 func _on_evolution_scene_exiting(evo: EvolutionScene) -> void:
@@ -251,9 +231,6 @@ func _restore_interrupted_evolution() -> void:
 	if not _evolution_presentation_active:
 		return
 	_evolution_presentation_active = false
-	if is_instance_valid(world_lighting):
-		world_lighting.world_env.environment = _evolution_saved_environment
-		world_lighting.reapply_current_period()
 	_presentation.set_world_visible(true)
 	if is_instance_valid(_presentation.player()):
 		_presentation.player().visible = true

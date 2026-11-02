@@ -1,9 +1,13 @@
 class_name CombatMapActors
-extends "res://features/combat/scene/combat_map_actors_port.gd"
+extends RefCounted
 
 ## Fachada inicial del estado físico/visual de los combatientes. Centraliza los
 ## radios que usan navegación, targeting y presentación sin exponerlos como un
 ## detalle de MapArea.
+var presentation: CombatMapActorPresentationAdapter
+var movement: CombatMapActorMovementAdapter
+var state: CombatMapActorStateAdapter
+
 var map: CombatMapArea
 var overlay: CombatMapOverlay
 var renderer: CombatMapRenderer

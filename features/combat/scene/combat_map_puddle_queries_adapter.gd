@@ -1,6 +1,5 @@
 class_name CombatMapPuddleQueriesAdapter
-extends CombatMapPuddleQueriesPort
-
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func puddle_at(pos: Vector2) -> Dictionary: return source.puddle_at(pos)

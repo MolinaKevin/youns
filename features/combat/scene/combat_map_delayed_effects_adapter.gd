@@ -1,6 +1,5 @@
 class_name CombatMapDelayedEffectsAdapter
-extends CombatMapDelayedEffectsPort
-
+extends RefCounted
 var source
 func _init(value: CombatMapEffectsPort) -> void: source = value
 func place_delayed_zone(pos: Vector2, radius: float, damage: int, name: String, rounds: int = 1, effect: String = "", turns: int = 0) -> void: source.place_delayed_zone(pos, radius, damage, name, rounds, effect, turns)

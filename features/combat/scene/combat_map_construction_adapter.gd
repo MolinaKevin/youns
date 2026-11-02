@@ -1,6 +1,5 @@
 class_name CombatMapConstructionAdapter
-extends CombatMapConstructionPort
-
+extends RefCounted
 const CombatObstacleScript := preload("res://features/combat/scene/combat_obstacle.gd")
 
 var terrain: CombatTerrain

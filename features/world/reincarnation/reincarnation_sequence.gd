@@ -111,8 +111,8 @@ func _run() -> void:
 	if not _flow.is_active(): return
 	if by_health:
 		# Las vidas solo se ven acá. Se descuentan al nacer el bebé.
-		var save := PlayerSessionAccess.save()
-		var lives := maxi(0, save.lives - 1) if save != null else 0
+		var life_save := PlayerSessionAccess.save()
+		var lives := maxi(0, life_save.lives - 1) if life_save != null else 0
 		await _msg.message(LocalizationState.t("reincarnation.life_lost"), _msg.hearts(lives, ReincarnationRules.MAX_LIVES))
 		if not _flow.is_active(): return
 

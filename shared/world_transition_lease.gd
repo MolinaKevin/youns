@@ -17,6 +17,7 @@ var _party_state: Dictionary = {}
 var _freeze_actors := true
 var _freeze_camera := true
 var _pause_tree := false
+var _hide_world := false
 var _released := false
 
 
@@ -26,6 +27,7 @@ func _init(hud: ModalScreenHostPort, party: WorldTransitionPartyPort, options: D
 	_freeze_actors = options.get("freeze_actors", true)
 	_freeze_camera = options.get("freeze_camera", true)
 	_pause_tree = options.get("pause_tree", false)
+	_hide_world = options.get("hide_world", false)
 	_clock_was_paused = _hud.clock_paused()
 	_clock_was_visible = _hud.clock_visible()
 	_status_was_visible = _hud.youns_status_visible()
@@ -47,6 +49,8 @@ func _init(hud: ModalScreenHostPort, party: WorldTransitionPartyPort, options: D
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	if _pause_tree and _tree:
 		_tree.paused = true
+	if _hide_world:
+		ZoneManager.set_world_visible(false)
 
 
 func release() -> void:
@@ -61,6 +65,8 @@ func release() -> void:
 		_hud.set_clock_visible(_clock_was_visible)
 		_hud.set_youns_status_visible(_status_was_visible)
 	Input.mouse_mode = _mouse_mode
+	if _hide_world:
+		ZoneManager.set_world_visible(true)
 
 
 func _snapshot_party_state() -> void:

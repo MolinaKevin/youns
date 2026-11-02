@@ -51,7 +51,7 @@ func enter(interior_scene_path: String, spawn_name := "SpawnPoint") -> void:
 
 func exit(return_spawn := "SpawnPoint") -> void:
 	leave_silently()
-	PartyManager.next_spawn = return_spawn
+	PartyManager.set_next_spawn(return_spawn)
 	var zone := _current_zone_node.call() as Node3D
 	if zone != null:
 		PartyManager.place_at_spawn(zone)
@@ -78,5 +78,5 @@ func set_world_visible(visible: bool) -> void:
 func _spawn_in_interior(spawn_name: String) -> void:
 	if not is_inside():
 		return
-	PartyManager.next_spawn = spawn_name
+	PartyManager.set_next_spawn(spawn_name)
 	PartyManager.place_at_spawn(_interior)

@@ -1,6 +1,5 @@
 class_name CombatMapSelectionTerrainModesAdapter
-extends CombatMapSelectionTerrainModesPort
-
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func start_rock_jump_selection(value: float) -> void: source.start_rock_jump_selection(value)

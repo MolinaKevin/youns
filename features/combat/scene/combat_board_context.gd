@@ -8,30 +8,30 @@ signal player_anim_finished
 signal enemy_anim_finished
 signal enemy_reached_target
 
-const WORLD_W := CombatMapStatePort.WORLD_W
-const WORLD_H := CombatMapStatePort.WORLD_H
-const MIN_SEPARATION := CombatMapStatePort.MIN_SEPARATION
-const CLICK_MARGIN := CombatMapStatePort.CLICK_MARGIN
+const WORLD_W := CombatMapStateAdapter.WORLD_W
+const WORLD_H := CombatMapStateAdapter.WORLD_H
+const MIN_SEPARATION := CombatMapStateAdapter.MIN_SEPARATION
+const CLICK_MARGIN := CombatMapStateAdapter.CLICK_MARGIN
 
-var queries: CombatMapQueriesPort
-var actors: CombatMapActorsPort
+var queries: CombatMapQueries
+var actors: CombatMapActors
 var selection: CombatMapSelectionPort
 var placement: CombatMapPlacementPort
 var effects: CombatMapEffectsPort
 var obstacles: CombatMapObstaclePort
 var push: CombatMapPushPort
-var presentation: CombatMapPresentationPort
+var presentation: CombatMapPresentation
 var movement: CombatMapMovementPort
 var terrain: CombatMapTerrainPort
 ## Estado espacial explícito del tablero. Los consumidores nuevos deberían
 ## consultarlo directamente en vez de depender de aliases de posición.
-var state: CombatMapStatePort
+var state: CombatMapStateAdapter
 
-func _init(p_state: CombatMapStatePort, p_queries: CombatMapQueriesPort,
-		p_actors: CombatMapActorsPort, p_selection: CombatMapSelectionPort,
+func _init(p_state: CombatMapStateAdapter, p_queries: CombatMapQueries,
+		p_actors: CombatMapActors, p_selection: CombatMapSelectionPort,
 		p_placement: CombatMapPlacementPort, p_effects: CombatMapEffectsPort,
 		p_obstacles: CombatMapObstaclePort, p_push: CombatMapPushPort,
-		p_presentation: CombatMapPresentationPort, p_movement: CombatMapMovementPort,
+		p_presentation: CombatMapPresentation, p_movement: CombatMapMovementPort,
 		p_terrain: CombatMapTerrainPort, signal_source: Object = null) -> void:
 	state = p_state
 	queries = p_queries

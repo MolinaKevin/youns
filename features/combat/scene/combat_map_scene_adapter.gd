@@ -1,5 +1,20 @@
 class_name CombatMapSceneAdapter
-extends CombatMapScenePort
+extends RefCounted
+
+@warning_ignore("unused_signal")
+signal position_selected(pos: Vector2)
+@warning_ignore("unused_signal")
+signal player_knocked_off_tree(burning: bool)
+@warning_ignore("unused_signal")
+signal player_anim_finished
+@warning_ignore("unused_signal")
+signal enemy_anim_finished
+@warning_ignore("unused_signal")
+signal enemy_reached_target
+
+var actors: CombatMapSceneActorsAdapter
+var presentation: CombatMapScenePresentationAdapter
+var input: CombatMapSceneInputAdapter
 
 ## Adaptador de composición visual/entrada para la escena concreta del tablero.
 var _input: CombatMapInput

@@ -9,10 +9,16 @@ const YOUN_PATH := ^"Youn"
 const CAMERA_RIG_PATH := ^"CameraRig"
 
 var player: CharacterBody3D
-var youn: CharacterBody3D
 var camera_rig: Node3D
-var next_spawn := "SpawnPoint"
+var _youn: CharacterBody3D
+var _next_spawn := "SpawnPoint"
 var _initialized := false
+
+## Solo lectura desde afuera; usar set_youn_for_test() en tests que necesiten
+## reemplazarlo por un doble.
+var youn: CharacterBody3D:
+	get:
+		return _youn
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
@@ -40,7 +46,7 @@ func initialize_party() -> void:
 		party.queue_free()
 		return
 	player = members["player"]
-	youn = members["youn"]
+	_youn = members["youn"]
 	camera_rig = members["camera_rig"]
 	# Los actores caminan normalmente sobre suelo y obstáculos. El Youn cambia
 	# temporalmente a sólo suelo cuando necesita recuperar distancia.
@@ -70,18 +76,23 @@ static func resolve_party_members(party: Node) -> Dictionary:
 func is_initialized() -> bool:
 	return _initialized
 
+## Nombre del nodo spawn que usará la próxima place_at_spawn(). Las
+## transiciones lo fijan antes de cargar la escena destino.
+func set_next_spawn(spawn_name: String) -> void:
+	_next_spawn = spawn_name
+
 func place_at_spawn(scene: Node) -> void:
 	if not _initialized:
 		return
-	var spawn := scene.get_node_or_null(next_spawn)
-	next_spawn = "SpawnPoint"
+	var spawn := scene.get_node_or_null(_next_spawn)
+	_next_spawn = "SpawnPoint"
 	if not spawn:
 		return
 	var pos := (spawn as Node3D).global_position
 	player.global_position = pos
 	player.velocity = Vector3.ZERO
-	youn.global_position = pos + Vector3(1.5, 0, 1.5)
-	youn.velocity = Vector3.ZERO
+	_youn.global_position = pos + Vector3(1.5, 0, 1.5)
+	_youn.velocity = Vector3.ZERO
 
 ## Pone al grupo en una posición (el Youn al lado del jugador).
 func place_at(pos: Vector3) -> void:
@@ -89,8 +100,8 @@ func place_at(pos: Vector3) -> void:
 		return
 	player.global_position = pos
 	player.velocity = Vector3.ZERO
-	youn.global_position = pos + Vector3(1.5, 0, 1.5)
-	youn.velocity = Vector3.ZERO
+	_youn.global_position = pos + Vector3(1.5, 0, 1.5)
+	_youn.velocity = Vector3.ZERO
 
 func set_party_visible(visible: bool) -> void:
 	for child in get_children():
@@ -147,3 +158,9 @@ func restore_transition_state(snapshot: Dictionary, restore_actors: bool, restor
 func unfreeze_camera() -> void:
 	if is_instance_valid(camera_rig):
 		camera_rig.enabled = true
+
+# ── Soporte de tests ──────────────────────────────────────────────────────────
+
+## Reemplaza el Youn del grupo por un doble (o por null) para aislar un test.
+func set_youn_for_test(value: CharacterBody3D) -> void:
+	_youn = value

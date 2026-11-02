@@ -1,4 +1,4 @@
-extends SceneTree
+extends "res://tools/bake_tool_base.gd"
 
 ## Ejecutar desde la raíz:
 ## godot --headless --path . --script res://tools/bake_world_boundary.gd
@@ -15,8 +15,7 @@ const WALLS_OUTPUT := "res://assets/maps/world/baked_world_boundary_walls.scn"
 
 
 func _init() -> void:
-	for autoload in root.get_children():
-		autoload.process_mode = Node.PROCESS_MODE_DISABLED
+	_disable_autoloads()
 	call_deferred("_bake")
 
 
@@ -56,12 +55,6 @@ func _bake() -> void:
 		return
 	print("[WorldBoundaryBaker] Listo: %s y %s (%d×%d celdas)." % [GRID_OUTPUT, WALLS_OUTPUT, bake_data.width, bake_data.height])
 	quit()
-
-
-func _set_owner_recursive(node: Node, owner: Node) -> void:
-	for child in node.get_children():
-		child.owner = owner
-		_set_owner_recursive(child, owner)
 
 
 func _fail(boundary: Node, message: String) -> void:

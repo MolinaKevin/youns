@@ -1,7 +1,7 @@
 class_name CombatMapTreeQueriesAdapter
-extends CombatMapTreeQueriesPort
+extends RefCounted
 var source
-func _init(value) -> void: source = value
+func _init(value = null) -> void: source = value
 func tree_at(pos: Vector2) -> Dictionary: return source.tree_at(pos)
 func can_drop_at(pos: Vector2) -> bool: return source.can_drop_at(pos)
 func is_tree_burning(tree: Dictionary) -> bool: return source.is_tree_burning(tree)

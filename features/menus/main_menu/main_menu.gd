@@ -97,10 +97,7 @@ func _input(event: InputEvent) -> void:
 		_activate()
 
 func _move(delta: int) -> void:
-	var next := _selected + delta
-	if next < 0 or next >= _items.size():
-		return
-	_selected = next
+	_selected = MenuNavigation.next_index(_selected, delta, _items.size(), false)
 	_update_selection()
 
 func _update_selection() -> void:

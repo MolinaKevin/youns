@@ -1,5 +1,5 @@
 class_name CombatMapSelectionHoverAdapter
-extends CombatMapSelectionHoverPort
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func update_hover_previews(pos: Vector2) -> void: source.update_hover_previews(pos)

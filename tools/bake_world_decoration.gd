@@ -1,4 +1,4 @@
-extends SceneTree
+extends "res://tools/bake_tool_base.gd"
 
 ## Ejecutar una vez desde la raíz del proyecto:
 ## godot --headless --path . --script res://tools/bake_world_decoration.gd
@@ -17,8 +17,7 @@ func _init() -> void:
 	# Al ejecutar un script de SceneTree Godot instancia los autoloads del
 	# proyecto. El baker construye el mundo de forma aislada, así que ningún
 	# autoload debe comenzar a streamear zonas en el frame de salida.
-	for autoload in root.get_children():
-		autoload.process_mode = Node.PROCESS_MODE_DISABLED
+	_disable_autoloads()
 	call_deferred("_bake")
 
 
@@ -62,12 +61,6 @@ func _bake() -> void:
 	decoration.free()
 	boundary.free()
 	quit()
-
-
-func _set_owner_recursive(node: Node, owner: Node) -> void:
-	for child in node.get_children():
-		child.owner = owner
-		_set_owner_recursive(child, owner)
 
 
 func _remove_runtime_multimeshes(root: Node) -> void:

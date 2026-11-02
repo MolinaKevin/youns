@@ -37,11 +37,7 @@ func _ready() -> void:
 	_log("_ready: aislando la escena.")
 	# ZoneManager y PartyManager son autoloads: pueden conservar nodos y una
 	# cámara de una sesión anterior. La ceremonia debe aislarse por completo.
-	ZoneManager.set_world_visible(false)
-	PartyManager.set_party_visible(false)
-	GlobalHUD.set_clock_visible(false)
-	GlobalHUD.set_clock_paused(true)
-	GlobalHUD.set_youns_status_visible(false)
+	ModalScreenContext.enter_fullscreen(ModalScreenHost.from_runtime())
 	_data = NarrativeYouns.pachamama()
 	if _data == null:
 		push_error("[NewGameCeremony:%s] No se pudo cargar Pachamama." % get_instance_id())
@@ -227,7 +223,7 @@ func _enter_world() -> void:
 		return
 	_entering_world = true
 	_log("_enter_world: preparando entrada al mundo.")
-	GameState.new_game_ceremony_completed = true
+	GameState.set_new_game_ceremony_completed(true)
 	call_deferred("_change_to_world")
 
 

@@ -1,5 +1,5 @@
 class_name CombatMapTrapPlacementAdapter
-extends CombatMapTrapPlacementPort
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func start_trap_placement(reach: float, radius: float = 1.0, preview_los: bool = true) -> void: source.start_trap_placement(reach, radius, preview_los)

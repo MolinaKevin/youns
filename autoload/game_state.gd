@@ -31,14 +31,22 @@ var clock_paused: bool:
 ## Transición efímera mundo → combate → mundo. No forma parte del guardado.
 var world_combat: WorldCombatContext = WorldCombatContext.new()
 var world_entry: WorldEntryContext = WorldEntryContext.new()
-## Evita volver a reproducir la ceremonia al llegar a GameWorld después de la
-## escena independiente de una partida nueva.
-var new_game_ceremony_completed := false
-## Recurso efímero preparado durante la ceremonia de partida nueva. No se
-## guarda: WorldLoading lo consume una sola vez al entrar al exterior.
-var preloaded_game_world: PackedScene
-var preloaded_zone_scenes: Dictionary = {}
 var ui_return: UiReturnContext = UiReturnContext.new()
+
+## Evita volver a reproducir la ceremonia al llegar a GameWorld después de la
+## escena independiente de una partida nueva. Solo lectura desde afuera; usar
+## set_new_game_ceremony_completed().
+var _new_game_ceremony_completed := false
+var new_game_ceremony_completed: bool:
+	get:
+		return _new_game_ceremony_completed
+
+## Recursos efímeros preparados durante la ceremonia de partida nueva. No se
+## guardan: WorldLoading los consume una sola vez al entrar al exterior. Usar
+## set_preloaded_game_world()/take_preloaded_game_world() y
+## set_preloaded_zone_scene()/take_preloaded_zone_scene().
+var _preloaded_game_world: PackedScene
+var _preloaded_zone_scenes: Dictionary = {}
 
 ## Fachada de los datos iniciales: su dueño es SaveService.
 const STARTING_YOUN_PATH := SaveService.STARTING_YOUN_PATH
@@ -120,9 +128,6 @@ func skip_to_next_hour(hour: int, notify: bool = true) -> int:
 func set_clock(day: int, hour: float) -> void:
 	clock.set_time(day, hour)
 
-func set_clock_paused(paused: bool) -> void:
-	clock.set_paused(paused)
-
 func notify_clock_changed() -> void:
 	clock.notify_clock_changed()
 
@@ -137,9 +142,9 @@ func has_saved_game() -> bool:
 func start_new_game() -> void:
 	# La etapa inicial del Youn se guarda con la hora real de esta partida, no
 	# con la hora de la sesión anterior.
-	new_game_ceremony_completed = false
-	preloaded_game_world = null
-	preloaded_zone_scenes.clear()
+	_new_game_ceremony_completed = false
+	_preloaded_game_world = null
+	_preloaded_zone_scenes.clear()
 	clock.set_time(1, 8.0, false)
 	_reset_session()
 	save_service.start_new_session(get_total_hours())
@@ -151,8 +156,8 @@ func load_game() -> bool:
 	var loaded := save_service.load_from_disk()
 	if loaded == null:
 		return false
-	preloaded_game_world = null
-	preloaded_zone_scenes.clear()
+	_preloaded_game_world = null
+	_preloaded_zone_scenes.clear()
 	clock.set_time(loaded.saved_day, loaded.saved_hour, false)
 	_reset_session()
 	save_service.activate_loaded_session(loaded)
@@ -176,9 +181,25 @@ func _reset_session() -> void:
 	discard_pending_ticks()
 
 
+func set_new_game_ceremony_completed(value: bool) -> void:
+	_new_game_ceremony_completed = value
+
+func set_preloaded_game_world(scene: PackedScene) -> void:
+	_preloaded_game_world = scene
+
+## Entrega el mundo precargado durante la ceremonia de partida nueva. Se
+## consume una sola vez para que no quede retenido después de entrar al mundo.
+func take_preloaded_game_world() -> PackedScene:
+	var scene := _preloaded_game_world
+	_preloaded_game_world = null
+	return scene
+
+func set_preloaded_zone_scene(path: String, scene: PackedScene) -> void:
+	_preloaded_zone_scenes[path] = scene
+
 ## Entrega una zona ya leída en segundo plano. La escena se consume una sola
 ## vez para que no quede retenida después de entrar al mundo.
 func take_preloaded_zone_scene(path: String) -> PackedScene:
-	var scene := preloaded_zone_scenes.get(path) as PackedScene
-	preloaded_zone_scenes.erase(path)
+	var scene := _preloaded_zone_scenes.get(path) as PackedScene
+	_preloaded_zone_scenes.erase(path)
 	return scene

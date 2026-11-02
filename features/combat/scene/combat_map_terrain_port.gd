@@ -3,7 +3,7 @@ extends RefCounted
 
 var navigation: CombatMapTerrainNavigationPort
 var geometry: CombatMapTerrainGeometryPort = CombatMapTerrainGeometryPort.new()
-var mutation: CombatMapTerrainMutationPort = CombatMapTerrainMutationPort.new()
+var mutation: CombatMapTerrainMutationAdapter = CombatMapTerrainMutationAdapter.new()
 
 func obstacles() -> Array[Dictionary]: return []
 

@@ -1,5 +1,5 @@
 class_name CombatMapPuddlePlacementAdapter
-extends CombatMapPuddlePlacementPort
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func start_puddle_placement(reach: float, effect: String, radius: float) -> void: source.start_puddle_placement(reach, effect, radius)

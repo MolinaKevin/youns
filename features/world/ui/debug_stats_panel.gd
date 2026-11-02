@@ -226,10 +226,7 @@ func _refresh_position() -> void:
 		return
 	var p: Vector3 = player.global_position
 	_pos_val.text = "Pos %.0f, %.1f, %.0f" % [p.x, p.y, p.z]
-	var boundary = ZoneManager.get("_boundary")
-	var zone := ""
-	if boundary != null and is_instance_valid(boundary):
-		zone = boundary.zone_at(p)
+	var zone := ZoneManager.world_zone_at(p)
 	_zone_val.text = "Zona " + (zone if zone != "" else "-")
 
 

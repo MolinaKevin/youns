@@ -8,8 +8,8 @@ extends CanvasLayer
 signal finished
 
 const BG := Color(0.04, 0.09, 0.14, 0.97)
-const BORDER := Color(0.35, 0.85, 1.0)
-const NEW := Color(1.0, 0.85, 0.35)
+const BORDER := EvolutionPalette.ACCENT
+const NEW := EvolutionPalette.CURRENT
 const KNOWN := Color(0.9, 0.95, 1.0)
 const HIDDEN := Color(0.55, 0.6, 0.65)
 ## Renglón de una condición sin descubrir.

@@ -8,7 +8,6 @@ const PlaceholderModel := preload("res://features/world/party/placeholder_model.
 const ORBIT_DISTANCE := 2.5
 const LOOK_AT_HEIGHT := 0.5
 const Y_FLOAT        := 0.5
-const AsyncFlowToken := preload("res://shared/async_flow_token.gd")
 
 var _camera: Camera3D
 var _youn_holder: Node3D
@@ -16,6 +15,8 @@ var _overlay: ColorRect
 var _current_model: Node3D = null
 var _approach_angle: float = 0.0
 var _flow: AsyncFlowToken
+var _world_lighting: WorldLighting
+var _saved_environment: Environment
 
 
 func _ready() -> void:
@@ -40,7 +41,7 @@ func _build_scene() -> void:
 	canvas.add_child(_overlay)
 
 
-func start(from_data: YounData, to_data: YounData, from_cam_transform: Transform3D) -> void:
+func start(from_data: YounData, to_data: YounData, from_cam_transform: Transform3D, world_lighting: WorldLighting) -> void:
 	if not _flow.is_active():
 		return
 	var youn_node = PartyManager.youn if PartyManager else null
@@ -49,6 +50,7 @@ func start(from_data: YounData, to_data: YounData, from_cam_transform: Transform
 	_approach_angle = 5.0 * PI / 4.0 - youn_r - mesh_off
 	_camera.global_transform = from_cam_transform
 	_camera.current = true
+	_world_lighting = world_lighting
 	_run_sequence(to_data)
 
 
@@ -74,6 +76,9 @@ func _run_sequence(to_data: YounData) -> void:
 
 	# ── 2. Fondo se desvanece a negro — Youn del juego sigue visible ─────────
 	approach_finished.emit()
+	if not _flow.is_active():
+		return
+	_enter_closeup_lighting()
 	await get_tree().create_timer(0.5).timeout
 	if not _flow.is_active():
 		return
@@ -123,7 +128,42 @@ func _run_sequence(to_data: YounData) -> void:
 	if not _flow.is_active():
 		return
 
+	_restore_lighting()
 	finished.emit()
+
+
+## Apaga el sol, pone fondo negro con fundido y frena la transición de
+## iluminación del mundo — restaurado en _restore_lighting() o, si la escena
+## se destruye a mitad de la cinemática, en _exit_tree().
+func _enter_closeup_lighting() -> void:
+	if not is_instance_valid(_world_lighting):
+		return
+	_world_lighting.freeze_transition()
+	_saved_environment = _world_lighting.world_env.environment
+	_world_lighting.sun.light_energy = 4.0
+	_world_lighting.sun.light_color = Color(1.0, 0.95, 0.9)
+	_world_lighting.sun.shadow_enabled = false
+	_world_lighting.fill.light_energy = 2.5
+	_world_lighting.fill.light_color = Color(0.85, 0.9, 1.0)
+	var black_env := Environment.new()
+	black_env.background_mode = Environment.BG_COLOR
+	black_env.background_color = _saved_environment.background_color
+	black_env.fog_enabled = false
+	black_env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	black_env.ambient_light_color = Color(1.0, 1.0, 1.0)
+	black_env.ambient_light_energy = 1.0
+	_world_lighting.world_env.environment = black_env
+	var bg_tw := create_tween().set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN)
+	bg_tw.tween_property(black_env, "background_color", Color.BLACK, 0.5)
+
+
+func _restore_lighting() -> void:
+	if _saved_environment == null:
+		return
+	if is_instance_valid(_world_lighting):
+		_world_lighting.world_env.environment = _saved_environment
+		_world_lighting.reapply_current_period()
+	_saved_environment = null
 
 
 func _orbit(from_angle: float, to_angle: float, duration: float) -> void:
@@ -153,6 +193,9 @@ func _exit_tree() -> void:
 	# detalle visual.
 	if PartyManager:
 		PartyManager.set_party_visible(true)
+	# Idem para la iluminación: si la cinemática ya tomó control manual del
+	# sol/fondo cuando la escena se destruye, no queda tomado para siempre.
+	_restore_lighting()
 
 
 func _load_model(data: YounData) -> void:

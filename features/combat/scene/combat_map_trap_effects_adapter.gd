@@ -1,6 +1,5 @@
 class_name CombatMapTrapEffectsAdapter
-extends CombatMapTrapEffectsPort
-
+extends RefCounted
 var source
 func _init(value: CombatMapEffectsPort) -> void: source = value
 func trigger_traps(pos: Vector2, margin: float = 0.0) -> int: return source.trigger_traps(pos, margin)

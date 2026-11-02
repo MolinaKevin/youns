@@ -1,5 +1,5 @@
 class_name CombatMapGrenadePlacementAdapter
-extends CombatMapGrenadePlacementPort
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func grenade_landing(from: Vector2, target: Vector2, bounce: float) -> Vector2: return source.grenade_landing(from, target, bounce)

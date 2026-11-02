@@ -26,18 +26,18 @@ var player_elevation: int = 0
 var enemy_elevation: int = 0
 ## Fachadas del tablero. `MapArea` las compone con implementaciones reales;
 ## los dobles de prueba extienden estos tipos para conservar el contrato.
-var queries: CombatMapQueriesPort
-var actors: CombatMapActorsPort
+var queries: CombatMapQueries
+var actors: CombatMapActors
 var selection: CombatMapSelectionPort
 var placement: CombatMapPlacementPort
 var effects: CombatMapEffectsPort
 var obstacles: CombatMapObstaclePort
 var push: CombatMapPushPort
-var presentation: CombatMapPresentationPort
+var presentation: CombatMapPresentation
 var movement: CombatMapMovementPort
 var terrain: CombatMapTerrainPort
-var scene: CombatMapScenePort
-var state: CombatMapStatePort
+var scene: CombatMapSceneAdapter
+var state: CombatMapStateAdapter
 ## Puerto de construcción inicial; queda sin tipo nominal para que los recursos
 ## de datos puedan cargarse antes de registrar el script del puerto.
 var construction

@@ -1,9 +1,12 @@
 class_name CombatMapTreeAdapter
-extends CombatMapTreePort
+extends RefCounted
 
 var source: CombatMapObstacleAdapter
+var queries: CombatMapTreeQueriesAdapter
+var movement: CombatMapTreeMovementAdapter
+var effects: CombatMapTreeEffectsAdapter
 
-func _init(value: CombatMapObstacleAdapter) -> void:
+func _init(value: CombatMapObstacleAdapter = null) -> void:
 	source = value
 	queries = CombatMapTreeQueriesAdapter.new(self)
 	movement = CombatMapTreeMovementAdapter.new(self)

@@ -1,5 +1,5 @@
 class_name CombatEnemyBoardEffectsAdapter
-extends CombatEnemyBoardEffectsPort
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func trigger_enemy_traps() -> int: return source.trigger_enemy_traps()

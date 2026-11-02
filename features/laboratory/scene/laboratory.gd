@@ -92,7 +92,7 @@ func _build_location_sidebar() -> void:
 		child.queue_free()
 	location_buttons.clear()
 	var seen: Array = []
-	for recipe in LaboratoryState.all_recipes:
+	for recipe in LaboratoryState.recipes():
 		if not LaboratoryState.is_recipe_unlocked(recipe.id) and not LaboratoryState.is_recipe_completed(recipe.id):
 			continue
 		if recipe.location not in seen:
@@ -145,7 +145,7 @@ func _refresh_columns() -> void:
 
 		column.visible = LaboratoryState.is_column_unlocked(selected_location, action_type)
 
-		var filtered := LaboratoryState.all_recipes.filter(
+		var filtered := LaboratoryState.recipes().filter(
 			func(r): return r.location == selected_location and r.action_type == action_type \
 				and LaboratoryState.is_recipe_unlocked(r.id) \
 				and not LaboratoryState.is_recipe_completed(r.id)

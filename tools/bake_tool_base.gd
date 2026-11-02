@@ -1,0 +1,15 @@
+extends SceneTree
+
+## Base común de los bakers (world_boundary, world_decoration, ...): aislar
+## los autoloads antes de construir el mundo offline, y reparentar un
+## sub-árbol para poder empaquetarlo como escena.
+
+func _disable_autoloads() -> void:
+	for autoload in root.get_children():
+		autoload.process_mode = Node.PROCESS_MODE_DISABLED
+
+
+func _set_owner_recursive(node: Node, owner: Node) -> void:
+	for child in node.get_children():
+		child.owner = owner
+		_set_owner_recursive(child, owner)

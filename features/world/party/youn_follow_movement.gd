@@ -209,13 +209,8 @@ func _teleport_to_player_safely() -> bool:
 func _ground_below(world_position: Vector3) -> Variant:
 	if not host.is_inside_tree():
 		return null
-	var query := PhysicsRayQueryParameters3D.create(
-		world_position + Vector3.UP * 20.0,
-		world_position + Vector3.DOWN * 40.0,
-		CollisionLayers.GROUND
-	)
-	query.exclude = [host.get_rid(), _player.get_rid()]
-	var hit := host.get_world_3d().direct_space_state.intersect_ray(query)
+	var hit := GroundRaycast.hit_below(host.get_world_3d().direct_space_state, world_position,
+		20.0, 40.0, [host.get_rid(), _player.get_rid()], CollisionLayers.GROUND)
 	return hit.get("position")
 
 

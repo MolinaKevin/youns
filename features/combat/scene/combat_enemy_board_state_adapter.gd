@@ -1,5 +1,5 @@
 class_name CombatEnemyBoardStateAdapter
-extends CombatEnemyBoardStatePort
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func player_position() -> Vector2: return source.player_position()

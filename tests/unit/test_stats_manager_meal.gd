@@ -12,13 +12,13 @@ func before_each() -> void:
 	GameState.save_service.player_save = PlayerSaveData.new()
 	StatsManager.emotion_service.active_states.clear()
 	_youn_backup = PartyManager.youn
-	PartyManager.youn = null
+	PartyManager.set_youn_for_test(null)
 
 
 func after_each() -> void:
 	StatsManager.emotion_service.active_states.clear()
 	GameState.save_service.player_save = null
-	PartyManager.youn = _youn_backup
+	PartyManager.set_youn_for_test(_youn_backup)
 
 
 # ── on_meal_eaten ─────────────────────────────────────────────────────────────

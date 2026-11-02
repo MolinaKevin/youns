@@ -8,9 +8,9 @@ extends RefCounted
 var _services: StatsServicesPort
 var _check_status: Callable
 
-func _init(services: StatsServicesPort = null, check_status: Callable = Callable()) -> void:
+func _init(services: StatsServicesPort = null, check_status_callback: Callable = Callable()) -> void:
 	_services = services
-	_check_status = check_status
+	_check_status = check_status_callback
 
 func add_stat(key: String, delta: int) -> void:
 	_services.care().add_stat(key, delta)

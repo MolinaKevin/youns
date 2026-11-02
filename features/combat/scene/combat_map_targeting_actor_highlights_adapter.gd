@@ -1,7 +1,7 @@
 class_name CombatMapTargetingActorHighlightsAdapter
-extends CombatMapTargetingActorHighlightsPort
+extends RefCounted
 var source
-func _init(value) -> void: source = value
+func _init(value = null) -> void: source = value
 func show_enemy_highlight() -> void: source.show_enemy_highlight()
 func clear_enemy_highlight() -> void: source.clear_enemy_highlight()
 func show_self_highlight() -> void: source.show_self_highlight()

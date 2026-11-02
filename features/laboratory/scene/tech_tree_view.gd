@@ -21,7 +21,7 @@ func _build() -> void:
 	for child in get_children():
 		child.queue_free()
 
-	var recipes := LaboratoryState.all_recipes.filter(
+	var recipes := LaboratoryState.recipes().filter(
 		func(r): return LaboratoryState.is_recipe_unlocked(r.id) or LaboratoryState.is_recipe_completed(r.id)
 	)
 	_layout = TechTreeLayoutScript.new(recipes)

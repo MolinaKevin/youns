@@ -14,13 +14,13 @@ func before_each() -> void:
 	GameState.save_service.player_save = PlayerSaveData.new()
 	StatsManager.restore_from_save(GameState.save_service.player_save)
 	_youn_backup = PartyManager.youn
-	PartyManager.youn = null
+	PartyManager.set_youn_for_test(null)
 
 
 func after_each() -> void:
 	GameState.save_service.player_save = _save_backup
 	StatsManager.restore_from_save(_save_backup)
-	PartyManager.youn = _youn_backup
+	PartyManager.set_youn_for_test(_youn_backup)
 	if is_instance_valid(_test_youn):
 		_test_youn.free()
 	_test_youn = null
@@ -61,7 +61,7 @@ func test_decay_respeta_el_multiplicador_del_youn() -> void:
 	data.mult_energia = 2.0
 	_test_youn = Youn3DScript.new()
 	_test_youn.set("youn_data", data)
-	PartyManager.youn = _test_youn
+	PartyManager.set_youn_for_test(_test_youn)
 	GameState.save_service.player_save.energia = 50
 	_run_hours(1)
 	assert_eq(GameState.save_service.player_save.energia, 50 + int(_rate("energia") * data.mult_energia))

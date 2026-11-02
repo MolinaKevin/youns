@@ -3,8 +3,10 @@ extends RefCounted
 
 ## Panel modal con el detalle de un Youn del árbol de evoluciones: sus
 ## inteligencias y sus condiciones de evolución (las conocidas con texto, el
-## resto "???????"). `host` es la pantalla (EvolutionTreeScreen, sin
-## class_name propio) dueña exclusiva de esta instancia.
+## resto "???????"). `host` es la pantalla (EvolutionTreeScreen en producción;
+## los tests pasan un doble liviano que sólo duck-typea PANEL_BG/KNOWN/
+## CURRENT/HIDDEN/Intelligences/is_current_youn/restore_tree_focus — por eso
+## se deja sin tipo, para no obligarlos a extender la pantalla real completa).
 
 var host
 

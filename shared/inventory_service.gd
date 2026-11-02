@@ -83,10 +83,10 @@ static func sanitize_entries(entries: Array[Dictionary], capacity: int, max_stac
 				var room := stack_limit - Entry.count_of(stored)
 				if room <= 0:
 					continue
-				var added := mini(count, room)
-				stored[Entry.COUNT] = Entry.count_of(stored) + added
+				var merged_amount := mini(count, room)
+				stored[Entry.COUNT] = Entry.count_of(stored) + merged_amount
 				sanitized[index] = stored
-				count -= added
+				count -= merged_amount
 				merged = true
 				break
 			if merged:

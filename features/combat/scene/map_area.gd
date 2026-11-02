@@ -38,6 +38,17 @@ const LOG_SEGMENTS := TreeSystem.LOG_SEGMENTS
 func _init() -> void:
 	player_pos = Vector2(3.0, 27.0)
 	enemy_pos = Vector2(27.0, 3.0)
+	_build_facades()
+	_configure_terrain_and_movement()
+	_wire_presentation_and_actors()
+	_wire_terrain_and_combat_systems()
+	_attach_interactive_systems()
+	setup_biome(null)
+
+## Crea las fachadas tipadas (queries/actors/presentation/scene/terrain/
+## construction/movement/selection/placement/effects/obstacles/push) y las
+## asigna a los campos públicos que consumen las acciones de combate.
+func _build_facades() -> void:
 	_queries_impl = CombatMapQueries.new()
 	_actors_impl = CombatMapActors.new()
 	_presentation_impl = CombatMapPresentation.new()
@@ -58,6 +69,10 @@ func _init() -> void:
 	effects = CombatMapEffectsAdapter.new(self, _trap_system, _puddle_system, _spell_system)
 	obstacles = CombatMapObstacleAdapter.new(self, _rock_jump_system, _module_system, _tree_system)
 	push = CombatMapPushAdapter.new(_push_system)
+
+## Overlay/input de la escena y los colaboradores de geometría/movimiento que
+## el resto del wiring va a necesitar (queries, actor mover, hechizos, targeting).
+func _configure_terrain_and_movement() -> void:
 	add_child(_overlay)
 	_input_controller.map = self
 	add_child(_input_controller)
@@ -68,6 +83,11 @@ func _init() -> void:
 	_actor_mover.enemy_reached_target.connect(func(): scene.enemy_reached_target.emit())
 	_spell_system.map = self
 	_targeting.map = self
+
+## Conecta la fachada visual (`_presentation_impl`) y la de actores
+## (`_actors_impl`) con los colaboradores compartidos (overlay, renderer,
+## range overlay) que ya existen en la escena.
+func _wire_presentation_and_actors() -> void:
 	_presentation_impl.map = self
 	_presentation_impl.overlay = _overlay
 	_presentation_impl.renderer = _renderer
@@ -87,12 +107,18 @@ func _init() -> void:
 	_presentation_impl.combat_preview_presentation.renderer = _renderer
 	_presentation_impl.overwatch_presentation.overlay = _overlay
 	_presentation_impl.overwatch_presentation.renderer = _renderer
+	_presentation_impl.puddle_presentation.overlay = _presentation_impl.overlay_port
+	_presentation_impl.puddle_presentation.node = _puddle_system
 	_actors_impl.map = self
 	_actors_impl.overlay = _overlay
 	_actors_impl.renderer = _renderer
 	_actors_impl.terrain = terrain
 	_actors_impl.mover = _actor_mover
 	_actors_impl.trees = _tree_system
+
+## Fachada de terreno, movimiento/push/overwatch y el range overlay que
+## necesita consultar queries y la geometría del terreno.
+func _wire_terrain_and_combat_systems() -> void:
 	terrain.map = self
 	terrain.logic = _terrain
 	terrain.navigation_impl = _navigation
@@ -103,6 +129,11 @@ func _init() -> void:
 	_range_overlay.queries = _queries_impl
 	_range_overlay.renderer = _renderer
 	_actor_presentation.map = self
+
+## Sistemas interactivos del tablero (charcos, trampas, granadas, salto de
+## roca, árboles, módulos): se cuelgan del árbol acá, no en _ready(), para que
+## funcionen incluso en tests que instancian MapArea suelto.
+func _attach_interactive_systems() -> void:
 	_puddle_system.map = self
 	add_child(_puddle_system)
 	_trap_system.map = self
@@ -116,7 +147,6 @@ func _init() -> void:
 	_module_system.map = self
 	_module_system.tree_system = _tree_system
 	add_child(_module_system)
-	setup_biome(null)
 
 # ── World bounds ──────────────────────────────────────────────────────────────
 const DEFAULT_BIOME: BiomeData = preload("res://data/biomes/pradera.tres")

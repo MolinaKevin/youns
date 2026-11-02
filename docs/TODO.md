@@ -152,6 +152,36 @@ Pendientes conocidos, agrupados por sistema. Al resolver uno, borrarlo de acá.
 - [ ] Youn bebé propio (diseño, modelo y mazo inicial) para arrancar el demo
       en bebé.
 
+## Arquitectura y código
+
+Deuda técnica detectada en una auditoría de encapsulación/duplicación/
+responsabilidades (nov. 2026). Resolver de a uno y borrar de acá, como el
+resto del archivo. Orden sugerido: autoloads primero (son los que más se
+tocan desde todos lados), después combate, después el resto.
+
+### Autoloads (estado global)
+
+
+### Otras features
+
+- [ ] **`features/world/zones/auto_decoration.gd`** (441 líneas): ya tiene el
+      índice espacial separado en su propia clase (`_TriIndex`) y secciones
+      claras por comentario; no es tan "mezclado" como parecía. Su test
+      (`test_auto_decoration.gd`) requiere sesión gráfica y se salta en
+      headless, así que cualquier cambio acá necesita verificarse con el
+      editor abierto, no solo con la suite. No tocar sin esa verificación.
+- [ ] **Arquitectura inconsistente entre features**: solo combate usa
+      port/adapter; el resto son scripts monolíticos. Decidir y documentar
+      (en AGENTS.md o docs/) cuál es la convención esperada para no seguir
+      improvisando por feature.
+- [ ] **`item_effect_stat.gd` vs `item_effect_set_stat.gd`**: casi idénticos
+      (delta vs. valor absoluto); podrían fusionarse con un enum `mode`.
+      Prioridad baja.
+- [ ] **Posible duplicación en secuencias cinemáticas**: `new_world_welcome.gd`
+      y `new_game_ceremony.gd` tienen una estructura muy parecida (fade/tween
+      + await de diálogo). Sin confirmar si el contenido interno se repite;
+      revisar antes de extraer un helper.
+
 ## Limpieza
 
 - [ ] **Retirar puentes de compatibilidad** cuando se cumplan los criterios de

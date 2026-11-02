@@ -1,5 +1,5 @@
 class_name CombatMapTargetQueriesAdapter
-extends CombatMapTargetQueriesPort
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func is_click_on_enemy(pos: Vector2) -> bool: return source.is_click_on_enemy(pos)

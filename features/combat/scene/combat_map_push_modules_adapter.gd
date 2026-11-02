@@ -1,5 +1,5 @@
 class_name CombatMapPushModulesAdapter
-extends CombatMapPushModulesPort
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func start_module_push_cone(pos: Vector2, reach: float, angle: float) -> void: source.start_module_push_cone(pos, reach, angle)

@@ -1,9 +1,9 @@
 class_name CombatMapModuleAdapter
-extends CombatMapModulePort
+extends RefCounted
 
 var source: CombatMapObstacleAdapter
 
-func _init(value: CombatMapObstacleAdapter) -> void: source = value
+func _init(value: CombatMapObstacleAdapter = null) -> void: source = value
 func module_at(pos: Vector2) -> Dictionary: return source.module_at(pos)
 func obstacle_gap(obstacle: Dictionary) -> float: return source.obstacle_gap(obstacle)
 func break_modules(obstacle: Dictionary, count: int) -> int: return source.break_modules(obstacle, count)

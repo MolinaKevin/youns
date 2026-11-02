@@ -1,5 +1,5 @@
 class_name CombatMapSelectionModesTargetingAdapter
-extends CombatMapSelectionModesTargetingPort
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func has_active_placement() -> bool: return source.has_active_placement()

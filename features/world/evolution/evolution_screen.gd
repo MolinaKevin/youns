@@ -23,7 +23,7 @@ const CARD_SCENE := preload("res://features/cards/presentation/card_view.tscn")
 const CARD_SIZE := Vector2(195, 293)
 const GRID_CARD_SCALE := 0.6
 const PANEL_BG := Color(0.04, 0.09, 0.14, 0.97)
-const BORDER := Color(0.35, 0.85, 1.0)
+const BORDER := EvolutionPalette.ACCENT
 const LOSS := Color(1.0, 0.45, 0.4)
 
 enum Section { STATS, COLORS, CARDS, ACTIONS }

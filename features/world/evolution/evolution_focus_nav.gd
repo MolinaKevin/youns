@@ -4,8 +4,10 @@ extends RefCounted
 ## Navegación direccional (flechas) entre los botones del árbol de
 ## evoluciones: busca, en la dirección pedida, el botón habilitado más
 ## cercano "hacia adelante" (favorece la distancia en esa dirección sobre el
-## desvío lateral). `host` es la pantalla (EvolutionTreeScreen) dueña
-## exclusiva de esta instancia.
+## desvío lateral). `host` es la pantalla (EvolutionTreeScreen en producción;
+## los tests pasan un doble liviano que sólo duck-typea
+## current_evolution_node()/evolution_node_buttons() — por eso se deja sin
+## tipo, para no obligarlos a extender la pantalla real completa).
 
 var host
 var focused: Button

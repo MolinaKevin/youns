@@ -27,4 +27,12 @@ Los interiores de la mina (`blender/mina.blend`, `blender/mina2.blend`) tienen s
 propia guía: **[docs/minas.md](docs/minas.md)** — warps, spawns, luces, estados
 de la tierra (`*_E0/_E1/_E2`) y lo que falta en Godot.
 
+## Ports y adapters de combate
+
+Antes de agregar un `*_port.gd` nuevo en `features/combat/scene/`, o de
+"completarle" el puerto a un adapter que no lo tiene, leer
+**[docs/combate_ports.md](docs/combate_ports.md)**: el puerto solo se
+justifica si un mock de test lo sustituye de verdad; si no, un solo archivo
+alcanza. Incluye la lista de los que sí deben seguir separados.
+
 Otros documentos: `docs/patrones_modulares.md`, `docs/sistema_movimiento.md`, `docs/TODO.md`.

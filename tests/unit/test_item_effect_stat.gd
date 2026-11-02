@@ -20,25 +20,26 @@ func before_each() -> void:
 	save = PlayerSaveData.new()
 	GameState.save_service.player_save = save
 	_youn_backup = PartyManager.youn
-	PartyManager.youn = null
+	PartyManager.set_youn_for_test(null)
 
 
 func after_each() -> void:
 	GameState.save_service.player_save = null
-	PartyManager.youn = _youn_backup
+	PartyManager.set_youn_for_test(_youn_backup)
 
 
 func _make_stat_effect(key: String, delta: float) -> ItemEffectStat:
 	var e := ItemEffectStat.new()
 	e.stat_key = key
-	e.delta = delta
+	e.amount = delta
 	return e
 
 
-func _make_set_effect(key: String, value: float) -> ItemEffectSetStat:
-	var e := ItemEffectSetStat.new()
+func _make_set_effect(key: String, value: float) -> ItemEffectStat:
+	var e := ItemEffectStat.new()
 	e.stat_key = key
-	e.value = value
+	e.mode = ItemEffectStat.Mode.SET
+	e.amount = value
 	return e
 
 
@@ -80,7 +81,7 @@ func test_stat_key_inexistente_no_crashea() -> void:
 	assert_eq(save.salud, 70)
 
 
-# ── ItemEffectSetStat ─────────────────────────────────────────────────────────
+# ── ItemEffectStat (mode = SET) ───────────────────────────────────────────────
 
 func test_set_stat_pone_el_valor_exacto() -> void:
 	save.energia = 20

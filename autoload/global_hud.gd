@@ -36,7 +36,7 @@ func set_clock_visible(visible: bool) -> void:
 	clock_visibility_changed.emit(visible)
 
 func set_clock_paused(paused: bool) -> void:
-	GameState.set_clock_paused(paused)
+	GameState.clock_paused = paused
 	clock_pause_changed.emit(paused)
 
 func set_clock_style(style: int) -> void:

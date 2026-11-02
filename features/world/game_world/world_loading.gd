@@ -10,9 +10,7 @@ var _flow: AsyncFlowToken
 
 func _ready() -> void:
 	_flow = AsyncFlowToken.new(self)
-	GlobalHUD.set_clock_visible(false)
-	GlobalHUD.set_clock_paused(true)
-	GlobalHUD.set_youns_status_visible(false)
+	ModalScreenContext.enter_fullscreen(ModalScreenHost.from_runtime())
 	call_deferred("_load_world")
 
 
@@ -32,8 +30,7 @@ func _load_world() -> void:
 	await get_tree().process_frame
 	if not _flow.is_active():
 		return
-	var preloaded_world := GameState.preloaded_game_world
-	GameState.preloaded_game_world = null
+	var preloaded_world := GameState.take_preloaded_game_world()
 	if preloaded_world != null:
 		_log("Total hasta GameWorld (precargado): %d ms." % (Time.get_ticks_msec() - started_at))
 		_handle_scene_change(SceneNavigator.change_packed_scene_resumed(get_tree(), preloaded_world))

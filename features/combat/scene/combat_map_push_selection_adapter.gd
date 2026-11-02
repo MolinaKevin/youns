@@ -1,5 +1,5 @@
 class_name CombatMapPushSelectionAdapter
-extends CombatMapPushSelectionPort
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func start_push_enemy_selection(value: float) -> void: source.start_push_enemy_selection(value)

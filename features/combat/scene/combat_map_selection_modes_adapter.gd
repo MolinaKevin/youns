@@ -1,5 +1,9 @@
 class_name CombatMapSelectionModesAdapter
-extends CombatMapSelectionModesPort
+extends RefCounted
+
+var terrain: CombatMapSelectionTerrainModesAdapter
+var actions: CombatMapSelectionActionModesAdapter
+
 var source
 func _init(value: CombatMapSelectionActionsPort) -> void:
 	source = value

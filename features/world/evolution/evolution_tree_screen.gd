@@ -1,3 +1,4 @@
+class_name EvolutionTreeScreen
 extends Control
 
 ## Árbol de evoluciones: los Youns por etapa (bebé → ultimate). Los descubiertos
@@ -12,10 +13,10 @@ const STAGES := ["bebe", "nino", "adolescente", "campeon", "ultimate"]
 const NODE_SIZE := Vector2(150, 54)
 const BG := Color(0.03, 0.06, 0.09)
 const PANEL_BG := Color(0.05, 0.1, 0.15)
-const KNOWN := Color(0.35, 0.85, 1.0)
+const KNOWN := EvolutionPalette.ACCENT
 const HIDDEN := Color(0.3, 0.33, 0.36)
-const CURRENT := Color(1.0, 0.85, 0.35)
-const LINK := Color(0.35, 0.85, 1.0, 0.5)
+const CURRENT := EvolutionPalette.CURRENT
+const LINK := Color(EvolutionPalette.ACCENT.r, EvolutionPalette.ACCENT.g, EvolutionPalette.ACCENT.b, 0.5)
 
 var _youns: Array[YounData] = []
 var _discovered := {}

@@ -1,6 +1,5 @@
 class_name CombatMapSceneInputAdapter
-extends CombatMapSceneInputPort
-
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func lock_hover_at_last_click() -> void: source.lock_hover_at_last_click()

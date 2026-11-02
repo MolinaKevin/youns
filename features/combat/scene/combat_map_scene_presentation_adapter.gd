@@ -1,6 +1,5 @@
 class_name CombatMapScenePresentationAdapter
-extends CombatMapScenePresentationPort
-
+extends RefCounted
 var source
 func _init(value) -> void: source = value
 func set_status_texts(player_text: String, enemy_text: String) -> void: source.set_status_texts(player_text, enemy_text)
