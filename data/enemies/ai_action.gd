@@ -5,7 +5,19 @@ extends Resource
 ## Todas las conditions deben cumplirse para que la acción sea elegible.
 ## El evaluador elige la acción con mayor score entre las elegibles.
 
-@export var action_type: String = "move_toward"
+## Constantes para comparar action_type sin escribir el string a mano: un typo
+## en TYPE_MELEE_ATTACK es error de compilación, un typo en "melee_attack" no.
+## El campo sigue siendo String (no un enum) para no tener que resavear los
+## .tres de acciones. Mismo criterio que CardActionLine.
+const TYPE_MELEE_ATTACK := "melee_attack"
+const TYPE_RANGE_ATTACK := "range_attack"
+const TYPE_MOVE_TOWARD := "move_toward"
+const TYPE_MOVE_AWAY := "move_away"
+const TYPE_MOVE_TO_LAST_KNOWN := "move_to_last_known"
+const TYPE_BLOCK := "block"
+const TYPE_WARD := "ward"
+
+@export var action_type: String = TYPE_MOVE_TOWARD
 ## Tipos soportados:
 ##   melee_attack      — ataca cuerpo a cuerpo
 ##   range_attack      — ataca a distancia si hay LOS

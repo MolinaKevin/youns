@@ -50,7 +50,7 @@ func _init(hud: ModalScreenHostPort, party: WorldTransitionPartyPort, options: D
 	if _pause_tree and _tree:
 		_tree.paused = true
 	if _hide_world:
-		ZoneManager.set_world_visible(false)
+		_hud.set_world_visible(false)
 
 
 func release() -> void:
@@ -65,8 +65,8 @@ func release() -> void:
 		_hud.set_clock_visible(_clock_was_visible)
 		_hud.set_youns_status_visible(_status_was_visible)
 	Input.mouse_mode = _mouse_mode
-	if _hide_world:
-		ZoneManager.set_world_visible(true)
+	if _hide_world and is_instance_valid(_hud):
+		_hud.set_world_visible(true)
 
 
 func _snapshot_party_state() -> void:

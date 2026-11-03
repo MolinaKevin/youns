@@ -102,10 +102,10 @@ func _toggle_menu() -> void:
 	menu.visible = showing
 	pause_overlay.visible = showing
 	if showing:
-		_menu_modal.enter_overlay(self, true, true, true)
+		_menu_modal.enter_overlay(true, true, true)
 		PartyManager.freeze_camera()
 	else:
-		_menu_modal.exit_overlay(self)
+		_menu_modal.exit_overlay()
 		GlobalHUD.sync_overworld_ui_visibility()
 		PartyManager.unfreeze_camera()
 

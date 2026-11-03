@@ -28,6 +28,7 @@ func _bake() -> void:
 	# El horneado sólo necesita la grilla y las mallas que se guardan. Las
 	# paredes y los MultiMeshes de árboles son runtime-only (las posiciones se
 	# guardan como metadato) y no se crean en este proceso headless.
+	# build(catalog, force_procedural_decoration, build_walls, build_tree_meshes, use_baked_boundary)
 	boundary.build(ZoneCatalogScript.new(), true, false, false, false)
 	var decoration := boundary.get_node_or_null("AutoDecoration") as Node3D
 	if decoration == null:

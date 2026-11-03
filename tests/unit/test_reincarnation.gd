@@ -68,7 +68,7 @@ func test_la_vida_nueva_es_el_bebe_con_su_mazo_y_la_carta_heredada() -> void:
 	ps.enfermo = true
 	var baby: YounData = load(BEBE)
 	var inherited := _inherited()
-	StatsManager.emotion_service.active_states["dying"] = {"hour": 0.0, "stat_value": 100.0}
+	StatsManager.emotion_service.active_states["dying"] = EmotionStateEntry.make(0.0, 100.0)
 	StatsManager.life_stage.complete_reincarnation(baby, inherited)
 
 	assert_eq(ps.current_youn_path, BEBE)

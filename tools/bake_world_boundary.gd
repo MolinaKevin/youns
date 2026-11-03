@@ -23,6 +23,7 @@ func _bake() -> void:
 	print("[WorldBoundaryBaker] Generando grilla y límites horneados…")
 	var boundary := WorldBoundary.new()
 	# Fuerza la ruta fuente: este baker es quien actualiza los artefactos.
+	# build(catalog, force_procedural_decoration, build_walls, build_tree_meshes, use_baked_boundary)
 	boundary.build(ZoneCatalogScript.new(), false, true, false, false)
 	var bake_data := WorldBoundaryBakeDataScript.new()
 	bake_data.from_grid(boundary._grid, WorldBoundaryBakeSignatureScript.current(WorldLayoutScript))

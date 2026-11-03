@@ -58,7 +58,7 @@ func start(lines: Array[Dictionary], mirrored := false) -> void:
 		configured_line["mirrored"] = bool(configured_line.get("mirrored", mirrored))
 		_lines.append(configured_line)
 	_line_index = 0
-	_dialogue_modal.enter_overlay(self)
+	_dialogue_modal.enter_overlay()
 	_root.show()
 	_show_current_line()
 
@@ -74,7 +74,7 @@ func finish() -> void:
 	_line_index = -1
 	_typing = false
 	_root.hide()
-	_dialogue_modal.exit_overlay(self)
+	_dialogue_modal.exit_overlay()
 	if was_playing:
 		dialogue_finished.emit()
 
@@ -103,7 +103,7 @@ func ask(options: Array[String]) -> int:
 ## Abre el menú de elección y toma la pausa temporal que le corresponde. La
 ## lógica de botones no manipula nodos ni estado de pausa privados.
 func open_choice_menu() -> void:
-	_choice_modal.enter_overlay(self)
+	_choice_modal.enter_overlay()
 	_root.show()
 	_choice_menu.show()
 
@@ -111,7 +111,7 @@ func open_choice_menu() -> void:
 ## Cierra el menú de elección y restaura sólo la pausa que abrió él mismo.
 func close_choice_menu() -> void:
 	_choice_menu.hide()
-	_choice_modal.exit_overlay(self)
+	_choice_modal.exit_overlay()
 	if not is_playing():
 		_root.hide()
 

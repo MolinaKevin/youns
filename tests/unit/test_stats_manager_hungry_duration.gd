@@ -9,7 +9,7 @@ func before_each() -> void:
 	GameState.current_day = 1
 	GameState.time_of_day_hours = 0.0
 	StatsManager.emotion_service.active_states.clear()
-	StatsManager.emotion_service.active_states["hungry"] = {"hour": ACTIVATION_HOUR, "stat_value": 100.0}
+	StatsManager.emotion_service.active_states["hungry"] = EmotionStateEntry.make(ACTIVATION_HOUR, 100.0)
 
 
 func after_each() -> void:

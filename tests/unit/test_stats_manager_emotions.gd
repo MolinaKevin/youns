@@ -18,7 +18,7 @@ func after_each() -> void:
 
 func test_hungry_activo_bloquea_bathroom_en_evaluacion() -> void:
 	GameState.save_service.player_save.ganas_bano = 100
-	StatsManager.emotion_service.active_states["hungry"] = {"hour": 0.0, "stat_value": 100.0}
+	StatsManager.emotion_service.active_states["hungry"] = EmotionStateEntry.make(0.0, 100.0)
 
 	StatsManager.emotion_service.evaluate_rules()
 
@@ -27,7 +27,7 @@ func test_hungry_activo_bloquea_bathroom_en_evaluacion() -> void:
 
 func test_bathroom_activo_bloquea_hungry_en_evaluacion() -> void:
 	GameState.save_service.player_save.hambre = 100
-	StatsManager.emotion_service.active_states["bathroom"] = {"hour": 0.0, "stat_value": 100.0}
+	StatsManager.emotion_service.active_states["bathroom"] = EmotionStateEntry.make(0.0, 100.0)
 
 	StatsManager.emotion_service.evaluate_rules()
 
@@ -38,7 +38,7 @@ func test_bathroom_activo_bloquea_hungry_en_evaluacion() -> void:
 
 func test_sad_activo_bloquea_stressed_en_evaluacion() -> void:
 	GameState.save_service.player_save.estres = 100
-	StatsManager.emotion_service.active_states["sad"] = {"hour": 0.0, "stat_value": 0.0}
+	StatsManager.emotion_service.active_states["sad"] = EmotionStateEntry.make(0.0, 0.0)
 
 	StatsManager.emotion_service.evaluate_rules()
 
@@ -47,7 +47,7 @@ func test_sad_activo_bloquea_stressed_en_evaluacion() -> void:
 
 func test_sad_activo_bloquea_bored_en_evaluacion() -> void:
 	GameState.save_service.player_save.aburrimiento = 100
-	StatsManager.emotion_service.active_states["sad"] = {"hour": 0.0, "stat_value": 0.0}
+	StatsManager.emotion_service.active_states["sad"] = EmotionStateEntry.make(0.0, 0.0)
 
 	StatsManager.emotion_service.evaluate_rules()
 
@@ -58,7 +58,7 @@ func test_sad_activo_bloquea_bored_en_evaluacion() -> void:
 
 func test_sick_activo_bloquea_sad_en_evaluacion() -> void:
 	GameState.save_service.player_save.felicidad = 0
-	StatsManager.emotion_service.active_states["sick"] = {"hour": 0.0, "stat_value": 0.0}
+	StatsManager.emotion_service.active_states["sick"] = EmotionStateEntry.make(0.0, 0.0)
 
 	StatsManager.emotion_service.evaluate_rules()
 
@@ -67,7 +67,7 @@ func test_sick_activo_bloquea_sad_en_evaluacion() -> void:
 
 func test_sick_activo_bloquea_stressed_en_evaluacion() -> void:
 	GameState.save_service.player_save.estres = 100
-	StatsManager.emotion_service.active_states["sick"] = {"hour": 0.0, "stat_value": 0.0}
+	StatsManager.emotion_service.active_states["sick"] = EmotionStateEntry.make(0.0, 0.0)
 
 	StatsManager.emotion_service.evaluate_rules()
 
@@ -76,7 +76,7 @@ func test_sick_activo_bloquea_stressed_en_evaluacion() -> void:
 
 func test_sick_activo_bloquea_bored_en_evaluacion() -> void:
 	GameState.save_service.player_save.aburrimiento = 100
-	StatsManager.emotion_service.active_states["sick"] = {"hour": 0.0, "stat_value": 0.0}
+	StatsManager.emotion_service.active_states["sick"] = EmotionStateEntry.make(0.0, 0.0)
 
 	StatsManager.emotion_service.evaluate_rules()
 
@@ -88,7 +88,7 @@ func test_sick_activo_bloquea_bored_en_evaluacion() -> void:
 func test_sad_se_va_cuando_la_felicidad_sube() -> void:
 	# felicidad 100: la curva de sad da 0, así que al re-tirar se va seguro
 	GameState.save_service.player_save.felicidad = 100
-	StatsManager.emotion_service.active_states["sad"] = {"hour": 0.0, "stat_value": 0.0}
+	StatsManager.emotion_service.active_states["sad"] = EmotionStateEntry.make(0.0, 0.0)
 
 	StatsManager.emotion_service.evaluate_rules()
 
@@ -97,7 +97,7 @@ func test_sad_se_va_cuando_la_felicidad_sube() -> void:
 
 func test_sad_no_se_va_si_la_felicidad_sigue_igual() -> void:
 	GameState.save_service.player_save.felicidad = 0
-	StatsManager.emotion_service.active_states["sad"] = {"hour": 0.0, "stat_value": 0.0}
+	StatsManager.emotion_service.active_states["sad"] = EmotionStateEntry.make(0.0, 0.0)
 
 	StatsManager.emotion_service.evaluate_rules()
 
@@ -106,7 +106,7 @@ func test_sad_no_se_va_si_la_felicidad_sigue_igual() -> void:
 
 func test_tired_se_va_cuando_la_energia_sube() -> void:
 	GameState.save_service.player_save.energia = 100
-	StatsManager.emotion_service.active_states["tired"] = {"hour": 0.0, "stat_value": 5.0}
+	StatsManager.emotion_service.active_states["tired"] = EmotionStateEntry.make(0.0, 5.0)
 
 	StatsManager.emotion_service.evaluate_rules()
 
@@ -115,11 +115,11 @@ func test_tired_se_va_cuando_la_energia_sube() -> void:
 
 func test_hungry_sigue_saliendo_cuando_el_hambre_baja() -> void:
 	GameState.save_service.player_save.hambre = 0
-	StatsManager.emotion_service.active_states["hungry"] = {"hour": 0.0, "stat_value": 100.0}
+	StatsManager.emotion_service.active_states["hungry"] = EmotionStateEntry.make(0.0, 100.0)
 	var hits := 0
 	# la curva de hungry no llega a 0 (3,4%): basta con que salga casi siempre
 	for i in 20:
-		StatsManager.emotion_service.active_states["hungry"] = {"hour": 0.0, "stat_value": 100.0}
+		StatsManager.emotion_service.active_states["hungry"] = EmotionStateEntry.make(0.0, 100.0)
 		StatsManager.emotion_service.evaluate_rules()
 		if not "hungry" in StatsManager.emotion_service.active_states:
 			hits += 1

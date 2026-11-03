@@ -27,11 +27,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			open()
 
 func open() -> void:
-	_modal.enter_overlay(self, true, true)
+	_modal.enter_overlay(true, true)
 	show()
 
 func close() -> void:
-	_modal.exit_overlay(self)
+	_modal.exit_overlay()
 	hide()
 
 func _on_deck() -> void:

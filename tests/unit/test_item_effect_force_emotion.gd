@@ -40,7 +40,7 @@ func test_agrega_la_emocion_al_active_states() -> void:
 
 
 func test_no_limpia_otras_emociones_activas() -> void:
-	StatsManager.emotion_service.active_states["hungry"] = {"hour": 0.0, "stat_value": 100.0}
+	StatsManager.emotion_service.active_states["hungry"] = EmotionStateEntry.make(0.0, 100.0)
 	_make_effect("sick").apply(save)
 	assert_true("hungry" in StatsManager.emotion_service.active_states)
 	assert_true("sick" in StatsManager.emotion_service.active_states)
@@ -58,7 +58,7 @@ func test_guard_emotion_name_vacio_no_agrega_nada() -> void:
 
 
 func test_no_sobreescribe_emocion_ya_activa() -> void:
-	StatsManager.emotion_service.active_states["hungry"] = {"hour": 5.0, "stat_value": 50.0}
+	StatsManager.emotion_service.active_states["hungry"] = EmotionStateEntry.make(5.0, 50.0)
 	_make_effect("hungry").apply(save)
 	assert_eq(StatsManager.emotion_service.active_states["hungry"]["hour"], 5.0)
 

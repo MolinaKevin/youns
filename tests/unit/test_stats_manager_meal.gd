@@ -34,7 +34,7 @@ func test_meal_eaten_no_toca_hambre_ni_ganas_bano() -> void:
 
 
 func test_meal_eaten_limpia_emocion_hungry() -> void:
-	StatsManager.emotion_service.active_states["hungry"] = {"hour": 0.0, "stat_value": 100.0}
+	StatsManager.emotion_service.active_states["hungry"] = EmotionStateEntry.make(0.0, 100.0)
 	StatsManager.care_service.on_meal_eaten()
 	assert_false("hungry" in StatsManager.emotion_service.active_states)
 
@@ -193,7 +193,7 @@ func test_efecto_meal_baja_el_hambre_lo_que_llena() -> void:
 
 
 func test_efecto_meal_limpia_emocion_hungry() -> void:
-	StatsManager.emotion_service.active_states["hungry"] = {"hour": 0.0, "stat_value": 100.0}
+	StatsManager.emotion_service.active_states["hungry"] = EmotionStateEntry.make(0.0, 100.0)
 	ItemEffectMeal.new().apply(GameState.save_service.player_save)
 	assert_false("hungry" in StatsManager.emotion_service.active_states)
 

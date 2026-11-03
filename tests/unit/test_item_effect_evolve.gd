@@ -74,8 +74,8 @@ func test_evolve_nguruvilu_guarda_su_propio_target_en_active_states() -> void:
 
 
 func test_evolve_limpia_emociones_previas() -> void:
-	StatsManager.emotion_service.active_states["happy"] = {"hour": 0.0, "stat_value": 100.0}
-	StatsManager.emotion_service.active_states["tired"] = {"hour": 0.0, "stat_value": 50.0}
+	StatsManager.emotion_service.active_states["happy"] = EmotionStateEntry.make(0.0, 100.0)
+	StatsManager.emotion_service.active_states["tired"] = EmotionStateEntry.make(0.0, 50.0)
 	var effect := ItemEffectEvolve.new()
 	effect.youn_data_path = "res://data/youns/newen.tres"
 	effect.apply(save)

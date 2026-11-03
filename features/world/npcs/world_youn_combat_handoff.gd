@@ -34,7 +34,7 @@ func engage() -> void:
 	waiting = true
 	host.process_mode = Node.PROCESS_MODE_ALWAYS
 	PauseMenu.enabled = false
-	_modal.enter_overlay(host)
+	_modal.enter_overlay()
 
 ## true si el evento se consumió (estaba esperando confirmación), haya sido
 ## o no la tecla correcta.
@@ -44,7 +44,7 @@ func handle_input(event: InputEvent) -> bool:
 	if event.is_action_pressed("ui_accept"):
 		waiting = false
 		host.popup_panel.visible = false
-		_modal.exit_overlay(host)
+		_modal.exit_overlay()
 		host.process_mode = Node.PROCESS_MODE_PAUSABLE
 		host.get_viewport().set_input_as_handled()
 		_start_transition()

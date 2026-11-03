@@ -125,7 +125,7 @@ func test_complete_evolution_limpia_pending_evolution_path() -> void:
 
 func test_complete_evolution_limpia_emocion_evolving() -> void:
 	GameState.save_service.player_save.pending_evolution_path = WILDCARD_CAMPEON
-	StatsManager.emotion_service.active_states["evolving"] = {"hour": 0.0, "stat_value": 100.0}
+	StatsManager.emotion_service.active_states["evolving"] = EmotionStateEntry.make(0.0, 100.0)
 	StatsManager.life_stage.complete_evolution()
 	assert_false("evolving" in StatsManager.emotion_service.active_states)
 

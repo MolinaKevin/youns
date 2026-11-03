@@ -24,7 +24,7 @@ func inventory_capacity() -> int:
 
 func inventory_items() -> Array:
 	var save := _save()
-	return save.inventory_items if save else []
+	return save.inventory_items.duplicate() if save else []
 
 
 func inventory_item_at(index: int) -> Dictionary:

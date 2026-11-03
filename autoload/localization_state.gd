@@ -31,31 +31,37 @@ func action_type_name(action_type: String) -> String:
 	return t("lab.action.%s" % action_type)
 
 func card_name(card_id: String, fallback: String = "") -> String:
-	return t("card.name.%s" % card_id) if has_key("card.name.%s" % card_id) else fallback
+	return _localized("card.name", card_id, fallback)
 
 func card_description(card_id: String, fallback: String = "") -> String:
-	return t("card.desc.%s" % card_id) if has_key("card.desc.%s" % card_id) else fallback
+	return _localized("card.desc", card_id, fallback)
 
 func card_type_name(card_type: String) -> String:
-	return t("card_type.%s" % card_type) if has_key("card_type.%s" % card_type) else card_type
+	return _localized("card_type", card_type, card_type)
 
 func recipe_name(recipe_id: String, fallback: String = "") -> String:
-	return t("recipe.name.%s" % recipe_id) if has_key("recipe.name.%s" % recipe_id) else fallback
+	return _localized("recipe.name", recipe_id, fallback)
 
 func recipe_description(recipe_id: String, fallback: String = "") -> String:
-	return t("recipe.desc.%s" % recipe_id) if has_key("recipe.desc.%s" % recipe_id) else fallback
+	return _localized("recipe.desc", recipe_id, fallback)
 
 func item_name(item_id: String, fallback: String = "") -> String:
-	return t("item.name.%s" % item_id) if has_key("item.name.%s" % item_id) else fallback
+	return _localized("item.name", item_id, fallback)
 
 func enemy_name(enemy_id: String, fallback: String = "") -> String:
-	return t("enemy.name.%s" % enemy_id) if has_key("enemy.name.%s" % enemy_id) else fallback
+	return _localized("enemy.name", enemy_id, fallback)
 
 func biome_name(biome_id: String, fallback: String = "") -> String:
-	return t("biome.name.%s" % biome_id) if has_key("biome.name.%s" % biome_id) else fallback
+	return _localized("biome.name", biome_id, fallback)
 
 func youn_stage_name(stage_id: String) -> String:
-	return t("youn.stage.%s" % stage_id) if has_key("youn.stage.%s" % stage_id) else stage_id
+	return _localized("youn.stage", stage_id, stage_id)
+
+## Busca "<prefix>.<id>" y cae a `fallback` si no existe la clave. Antes cada
+## *_name()/*_description() repetía esta misma forma con su propio prefijo.
+func _localized(prefix: String, id: String, fallback: String) -> String:
+	var key := "%s.%s" % [prefix, id]
+	return t(key) if has_key(key) else fallback
 
 func t(key: String, args: Array = []) -> String:
 	var text: String = _get_text_for_key(key)

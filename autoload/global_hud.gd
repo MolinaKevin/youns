@@ -67,13 +67,20 @@ func notify_youns_status_changed() -> void:
 		return
 	youns_status_changed.emit(save.discipline, save.care_mistakes)
 
+## CanvasLayer de overlay global (nombre + capa + PROCESS_MODE_ALWAYS +
+## agregado diferido a root): antes se repetía igual en cada _ensure_*_ui.
+func _create_overlay_layer(layer_name: String, layer_index: int) -> CanvasLayer:
+	var canvas_layer := CanvasLayer.new()
+	canvas_layer.name = layer_name
+	canvas_layer.layer = layer_index
+	canvas_layer.process_mode = Node.PROCESS_MODE_ALWAYS
+	get_tree().root.call_deferred("add_child", canvas_layer)
+	return canvas_layer
+
 func _ensure_day_clock_ui() -> void:
 	if is_instance_valid(_day_clock_ui):
 		return
-	_day_clock_ui = CanvasLayer.new()
-	_day_clock_ui.name = "GlobalDayClock"
-	_day_clock_ui.layer = 50
-	_day_clock_ui.process_mode = Node.PROCESS_MODE_ALWAYS
+	_day_clock_ui = _create_overlay_layer("GlobalDayClock", 50)
 
 	var clock := DAY_CLOCK_SCENE.instantiate()
 	clock.offset_left = 16.0
@@ -81,15 +88,11 @@ func _ensure_day_clock_ui() -> void:
 	clock.offset_right = 126.0
 	clock.offset_bottom = 126.0
 	_day_clock_ui.add_child(clock)
-	get_tree().root.call_deferred("add_child", _day_clock_ui)
 
 func _ensure_youns_status_ui() -> void:
 	if is_instance_valid(_youns_status_ui):
 		return
-	_youns_status_ui = CanvasLayer.new()
-	_youns_status_ui.name = "GlobalYounsStatus"
-	_youns_status_ui.layer = 45
-	_youns_status_ui.process_mode = Node.PROCESS_MODE_ALWAYS
+	_youns_status_ui = _create_overlay_layer("GlobalYounsStatus", 45)
 	_youns_status_ui.visible = youns_status_visible
 
 	var panel: Control = YOUNS_STATUS_SCENE.instantiate()
@@ -98,7 +101,6 @@ func _ensure_youns_status_ui() -> void:
 	panel.offset_right = 292.0
 	panel.offset_bottom = 884.0
 	_youns_status_ui.add_child(panel)
-	get_tree().root.call_deferred("add_child", _youns_status_ui)
 
 func show_toast(text: String, duration: float = 2.5) -> void:
 	Dialogue.toast(text, duration)
@@ -110,10 +112,7 @@ func set_debug_stats_visible(visible: bool) -> void:
 func _ensure_debug_stats_ui() -> void:
 	if is_instance_valid(_debug_stats_ui):
 		return
-	_debug_stats_ui = CanvasLayer.new()
-	_debug_stats_ui.name = "GlobalDebugStats"
-	_debug_stats_ui.layer = 80
-	_debug_stats_ui.process_mode = Node.PROCESS_MODE_ALWAYS
+	_debug_stats_ui = _create_overlay_layer("GlobalDebugStats", 80)
 
 	var panel := PanelContainer.new()
 	panel.set_script(DEBUG_STATS_SCRIPT)
@@ -126,4 +125,3 @@ func _ensure_debug_stats_ui() -> void:
 	panel.offset_right = -16.0
 	panel.offset_bottom = 246.0
 	_debug_stats_ui.add_child(panel)
-	get_tree().root.call_deferred("add_child", _debug_stats_ui)

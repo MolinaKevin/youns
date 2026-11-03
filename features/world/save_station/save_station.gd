@@ -144,7 +144,7 @@ func open_dialog() -> void:
 	cancel_catcher.cancelled.connect(close_dialog)
 	_dialog.add_child(cancel_catcher)
 	get_tree().root.add_child(_dialog)
-	_modal.enter_overlay(self, false, false, true)
+	_modal.enter_overlay(false, false, true)
 	yes.grab_focus()
 
 func _on_save() -> void:
@@ -156,7 +156,7 @@ func close_dialog() -> void:
 		return
 	_dialog.queue_free()
 	_dialog = null
-	_modal.exit_overlay(self)
+	_modal.exit_overlay()
 	_prompt.visible = _near
 
 ## Escucha Esc mientras el diálogo está abierto (con el juego pausado).

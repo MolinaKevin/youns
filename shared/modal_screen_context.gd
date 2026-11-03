@@ -29,7 +29,7 @@ var _lease: WorldTransitionLease
 func _init(host: ModalScreenHostPort) -> void:
 	_host = host
 
-func enter_overlay(_node: Node, hide_clock := false, hide_status := false, show_mouse := false) -> void:
+func enter_overlay(hide_clock := false, hide_status := false, show_mouse := false) -> void:
 	_lease = WorldTransitionLease.new(_host, PartyManager, {
 		"freeze_actors": false,
 		"freeze_camera": false,
@@ -39,6 +39,6 @@ func enter_overlay(_node: Node, hide_clock := false, hide_status := false, show_
 		"show_mouse": show_mouse,
 	})
 
-func exit_overlay(_node: Node) -> void:
+func exit_overlay() -> void:
 	if _lease:
 		_lease.release()

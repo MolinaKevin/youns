@@ -142,7 +142,7 @@ func _refresh_selection() -> void:
 func open() -> void:
 	if visible:
 		return
-	_modal.enter_overlay(self)
+	_modal.enter_overlay()
 	_selected = "up"
 	_refresh_selection()
 	show()
@@ -151,7 +151,7 @@ func open() -> void:
 func close() -> void:
 	if not visible:
 		return
-	_modal.exit_overlay(self)
+	_modal.exit_overlay()
 	hide()
 
 

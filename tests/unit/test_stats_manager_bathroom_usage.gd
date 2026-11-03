@@ -10,7 +10,7 @@ var _youn_backup: Node
 func before_each() -> void:
 	GameState.save_service.player_save = PlayerSaveData.new()
 	StatsManager.emotion_service.active_states.clear()
-	StatsManager.emotion_service.active_states["bathroom"] = {"hour": 0.0, "stat_value": 100.0}
+	StatsManager.emotion_service.active_states["bathroom"] = EmotionStateEntry.make(0.0, 100.0)
 	GameState.save_service.player_save.ganas_bano = 80
 	GameState.save_service.player_save.poop_pending = 2.0
 	GameState.save_service.player_save.weight = 20.0
@@ -112,7 +112,7 @@ func _vencer_bathroom() -> void:
 	GameState.current_day = 1
 	GameState.time_of_day_hours = 12.0
 	# activado hace 2 h (dura 1 h)
-	StatsManager.emotion_service.active_states["bathroom"] = {"hour": GameState.get_total_hours() - 2.0, "stat_value": 100.0}
+	StatsManager.emotion_service.active_states["bathroom"] = EmotionStateEntry.make(GameState.get_total_hours() - 2.0, 100.0)
 	StatsManager.emotion_service.check_expirations()
 
 
