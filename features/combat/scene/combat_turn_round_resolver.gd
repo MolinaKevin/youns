@@ -28,7 +28,7 @@ func resolve_event(event: CombatRoundEvent, flow: AsyncFlowToken) -> bool:
 			if event.hit:
 				host.log_message(LocalizationState.t("combat.tree_drop.enemy_hit", [event.damage]))
 				await host._damage.deal_to_enemy(event.damage, false, CombatState.FISICO)
-				if not host.is_flow_active(flow) or host._result_flow.check_combat_end(): return true
+				if not host.is_flow_active(flow) or host.result_flow.check_combat_end(): return true
 			else:
 				host.log_message(LocalizationState.t("combat.tree_drop.descend"))
 			host.player_actions.apply_player_zone_effects(host.board.state.player_position(), host.board.state.player_position())
@@ -40,7 +40,7 @@ func resolve_event(event: CombatRoundEvent, flow: AsyncFlowToken) -> bool:
 		"status_damage":
 			host.log_message(LocalizationState.t(event.damage_log_key, [event.damage]))
 			await host._damage.deal_to_player(event.damage, true, event.damage_type)
-			if not host.is_flow_active(flow) or host._result_flow.check_combat_end(): return true
+			if not host.is_flow_active(flow) or host.result_flow.check_combat_end(): return true
 			log_expired(host.round_resolver.finish_status_event(host.state, event))
 		"status_duration":
 			log_expired(host.round_resolver.finish_status_event(host.state, event))
@@ -58,7 +58,7 @@ func resolve_delayed_zone(event: CombatRoundEvent, flow: AsyncFlowToken) -> bool
 		await host._damage.deal_to_enemy(hit.damage, true, CombatState.MAGICO)
 	else:
 		await host._damage.deal_to_player(hit.damage, true, CombatState.MAGICO)
-	if not host.is_flow_active(flow) or host._result_flow.check_combat_end(): return true
+	if not host.is_flow_active(flow) or host.result_flow.check_combat_end(): return true
 	log_delayed_impact(host.round_resolver.apply_delayed_zone_impact(host.state, event), on_enemy)
 	return false
 

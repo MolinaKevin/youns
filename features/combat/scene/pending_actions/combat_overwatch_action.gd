@@ -22,8 +22,7 @@ func on_tile_selected(pos: Vector2) -> void:
 		host.confirm_popup_show_requested.emit(false)
 
 func execute(_cell: Vector2) -> void:
-	if not _index_valid():
-		clear()
+	if not _require_valid_index():
 		return
 	var played_card: CardActionLine = host.state.turn_actions[index]
 	host.board.selection.actions.overwatch.clear_overwatch_selection()

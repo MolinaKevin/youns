@@ -10,17 +10,13 @@ const PlaceholderModel := preload("res://features/world/party/placeholder_model.
 const DebugLog := preload("res://shared/debug_logging.gd")
 
 var host: Youn3D
-var _anim_bodies: Dictionary = {}   # "idle" -> Node3D, "walk" -> Node3D, etc.
-var _anim_current: String = ""
+var _bodies := YounAnimBodies.new()
 
 func _init(p_host: Youn3D) -> void:
 	host = p_host
 
 func load_model(data: YounData) -> void:
-	for body in _anim_bodies.values():
-		body.queue_free()
-	_anim_bodies.clear()
-	_anim_current = ""
+	_bodies.clear()
 
 	var mat: StandardMaterial3D = YounModelBuilder.material_for(data)
 
@@ -46,37 +42,20 @@ func load_model(data: YounData) -> void:
 		body.visible = false
 		host.add_child(body)
 		YounModelBuilder.apply_material(body, mat)
-		_anim_bodies[key] = body
+		_bodies.register(key, body)
 
 	# Youn sin modelo todavía: uno de primitivas (PlaceholderModel), para que se vea.
-	if _anim_bodies.is_empty():
-		_anim_bodies["idle"] = PlaceholderModel.build(data)
-		_anim_bodies["idle"].visible = false
-		host.add_child(_anim_bodies["idle"])
+	if _bodies.is_empty():
+		var placeholder: Node3D = PlaceholderModel.build(data)
+		placeholder.visible = false
+		host.add_child(placeholder)
+		_bodies.register("idle", placeholder)
 	if DebugLog.verbose_enabled():
-		print("[YounAppearance] Cuerpos cargados: %s" % _anim_bodies.keys())
+		print("[YounAppearance] Cuerpos cargados: %s" % _bodies.keys())
 	switch_anim("idle")
 
 func switch_anim(anim_key: String) -> void:
-	# Si la animación pedida no existe, cae al idle
-	var target := anim_key if anim_key in _anim_bodies else "idle"
-	if _anim_current == target:
-		return
-	if _anim_current in _anim_bodies:
-		_anim_bodies[_anim_current].visible = false
-	_anim_current = target
-	if target in _anim_bodies:
-		var body: Node3D = _anim_bodies[target]
-		body.visible = true
-		var anim_player := Node3DSearch.find_anim_player(body)
-		if anim_player:
-			var list := anim_player.get_animation_list()
-			if not list.is_empty():
-				var anim_name := list[0]
-				var anim := anim_player.get_animation(anim_name)
-				if anim:
-					anim.loop_mode = Animation.LOOP_LINEAR
-				anim_player.play(anim_name)
+	_bodies.switch_to(anim_key)
 
 func current_anim() -> String:
-	return _anim_current
+	return _bodies.current()

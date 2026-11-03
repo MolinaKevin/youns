@@ -43,7 +43,7 @@ func unlock_recipe(recipe_id: String) -> void:
 		return
 	_state.unlock_column(recipe.location, recipe.action_type)
 	if _state.is_loaded:
-		_state.recipe_unlocked.emit(recipe)
+		_state.notify_recipe_unlocked(recipe)
 
 func check_indirect_unlocks(produced_item_id: String) -> void:
 	for recipe in _state.recipes_for_ingredient(produced_item_id):

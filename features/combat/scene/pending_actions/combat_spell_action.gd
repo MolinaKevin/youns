@@ -95,8 +95,7 @@ func on_tile_selected(pos: Vector2) -> void:
 			if card.card_type == CardActionLine.TYPE_BLINK and not host.board.terrain.geometry.collision.can_blink_to(pos):
 				host.emit_log("combat.log.spell.blink_invalid_destination")
 				return
-	host.pending_cell = pos
-	host.confirm_popup_show_requested.emit(false)
+	_request_confirm(pos)
 
 ## Trepar árbol: primero el árbol (pegado a vos), después dónde caer (dentro
 ## del rango alrededor del árbol: un lugar libre o encima del enemigo).
@@ -121,15 +120,11 @@ func _on_tree_climb_click(pos: Vector2) -> void:
 	if not host.board.obstacles.can_drop_at(pos):
 		host.emit_log("combat.log.spell.tree_landing_invalid")
 		return
-	host.pending_cell = pos
-	host.confirm_popup_show_requested.emit(false)
+	_request_confirm(pos)
 
 func execute(cell: Vector2) -> void:
 	var flow := _flow()
-	if not _flow_is_active(flow):
-		return
-	if not _index_valid():
-		clear()
+	if _should_abort_execute(flow):
 		return
 	var played_card: CardActionLine = host.state.turn_actions[index]
 	var saved_dir := dir

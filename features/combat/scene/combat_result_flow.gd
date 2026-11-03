@@ -17,16 +17,16 @@ func check_combat_end() -> bool:
 	if host.state.enemy_hp <= 0:
 		host.hand_section.disable_cards()
 		host.end_turn_button.disabled = true
-		if not host._combat_finished:
-			host._combat_finished = true
+		if not host.is_combat_finished():
+			host.mark_combat_finished()
 			host.log_message(LocalizationState.t("combat.win"))
 			_show_victory.call_deferred(host.current_flow())
 		return true
 	if host.state.player_hp <= 0:
 		host.hand_section.disable_cards()
 		host.end_turn_button.disabled = true
-		if not host._combat_finished:
-			host._combat_finished = true
+		if not host.is_combat_finished():
+			host.mark_combat_finished()
 			host.log_message(LocalizationState.t("combat.lose"))
 			host.board.actors.presentation.play_player_animation("die")
 			_show_defeat.call_deferred(host.current_flow())

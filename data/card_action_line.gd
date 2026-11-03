@@ -155,11 +155,12 @@ func resolved(stats: Dictionary) -> CardActionLine:
 
 
 ## Las cartas existentes usaban card_range en celdas: se redondean al módulo
-## más cercano durante la transición.
+## más cercano durante la transición. A diferencia de primary/cast, mover
+## nunca puede quedar en 0 módulos.
 func movement_modules() -> int:
 	if movement_base_modules > 0:
 		return movement_base_modules
-	return maxi(1, roundi(float(card_range) / float(MOVEMENT_MODULE_CELLS)))
+	return maxi(1, modules_from_cells(card_range))
 
 
 func movement_effective_modules() -> float:
@@ -171,20 +172,16 @@ func movement_range_cells() -> int:
 
 
 func movement_module_label() -> String:
-	return movement_modules_label(movement_effective_modules())
+	return modules_label(movement_effective_modules())
 
 
+## A diferencia de primary/cast, mover nunca puede quedar en 0 casillas.
 static func movement_cells_for_modules(modules: float) -> int:
-	return maxi(1, roundi(modules * MOVEMENT_MODULE_CELLS))
-
-
-static func movement_modules_label(modules: float) -> String:
-	var rounded := snappedf(modules, 0.1)
-	return str(roundi(rounded)) if is_equal_approx(rounded, float(roundi(rounded))) else "%.1f" % rounded
+	return maxi(1, cells_for_modules(modules))
 
 
 static func movement_modules_label_for_cells(cells: int) -> String:
-	return movement_modules_label(float(cells) / float(MOVEMENT_MODULE_CELLS))
+	return modules_label(float(cells) / float(MOVEMENT_MODULE_CELLS))
 
 
 func primary_modules() -> int:

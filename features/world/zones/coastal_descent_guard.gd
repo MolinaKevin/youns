@@ -25,8 +25,3 @@ func _init() -> void:
 		var p := _progress()
 		if p != null:
 			p.coastal_descent_mission_started = true
-
-
-func _progress() -> WorldProgressData:
-	var save := PlayerSessionAccess.save()
-	return save.world_progress if save != null else null

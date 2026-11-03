@@ -53,7 +53,6 @@ func _refresh_deck_panel() -> void:
 	for child in deck_list.get_children():
 		child.queue_free()
 
-	deck_count_label.text = LocalizationState.t("deck.count", [current_deck.size()])
 	_apply_localized_text()
 
 	for i in current_deck.size():

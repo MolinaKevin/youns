@@ -29,8 +29,7 @@ static func build(default_data: YounData, entries: Array, default_mirrored := fa
 
 ## Atajo: arma una sola línea y la manda directo a Dialogue.start().
 static func say(data: YounData, text: String, mirrored := false) -> void:
-	var lines: Array[Dictionary] = [line_for(data, text, mirrored)]
-	Dialogue.start(lines)
+	say_many(data, [text], mirrored)
 
 ## Atajo: arma una conversación de varias líneas y la manda a Dialogue.start().
 static func say_many(default_data: YounData, entries: Array, default_mirrored := false) -> void:

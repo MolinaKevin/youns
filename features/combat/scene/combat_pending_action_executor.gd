@@ -10,29 +10,31 @@ func _init(host) -> void:
 	_host = host
 
 func execute(cell: Vector2) -> void:
-	if _host._current_action == null:
+	var action: CombatPendingAction = _host.current_action()
+	if action == null:
 		return
-	var action: CombatPendingAction = _host._current_action
 	action.execute(cell)
 	if not action.is_active():
-		_host._current_action = null
+		_host.clear_current_action()
 
 func execute_async(cell: Vector2) -> void:
-	if _host._current_action == null:
-		return
 	# Las implementaciones de `execute()` pueden ser corrutinas o inmediatas.
 	# El puerto base es intencionalmente síncrono, por eso se despacha como
 	# Variant para que `await` conserve la corrutina concreta cuando exista.
-	var action: Variant = _host._current_action
+	var action: Variant = _host.current_action()
+	if action == null:
+		return
 	await action.execute(cell)
 	if not action.is_active():
-		_host._current_action = null
+		_host.clear_current_action()
 
 func active_index() -> int:
-	return _host._current_action.index if _host._current_action != null else -1
+	var action: CombatPendingAction = _host.current_action()
+	return action.index if action != null else -1
 
 func active_range_cells() -> int:
-	if _host._current_action == null:
+	var action: CombatPendingAction = _host.current_action()
+	if action == null:
 		return -1
-	var range_value: Variant = _host._current_action.get("range_cells")
+	var range_value: Variant = action.get("range_cells")
 	return int(range_value) if range_value != null else -1

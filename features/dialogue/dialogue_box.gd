@@ -1,6 +1,5 @@
 extends CanvasLayer
 
-const DebugLog := preload("res://shared/debug_logging.gd")
 const DialogueChoiceHostAdapterScript := preload("res://shared/dialogue_choice_host_adapter.gd")
 
 ## Servicio global de diálogo. Cada entrada usa las claves `speaker`, `text`
@@ -10,7 +9,6 @@ signal dialogue_finished
 signal choice_made(index: int)
 
 const CHARACTERS_PER_SECOND := 55.0
-const DEBUG_LAYOUT := false
 
 @onready var _root: Control = $Root
 @onready var _dialogue_box: Control = $Root/DialogueBox
@@ -197,16 +195,13 @@ func _show_current_line() -> void:
 	_speaker_label.text = str(line.get("speaker", ""))
 	_speaker_label.visible = not _speaker_label.text.is_empty()
 	_layout.apply_mirrored(mirrored)
-	_layout.set_nameplate_side(_mirrored_side(str(line.get("nameplate_side", "left"))) if mirrored else str(line.get("nameplate_side", "left")))
+	_layout.set_nameplate_side(str(line.get("nameplate_side", "left")), mirrored)
 	_text_label.text = str(line.get("text", ""))
 
 	var portrait_texture := line.get("portrait") as Texture2D
 	var portrait_position: Vector2 = line.get("portrait_position", Vector2(-145, -70))
 	var portrait_scale: Vector2 = line.get("portrait_scale", Vector2(0.36, 0.36))
 	_layout.apply_portrait(portrait_texture, mirrored, portrait_position, portrait_scale)
-	if DEBUG_LAYOUT and _line_index == 0:
-		if DebugLog.verbose_enabled():
-			call_deferred("_log_layout", _speaker_label.text, mirrored, _portrait.position)
 
 	_visible_characters = 0.0
 	_text_label.visible_characters = 0
@@ -216,33 +211,3 @@ func _show_current_line() -> void:
 	if not _typing:
 		_continue_hint.modulate.a = 1.0
 	line_changed.emit(_line_index)
-
-
-func _log_layout(speaker: String, mirrored: bool, portrait_position: Vector2) -> void:
-	if not DebugLog.verbose_enabled():
-		return
-	var viewport_rect := get_viewport().get_visible_rect()
-	print("[DialogueLayout] speaker=%s mirrored=%s viewport=%s root=(pos=%s size=%s) box=(rect=%s anchors=(%s,%s,%s,%s)) frame=(rect=%s anchors=(%s,%s,%s,%s)) portrait=(pos=%s scale=%s rect=%s)" % [
-		speaker,
-		mirrored,
-		viewport_rect,
-		_root.position,
-		_root.size,
-		_dialogue_box.get_global_rect(),
-		_dialogue_box.anchor_left,
-		_dialogue_box.anchor_top,
-		_dialogue_box.anchor_right,
-		_dialogue_box.anchor_bottom,
-		_portrait_frame.get_global_rect(),
-		_portrait_frame.anchor_left,
-		_portrait_frame.anchor_top,
-		_portrait_frame.anchor_right,
-		_portrait_frame.anchor_bottom,
-		portrait_position,
-		_portrait.scale,
-		_portrait.get_global_rect(),
-	])
-
-
-func _mirrored_side(side: String) -> String:
-	return "left" if side == "right" else "right"

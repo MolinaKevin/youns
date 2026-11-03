@@ -14,12 +14,10 @@ func start(p_index: int, p_card: CardActionLine, nearby: bool) -> void:
 		host.emit_log("combat.log.trap.select_throw", [card.name, card.cast_module_label()])
 
 func on_tile_selected(pos: Vector2) -> void:
-	host.pending_cell = pos
-	host.confirm_popup_show_requested.emit(false)
+	_request_confirm(pos)
 
 func execute(cell: Vector2) -> void:
-	if not _index_valid():
-		clear()
+	if not _require_valid_index():
 		return
 	var played_card: CardActionLine = host.state.turn_actions[index]
 	var is_nearby := played_card.card_type == CardActionLine.TYPE_TRAP_PLACE

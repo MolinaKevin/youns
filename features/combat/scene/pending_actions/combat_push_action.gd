@@ -29,8 +29,7 @@ func on_tile_selected(pos: Vector2) -> void:
 		if not host.board.queries.line_of_sight.has_line_of_sight(host.board.state.player_position(), pos):
 			host.emit_log("combat.log.push.anchor_blocked")
 			return
-		host.pending_cell = pos
-		host.confirm_popup_show_requested.emit(false)
+		_request_confirm(pos)
 		return
 
 	if phase == 0:
@@ -40,8 +39,7 @@ func on_tile_selected(pos: Vector2) -> void:
 		if not host.board.selection.targeting.queries.is_click_on_enemy(pos):
 			return
 		if card.card_type == CardActionLine.TYPE_PULL:
-			host.pending_cell = host.board.state.player_position()
-			host.confirm_popup_show_requested.emit(false)
+			_request_confirm(host.board.state.player_position())
 			return
 		phase = 1
 		host.board.push.selection.start_push_cone(host.w(card.cast_range_cells()))
@@ -50,15 +48,11 @@ func on_tile_selected(pos: Vector2) -> void:
 
 	if not host.board.push.queries.is_pos_in_push_cone(pos, host.w(card.cast_range_cells())):
 		return
-	host.pending_cell = pos
-	host.confirm_popup_show_requested.emit(false)
+	_request_confirm(pos)
 
 func execute(direction_target: Vector2) -> void:
 	var flow := _flow()
-	if not _flow_is_active(flow):
-		return
-	if not _index_valid():
-		clear()
+	if _should_abort_execute(flow):
 		return
 	var played_card: CardActionLine = host.state.turn_actions[index]
 	var push_from: Vector2 = host.board.state.enemy_position()
@@ -98,7 +92,7 @@ func execute(direction_target: Vector2) -> void:
 	if host.state.enemy_hp > 0:
 		host.board.actors.presentation.play_enemy_animation("idle")
 
-	var any_zone: bool = await host._apply_enemy_forced_move(played_card.name, push_from, landing, flow)
+	var any_zone: bool = await host.apply_enemy_forced_move(played_card.name, push_from, landing, flow)
 	if not _flow_is_active(flow):
 		return
 	if not any_zone:

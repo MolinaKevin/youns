@@ -34,7 +34,7 @@ func play_as_move(index: int) -> void:
 	if penalty > 0:
 		host.emit_log("combat.log.player.movement_reduced")
 	host._move_action.configure(index, effective_range)
-	host._current_action = host._move_action
+	host.set_current_action(host._move_action)
 	host.emit_log("combat.log.player.move_mode", [CardActionLine.movement_modules_label_for_cells(effective_range)])
 
 func play_card(index: int) -> void:
@@ -72,7 +72,7 @@ func play_card(index: int) -> void:
 			host.start_push_selection(index, card)
 		CardActionLine.TYPE_BREAK, CardActionLine.TYPE_MODULE_PUSH, CardActionLine.TYPE_BUILD, CardActionLine.TYPE_MODULE_THROW, CardActionLine.TYPE_COLLAPSE:
 			host._module_action.start(index, card)
-			host._current_action = host._module_action
+			host.set_current_action(host._module_action)
 		CardActionLine.TYPE_PUDDLE:
 			host.start_puddle_selection(index, card)
 		CardActionLine.TYPE_OVERWATCH:

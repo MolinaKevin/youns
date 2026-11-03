@@ -289,6 +289,12 @@ func unlock_column(_location: String, action_type: String) -> void:
 func unlock_recipe(recipe_id: String) -> void:
 	_rules.unlock_recipe(recipe_id)
 
+## Lo llama LaboratoryRecipeRules al desbloquear; separado para que el
+## emit() quede escrito en este archivo (si no, el analizador de Godot
+## marca la señal como "nunca usada" porque sólo la emite desde afuera).
+func notify_recipe_unlocked(recipe: LabRecipe) -> void:
+	recipe_unlocked.emit(recipe)
+
 func is_recipe_unlocked(recipe_id: String) -> bool:
 	return _progress.is_unlocked(recipe_id)
 

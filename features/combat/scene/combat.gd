@@ -37,7 +37,7 @@ const Phase = _CombatTurnController.Phase
 const Wild = _CombatTurnController.Wild
 
 @onready var player_stats = $UI/MainVBox/TopBar/PlayerStats
-@onready var ui_root: Control = $UI
+@onready var ui_root: CanvasLayer = $UI
 @onready var move_mode_button = $UI/MainVBox/TopBar/MoveModeButton
 @onready var end_turn_button = $UI/MainVBox/TopBar/EndTurnButton
 @onready var message_log = $UI/MainVBox/MiddleRow/SidePanel/MessageLog
@@ -67,21 +67,23 @@ var enemy_ai
 var deck_manager: CombatDeckManager
 var turn := _CombatTurnController.new()
 var round_resolver := _CombatRoundResolver.new()
-@warning_ignore("unused_private_class_variable")
 var _combat_finished := false
-var _preview_action: CardActionLine = null
+## Sin guion bajo: CombatTurnFlow, CombatRuntimeBootstrap y
+## CombatTurnRoundResolver son colaboradores internos del módulo combate y
+## los leen/escriben de verdad (antes el guion bajo "mentía": Godot los
+## marcaba @warning_ignore("unused_private_class_variable") porque solo veía
+## el archivo donde se declaran).
+var preview_action: CardActionLine = null
 var wildcards_ui := _CombatWildcardsUI.new()
-var _wildcards: CombatWildcards
-@warning_ignore("unused_private_class_variable")
-var _result_flow: CombatResultFlow
+var wildcards: CombatWildcards
+var result_flow: CombatResultFlow
 @warning_ignore("unused_private_class_variable")
 var _damage: CombatDamageResolver
 var _pile_popup: CombatPilePopup
 var _turn_flow: CombatTurnFlow
 var enemy_reveal := _CombatEnemyRevealPresentation.new()
-@warning_ignore("unused_private_class_variable")
-var _player_name := ""
-var _enemy_name := ""
+var player_name := ""
+var enemy_name := ""
 var _preview_tween: Tween = null
 var _flow_token: AsyncFlowToken
 var board: CombatBoardContext
@@ -117,17 +119,17 @@ func _ready() -> void:
 	hand_section.set_title(LocalizationState.t("combat.hand"))
 	hand_section.card_index_selected.connect(_turn_flow.on_hand_card_selected)
 	hand_section.half_selected.connect(_turn_flow.on_hand_half_selected)
-	_wildcards = CombatWildcards.new(self)
+	wildcards = CombatWildcards.new(self)
 	wildcards_ui.setup(hand_section, ui_root, pile_popup, pile_popup_title, pile_popup_grid, {
 		"none": Wild.NONE, "attack": Wild.ATTACK, "move": Wild.MOVE,
 		"keep": Wild.KEEP, "item": Wild.ITEM,
 	})
-	wildcards_ui.wild_toggled.connect(_wildcards.on_toggled)
+	wildcards_ui.wild_toggled.connect(wildcards.on_toggled)
 	wildcards_ui.skip_requested.connect(_turn_flow.on_skip_line_pressed)
 	wildcards_ui.end_turn_requested.connect(_turn_flow.on_end_turn_pressed)
-	wildcards_ui.keep_card_selected.connect(_wildcards.on_pile_card_selected)
-	wildcards_ui.item_selected.connect(_wildcards.use_item)
-	wildcards_ui.item_cancelled.connect(_wildcards.close_item_picker)
+	wildcards_ui.keep_card_selected.connect(wildcards.on_pile_card_selected)
+	wildcards_ui.item_selected.connect(wildcards.use_item)
+	wildcards_ui.item_cancelled.connect(wildcards.close_item_picker)
 	enemy_reveal.setup(ui_root, monster_card_view)
 	plan_zone.slot_clicked.connect(_turn_flow.on_plan_slot_clicked)
 	plan_zone.slot_dropped.connect(_turn_flow.on_plan_slot_dropped)
@@ -143,7 +145,7 @@ func _ready() -> void:
 
 	PauseMenu.enabled = true
 
-	log_message(LocalizationState.t("combat.started", [_enemy_name]))
+	log_message(LocalizationState.t("combat.started", [enemy_name]))
 	# Salud baja: las cartas rinden menos (ver CardScaling.health_penalty).
 	var save := PlayerSessionAccess.save()
 	if save != null:
@@ -176,6 +178,16 @@ func current_flow() -> AsyncFlowToken:
 func is_flow_active(flow: AsyncFlowToken) -> bool:
 	return is_inside_tree() and flow != null and flow == _flow_token and flow.is_active()
 
+## Único punto de lectura/escritura de _combat_finished: lo usan
+## CombatResultFlow (lo marca al detectar HP en 0) y CombatDamageResolver
+## (corta el daño si ya terminó), que antes tocaban el campo privado directo.
+func is_combat_finished() -> bool:
+	return _combat_finished
+
+
+func mark_combat_finished() -> void:
+	_combat_finished = true
+
 ## Punto de entrada de compatibilidad para CombatWildcards y la señal
 ## hand_refresh_requested; la lógica vive en CombatTurnFlow.
 func refresh_hand() -> void:
@@ -190,7 +202,7 @@ func update_ui() -> void:
 	map_area.scene.presentation.set_status_texts(state.status_summary(true), state.status_summary(false))
 
 func show_card_preview(action: CardActionLine) -> void:
-	_preview_action = action
+	preview_action = action
 	if _preview_tween and _preview_tween.is_valid():
 		_preview_tween.kill()
 	hand_section.show_all_cards()
@@ -204,7 +216,7 @@ func show_card_preview(action: CardActionLine) -> void:
 	_preview_tween.tween_property(card_preview, "modulate:a", 1.0, 0.15)
 
 func hide_card_preview() -> void:
-	_preview_action = null
+	preview_action = null
 	if _preview_tween and _preview_tween.is_valid():
 		_preview_tween.kill()
 	if not card_preview.visible:
@@ -237,7 +249,7 @@ func _apply_localized_text(_language: String = "") -> void:
 	confirm_yes_button.text = LocalizationState.t("combat.yes")
 	confirm_no_button.text = LocalizationState.t("combat.no")
 	confirm_fin_button.text = LocalizationState.t("combat.finish")
-	_wildcards.apply_localization()
+	wildcards.apply_localization()
 	enemy_reveal.apply_localization()
 	_pile_popup.refresh_title_if_visible()
 	_turn_flow.refresh_hand_view()

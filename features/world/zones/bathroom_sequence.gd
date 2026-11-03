@@ -243,7 +243,4 @@ func _finish() -> void:
 ## pegado al target (CutsceneScene3D.yaw_toward() devolvería 0 y lo haría
 ## mirar al frente del mundo en vez de dejarlo como está).
 func _face_toward(node: Node3D, target: Vector3) -> void:
-	var d: Vector3 = target - node.global_position
-	d.y = 0.0
-	if d.length() > 0.05:
-		node.rotation.y = _scene3d.yaw_toward(node.global_position, target)
+	YounOrientation.face_toward(node, target)

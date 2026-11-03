@@ -2,20 +2,6 @@ extends "res://tests/helpers/combat_test_case.gd"
 
 ## Selección de acciones según la fase activa.
 
-func _make_phase(phase_name: String, actions: Array) -> AiPhase:
-	var phase := AiPhase.new()
-	phase.phase_name = phase_name
-	for action in actions:
-		phase.actions.append(action)
-	return phase
-
-func _make_phase_strategy(initial: String, phases: Array) -> AiStrategy:
-	var strategy := AiStrategy.new()
-	strategy.initial_phase = initial
-	for phase in phases:
-		strategy.phases.append(phase)
-	return strategy
-
 func test_fase_inicial_determina_acciones_disponibles() -> void:
 	var s := CombatState.new()
 	_map.player_pos = Vector2.ZERO

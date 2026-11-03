@@ -12,15 +12,11 @@ func start(p_index: int, p_card: CardActionLine) -> void:
 	host.emit_log("combat.log.grenade.select", [card.name, card.cast_module_label(), card.bounce])
 
 func on_tile_selected(pos: Vector2) -> void:
-	host.pending_cell = pos
-	host.confirm_popup_show_requested.emit(false)
+	_request_confirm(pos)
 
 func execute(target: Vector2) -> void:
 	var flow := _flow()
-	if not _flow_is_active(flow):
-		return
-	if not _index_valid():
-		clear()
+	if _should_abort_execute(flow):
 		return
 	var played_card: CardActionLine = host.state.turn_actions[index]
 

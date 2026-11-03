@@ -31,9 +31,7 @@ func _bake() -> void:
 	boundary.build(ZoneCatalogScript.new(), true, false, false, false)
 	var decoration := boundary.get_node_or_null("AutoDecoration") as Node3D
 	if decoration == null:
-		push_error("WorldDecorationBaker: no se generó AutoDecoration.")
-		boundary.free()
-		quit(1)
+		_fail("WorldDecorationBaker: no se generó AutoDecoration.", [boundary])
 		return
 	boundary.remove_child(decoration)
 	decoration.set_meta("tree_positions", boundary.decoration_tree_positions())
@@ -43,17 +41,11 @@ func _bake() -> void:
 	var packed := PackedScene.new()
 	var pack_error := packed.pack(decoration)
 	if pack_error != OK:
-		push_error("WorldDecorationBaker: no se pudo empaquetar (%s)." % pack_error)
-		decoration.free()
-		boundary.free()
-		quit(1)
+		_fail("WorldDecorationBaker: no se pudo empaquetar (%s)." % pack_error, [decoration, boundary])
 		return
 	var save_error := ResourceSaver.save(packed, OUTPUT_PATH, ResourceSaver.FLAG_COMPRESS)
 	if save_error != OK:
-		push_error("WorldDecorationBaker: no se pudo guardar %s (%s)." % [OUTPUT_PATH, save_error])
-		decoration.free()
-		boundary.free()
-		quit(1)
+		_fail("WorldDecorationBaker: no se pudo guardar %s (%s)." % [OUTPUT_PATH, save_error], [decoration, boundary])
 		return
 	print("[WorldDecorationBaker] Listo: %s (%d posiciones de árboles)." % [OUTPUT_PATH, boundary.decoration_tree_positions().size()])
 	# En este punto sólo quedan las mallas serializadas: las paredes y los

@@ -32,9 +32,9 @@ func cast_element_bolt(played_card: CardActionLine, cell: Vector2, flow: AsyncFl
 	if host.state.enemy_hp <= 0:
 		return
 	if played_card.puddle_effect == "ice" and was_wet:
-		host._apply_spell_status("freeze", CombatPlayerActions.FREEZE_TURNS)
+		host.apply_spell_status("freeze", CombatPlayerActions.FREEZE_TURNS)
 	elif played_card.status_effect != "ninguno":
-		host._apply_spell_status(played_card.status_effect, maxi(1, played_card.duration))
+		host.apply_spell_status(played_card.status_effect, maxi(1, played_card.duration))
 
 ## Descarga: rayo en línea. Pega doble a los mojados y se propaga por el agua
 ## que toca (a quien esté parado en ella, también a vos).
@@ -90,7 +90,7 @@ func cast_cone_blast(played_card: CardActionLine, blast_dir: Vector2, flow: Asyn
 		await host.deal_damage_to_enemy.call(played_card.damage, true, CombatState.MAGICO)
 		if not _flow_is_active(flow): return
 		if played_card.status_effect != "ninguno" and host.state.enemy_hp > 0:
-			host._apply_spell_status(played_card.status_effect, maxi(1, played_card.duration))
+			host.apply_spell_status(played_card.status_effect, maxi(1, played_card.duration))
 	else:
 		host.emit_log("combat.log.spell.missed_all", [played_card.name])
 
@@ -104,7 +104,7 @@ func cast_curse(played_card: CardActionLine, flow: AsyncFlowToken) -> void:
 	if played_card.status_effect == "entangle" and host.board.obstacles.is_tree_near(host.board.state.enemy_position(), CombatPlayerActions.TREE_ROOT_REACH):
 		turns += CombatPlayerActions.TREE_ROOT_BONUS_TURNS
 		host.emit_log("combat.log.spell.tree_roots_help")
-	host._apply_spell_status(played_card.status_effect, turns)
+	host.apply_spell_status(played_card.status_effect, turns)
 
 ## Parpadeo: teletransporte instantáneo, sin daño ni estado.
 func cast_blink(played_card: CardActionLine, cell: Vector2) -> void:

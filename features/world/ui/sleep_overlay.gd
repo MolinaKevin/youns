@@ -24,35 +24,11 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
-	_fade = ColorRect.new()
-	_fade.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_fade.color = Color(0, 0, 0, 0)
-	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_fade)
-
-	var centering := CenterContainer.new()
-	centering.set_anchors_preset(Control.PRESET_FULL_RECT)
-	centering.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(centering)
-
-	_panel = PanelContainer.new()
+	var shell := ModalFadePanel.build(self, 300.0, 14.0)
+	_fade = shell["fade"]
+	_panel = shell["panel"]
 	_panel.visible = false
-	_panel.custom_minimum_size.x = 300
-
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.05, 0.05, 0.08, 0.95)
-	style.set_corner_radius_all(6)
-	_panel.add_theme_stylebox_override("panel", style)
-	centering.add_child(_panel)
-
-	var margin := MarginContainer.new()
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 20)
-	_panel.add_child(margin)
-
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 14)
-	margin.add_child(vbox)
+	var vbox: VBoxContainer = shell["vbox"]
 
 	_message = Label.new()
 	_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

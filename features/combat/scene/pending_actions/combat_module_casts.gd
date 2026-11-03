@@ -7,11 +7,11 @@ const CombatObstacleScript := preload("res://features/combat/scene/combat_obstac
 ## si corresponde, la dirección o el punto de caída) — eso lo resuelve
 ## CombatModuleAction.
 
-## Romper: destruye el módulo o, si es un árbol, lo tala (ver host._fell_tree).
+## Romper: destruye el módulo o, si es un árbol, lo tala (ver host.fell_tree).
 func cast_break(played_card: CardActionLine, obs: Dictionary, flow: AsyncFlowToken) -> void:
 	var count := maxi(1, played_card.module_count)
 	if CombatObstacleScript.type_of(obs) == CombatObstacleScript.TREE:
-		await host._fell_tree(played_card, obs, flow)
+		await host.fell_tree(played_card, obs, flow)
 	else:
 		var broken: int = host.board.obstacles.break_modules(obs, count)
 		host.emit_log("combat.log.module.broken", [played_card.name, broken])

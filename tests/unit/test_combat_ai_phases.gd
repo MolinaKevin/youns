@@ -2,33 +2,6 @@ extends "res://tests/helpers/combat_test_case.gd"
 
 ## Fases, transiciones y seguimiento de visibilidad de la IA.
 
-func _make_phase(phase_name: String, actions: Array) -> AiPhase:
-	var p := AiPhase.new()
-	p.phase_name = phase_name
-	for a in actions:
-		p.actions.append(a)
-	return p
-
-
-func _make_transition(from: String, to: String, conditions: Array) -> AiPhaseTransition:
-	var t := AiPhaseTransition.new()
-	t.from_phase = from
-	t.target_phase = to
-	for c in conditions:
-		t.conditions.append(c)
-	return t
-
-
-func _make_phase_strategy(initial: String, phases: Array, transitions: Array) -> AiStrategy:
-	var s := AiStrategy.new()
-	s.initial_phase = initial
-	for p in phases:
-		s.phases.append(p)
-	for t in transitions:
-		s.transitions.append(t)
-	return s
-
-
 # ── Fases — transiciones ──────────────────────────────────────────────────────
 
 func test_transicion_ocurre_cuando_condicion_cumplida() -> void:

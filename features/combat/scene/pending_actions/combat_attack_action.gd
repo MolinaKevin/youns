@@ -19,15 +19,11 @@ func start(p_index: int, p_card: CardActionLine, range_override: int = 0) -> voi
 		host.board.presentation.patterns.show_card_pattern(card.pattern, host.board.state.player_position(), host.board.state.enemy_position() - host.board.state.player_position(), host.w(range_cells))
 
 func on_tile_selected(pos: Vector2) -> void:
-	host.pending_cell = pos
-	host.confirm_popup_show_requested.emit(false)
+	_request_confirm(pos)
 
 func execute(_cell: Vector2) -> void:
 	var flow := _flow()
-	if not _flow_is_active(flow):
-		return
-	if not _index_valid():
-		clear()
+	if _should_abort_execute(flow):
 		return
 	var played_card: CardActionLine = host.state.turn_actions[index]
 	var in_pattern: bool = host.board.selection.targeting.queries.is_enemy_in_card_pattern(played_card.pattern, host.board.state.player_position(), host.board.state.enemy_position() - host.board.state.player_position(), host.w(range_cells)) if played_card.pattern != null else host.board.queries.actors.is_enemy_in_attack_range(host.w(range_cells))
@@ -55,7 +51,7 @@ func execute(_cell: Vector2) -> void:
 	if not _flow_is_active(flow):
 		return
 	if enchant_status != "" and host.state.enemy_hp > 0:
-		host._apply_spell_status(enchant_status, 3)
+		host.apply_spell_status(enchant_status, 3)
 	host.ui_update_requested.emit()
 	host.check_combat_end.call()
 

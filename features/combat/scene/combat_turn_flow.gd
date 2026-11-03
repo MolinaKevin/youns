@@ -43,7 +43,7 @@ func refresh_hand_view() -> void:
 		host.hand_section.halves_mode = false
 		host.hand_section.set_cards(turn.hand_view_indices.map(func(i): return state.hand[i]))
 	else:
-		host._wildcards.update_buttons()
+		host.wildcards.update_buttons()
 		host.hand_section.drag_source = ""
 		host.hand_section.halves_mode = true
 		host.hand_section.set_cards(turn.turn_cards)
@@ -53,7 +53,7 @@ func refresh_hand_view() -> void:
 		_show_active_line()
 	host.draw_pile_button.text = LocalizationState.t("combat.draw_pile", [state.draw_pile.size()])
 	host.discard_pile_button.text = LocalizationState.t("combat.discard_pile", [state.discard_pile.size()])
-	if host._preview_action != null and not state.turn_actions.has(host._preview_action):
+	if host.preview_action != null and not state.turn_actions.has(host.preview_action):
 		host.hide_card_preview()
 	_update_plan_zone()
 
@@ -64,7 +64,7 @@ func refresh_hand_view() -> void:
 
 func start_planning() -> void:
 	host.turn.begin_planning()
-	host._wildcards.disarm()
+	host.wildcards.disarm()
 	host.turn_order_bar.visible = false
 	host.monster_card_view.visible = false
 	host.monster_card_view.snap_home()
@@ -90,10 +90,10 @@ func on_hand_half_selected(index: int, is_top: bool) -> void:
 		"unavailable":
 			return
 		"keep":
-			host._wildcards.start_keep(index, is_top)
+			host.wildcards.start_keep(index, is_top)
 			return
 		"item":
-			host._wildcards.start_item(index, is_top)
+			host.wildcards.start_item(index, is_top)
 			return
 		"no_lines":
 			host.log_message(LocalizationState.t("combat.no_lines"))
@@ -102,7 +102,7 @@ func on_hand_half_selected(index: int, is_top: bool) -> void:
 	if is_wild:
 		for line: CardActionLine in turn.playing.lines:
 			line.name = LocalizationState.t("wildcard.name")
-	host._wildcards.disarm()
+	host.wildcards.disarm()
 	# Cambiar de mitad antes de hacer la primera línea no gasta nada.
 	if host.player_actions.has_pending_selection():
 		host.player_actions.cancel_selection()
@@ -233,7 +233,7 @@ func commit_plan(lead_index: int, second_index: int) -> void:
 	var monster_card: MonsterCard = host.enemy_ai.draw_card()
 	host.log_message(LocalizationState.t("combat.initiative", [player_initiative, host.enemy_ai.initiative]))
 	host.hand_section.set_title(LocalizationState.t("combat.actions"))
-	turn.build_turn_order(host._player_name, player_initiative, host._enemy_name, host.enemy_ai.initiative)
+	turn.build_turn_order(host.player_name, player_initiative, host.enemy_name, host.enemy_ai.initiative)
 	var enemy_first: bool = not turn.turn_order[0]["is_player"]
 	# Si el enemigo no va primero, actúa cuando el jugador termina su turno.
 	turn.enemy_pending = not enemy_first
@@ -253,7 +253,7 @@ func commit_plan(lead_index: int, second_index: int) -> void:
 		await host.enemy_ai.take_turn()
 		if not host.is_flow_active(flow):
 			return
-		if host._result_flow.check_combat_end():
+		if host.result_flow.check_combat_end():
 			return
 
 	host.turn_order_bar.show_order(turn.turn_order, turn.turn_order.find_custom(func(e): return e["is_player"]))
@@ -283,9 +283,9 @@ func on_end_turn_pressed() -> void:
 	host.player_actions.reset()
 	host.state.turn_actions.clear()
 	turn.clear_action_state()
-	host._wildcards.close_item_picker()
+	host.wildcards.close_item_picker()
 	host._pile_popup.close()
-	host._wildcards.disarm()
+	host.wildcards.disarm()
 	refresh_hand()
 	if turn.enemy_pending:
 		host.turn_order_bar.show_order(turn.turn_order, turn.turn_order.find_custom(func(e): return not e["is_player"]))
@@ -295,7 +295,7 @@ func on_end_turn_pressed() -> void:
 		await host.enemy_ai.take_turn()
 		if not host.is_flow_active(flow):
 			return
-		if host._result_flow.check_combat_end():
+		if host.result_flow.check_combat_end():
 			return
 	await _reset_turn(flow)
 	if not host.is_flow_active(flow):

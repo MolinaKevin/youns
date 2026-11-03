@@ -38,13 +38,13 @@ func deal_to_player(amount: int, skip_attack_anim: bool = false, damage_type: St
 func _play_player_anim_timed(anim_key: String) -> void:
 	host.board.actors.presentation.play_player_animation(anim_key)
 	await host.board.player_anim_finished
-	if _flow_active() and not host._combat_finished and host.state.player_hp > 0:
+	if _flow_active() and not host.is_combat_finished() and host.state.player_hp > 0:
 		host.board.actors.presentation.play_player_animation("idle")
 
 func _play_enemy_anim_timed(anim_key: String) -> void:
 	host.board.actors.presentation.play_enemy_animation(anim_key)
 	await host.board.enemy_anim_finished
-	if _flow_active() and not host._combat_finished and host.state.enemy_hp > 0:
+	if _flow_active() and not host.is_combat_finished() and host.state.enemy_hp > 0:
 		host.board.actors.presentation.play_enemy_animation("idle")
 
 func _flow_active() -> bool:

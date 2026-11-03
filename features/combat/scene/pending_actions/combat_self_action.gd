@@ -17,8 +17,7 @@ func on_tile_selected(pos: Vector2) -> void:
 		execute(pos)
 
 func execute(_cell: Vector2) -> void:
-	if not _index_valid():
-		clear()
+	if not _require_valid_index():
 		return
 	var played_card: CardActionLine = host.state.turn_actions[index]
 	if played_card.card_type == CardActionLine.TYPE_HEAL:
@@ -29,7 +28,7 @@ func execute(_cell: Vector2) -> void:
 		host.state.player_enchant_status = "" if played_card.status_effect == "ninguno" else played_card.status_effect
 		host.emit_log("combat.log.self.enchant_armed", [played_card.name, played_card.damage])
 	elif played_card.card_type == CardActionLine.TYPE_NOVA:
-		host._execute_nova.call_deferred(played_card)
+		host.execute_nova.call_deferred(played_card)
 	elif played_card.card_type == CardActionLine.TYPE_COUNTER:
 		host.state.player_counter_damage += played_card.damage
 		host.emit_log("combat.log.self.counter_armed", [played_card.name, host.state.player_counter_damage])

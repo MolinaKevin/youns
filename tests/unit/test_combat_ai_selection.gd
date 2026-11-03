@@ -59,11 +59,7 @@ func test_ai_elige_block_y_devuelve_block_amount_correcto() -> void:
 	var s := CombatState.new()
 	_map.player_pos = Vector2.ZERO
 	_map.enemy_pos = Vector2(1.0, 0.0)
-	var action := AiAction.new()
-	action.action_type = "block"
-	action.base_score = 80.0
-	action.conditions.append(_make_condition("always"))
-	action.block_amount = 5
+	var action := _make_action("block", 80.0, [_make_condition("always")], 1.0, 5)
 	var strategy := AiStrategy.new()
 	strategy.actions.append(action)
 	var ai := CombatEnemyAI.new()

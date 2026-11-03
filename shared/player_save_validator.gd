@@ -87,17 +87,11 @@ static func _sanitize_card_ids(save: PlayerSaveData, changes: PackedStringArray)
 	if equipped.size() != save.equipped_deck_ids.size():
 		save.equipped_deck_ids = equipped
 		changes.append("Se quitaron cartas inexistentes del mazo inicial.")
-	var deck: Array[CardData] = []
-	for card in save.deck:
-		if card != null and known.has(card.id):
-			deck.append(card)
+	var deck := _known_cards(save.deck, known)
 	if deck.size() != save.deck.size():
 		save.deck = deck
 		changes.append("Se quitaron cartas inválidas del mazo guardado.")
-	var inherited: Array[CardData] = []
-	for card in save.saved_cards:
-		if card != null and known.has(card.id):
-			inherited.append(card)
+	var inherited := _known_cards(save.saved_cards, known)
 	if inherited.size() != save.saved_cards.size():
 		save.saved_cards = inherited
 		changes.append("Se quitaron cartas reencarnadas inválidas.")
@@ -158,6 +152,14 @@ static func _known_ids(ids: Array[String], known: Dictionary) -> Array[String]:
 	for card_id in ids:
 		if known.has(card_id):
 			valid.append(card_id)
+	return valid
+
+
+static func _known_cards(cards: Array[CardData], known: Dictionary) -> Array[CardData]:
+	var valid: Array[CardData] = []
+	for card in cards:
+		if card != null and known.has(card.id):
+			valid.append(card)
 	return valid
 
 

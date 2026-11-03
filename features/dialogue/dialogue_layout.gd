@@ -44,8 +44,14 @@ func reset() -> void:
 	_speaker_plate.offset_top = -26.0
 	_speaker_plate.offset_bottom = 28.0
 
-func set_nameplate_side(side: String) -> void:
-	if side == "right":
+## `side` llega sin espejar; si `mirrored`, el lado efectivo es el opuesto
+## (igual que apply_mirrored/apply_portrait, que ya reciben mirrored y
+## calculan el reflejo ellos mismos).
+func set_nameplate_side(side: String, mirrored: bool) -> void:
+	var effective_side := side
+	if mirrored:
+		effective_side = "left" if side == "right" else "right"
+	if effective_side == "right":
 		_speaker_plate.anchor_left = 1.0
 		_speaker_plate.anchor_right = 1.0
 		_speaker_plate.offset_left = -NAMEPLATE_WIDTH - NAMEPLATE_INSET

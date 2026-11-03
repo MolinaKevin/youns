@@ -79,6 +79,11 @@ func _play_lines(keys: Array[String]) -> void:
 	DialogueLines.say_many(youn_data, lines)
 
 
+func _progress() -> WorldProgressData:
+	var save := PlayerSessionAccess.save()
+	return save.world_progress if save != null else null
+
+
 func _has_item(save: PlayerSaveData) -> bool:
 	return save.inventory_items.any(func(entry: Dictionary) -> bool: return str(entry.get("id", "")) == item_id)
 

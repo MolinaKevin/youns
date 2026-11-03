@@ -7,6 +7,18 @@ const Entry := preload("res://shared/inventory_entry.gd")
 ## Operaciones consistentes sobre el inventario persistido del jugador.
 const MAX_STACK := 20
 
+## Fusiona hasta `amount` en una pila existente (dict con Entry.COUNT),
+## respetando `max_stack`; la actualiza in-place si entra algo. Devuelve
+## cuánto se fusionó (0 si no hay lugar). Comparten este cálculo add_entry()
+## y sanitize_entries(), que antes repetían la misma cuenta de "lugar
+## restante" cada uno por su lado.
+static func _merge_into_stack(stack: Dictionary, amount: int, max_stack: int) -> int:
+	var room := maxi(0, max_stack - Entry.count_of(stack))
+	var merged := mini(amount, room)
+	if merged > 0:
+		stack[Entry.COUNT] = Entry.count_of(stack) + merged
+	return merged
+
 ## Agrega una entrada sin crear pilas duplicadas. Devuelve cuánto entró y
 ## cuánto queda fuera por capacidad o por llegar al límite de la pila.
 static func add_entry(items: Array[Dictionary], entry: Dictionary, capacity: int, max_stack := MAX_STACK) -> Dictionary:
@@ -18,10 +30,8 @@ static func add_entry(items: Array[Dictionary], entry: Dictionary, capacity: int
 		var existing: Dictionary = items[index]
 		if Entry.item_id(existing) != item_id:
 			continue
-		var current := Entry.count_of(existing)
-		var merged_count := mini(requested, maxi(0, max_stack - current))
+		var merged_count := _merge_into_stack(existing, requested, max_stack)
 		if merged_count > 0:
-			existing[Entry.COUNT] = current + merged_count
 			items[index] = existing
 		return {"added": merged_count, "remaining": requested - merged_count}
 	if items.size() >= maxi(0, capacity):
@@ -80,11 +90,9 @@ static func sanitize_entries(entries: Array[Dictionary], capacity: int, max_stac
 				var stored: Dictionary = sanitized[index]
 				if Entry.item_id(stored) != data.id:
 					continue
-				var room := stack_limit - Entry.count_of(stored)
-				if room <= 0:
+				var merged_amount := _merge_into_stack(stored, count, stack_limit)
+				if merged_amount == 0:
 					continue
-				var merged_amount := mini(count, room)
-				stored[Entry.COUNT] = Entry.count_of(stored) + merged_amount
 				sanitized[index] = stored
 				count -= merged_amount
 				merged = true

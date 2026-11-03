@@ -81,7 +81,4 @@ static func _finish() -> void:
 
 
 static func _face_toward(node: Node3D, target: Vector3) -> void:
-	var d := target - node.global_position
-	d.y = 0.0
-	if d.length() > 0.05:
-		node.rotation.y = atan2(d.x, d.z)
+	YounOrientation.face_toward(node, target)

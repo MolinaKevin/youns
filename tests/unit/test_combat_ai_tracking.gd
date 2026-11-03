@@ -2,30 +2,6 @@ extends "res://tests/helpers/combat_test_case.gd"
 
 ## Seguimiento de la última posición visible y condición player_hidden.
 
-func _make_phase(phase_name: String, actions: Array) -> AiPhase:
-	var p := AiPhase.new()
-	p.phase_name = phase_name
-	for a in actions:
-		p.actions.append(a)
-	return p
-
-func _make_transition(from: String, to: String, conditions: Array) -> AiPhaseTransition:
-	var t := AiPhaseTransition.new()
-	t.from_phase = from
-	t.target_phase = to
-	for c in conditions:
-		t.conditions.append(c)
-	return t
-
-func _make_phase_strategy(initial: String, phases: Array, transitions: Array) -> AiStrategy:
-	var s := AiStrategy.new()
-	s.initial_phase = initial
-	for p in phases:
-		s.phases.append(p)
-	for t in transitions:
-		s.transitions.append(t)
-	return s
-
 func test_update_tracking_con_los_guarda_posicion_del_jugador() -> void:
 	var s := CombatState.new()
 	_map.player_pos = Vector2(5.0, 3.0)

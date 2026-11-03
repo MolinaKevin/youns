@@ -52,6 +52,35 @@ func _flow() -> AsyncFlowToken:
 func _flow_is_active(flow: AsyncFlowToken) -> bool:
 	return host.is_flow_active(flow)
 
+## Chequeo combinado de flow+índice al empezar execute(): true si hay que
+## cortar ahí (si es por índice inválido, ya limpió). `flow` puede ser null
+## legítimamente cuando el test no conectó get_flow — null no es por sí solo
+## motivo de corte, así que no se puede usar como valor de retorno "inválido".
+## Lo usan las familias que necesitan el token después para un await
+## (attack, spell, push, module, grenade, jump).
+func _should_abort_execute(flow: AsyncFlowToken) -> bool:
+	if not _flow_is_active(flow):
+		return true
+	if not _index_valid():
+		clear()
+		return true
+	return false
+
+## Solo el chequeo de índice, para las familias que no necesitan el flow
+## token al empezar execute() (overwatch, self, trap, puddle).
+func _require_valid_index() -> bool:
+	if _index_valid():
+		return true
+	clear()
+	return false
+
+## Cierre de on_tile_selected() cuando el click alcanza para pedir
+## confirmación: guarda la celda y pide el popup. Repetido en casi todas las
+## familias (attack, spell, push, module, grenade, jump, trap, puddle).
+func _request_confirm(pos: Vector2, started := false) -> void:
+	host.pending_cell = pos
+	host.confirm_popup_show_requested.emit(started)
+
 ## Gasta la carta jugada: sale de turn_actions, se limpia la selección propia
 ## de la familia (clear(), polimórfico) y se cierra la vista previa. La
 ## mayoría de los execute() arrancan así. grenade no lo usa porque necesita

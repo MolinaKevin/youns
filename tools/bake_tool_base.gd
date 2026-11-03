@@ -13,3 +13,14 @@ func _set_owner_recursive(node: Node, owner: Node) -> void:
 	for child in node.get_children():
 		child.owner = owner
 		_set_owner_recursive(child, owner)
+
+
+## Error fatal del baker: loguea, libera los nodos temporales que ya se
+## instanciaron y sale con error. Antes cada baker repetía push_error+free+
+## quit(1) a mano en cada punto de falla.
+func _fail(message: String, nodes_to_free: Array = []) -> void:
+	push_error(message)
+	for node in nodes_to_free:
+		if node != null:
+			node.free()
+	quit(1)

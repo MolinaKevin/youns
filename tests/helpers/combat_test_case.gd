@@ -238,8 +238,21 @@ func _make_condition(type: String, check_range: float = 12.0) -> AiCondition:
 	return TestData.condition(type, check_range)
 
 
-func _make_action(type: String, score: float, conditions: Array) -> AiAction:
-	return TestData.action(type, score, conditions)
+func _make_action(type: String, score: float, conditions: Array,
+		score_multiplier_low_hp: float = 1.0, block_amount: int = 0) -> AiAction:
+	return TestData.action(type, score, conditions, score_multiplier_low_hp, block_amount)
+
+
+func _make_phase(phase_name: String, actions: Array) -> AiPhase:
+	return TestData.phase(phase_name, actions)
+
+
+func _make_transition(from: String, to: String, conditions: Array) -> AiPhaseTransition:
+	return TestData.phase_transition(from, to, conditions)
+
+
+func _make_phase_strategy(initial: String, phases: Array, transitions: Array = []) -> AiStrategy:
+	return TestData.phase_strategy(initial, phases, transitions)
 
 func before_each() -> void:
 	_map = MockCombatMap.new()

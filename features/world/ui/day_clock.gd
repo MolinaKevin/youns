@@ -86,17 +86,6 @@ func _sector_polygon(center: Vector2, radius: float, start_a: float, end_a: floa
 		pts.append(center + Vector2(cos(a), sin(a)) * radius)
 	return pts
 
-func _get_current_period() -> Dictionary:
-	var h := GameState.time_of_day_hours
-	if h >= 4.0 and h < 8.0:
-		return PERIODS[0]  # Mañana
-	elif h >= 8.0 and h < 16.0:
-		return PERIODS[1]  # Día
-	elif h >= 16.0 and h < 20.0:
-		return PERIODS[2]  # Tarde
-	else:
-		return PERIODS[3]  # Noche (20-24 y 0-4)
-
 func _refresh_clock(_current_hour: float, _current_day: int) -> void:
 	queue_redraw()
 

@@ -30,19 +30,15 @@ func on_tile_selected(pos: Vector2) -> void:
 		host.board.selection.actions.modes.terrain.start_jump_landing_selection(rock_pos, host.w(card.cast_range_cells()))
 		host.emit_log("combat.log.jump.select_landing", [rock_pos.x, rock_pos.y])
 		return
-	if rock_pos.distance_to(pos) > host.w(card.cast_range_cells()):
+	if host.board.queries.actors.movement_distance(rock_pos, pos) > host.w(card.cast_range_cells()):
 		return
 	if not host.board.obstacles.can_jump_land_at(pos):
 		return
-	host.pending_cell = pos
-	host.confirm_popup_show_requested.emit(false)
+	_request_confirm(pos)
 
 func execute(landing_pos: Vector2) -> void:
 	var flow := _flow()
-	if not _flow_is_active(flow):
-		return
-	if not _index_valid():
-		clear()
+	if _should_abort_execute(flow):
 		return
 	var played_card: CardActionLine = host.state.turn_actions[index]
 

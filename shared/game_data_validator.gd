@@ -10,6 +10,18 @@ const YounCatalogScript := preload("res://shared/youn_catalog.gd")
 const ItemCatalogScript := preload("res://shared/item_catalog.gd")
 
 
+## Id vacío o repetido para un recurso identificado por `path`. Devuelve el
+## mensaje de error (vacío si no hay problema) y, si el id es válido, lo
+## registra en `ids` para detectar el próximo duplicado.
+static func _check_unique_id(id: String, path: String, label_cap: String, label_mid: String, ids: Dictionary) -> String:
+	if id.is_empty():
+		return "%s sin id: %s" % [label_cap, path]
+	if ids.has(id):
+		return "Id de %s repetido '%s': %s y %s" % [label_mid, id, ids[id], path]
+	ids[id] = path
+	return ""
+
+
 static func card_errors(cards: Array[CardData]) -> PackedStringArray:
 	var errors := PackedStringArray()
 	var ids := {}
@@ -18,12 +30,9 @@ static func card_errors(cards: Array[CardData]) -> PackedStringArray:
 			errors.append("Carta nula en CardDatabase.")
 			continue
 		var path := card.resource_path
-		if card.id.is_empty():
-			errors.append("Carta sin id: %s" % path)
-		elif ids.has(card.id):
-			errors.append("Id de carta repetido '%s': %s y %s" % [card.id, ids[card.id], path])
-		else:
-			ids[card.id] = path
+		var id_error := _check_unique_id(card.id, path, "Carta", "carta", ids)
+		if not id_error.is_empty():
+			errors.append(id_error)
 		for side in [card.top, card.bottom]:
 			if side == null:
 				continue
@@ -38,12 +47,9 @@ static func recipe_errors(recipes: Array[LabRecipe]) -> PackedStringArray:
 	var ids := {}
 	for recipe in recipes:
 		var path := recipe.resource_path
-		if recipe.id.is_empty():
-			errors.append("Receta sin id: %s" % path)
-		elif ids.has(recipe.id):
-			errors.append("Id de receta repetido '%s': %s y %s" % [recipe.id, ids[recipe.id], path])
-		else:
-			ids[recipe.id] = path
+		var id_error := _check_unique_id(recipe.id, path, "Receta", "receta", ids)
+		if not id_error.is_empty():
+			errors.append(id_error)
 		if not LabRecipeActionScript.is_known(recipe.action_type):
 			errors.append("Acción de receta desconocida '%s' en %s" % [recipe.action_type, path])
 		for ingredient in recipe.ingredients:
@@ -65,12 +71,9 @@ static func youn_errors() -> PackedStringArray:
 	var ids := {}
 	for youn in YounCatalogScript.all():
 		var path := youn.resource_path
-		if youn.id.is_empty():
-			errors.append("Youn sin id: %s" % path)
-		elif ids.has(youn.id):
-			errors.append("Id de Youn repetido '%s': %s y %s" % [youn.id, ids[youn.id], path])
-		else:
-			ids[youn.id] = path
+		var id_error := _check_unique_id(youn.id, path, "Youn", "Youn", ids)
+		if not id_error.is_empty():
+			errors.append(id_error)
 		for target_path in youn.evolves_to:
 			if YounCatalogScript.by_path(target_path) == null:
 				errors.append("Evolución inexistente '%s' en %s" % [target_path, path])
@@ -82,12 +85,9 @@ static func item_errors() -> PackedStringArray:
 	var ids := {}
 	for item in ItemCatalogScript.all():
 		var path := item.resource_path
-		if item.id.is_empty():
-			errors.append("Ítem sin id: %s" % path)
-		elif ids.has(item.id):
-			errors.append("Id de ítem repetido '%s': %s y %s" % [item.id, ids[item.id], path])
-		else:
-			ids[item.id] = path
+		var id_error := _check_unique_id(item.id, path, "Ítem", "ítem", ids)
+		if not id_error.is_empty():
+			errors.append(id_error)
 		for effect in item.effects:
 			if effect == null:
 				errors.append("Ítem con efecto nulo: %s" % path)

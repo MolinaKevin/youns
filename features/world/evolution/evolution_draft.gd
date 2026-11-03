@@ -5,8 +5,6 @@ extends RefCounted
 ## No conoce nodos ni presentación: la pantalla sólo lo dibuja y delega aquí
 ## los cambios para que las reglas puedan probarse sin montar la UI.
 
-const PendingRules := preload("res://features/world/evolution/evolution_pending_rules.gd")
-
 enum Section { STATS, COLORS, CARDS, ACTIONS }
 
 var to: YounData
@@ -31,7 +29,7 @@ func _init(target: YounData, cards: Array[CardData]) -> void:
 
 
 func show_section(next_section: int) -> void:
-	section = next_section
+	section = next_section as Section
 	selected_color = ""
 	selected_line = -1
 
@@ -99,12 +97,19 @@ func undo(type: String) -> bool:
 
 
 func pending_colors() -> int:
-	return PendingRules.pending_colors(remaining_colors)
+	var total := 0
+	for id in remaining_colors:
+		total += remaining_colors[id]
+	return total
 
 
 func pending_lines() -> int:
-	return PendingRules.pending_lines(deck, used_lines)
+	var has_room := deck.any(func(card: CardData) -> bool:
+		return DeckRules.can_add_line(card.top) or DeckRules.can_add_line(card.bottom))
+	if not has_room:
+		return 0
+	return used_lines.count(false)
 
 
 func can_finish() -> bool:
-	return PendingRules.can_finish(remaining_colors, deck, used_lines)
+	return pending_colors() == 0 and pending_lines() == 0

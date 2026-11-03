@@ -163,6 +163,18 @@ func start_line(card: CardActionLine) -> void:
 func has_pending_selection() -> bool:
 	return _current_action != null
 
+## Acceso para los helpers que esta misma clase construye (executor,
+## selection_coordinator): único punto de lectura/escritura de la acción
+## pendiente, en vez de que cada uno toque _current_action directo.
+func current_action() -> CombatPendingAction:
+	return _current_action
+
+func set_current_action(action: CombatPendingAction) -> void:
+	_current_action = action
+
+func clear_current_action() -> void:
+	_current_action = null
+
 ## Activa o desactiva el modo de usar una mitad de carta como movimiento.
 func set_move_mode(pressed: bool) -> void:
 	move_mode = pressed
@@ -305,7 +317,9 @@ func apply_player_zone_effects(from: Vector2, to: Vector2) -> void:
 	_board_effects.apply_player_zone_effects(from, to)
 
 ## Talar: el árbol cae alejándose del jugador y queda un tronco tirado.
-func _fell_tree(card: CardActionLine, tree: Dictionary, flow: AsyncFlowToken) -> void:
+## Sin guion bajo: lo llama combat_module_casts.gd como parte del contrato
+## host↔casts (igual que apply_enemy_forced_move/execute_nova/apply_spell_status).
+func fell_tree(card: CardActionLine, tree: Dictionary, flow: AsyncFlowToken) -> void:
 	var result: Dictionary = board.obstacles.fell_tree(tree, tree["pos"] - map_area.player_pos)
 	emit_log("combat.log.player.tree_felled", [card.name])
 	if result["enemy_hit"]:
@@ -321,14 +335,14 @@ func player_falls_from_tree(burning: bool) -> void:
 
 ## El enemigo fue movido a la fuerza (empuje, tirón, ancla, nova): se le
 ## aplican los charcos y trampas que cruzó. Devuelve si pasó por alguno.
-func _apply_enemy_forced_move(card_name: String, from: Vector2, landing: Vector2, flow: AsyncFlowToken) -> bool:
+func apply_enemy_forced_move(card_name: String, from: Vector2, landing: Vector2, flow: AsyncFlowToken) -> bool:
 	return await _board_effects.apply_enemy_forced_move(card_name, from, landing, flow)
 
 ## Nova: daño mágico alrededor tuyo y empuja al enemigo hacia afuera.
-func _execute_nova(card: CardActionLine) -> void:
+func execute_nova(card: CardActionLine) -> void:
 	await _board_effects.execute_nova(card)
 
-func _apply_spell_status(effect: String, base_turns: int) -> void:
+func apply_spell_status(effect: String, base_turns: int) -> void:
 	var turns: int = state.set_enemy_status(effect, base_turns)
 	if turns > 0:
 		emit_log("combat.status.enemy_applied", [LocalizationState.t("combat.status_name.%s" % effect), turns])

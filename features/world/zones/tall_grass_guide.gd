@@ -22,8 +22,3 @@ func _init() -> void:
 		var p := _progress()
 		if p != null:
 			p.tall_grass_mission_started = true
-
-
-func _progress() -> WorldProgressData:
-	var save := PlayerSessionAccess.save()
-	return save.world_progress if save != null else null

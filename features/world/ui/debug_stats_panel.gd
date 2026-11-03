@@ -31,6 +31,26 @@ var _pos_val: Label
 var _zone_val: Label
 
 
+## Fila "nombre a la izquierda, valor a la derecha" con el mismo tamaño de
+## fuente: se repetía a mano para cada métrica, el reloj, la duración del día
+## y los dos pares de animación. Devuelve [name_label, value_label].
+func _add_row(parent: VBoxContainer, name_text: String, value_color: Color, value_width: float = 32.0) -> Array:
+	var row := HBoxContainer.new()
+	parent.add_child(row)
+	var name_lbl := Label.new()
+	name_lbl.text = name_text
+	name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_lbl.add_theme_font_size_override("font_size", 11)
+	row.add_child(name_lbl)
+	var val_lbl := Label.new()
+	val_lbl.custom_minimum_size.x = value_width
+	val_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	val_lbl.add_theme_font_size_override("font_size", 11)
+	val_lbl.add_theme_color_override("font_color", value_color)
+	row.add_child(val_lbl)
+	return [name_lbl, val_lbl]
+
+
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
@@ -65,67 +85,25 @@ func _ready() -> void:
 		var key: String = entry[0]
 		var label_text: String = entry[1]
 
-		var row := HBoxContainer.new()
-		vbox.add_child(row)
-
-		var name_lbl := Label.new()
-		name_lbl.text = LocalizationState.t(label_text)
-		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		name_lbl.add_theme_font_size_override("font_size", 11)
-		row.add_child(name_lbl)
-
-		var val_lbl := Label.new()
-		val_lbl.custom_minimum_size.x = 32
-		val_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		val_lbl.add_theme_font_size_override("font_size", 11)
-		val_lbl.add_theme_color_override("font_color", Color(0.9, 0.85, 0.5))
-		row.add_child(val_lbl)
-
-		_value_labels[key] = val_lbl
-		_name_labels[key] = [name_lbl, label_text]
+		var labels := _add_row(vbox, LocalizationState.t(label_text), Color(0.9, 0.85, 0.5))
+		_value_labels[key] = labels[1]
+		_name_labels[key] = [labels[0], label_text]
 
 	var sep2 := HSeparator.new()
 	sep2.add_theme_constant_override("separation", 2)
 	vbox.add_child(sep2)
 
-	var clock_row := HBoxContainer.new()
-	vbox.add_child(clock_row)
-
-	var clock_lbl := Label.new()
-	clock_lbl.text = LocalizationState.t("debug.time")
-	clock_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	clock_lbl.add_theme_font_size_override("font_size", 11)
-	clock_row.add_child(clock_lbl)
-	_name_labels["_time"] = [clock_lbl, "debug.time"]
-
-	_clock_val = Label.new()
-	_clock_val.custom_minimum_size.x = 48
-	_clock_val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_clock_val.add_theme_font_size_override("font_size", 11)
-	_clock_val.add_theme_color_override("font_color", Color(0.6, 0.85, 1.0))
-	clock_row.add_child(_clock_val)
+	var clock_labels := _add_row(vbox, LocalizationState.t("debug.time"), Color(0.6, 0.85, 1.0), 48.0)
+	_name_labels["_time"] = [clock_labels[0], "debug.time"]
+	_clock_val = clock_labels[1]
 
 	var sep3 := HSeparator.new()
 	sep3.add_theme_constant_override("separation", 2)
 	vbox.add_child(sep3)
 
-	var day_row := HBoxContainer.new()
-	vbox.add_child(day_row)
-
-	var day_lbl := Label.new()
-	day_lbl.text = LocalizationState.t("debug.day_duration")
-	day_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	day_lbl.add_theme_font_size_override("font_size", 11)
-	day_row.add_child(day_lbl)
-	_name_labels["_day_duration"] = [day_lbl, "debug.day_duration"]
-
-	var day_val := Label.new()
-	day_val.text = "%.1f min" % (GameState.DAY_DURATION_MINUTES if GameState else 0.0)
-	day_val.custom_minimum_size.x = 48
-	day_val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	day_val.add_theme_font_size_override("font_size", 11)
-	day_val.add_theme_color_override("font_color", Color(0.6, 0.9, 0.6))
-	day_row.add_child(day_val)
+	var day_labels := _add_row(vbox, LocalizationState.t("debug.day_duration"), Color(0.6, 0.9, 0.6), 48.0)
+	_name_labels["_day_duration"] = [day_labels[0], "debug.day_duration"]
+	day_labels[1].text = "%.1f min" % (GameState.DAY_DURATION_MINUTES if GameState else 0.0)
 
 	var sep4 := HSeparator.new()
 	sep4.add_theme_constant_override("separation", 2)
@@ -163,20 +141,10 @@ func _ready() -> void:
 			_zone_val = info
 
 	for pair in [["Youn anim", "_anim_youn"], ["Player", "_anim_player"]]:
-		var row := HBoxContainer.new()
-		vbox.add_child(row)
-		var lbl := Label.new()
-		lbl.text = pair[0]
-		lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		lbl.add_theme_font_size_override("font_size", 11)
-		row.add_child(lbl)
-		var val := Label.new()
-		val.add_theme_font_size_override("font_size", 11)
-		val.add_theme_color_override("font_color", Color(0.4, 1.0, 0.6))
-		row.add_child(val)
+		var labels := _add_row(vbox, pair[0], Color(0.4, 1.0, 0.6), 0.0)
 		match pair[1]:
-			"_anim_youn": _anim_youn_val = val
-			"_anim_player": _anim_player_val = val
+			"_anim_youn": _anim_youn_val = labels[1]
+			"_anim_player": _anim_player_val = labels[1]
 
 	LocalizationState.language_changed.connect(_on_language_changed)
 	_refresh()

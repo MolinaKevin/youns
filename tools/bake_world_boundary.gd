@@ -28,14 +28,14 @@ func _bake() -> void:
 	bake_data.from_grid(boundary._grid, WorldBoundaryBakeSignatureScript.current(WorldLayoutScript))
 	var grid_error := ResourceSaver.save(bake_data, GRID_OUTPUT, ResourceSaver.FLAG_COMPRESS)
 	if grid_error != OK:
-		_fail(boundary, "No se pudo guardar %s (%s)." % [GRID_OUTPUT, grid_error])
+		_fail("WorldBoundaryBaker: No se pudo guardar %s (%s)." % [GRID_OUTPUT, grid_error], [boundary])
 		return
 	var root_node := Node3D.new()
 	root_node.name = "BakedWorldBoundaryWalls"
 	for node_name in ["Walls", "NorthTrail"]:
 		var node := boundary.get_node_or_null(node_name) as Node3D
 		if node == null:
-			_fail(boundary, "No se generó %s." % node_name)
+			_fail("WorldBoundaryBaker: No se generó %s." % node_name, [boundary])
 			return
 		boundary.remove_child(node)
 		root_node.add_child(node)
@@ -43,21 +43,13 @@ func _bake() -> void:
 	var packed := PackedScene.new()
 	var pack_error := packed.pack(root_node)
 	if pack_error != OK:
-		root_node.free()
-		_fail(boundary, "No se pudo empaquetar límites (%s)." % pack_error)
+		_fail("WorldBoundaryBaker: No se pudo empaquetar límites (%s)." % pack_error, [root_node, boundary])
 		return
 	var walls_error := ResourceSaver.save(packed, WALLS_OUTPUT, ResourceSaver.FLAG_COMPRESS)
+	if walls_error != OK:
+		_fail("WorldBoundaryBaker: no se pudo guardar %s (%s)." % [WALLS_OUTPUT, walls_error], [root_node, boundary])
+		return
 	root_node.free()
 	boundary.free()
-	if walls_error != OK:
-		push_error("WorldBoundaryBaker: no se pudo guardar %s (%s)." % [WALLS_OUTPUT, walls_error])
-		quit(1)
-		return
 	print("[WorldBoundaryBaker] Listo: %s y %s (%d×%d celdas)." % [GRID_OUTPUT, WALLS_OUTPUT, bake_data.width, bake_data.height])
 	quit()
-
-
-func _fail(boundary: Node, message: String) -> void:
-	push_error("WorldBoundaryBaker: " + message)
-	boundary.free()
-	quit(1)

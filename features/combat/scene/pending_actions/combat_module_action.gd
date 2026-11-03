@@ -37,8 +37,7 @@ func on_tile_selected(pos: Vector2) -> void:
 		if host.board.queries.actors.movement_distance(host.board.state.player_position(), pos) > host.w(card.primary_range_cells()):
 			host.emit_log("combat.log.module.build_too_far")
 			return
-		host.pending_cell = pos
-		host.confirm_popup_show_requested.emit(false)
+		_request_confirm(pos)
 		return
 	if card.card_type == CardActionLine.TYPE_COLLAPSE:
 		if not host.board.selection.targeting.queries.is_click_on_enemy(pos):
@@ -46,24 +45,21 @@ func on_tile_selected(pos: Vector2) -> void:
 		if not host.board.queries.actors.is_enemy_in_attack_range(host.w(card.primary_range_cells())):
 			host.emit_log("combat.log.module.enemy_too_far")
 			return
-		host.pending_cell = pos
-		host.confirm_popup_show_requested.emit(false)
+		_request_confirm(pos)
 		return
 	if phase == 1 and card.card_type == CardActionLine.TYPE_MODULE_THROW:
 		# Lanzar: elegir dónde cae.
 		if host.board.queries.actors.movement_distance(host.board.state.player_position(), pos) > host.w(card.cast_range_cells()):
 			host.emit_log("combat.log.module.throw_too_far")
 			return
-		host.pending_cell = pos
-		host.confirm_popup_show_requested.emit(false)
+		_request_confirm(pos)
 		return
 	if phase == 1:
 		# Golpe: elegir la dirección dentro del cono.
 		var module_cone_angle := card.pattern.cone_half_angle if card.pattern != null else 55.0
 		if not host.board.push.modules.is_pos_in_module_cone(target["pos"], pos, host.w(card.cast_range_cells()), module_cone_angle):
 			return
-		host.pending_cell = pos
-		host.confirm_popup_show_requested.emit(false)
+		_request_confirm(pos)
 		return
 	var obs: Dictionary = host.board.obstacles.module_at(pos)
 	if obs.is_empty() and card.card_type == CardActionLine.TYPE_BREAK:
@@ -85,15 +81,11 @@ func on_tile_selected(pos: Vector2) -> void:
 		host.board.push.modules.start_module_push_cone(obs["pos"], host.w(card.cast_range_cells()), module_preview_angle)
 		host.emit_log("combat.log.module.select_push_direction")
 		return
-	host.pending_cell = pos
-	host.confirm_popup_show_requested.emit(false)
+	_request_confirm(pos)
 
 func execute(cell: Vector2) -> void:
 	var flow := _flow()
-	if not _flow_is_active(flow):
-		return
-	if not _index_valid():
-		clear()
+	if _should_abort_execute(flow):
 		return
 	var played_card: CardActionLine = host.state.turn_actions[index]
 	var obs := target
