@@ -19,11 +19,23 @@ static func instantiate(data: YounData, scene: PackedScene, scale_multiplier: fl
 		animation_player.speed_scale = animation_speed
 		var animations := animation_player.get_animation_list()
 		if not animations.is_empty():
-			var animation := animation_player.get_animation(animations[0])
+			var anim_name := main_animation_name(animations)
+			var animation := animation_player.get_animation(anim_name)
 			if animation != null:
 				animation.loop_mode = Animation.LOOP_LINEAR
-			animation_player.play(animations[0])
+			animation_player.play(anim_name)
 	return model
+
+## Animación jugable dentro de una lista de un AnimationPlayer exportado de
+## Blender: la que no tiene "|" en el nombre (p.ej. "G_Idle"). La que sí tiene
+## "|" (p.ej. "Armature|ArmatureAction") es la pista de bind pose que arma el
+## exportador, no una animación real — mismo criterio que ya usa
+## tools/import_player_model.gd para el personaje. Asume `list` no vacía.
+static func main_animation_name(list: Array) -> StringName:
+	for anim_name in list:
+		if not "|" in String(anim_name):
+			return anim_name
+	return list[0]
 
 ## Material con la textura de `data`, o null si no tiene (no agregar
 ## material_override en ese caso). Comparten esta construcción YounAppearance

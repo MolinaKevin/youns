@@ -15,6 +15,10 @@ enum Comparison { GREATER = 0, LESS = 1, BOOL_TRUE = 2 }
 @export var max_duration_hours: float = 0.0
 
 @export_group("Expire Penalty")
+## Resource cacheado y compartido entre todas las instancias que lo usan: no
+## mutar este dict desde afuera (ej. `rule.expire_stats[key] = x`), corrompe
+## el dato para cualquier otro lector. Hoy ningún .tres lo define y el único
+## consumidor (CareStatsService.apply_expire_penalty) solo lee.
 @export var expire_stats: Dictionary = {}
 @export var expire_reset_hambre: bool = false
 @export var expire_care_mistakes: int = 0

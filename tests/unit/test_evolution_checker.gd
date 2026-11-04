@@ -187,12 +187,23 @@ func test_stat_dominante_de_nguruvilu_va_a_nguruvilu() -> void:
 		assert_eq(_pick(_nino_save({key: 45})), NGURUVILU, key)
 
 
-func test_empate_arriba_entre_rookies_va_al_por_defecto() -> void:
-	assert_eq(_pick(_nino_save({"agilidad": 45, "espiritu": 45})), NEWEN)
+func test_empate_total_entre_rookies_va_al_joker() -> void:
+	# agilidad (Newen) y espiritu (Nguruvilu) empatan arriba, y el resto de las
+	# 8 stats sigue empatado en 30 repartido 3 y 3 entre los dos: no hay
+	# ninguna stat que desempate. Cae en EvolutionChecker.NINO_JOKER_PATH, que
+	# hoy apunta a Newen (placeholder, no hay joker propio para esta etapa).
+	assert_eq(_pick(_nino_save({"agilidad": 45, "espiritu": 45})), EvolutionChecker.NINO_JOKER_PATH)
+	assert_eq(EvolutionChecker.NINO_JOKER_PATH, NEWEN)
 
 
 func test_empate_arriba_del_mismo_rookie_va_a_ese() -> void:
 	assert_eq(_pick(_nino_save({"espiritu": 45, "fuerza": 45})), NGURUVILU)
+
+
+func test_empate_arriba_se_desempata_con_la_siguiente_stat() -> void:
+	# agilidad (Newen) y espiritu (Nguruvilu) empatan arriba; tecnica (Newen)
+	# es la siguiente más alta y nadie de Nguruvilu la iguala ahí: desempata.
+	assert_eq(_pick(_nino_save({"agilidad": 50, "espiritu": 50, "tecnica": 40})), NEWEN)
 
 
 func test_dominant_stats_devuelve_las_empatadas() -> void:

@@ -21,6 +21,14 @@ const NEXT_STAGE := {
 ## Etapas que al terminar su tiempo mueren y reencarnan.
 const END_OF_LIFE_STAGES := ["campeon", "ultimate"]
 
+## Joker temporal de niño → rookie: a dónde va si el desempate en cascada de
+## _pick_by_dominant_stat() no logra distinguir a nadie. Campeón y ultimate ya
+## tienen su propio Youn joker (YounData.is_wildcard); esta etapa todavía no,
+## así que por ahora apunta a Newen nada más como placeholder. Cambiar esta
+## constante (o reemplazarla por un YounData con is_wildcard propio una vez
+## que se diseñe el joker real).
+const NINO_JOKER_PATH := "res://data/youns/newen.tres"
+
 
 static func try_evolve(save: PlayerSaveData, youn_data: YounData, random: RandomSource = null) -> String:
 	if save == null or youn_data == null:
@@ -134,37 +142,59 @@ static func pick_target(candidates: Array[String], ctx: Dictionary, _random: Ran
 	return best
 
 
-## Va al candidato dueño de la stat más alta. Si varias empatan arriba y son
-## de distintos candidatos (o de ninguno), va el de por defecto.
+## Va al candidato dueño de la stat más alta. Si varios empatan arriba,
+## desempata con la stat siguiente en el ranking (y la que sigue, y así) entre
+## los candidatos todavía en pie. Si se llega al final sin que ninguno se
+## distinga, va al joker (NINO_JOKER_PATH).
 static func _pick_by_dominant_stat(candidates: Array[String], datas: Array[YounData], ctx: Dictionary) -> String:
 	var save: PlayerSaveData = ctx.get("save")
 	if save == null:
-		return candidates[0]
-	var winner := -1
-	for key in dominant_stats(save.youn_stats):
-		var owner := -1
-		for i in datas.size():
-			if datas[i] != null and key in datas[i].dominant_stats:
-				owner = i
-				break
-		if owner < 0 or (winner >= 0 and owner != winner):
-			return candidates[0]
-		winner = owner
-	return candidates[maxi(winner, 0)]
+		return _nino_joker_or_default(candidates)
+	var contenders: Array[int] = []
+	for i in datas.size():
+		contenders.append(i)
+	for tier in _stats_ranked_desc(save.youn_stats):
+		var owners: Array[int] = []
+		for key in tier:
+			for i in contenders:
+				if datas[i] != null and key in datas[i].dominant_stats and not i in owners:
+					owners.append(i)
+		if owners.size() == 1:
+			return candidates[owners[0]]
+		if owners.size() > 1:
+			contenders = owners
+	return _nino_joker_or_default(candidates)
+
+
+## El joker si está entre los candidatos de este niño; si no (otro niño cuyo
+## evolves_to no lo incluya), el primero de la lista como red de seguridad.
+static func _nino_joker_or_default(candidates: Array[String]) -> String:
+	return NINO_JOKER_PATH if NINO_JOKER_PATH in candidates else candidates[0]
 
 
 ## Las stats con el valor más alto (varias si empatan).
 static func dominant_stats(stats: Dictionary) -> Array[String]:
-	var best: Array[String] = []
-	var best_value := -INF
+	var tiers := _stats_ranked_desc(stats)
+	return tiers[0] if not tiers.is_empty() else []
+
+
+## Las 8 stats agrupadas por valor, de mayor a menor (cada grupo = las que
+## empatan entre sí en ese escalón). Lo usan dominant_stats() (solo el primer
+## escalón) y _pick_by_dominant_stat() (todos, para desempatar en cascada).
+static func _stats_ranked_desc(stats: Dictionary) -> Array:
+	var by_value := {}
 	for key in YounStats.KEYS:
 		var value := float(stats.get(key, 0))
-		if value > best_value:
-			best = [key]
-			best_value = value
-		elif value == best_value:
-			best.append(key)
-	return best
+		if not by_value.has(value):
+			by_value[value] = [] as Array[String]
+		by_value[value].append(key)
+	var values := by_value.keys()
+	values.sort()
+	values.reverse()
+	var tiers := []
+	for value in values:
+		tiers.append(by_value[value])
+	return tiers
 
 
 ## Cuántas condiciones de evolución de target se cumplen.

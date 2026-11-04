@@ -16,12 +16,7 @@ func _load_cards() -> void:
 	for card in all_cards:
 		if card != null and card.id != "":
 			cards_by_id[card.id] = card
-	for error_text in GameDataValidatorScript.card_errors(all_cards):
-		push_error("CardDatabase: " + error_text)
-	for error_text in GameDataValidatorScript.youn_errors():
-		push_error("GameData: " + error_text)
-	for error_text in GameDataValidatorScript.item_errors():
-		push_error("GameData: " + error_text)
+	GameDataValidatorScript.validate_all_at_boot(all_cards)
 
 func get_card(card_id: String) -> CardData:
 	return cards_by_id.get(card_id, null)

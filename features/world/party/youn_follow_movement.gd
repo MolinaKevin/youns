@@ -54,6 +54,11 @@ var _path_rebuild_timer := 0.0
 var _recovery_stall_time := 0.0
 var _recovery_best_distance := INF
 
+## Último dist/speed calculados, solo para el panel de debug (ver
+## debug_stats_panel.gd) — no los lee ninguna otra lógica de seguimiento.
+var debug_dist := 0.0
+var debug_speed := 0.0
+
 func _init(p_host: Youn3D) -> void:
 	host = p_host
 	_player = host.get_parent().get_node_or_null("Player")
@@ -67,6 +72,7 @@ func tick(delta: float) -> void:
 	if host.movement_locked:
 		host.velocity.x = 0.0
 		host.velocity.z = 0.0
+		debug_speed = 0.0
 		_recovering_to_player = false
 		host.collision_mask = _normal_collision_mask
 		host.play_anim("idle")
@@ -79,15 +85,17 @@ func tick(delta: float) -> void:
 	var to_player := _player.global_position - host.global_position
 	to_player.y = 0.0
 	var dist := to_player.length()
+	debug_dist = dist
 	if dist < PLAYER_SEPARATION_DISTANCE:
 		_move_away_from_player(to_player, dist, delta)
 		return
 
 	# Seguimiento elástico: cerca conserva el ritmo del jugador; lejos agrega
 	# velocidad según la separación para poder alcanzarlo después de una carrera.
+	# Usa la velocidad real (no movement_speed(), que es la máxima posible y
+	# no baja a 0 cuando el jugador está parado: lo dejaba acercándose sin fin
+	# cerca del límite de FOLLOW_START_DIST).
 	var max_follow_speed := Vector2(_player.velocity.x, _player.velocity.z).length()
-	if _player.has_method("movement_speed"):
-		max_follow_speed = _player.movement_speed()
 	var distance_ratio := inverse_lerp(FOLLOW_START_DIST, FOLLOW_FULL_SPEED_DIST, dist)
 	var normal_speed := max_follow_speed * clampf(distance_ratio, 0.0, 1.0)
 	var catch_up_speed := maxf(0.0, dist - CATCH_UP_START_DIST) * CATCH_UP_SPEED_PER_METER
@@ -95,6 +103,7 @@ func tick(delta: float) -> void:
 	var current_speed := Vector2(host.velocity.x, host.velocity.z).length()
 	var rate := FOLLOW_ACCELERATION if target_speed > current_speed else FOLLOW_DECELERATION
 	var speed := move_toward(current_speed, target_speed, rate * delta)
+	debug_speed = speed
 
 	if not _recovering_to_player and dist >= RECOVERY_START_DISTANCE:
 		_begin_recovery()
@@ -135,10 +144,13 @@ func tick(delta: float) -> void:
 func _move_away_from_player(to_player: Vector3, distance_to_player: float, delta: float) -> void:
 	var away := -to_player / distance_to_player if distance_to_player > 0.01 else _fallback_away_direction()
 	var speed := PLAYER_SEPARATION_SPEED * inverse_lerp(0.0, PLAYER_SEPARATION_DISTANCE, PLAYER_SEPARATION_DISTANCE - distance_to_player)
+	debug_speed = speed
 	host.velocity.x = away.x * speed
 	host.velocity.z = away.z * speed
 	_face_dir(away, delta)
-	host.play_anim("walk")
+	# Cerca del borde de PLAYER_SEPARATION_DISTANCE, speed tiende a 0: sin este
+	# chequeo quedaba "caminando" casi inmóvil, clavado justo en ese borde.
+	host.play_anim("walk" if speed > 0.01 else "idle")
 	host.move_and_slide()
 
 
@@ -243,7 +255,7 @@ func _move_along_world_path(speed: float, delta: float) -> bool:
 	var to_target := target - host.global_position
 	to_target.y = 0.0
 	var dist := to_target.length()
-	if dist > 0.01:
+	if dist > 0.01 and speed > 0.01:
 		var dir := to_target / dist
 		host.velocity.x = dir.x * speed
 		host.velocity.z = dir.z * speed

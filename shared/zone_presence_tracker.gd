@@ -49,4 +49,6 @@ func check_now() -> void:
 
 
 static func _default_player_position() -> Variant:
-	return PartyManager.player.global_position if is_instance_valid(PartyManager.player) else null
+	if not is_instance_valid(PartyManager.player):
+		return null
+	return PartyManager.player.global_position

@@ -1,29 +1,58 @@
 class_name EvolutionTreeScreen
 extends Control
 
-## Árbol de evoluciones: los Youns por etapa (bebé → ultimate). Los descubiertos
-## (PlayerSaveData.discovered_evolutions, más el Youn actual) muestran su
-## nombre; el resto, "???". Tocar uno descubierto muestra sus inteligencias y
-## sus condiciones: las conocidas con texto y las demás como "???????".
-## Se abre desde el menú del juego.
+## Árbol de evoluciones: los Youns por etapa (bebé → ultimate), en casilleros
+## cuadrados con su ícono (como una chart: una columna de color por etapa, sin
+## líneas que las conecten). Los descubiertos (PlayerSaveData.discovered_evolutions,
+## más el Youn actual) muestran su retrato (o su nombre si todavía no tiene);
+## el resto queda vacío/bloqueado. Tocar uno descubierto muestra sus
+## inteligencias y sus condiciones: las conocidas con texto y las demás como
+## "???????". Se abre desde el menú del juego.
 
 const Intelligences := preload("res://data/youns/intelligences.gd")
 const YounCatalogScript := preload("res://shared/youn_catalog.gd")
 const STAGES := ["bebe", "nino", "adolescente", "campeon", "ultimate"]
-const NODE_SIZE := Vector2(150, 54)
+const NODE_SIZE := Vector2(80, 80)
 const BG := Color(0.03, 0.06, 0.09)
 const PANEL_BG := Color(0.05, 0.1, 0.15)
 const KNOWN := EvolutionPalette.ACCENT
 const HIDDEN := Color(0.3, 0.33, 0.36)
 const CURRENT := EvolutionPalette.CURRENT
-const LINK := Color(EvolutionPalette.ACCENT.r, EvolutionPalette.ACCENT.g, EvolutionPalette.ACCENT.b, 0.5)
+## Tinte de fondo por etapa, como las columnas de color de una chart de
+## evolución: cada etapa se distingue de un vistazo aunque le falten Youns.
+const STAGE_TINTS := {
+	"bebe": Color(0.45, 0.2, 0.28, 0.35),
+	"nino": Color(0.32, 0.18, 0.42, 0.35),
+	"adolescente": Color(0.14, 0.26, 0.42, 0.35),
+	"campeon": Color(0.14, 0.38, 0.24, 0.35),
+	"ultimate": Color(0.48, 0.32, 0.12, 0.35),
+}
+## Casilleros a reservar por etapa (más que los Youns que hay hoy): deja el
+## resto vacíos para cuando se agreguen. Ajustar acá a medida que se diseñen
+## más Youns de una etapa.
+const STAGE_CAPACITY := {
+	"bebe": 4,
+	"nino": 5,
+	"adolescente": 9,
+	"campeon": 50,
+	"ultimate": 15,
+}
+## Columnas de la grilla por etapa: bebé/niño/adolescente angostos (una sola
+## columna) para dejarle ancho a campeón/ultimate, que si no desbordan mucho
+## más en vertical dentro del mismo alto de pantalla.
+const STAGE_COLUMNS := {
+	"bebe": 1,
+	"nino": 1,
+	"adolescente": 1,
+	"campeon": 6,
+	"ultimate": 2,
+}
 
 var _youns: Array[YounData] = []
 var _discovered := {}
 var _current_path := ""
-## Botón de cada Youn (por resource_path), para dibujar las líneas.
+## Botón de cada Youn (por resource_path), para la navegación por teclado.
 var _nodes := {}
-var _links: Control
 var _detail: EvolutionDetailOverlay
 var _focus_nav: EvolutionFocusNav
 
@@ -90,39 +119,19 @@ func _build() -> void:
 	title.add_theme_font_size_override("font_size", 28)
 	column.add_child(title)
 
-	# Árbol arriba (todo el ancho) y el detalle abajo.
-	var body := VBoxContainer.new()
-	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", 16)
-	column.add_child(body)
-
-	# Árbol: una columna por etapa, con las líneas dibujadas por detrás.
-	var tree_area := Control.new()
-	tree_area.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	tree_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_child(tree_area)
-	_links = Control.new()
-	_links.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_links.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_links.draw.connect(_draw_links)
-	tree_area.add_child(_links)
+	# Árbol: una columna por etapa, cada una con su color y una grilla de
+	# casilleros cuadrados, del tamaño justo para sus cupos (sin estirarse
+	# todas a la misma altura). Sin líneas entre evoluciones (chart, no árbol).
+	var tree_scroll := ScrollContainer.new()
+	tree_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tree_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	column.add_child(tree_scroll)
 	var stages_row := HBoxContainer.new()
-	stages_row.set_anchors_preset(Control.PRESET_FULL_RECT)
-	stages_row.add_theme_constant_override("separation", 24)
-	tree_area.add_child(stages_row)
+	stages_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stages_row.add_theme_constant_override("separation", 18)
+	tree_scroll.add_child(stages_row)
 	for stage in STAGES:
-		var stage_col := VBoxContainer.new()
-		stage_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		stage_col.add_theme_constant_override("separation", 14)
-		stage_col.alignment = BoxContainer.ALIGNMENT_CENTER
-		stages_row.add_child(stage_col)
-		var header := Label.new()
-		header.text = LocalizationState.youn_stage_name(stage)
-		header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		stage_col.add_child(header)
-		for data in _youns:
-			if data.stage == stage:
-				stage_col.add_child(_node_button(data))
+		stages_row.add_child(_stage_column(stage))
 
 	_detail.build()
 
@@ -131,21 +140,67 @@ func _build() -> void:
 	back.custom_minimum_size = Vector2(160, 44)
 	back.pressed.connect(_on_back)
 	column.add_child(back)
-	# Las líneas se dibujan cuando los botones ya tienen su lugar.
-	_links.queue_redraw.call_deferred()
-	resized.connect(_links.queue_redraw)
+
+func _stage_column(stage: String) -> PanelContainer:
+	var stage_youns: Array[YounData] = []
+	for data in _youns:
+		if data.stage == stage:
+			stage_youns.append(data)
+
+	var panel := PanelContainer.new()
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = STAGE_TINTS.get(stage, Color(0.1, 0.1, 0.12, 0.35))
+	panel_style.set_corner_radius_all(10)
+	panel_style.set_content_margin_all(10)
+	panel.add_theme_stylebox_override("panel", panel_style)
+
+	var inner := VBoxContainer.new()
+	inner.add_theme_constant_override("separation", 10)
+	panel.add_child(inner)
+
+	var capacity: int = maxi(stage_youns.size(), STAGE_CAPACITY.get(stage, stage_youns.size()))
+	var grid := GridContainer.new()
+	grid.columns = STAGE_COLUMNS.get(stage, 1)
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	inner.add_child(grid)
+	for data in stage_youns:
+		grid.add_child(_node_button(data))
+	for i in capacity - stage_youns.size():
+		grid.add_child(_empty_slot())
+	return panel
+
+## Casillero reservado sin Youn asignado todavía: no es interactivo ni entra
+## en la navegación por teclado, solo marca que hay lugar para más.
+func _empty_slot() -> Control:
+	var slot := PanelContainer.new()
+	slot.custom_minimum_size = NODE_SIZE
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.08, 0.09, 0.1, 0.35)
+	st.border_color = HIDDEN
+	st.set_border_width_all(1)
+	st.set_corner_radius_all(8)
+	slot.add_theme_stylebox_override("panel", st)
+	return slot
 
 func _node_button(data: YounData) -> Button:
 	var known := _is_discovered(data)
 	var b := Button.new()
 	b.custom_minimum_size = NODE_SIZE
-	b.text = data.youn_name if known else "???"
 	b.disabled = not known
+	if known and data.portrait != null:
+		b.icon = data.portrait
+		b.expand_icon = true
+	elif known:
+		b.text = data.youn_name
+		b.add_theme_font_size_override("font_size", 13)
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var st := StyleBoxFlat.new()
-	st.bg_color = PANEL_BG if known else Color(0.08, 0.09, 0.1)
+	st.bg_color = PANEL_BG if known else Color(0.08, 0.09, 0.1, 0.6)
 	st.border_color = CURRENT if data.resource_path == _current_path else (KNOWN if known else HIDDEN)
 	st.set_border_width_all(3 if data.resource_path == _current_path else 1)
 	st.set_corner_radius_all(8)
+	st.set_content_margin_all(6)
 	for state in ["normal", "disabled"]:
 		b.add_theme_stylebox_override(state, st)
 	var hover := st.duplicate()
@@ -156,33 +211,6 @@ func _node_button(data: YounData) -> Button:
 	b.focus_entered.connect(_focus_nav.on_node_focused.bind(b))
 	_nodes[data.resource_path] = b
 	return b
-
-## Líneas entre Youns descubiertos: las evoluciones fijas (evolves_to) y, como
-## a un campeón se llega desde cualquier rookie, rookie → campeón.
-func _draw_links() -> void:
-	for data in _youns:
-		if not _is_discovered(data):
-			continue
-		var targets: Array[String] = []
-		targets.append_array(data.evolves_to)
-		if data.stage == "adolescente":
-			for other in _youns:
-				if other.stage == "campeon":
-					targets.append(other.resource_path)
-		for path in targets:
-			if not _nodes.has(path) or not _nodes.has(data.resource_path):
-				continue
-			var target: YounData = null
-			for other in _youns:
-				if other.resource_path == path:
-					target = other
-			if target == null or not _is_discovered(target):
-				continue
-			var a: Button = _nodes[data.resource_path]
-			var b: Button = _nodes[path]
-			var from := _links.get_global_transform().affine_inverse() * (a.global_position + Vector2(a.size.x, a.size.y * 0.5))
-			var to := _links.get_global_transform().affine_inverse() * (b.global_position + Vector2(0, b.size.y * 0.5))
-			_links.draw_line(from, to, LINK, 2.0, true)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not _detail.is_open():

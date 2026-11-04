@@ -111,7 +111,8 @@ func play(anim_key: String) -> void:
 	if anim_player:
 		var list := anim_player.get_animation_list()
 		if not list.is_empty():
-			var anim := anim_player.get_animation(list[0])
+			var anim_name := YounModelBuilder.main_animation_name(list)
+			var anim := anim_player.get_animation(anim_name)
 			if anim:
 				anim.loop_mode = Animation.LOOP_NONE if is_priority else Animation.LOOP_LINEAR
 			if is_priority:
@@ -119,7 +120,7 @@ func play(anim_key: String) -> void:
 					func(_n: StringName) -> void: anim_finished.emit(),
 					CONNECT_ONE_SHOT
 				)
-			anim_player.play(list[0])
+			anim_player.play(anim_name)
 		elif is_priority:
 			anim_finished.emit.call_deferred()
 	elif is_priority:

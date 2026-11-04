@@ -33,7 +33,7 @@ static func build(parent: Node, panel_min_width: float, vbox_separation: float) 
 	panel.add_child(margin)
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", vbox_separation)
+	vbox.add_theme_constant_override("separation", int(vbox_separation))
 	margin.add_child(vbox)
 
 	return {"fade": fade, "panel": panel, "vbox": vbox}

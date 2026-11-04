@@ -88,21 +88,6 @@ func show_for(data: YounData) -> void:
 		for id in data.intelligences:
 			names.append(host.Intelligences.display_name(id))
 		_info.add_child(_text(LocalizationState.t("tree.intelligences", [", ".join(names)]), 16, host.KNOWN))
-	_info.add_child(HSeparator.new())
-	if data.is_wildcard:
-		_info.add_child(_text(LocalizationState.t("evolution.wildcard"), 15, Color.WHITE))
-		return
-	if data.evolution_conditions.is_empty():
-		_info.add_child(_text(LocalizationState.t("evolution.no_conditions"), 15, Color.WHITE))
-		return
-	_info.add_child(_text(LocalizationState.t("tree.conditions"), 16, Color.WHITE))
-	var save := PlayerSessionAccess.save()
-	var known: Array = save.discovered_evolutions.get(EvolutionDiscovery.youn_key(data), []) if save != null else []
-	for i in data.evolution_conditions.size():
-		if known.has(i):
-			_info.add_child(_text("• " + data.evolution_conditions[i].describe(), 15, host.CURRENT))
-		else:
-			_info.add_child(_text("• ???????", 15, host.HIDDEN))
 
 func close_overlay() -> void:
 	overlay.visible = false

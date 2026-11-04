@@ -45,7 +45,8 @@ func switch_to(key: String) -> void:
 	var list := anim_player.get_animation_list()
 	if list.is_empty():
 		return
-	var anim := anim_player.get_animation(list[0])
+	var anim_name := YounModelBuilder.main_animation_name(list)
+	var anim := anim_player.get_animation(anim_name)
 	if anim != null:
 		anim.loop_mode = Animation.LOOP_LINEAR
-	anim_player.play(list[0])
+	anim_player.play(anim_name)

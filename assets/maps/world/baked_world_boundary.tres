@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_pltea")
-source_signature = "1:08db46d01e16090a0fffe0045f2fbbd49cddfb1bada34800bdfbd81a37a98084"
+source_signature = "1:710c3405cf31f14ca3c0ed261ace352fc1d24cdbd1b6cdab72f2b12b46a571e8"
 origin = Vector2(-381, -371)
 width = 726
 height = 557

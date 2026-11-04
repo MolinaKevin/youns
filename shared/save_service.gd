@@ -12,14 +12,15 @@ const WorldConstructionCatalogScript := preload("res://data/world/world_construc
 const CardCatalogScript := preload("res://shared/card_catalog.gd")
 const PlayerSaveValidatorScript := preload("res://shared/player_save_validator.gd")
 const TypedResourceLoaderScript := preload("res://shared/typed_resource_loader.gd")
-const STARTING_YOUN_PATH := "res://data/youns/nguruvilu.tres"
-const STARTING_OWNED_CARD_IDS: Array[String] = ["step", "dash", "strike", "slash", "block", "barrera", "meditar", "golpe_escudo", "represalia", "tiron", "ancla", "demoler", "carga_explosiva", "muro", "golpe_de_roca", "muro_arcano", "derrumbe", "lanzar_roca", "chispa", "escarcha", "descarga", "aliento", "nova", "ceguera", "lentitud", "raices", "curar", "encantar_arma", "parpadeo", "traslado_charco", "granizada", "diluvio", "lluvia_acida", "trepar", "meteor", "arrow", "snipe", "grenade", "salto_rupestre", "envion", "charco", "charco_fuego", "charco_grasa", "enredadera", "charco_sangre", "charco_veneno", "charco_arena", "emboscada"]
-const STARTING_EQUIPPED_DECK_IDS: Array[String] = ["step", "step", "dash", "arrow", "arrow", "snipe", "grenade", "grenade", "charco_fuego", "charco_fuego", "nova", "nova", "aliento", "aliento", "muro", "demoler", "lanzar_roca", "golpe_de_roca", "derrumbe", "trepar"]
-const STARTING_ITEM_PATHS: PackedStringArray = ["res://data/items/hierba_curativa.tres", "res://data/items/agua_de_manantial.tres", "res://data/items/unguento.tres"]
-const STARTING_STATS := {
-	"constitucion": 55, "mente": 45, "fuerza": 50, "resistencia": 50,
-	"agilidad": 45, "tecnica": 45, "inteligencia": 45, "espiritu": 60,
-}
+const NewGameDefaultsScript := preload("res://data/new_game_defaults.gd")
+## Re-exportados para no romper a GameState ni a los tests que ya los usan
+## como SaveService.STARTING_*/GameState.STARTING_*; el valor real vive en
+## NewGameDefaults, separado del ciclo de vida de guardado.
+const STARTING_YOUN_PATH := NewGameDefaultsScript.STARTING_YOUN_PATH
+const STARTING_OWNED_CARD_IDS := NewGameDefaultsScript.STARTING_OWNED_CARD_IDS
+const STARTING_EQUIPPED_DECK_IDS := NewGameDefaultsScript.STARTING_EQUIPPED_DECK_IDS
+const STARTING_ITEM_PATHS := NewGameDefaultsScript.STARTING_ITEM_PATHS
+const STARTING_STATS := NewGameDefaultsScript.STARTING_STATS
 
 var save_path := SAVE_PATH
 var player_save: PlayerSaveData
@@ -37,14 +38,14 @@ func make_new_save(total_hours: float) -> PlayerSaveData:
 	save.save_version = CURRENT_SAVE_VERSION
 	save.owned_card_ids = CardCatalogScript.filter_known_ids(STARTING_OWNED_CARD_IDS, "STARTING_OWNED_CARD_IDS")
 	save.equipped_deck_ids = CardCatalogScript.filter_known_ids(STARTING_EQUIPPED_DECK_IDS, "STARTING_EQUIPPED_DECK_IDS")
-	save.inventory_slots = 20
+	save.inventory_slots = NewGameDefaultsScript.STARTING_INVENTORY_SLOTS
 	for item_path in STARTING_ITEM_PATHS:
 		var item := TypedResourceLoaderScript.item(item_path)
 		if item != null:
 			save.inventory_items.append(item.to_inventory_entry(2))
 		else:
 			push_error("SaveService: ítem inicial inválido: %s" % item_path)
-	save.gold = 100
+	save.gold = NewGameDefaultsScript.STARTING_GOLD
 	setup_starting_youn(save, total_hours)
 	return save
 

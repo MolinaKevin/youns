@@ -94,6 +94,20 @@ static func item_errors() -> PackedStringArray:
 	return errors
 
 
+## Corre las validaciones de datos que no tienen autoload propio (cartas,
+## youns, ítems) y las loguea con el prefijo de cada dominio. Lo llama
+## CardDatabase al boot por ser el único lugar que ya carga el catálogo
+## completo de cartas — no es dueño de las validaciones de youn/item, solo
+## las corre por no haber un lugar mejor hoy.
+static func validate_all_at_boot(cards: Array[CardData]) -> void:
+	for error_text in card_errors(cards):
+		push_error("Cards: " + error_text)
+	for error_text in youn_errors():
+		push_error("Youns: " + error_text)
+	for error_text in item_errors():
+		push_error("Items: " + error_text)
+
+
 static func zone_graph_errors(catalog: ZoneCatalog) -> PackedStringArray:
 	var errors := PackedStringArray()
 	for id in catalog.ids():

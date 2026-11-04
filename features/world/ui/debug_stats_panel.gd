@@ -25,6 +25,8 @@ var _clock_val: Label
 var _states_val: Label
 var _anim_youn_val: Label
 var _anim_player_val: Label
+var _dist_val: Label
+var _speed_val: Label
 ## Posición del jugador y zona según la grilla de WorldBoundary: para reportar
 ## exactamente dónde hay una pared invisible o un agujero en el piso.
 var _pos_val: Label
@@ -146,6 +148,12 @@ func _ready() -> void:
 			"_anim_youn": _anim_youn_val = labels[1]
 			"_anim_player": _anim_player_val = labels[1]
 
+	for pair in [["Dist", "_dist"], ["Speed", "_speed"]]:
+		var labels := _add_row(vbox, pair[0], Color(1.0, 0.7, 0.3), 0.0)
+		match pair[1]:
+			"_dist": _dist_val = labels[1]
+			"_speed": _speed_val = labels[1]
+
 	LocalizationState.language_changed.connect(_on_language_changed)
 	_refresh()
 
@@ -175,6 +183,15 @@ func _refresh() -> void:
 			_anim_player_val.text = "move" if spd > 0.5 else "idle"
 		else:
 			_anim_player_val.text = "-"
+	if _dist_val and _speed_val:
+		var youn = PartyManager.youn if PartyManager else null
+		if is_instance_valid(youn):
+			var follow: Vector2 = youn.debug_follow_values()
+			_dist_val.text = "%.2f" % follow.x
+			_speed_val.text = "%.2f" % follow.y
+		else:
+			_dist_val.text = "-"
+			_speed_val.text = "-"
 	_refresh_position()
 	var ps: PlayerSaveData = PlayerSessionAccessScript.save() as PlayerSaveData
 	if ps == null:

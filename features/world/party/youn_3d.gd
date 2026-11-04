@@ -45,6 +45,11 @@ func get_current_anim() -> String:
 	return _appearance.current_anim()
 
 
+## Distancia al jugador y velocidad de seguimiento, para el panel de debug.
+func debug_follow_values() -> Vector2:
+	return Vector2(_movement.debug_dist, _movement.debug_speed)
+
+
 func show_emotion(state_name: String) -> void:
 	if _emotion_bubble:
 		_emotion_bubble.show_emotion(state_name)

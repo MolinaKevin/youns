@@ -1,19 +1,32 @@
-[gd_resource type="Resource" script_class="YounData" load_steps=5 format=3]
+[gd_resource type="Resource" script_class="YounData" load_steps=10 format=3]
 
 [ext_resource type="Script" uid="uid://dkniy614ehfbc" path="res://data/youns/youn_data.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/youns/tetue/portraits/tetue_neutral.png" id="2_portrait"]
-[ext_resource type="PackedScene" path="res://assets/youns/pombero/idle.fbx" id="3_placeholder_model"]
-[ext_resource type="Texture2D" path="res://assets/youns/pombero/texture.png" id="4_model_texture"]
+[ext_resource type="PackedScene" uid="uid://b6dfajdy3vwxr" path="res://assets/youns/tetue/Ground/Tue Tue G Idle.fbx" id="3_idle"]
+[ext_resource type="PackedScene" uid="uid://chvy0k5tjx848" path="res://assets/youns/tetue/Ground/Tue Tue Walk.fbx" id="4_walk"]
+[ext_resource type="Texture2D" uid="uid://d0y24dnn1mb7k" path="res://assets/youns/tetue/Textures/TueTueTexture Color.png" id="5_texture"]
+[ext_resource type="Resource" uid="uid://dvfqgfl4a8g0o" path="res://data/enemies/strategies/aggressive.tres" id="6_strategy"]
+[ext_resource type="PackedScene" uid="uid://d30db3h112q5r" path="res://assets/youns/tetue/Flying/Tue Tue F Movement.fbx" id="7_run"]
+[ext_resource type="PackedScene" uid="uid://ccmkxifqmsv5b" path="res://assets/youns/tetue/Flying/Tue Tue Attack 1.fbx" id="8_attack"]
+[ext_resource type="PackedScene" uid="uid://dde5xbxka5ljc" path="res://assets/youns/tetue/Flying/Tue Tue F Damaged.fbx" id="9_damage"]
 
 [resource]
 script = ExtResource("1_script")
 id = "tetue"
 youn_name = "Tetue"
+stage = "nino"
+evolves_to = Array[String](["res://data/youns/newen.tres", "res://data/youns/nguruvilu.tres"])
 portrait = ExtResource("2_portrait")
 dialogue_portrait_position = Vector2(-225, -115)
 portrait_scale = Vector2(0.36, 0.36)
 dialogue_nameplate_side = "right"
-mesh_scale = 0.2
+mesh_scale = 0.45
 mesh_y_offset = -0.8
-texture = ExtResource("4_model_texture")
-scene_idle = ExtResource("3_placeholder_model")
+texture = ExtResource("5_texture")
+scene_idle = ExtResource("3_idle")
+scene_walk = ExtResource("4_walk")
+scene_run = ExtResource("7_run")
+scene_attack = ExtResource("8_attack")
+scene_damage = ExtResource("9_damage")
+strategy = ExtResource("6_strategy")
+max_hp = 100
