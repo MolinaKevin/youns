@@ -252,16 +252,12 @@ func select_position(pos: Vector2) -> void:
 	if _current_action == null:
 		return
 	var action := _current_action
-	if action == _move_action:
-		print("[CombatMoveTrace] player_actions.select_position | pos=%s pending_before=%s" % [pos, pending_cell])
 	action.on_tile_selected(pos)
 	if not action.is_active():
 		_current_action = null
 
 ## Confirma la selección pendiente actual.
 func confirm_selection() -> void:
-	if _current_action == _move_action:
-		print("[CombatMoveTrace] player_actions.confirm_selection | pending_cell=%s" % pending_cell)
 	confirm_popup_hide_requested.emit()
 	var cell := pending_cell
 	pending_cell = Vector2(-1.0, -1.0)
@@ -283,7 +279,6 @@ func finish_movement() -> void:
 	_finish_movement()
 
 func _finish_movement() -> void:
-	print("[CombatMoveTrace] player_actions.finish_movement | current_is_move=%s pending_cell=%s" % [_current_action == _move_action, pending_cell])
 	card_preview_hide_requested.emit()
 	end_move_button_visible_changed.emit(false)
 	_move_action.clear()

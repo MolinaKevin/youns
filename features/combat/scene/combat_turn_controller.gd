@@ -170,20 +170,11 @@ func consume_wildcard_half(is_top: bool, card_index: int) -> void:
 		used_bottom = card_index
 
 func skip_active_line() -> CombatTurnResult:
-	print("[CombatMoveTrace] turn_controller.skip_active_line enter | phase=%s has_playing=%s active=%s started=%s index=%s" % [
-		phase,
-		playing != null,
-		playing.active if playing != null else false,
-		playing.started if playing != null else false,
-		playing.index if playing != null else -1,
-	])
 	if phase != Phase.ACTING or playing == null or not playing.active:
-		print("[CombatMoveTrace] turn_controller.skip_active_line idle")
 		return CombatTurnResult.make("idle")
 	var result := CombatTurnResult.make("skipped")
 	result.skipped = true
 	result.echo_card = mark_playing_started()
-	print("[CombatMoveTrace] turn_controller.skip_active_line skipped | started_after=%s used=%d counted=%d" % [playing.started, playing.used, playing.counted])
 	return result
 
 ## Avanza o termina la mitad según si CombatPlayerActions todavía conserva la
