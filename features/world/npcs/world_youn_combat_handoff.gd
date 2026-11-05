@@ -10,6 +10,7 @@ var host: WorldYoun
 var waiting := false
 var _modal: ModalScreenContext
 var _combat_runtime: WorldCombatRuntime
+var _combat_scene_requested := false
 
 func _init(p_host: WorldYoun) -> void:
 	host = p_host
@@ -35,6 +36,7 @@ func engage() -> void:
 	host.process_mode = Node.PROCESS_MODE_ALWAYS
 	PauseMenu.enabled = false
 	_modal.enter_overlay()
+	_request_combat_scene()
 
 ## true si el evento se consumió (estaba esperando confirmación), haya sido
 ## o no la tecla correcta.
@@ -56,4 +58,28 @@ func _start_transition() -> void:
 		host.world_enemy_id,
 		host.youn_data,
 	)
-	SceneNavigator.change_scene_resumed(host.get_tree(), ScenePaths.COMBAT)
+	var combat_scene := _take_combat_scene()
+	if combat_scene != null:
+		SceneNavigator.change_packed_scene_resumed(host.get_tree(), combat_scene)
+	else:
+		SceneNavigator.change_scene_resumed(host.get_tree(), ScenePaths.COMBAT)
+
+
+## El popup da una ventana natural para leer la escena en segundo plano antes
+## de que Enter confirme el combate. Si el jugador confirma enseguida,
+## load_threaded_get() espera sólo el trabajo que todavía quede pendiente.
+func _request_combat_scene() -> void:
+	var status := ResourceLoader.load_threaded_get_status(ScenePaths.COMBAT)
+	if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS or status == ResourceLoader.THREAD_LOAD_LOADED:
+		_combat_scene_requested = true
+		return
+	_combat_scene_requested = ResourceLoader.load_threaded_request(ScenePaths.COMBAT) == OK
+
+
+func _take_combat_scene() -> PackedScene:
+	if not _combat_scene_requested:
+		return null
+	var status := ResourceLoader.load_threaded_get_status(ScenePaths.COMBAT)
+	if status != ResourceLoader.THREAD_LOAD_IN_PROGRESS and status != ResourceLoader.THREAD_LOAD_LOADED:
+		return null
+	return ResourceLoader.load_threaded_get(ScenePaths.COMBAT) as PackedScene

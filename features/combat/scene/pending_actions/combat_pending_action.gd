@@ -89,6 +89,11 @@ func _request_confirm(pos: Vector2, started := false) -> void:
 func _spend_card() -> void:
 	host.state.turn_actions.remove_at(index)
 	clear()
+	# Las señales son síncronas: si el refresco de mano ocurre mientras esta
+	# referencia sigue activa, CombatTurnFlow interpreta que la selección aún
+	# está pendiente y no avanza a la próxima línea.
+	if host.current_action() == self:
+		host.clear_current_action()
 	host.card_preview_hide_requested.emit()
 
 ## Cierre común a las familias que animan algo después de gastar la carta:

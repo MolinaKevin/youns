@@ -95,6 +95,21 @@ func test_confirm_range_attack_gasta_la_accion_antes_del_danio() -> void:
 	assert_eq(s.enemy_hp, s.enemy_max_hp - 6)
 
 
+func test_range_attack_suelta_la_seleccion_antes_de_refrescar_la_mano() -> void:
+	var s := CombatState.new()
+	s.turn_actions.append(_make_card("melee_attack", 0, 6))
+	var pa := CombatPlayerActions.new()
+	pa.setup(s, _map, func(_amount: int, _skip := false, _type := CombatState.FISICO) -> void: pass,
+		Callable(), func() -> bool: return false)
+	var pending_during_refresh := [true]
+	pa.hand_refresh_requested.connect(func(): pending_during_refresh[0] = pa.has_pending_selection())
+	pa.start_range_attack_selection(0, s.turn_actions[0], 1)
+	await pa.execute_selection_at_async(Vector2.ZERO)
+
+	assert_false(pending_during_refresh[0])
+	assert_false(pa.has_pending_selection())
+
+
 func test_encantar_arma_vuelve_magico_el_proximo_ataque_y_suma_danio() -> void:
 	var s := CombatState.new()
 	s.player_enchant_damage = 20

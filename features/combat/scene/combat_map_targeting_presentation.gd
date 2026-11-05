@@ -31,7 +31,9 @@ func clear_path_preview() -> void:
 	visual_overlay.path_highlight.visible = false
 
 func show_attack_selection(attack_range: float) -> void:
-	renderer.show_disc(visual_overlay.attack_disc, map.player_pos, attack_range + map.actors.state.geometry.player_radius())
+	# Temporal: los alcances amplios no necesitan una malla por celda. El disco
+	# continuo evita bloquear un frame mientras revisamos el renderer granular.
+	renderer.show_simple_disc(visual_overlay.attack_disc, map.player_pos, attack_range + map.actors.state.geometry.player_radius())
 	renderer.show_footprint(visual_overlay.enemy_hover, map.enemy_pos, map.actors.state.geometry.enemy_radius(), map.HOVER_Y)
 	visual_overlay.enemy_hover.visible = false
 

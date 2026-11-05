@@ -26,10 +26,13 @@ const LIGHTING_KF := [
 ]
 
 const TRANSITION_DURATION := 2.0
+const SHADOW_SUN_DIRECTION := Vector3(0.5, -0.612, -0.612)
+const SHADOW_SUN_ENERGY_FACTOR := 0.10
 
 var world_env: WorldEnvironment
 var sun: DirectionalLight3D
 var fill: DirectionalLight3D
+var _shadow_sun: DirectionalLight3D
 
 var _period_idx: int = -1
 var _transition_t: float = 1.0
@@ -61,8 +64,18 @@ func _setup_environment() -> void:
 	sun.transform = Transform3D(
 		Basis(Vector3(0.866, -0.354, 0.354), Vector3(0.0, 0.707, 0.707), Vector3(-0.5, -0.612, 0.612)),
 		Vector3(0, 10, 0))
-	sun.shadow_enabled = true
+	# Conserva exactamente la iluminación original, pero delega las sombras a
+	# una luz tenue que sí apunta hacia abajo.
+	sun.shadow_enabled = false
 	add_child(sun)
+
+	_shadow_sun = DirectionalLight3D.new()
+	_shadow_sun.transform = Transform3D(
+		Basis.looking_at(SHADOW_SUN_DIRECTION.normalized(), Vector3.UP),
+		Vector3(0, 10, 0))
+	_shadow_sun.light_color = Color.WHITE
+	_shadow_sun.shadow_enabled = true
+	add_child(_shadow_sun)
 
 	fill = DirectionalLight3D.new()
 	fill.transform = Transform3D(
@@ -116,7 +129,9 @@ func _apply_kf(kf: Array) -> void:
 	var sun_energy: float    = kf[8] as float
 	sun.light_color    = kf[7] as Color
 	sun.light_energy   = sun_energy
-	sun.shadow_enabled = sun_energy > 0.05
+	sun.shadow_enabled = false
+	_shadow_sun.light_energy = sun_energy * SHADOW_SUN_ENERGY_FACTOR
+	_shadow_sun.shadow_enabled = _shadow_sun.light_energy > 0.01
 	fill.light_energy  = kf[9] as float
 
 
@@ -131,7 +146,9 @@ func _apply_kf_lerp(a: Array, b: Array, t: float) -> void:
 	var sun_energy: float    = lerpf(a[8] as float, b[8] as float, t)
 	sun.light_color    = (a[7] as Color).lerp(b[7] as Color, t)
 	sun.light_energy   = sun_energy
-	sun.shadow_enabled = sun_energy > 0.05
+	sun.shadow_enabled = false
+	_shadow_sun.light_energy = sun_energy * SHADOW_SUN_ENERGY_FACTOR
+	_shadow_sun.shadow_enabled = _shadow_sun.light_energy > 0.01
 	fill.light_energy  = lerpf(a[9] as float, b[9] as float, t)
 
 
@@ -155,6 +172,7 @@ func _snapshot_lighting() -> Array:
 ## de que tome control manual de sun/fill/environment.
 func freeze_transition() -> void:
 	_transition_t = 1.0
+	_shadow_sun.light_energy = 0.0
 
 
 ## Para la cinemática de evolución: vuelve a aplicar la luz del período actual

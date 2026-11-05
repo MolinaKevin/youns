@@ -30,6 +30,9 @@ Dialogue="*res://features/dialogue/dialogue_box.tscn"
 PartyManager="*uid://cuca14l87sjvn"
 ZoneManager="*uid://brjjvk68i1rvr"
 YounLifeEvents="*res://autoload/youn_life_events.gd"
+MCPRuntimeBridge="*res://addons/godot_mcp/services/mcp_runtime_bridge.gd"
+MCPInputBridge="*res://addons/godot_mcp/services/mcp_input_bridge.gd"
+MCPScreenshotBridge="*res://addons/godot_mcp/services/mcp_screenshot_bridge.gd"
 
 [display]
 
@@ -38,7 +41,7 @@ window/size/viewport_height=900
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/gut/plugin.cfg")
+enabled=PackedStringArray("res://addons/godot_mcp/plugin.cfg", "res://addons/gut/plugin.cfg")
 
 [input]
 

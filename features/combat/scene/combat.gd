@@ -138,7 +138,9 @@ func _ready() -> void:
 
 	_turn_flow.setup_draw_pile()
 	deck_manager.draw_cards(HAND_SIZE)
-	_apply_localized_text()
+	# start_planning() construye la mano inmediatamente después. Aplicar acá
+	# sólo los textos estáticos evita instanciar las seis cartas dos veces.
+	_apply_localized_text("", false)
 
 	card_preview.hover_enabled = false
 	card_preview.set_disabled(true)
@@ -240,7 +242,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func log_message(text: String) -> void:
 	message_log.append_text(text + "\n")
 
-func _apply_localized_text(_language: String = "") -> void:
+func _apply_localized_text(_language: String = "", refresh_hand_view := true) -> void:
 	hand_section.set_title(LocalizationState.t("combat.hand" if turn.phase == Phase.PLANNING else "combat.actions"))
 	move_mode_button.text = LocalizationState.t("combat.move")
 	end_turn_button.text = LocalizationState.t("combat.end_turn")
@@ -252,5 +254,6 @@ func _apply_localized_text(_language: String = "") -> void:
 	wildcards.apply_localization()
 	enemy_reveal.apply_localization()
 	_pile_popup.refresh_title_if_visible()
-	_turn_flow.refresh_hand_view()
+	if refresh_hand_view:
+		_turn_flow.refresh_hand_view()
 	update_ui()
