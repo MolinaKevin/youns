@@ -138,6 +138,53 @@ func test_start_move_selection_penaliza_rango_por_mojado_y_engrasado() -> void:
 	assert_eq(pa.active_selection_range_cells(), 50 - CombatMovePenalty.cells(true, true))
 
 
+func test_movimiento_termina_si_solo_queda_una_casilla_minima() -> void:
+	var s := CombatState.new()
+	var card := _make_card("move")
+	s.turn_actions.append(card)
+	_map.movement_path_cost = 9.0 * CombatGrid.CELL
+	var pa := _make_player_actions(s)
+	var pending_during_refresh := [true]
+	pa.hand_refresh_requested.connect(func(): pending_during_refresh[0] = pa.has_pending_selection())
+	pa.start_move_selection("hand", 0, 10, card.name)
+
+	pa.select_position(Vector2(1.0, 0.0))
+	pa.confirm_selection()
+
+	assert_false(pa.has_pending_selection())
+	assert_false(pending_during_refresh[0])
+	assert_eq(s.turn_actions.size(), 0)
+
+
+func test_movimiento_termina_si_quedan_dos_casillas() -> void:
+	var s := CombatState.new()
+	var card := _make_card("move")
+	s.turn_actions.append(card)
+	_map.movement_path_cost = 8.0 * CombatGrid.CELL
+	var pa := _make_player_actions(s)
+	pa.start_move_selection("hand", 0, 10, card.name)
+
+	pa.select_position(Vector2(1.0, 0.0))
+	pa.confirm_selection()
+
+	assert_false(pa.has_pending_selection())
+
+
+func test_movimiento_continua_si_quedan_tres_casillas() -> void:
+	var s := CombatState.new()
+	var card := _make_card("move")
+	s.turn_actions.append(card)
+	_map.movement_path_cost = 7.0 * CombatGrid.CELL
+	var pa := _make_player_actions(s)
+	pa.start_move_selection("hand", 0, 10, card.name)
+
+	pa.select_position(Vector2(1.0, 0.0))
+	pa.confirm_selection()
+
+	assert_true(pa.has_pending_selection())
+	assert_eq(pa.active_selection_range_cells(), 3)
+
+
 # ── CombatPlayerActions — ceguera reduce rango de ataque ─────────────────────
 
 func test_start_range_attack_selection_reduce_rango_por_cegado() -> void:
@@ -160,4 +207,3 @@ func test_start_range_attack_selection_sin_cegado_usa_rango_completo() -> void:
 
 
 # ── CombatPlayerActions — charcos usan el effect/rango de la carta ──────────
-

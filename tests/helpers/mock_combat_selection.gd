@@ -10,6 +10,7 @@ class Targeting extends CombatMapSelectionTargetingPort:
 		modes = CombatMapSelectionModesTargetingAdapter.new(self)
 		queries = CombatMapTargetQueriesAdapter.new(self)
 	func start_move_selection(_reach: float) -> void: owner.start_move_selection_calls += 1
+	func clear_move_selection() -> void: pass
 	func start_attack_selection(_reach: float) -> void: pass
 	func clear_attack_selection() -> void: pass
 	func is_click_on_enemy(_pos: Vector2) -> bool: return true

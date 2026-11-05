@@ -11,6 +11,9 @@ func try_move_player_to(_pos: Vector2) -> bool:
 func plan_player_move(_pos: Vector2) -> String:
 	return "no_path"
 
+func planned_destination() -> Vector2:
+	return Vector2.ZERO
+
 func path_cost() -> float:
 	return 0.0
 

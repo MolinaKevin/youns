@@ -151,20 +151,48 @@ func _line_cap() -> int:
 ## "Saltar acción": el controlador gasta la mitad; CombatPlayerActions cancela
 ## la selección y la próxima sincronización avanza a la siguiente línea.
 func on_skip_line_pressed() -> void:
+	var playing := host.turn.playing
+	print("[CombatMoveTrace] turn_flow.skip_enter | phase=%s playing=%s active=%s index=%s started=%s turn_actions=%d selection_pending=%s" % [
+		host.turn.phase,
+		playing != null,
+		playing.active if playing != null else false,
+		playing.index if playing != null else -1,
+		playing.started if playing != null else false,
+		host.state.turn_actions.size(),
+		host.player_actions.has_pending_selection(),
+	])
 	var result := host.turn.skip_active_line()
+	print("[CombatMoveTrace] turn_flow.skip_result | kind='%s' skipped=%s playing_started=%s" % [
+		result.kind,
+		result.skipped,
+		host.turn.playing.started if host.turn.playing != null else false,
+	])
 	if not result.skipped:
+		print("[CombatMoveTrace] turn_flow.skip_ignored")
 		return
 	_add_echoes(result.echo_card)
 	host.player_actions.cancel_selection()
+	print("[CombatMoveTrace] turn_flow.skip_exit | turn_actions=%d selection_pending=%s" % [
+		host.state.turn_actions.size(), host.player_actions.has_pending_selection(),
+	])
 
 ## Sincroniza los efectos externos de una transición ya resuelta por el
 ## controlador: puntos de movimiento, ecos, mensajes y la siguiente selección.
 func _sync_playing_resolution() -> void:
 	var turn := host.turn
 	if turn.playing == null:
+		print("[CombatMoveTrace] turn_flow.sync_resolution ignored | reason=no_playing")
 		return
 	var line: CardActionLine = turn.playing.lines[turn.playing.index]
-	var result := turn.resolve_playing(host.state.turn_actions.has(line), host.player_actions.has_pending_selection())
+	var line_still_active: bool = host.state.turn_actions.has(line)
+	var selection_pending: bool = host.player_actions.has_pending_selection()
+	print("[CombatMoveTrace] turn_flow.sync_resolution enter | line='%s' line_still_active=%s selection_pending=%s playing_index=%d playing_active=%s playing_started=%s" % [
+		line.name, line_still_active, selection_pending, turn.playing.index, turn.playing.active, turn.playing.started,
+	])
+	var result := turn.resolve_playing(line_still_active, selection_pending)
+	print("[CombatMoveTrace] turn_flow.sync_resolution result | kind='%s' mp_cost=%d has_playing_after=%s" % [
+		result.kind, result.mp_cost, turn.playing != null,
+	])
 	_add_echoes(result.echo_card)
 	host.state.player_mp -= result.mp_cost
 	match result.kind:

@@ -19,11 +19,15 @@ class Terrain extends CombatMapTerrainPort:
 
 class Movement extends CombatMapMovementPort:
 	var owner
+	var _planned_destination := Vector2.ZERO
 	func move_enemy_toward(_target: Vector2, _move_range: float) -> bool:
 		owner.move_enemy_toward_calls += 1
 		return true
-	func plan_player_move(_pos: Vector2) -> String: return ""
-	func path_cost() -> float: return 0.0
+	func plan_player_move(pos: Vector2) -> String:
+		_planned_destination = pos
+		return ""
+	func planned_destination() -> Vector2: return _planned_destination
+	func path_cost() -> float: return owner.movement_path_cost
 	func try_move_player_to(pos: Vector2) -> bool:
 		owner.player_pos = pos
 		return true

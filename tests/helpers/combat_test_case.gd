@@ -131,6 +131,7 @@ class MockCombatMap extends CombatMapArea:
 	var puddle_damage_result: Dictionary = {}
 	var overwatch_cone_hit := false
 	var move_enemy_toward_calls := 0
+	var movement_path_cost := 0.0
 	var start_move_selection_calls := 0
 	var clear_overwatch_zone_calls := 0
 	var place_puddle_calls: Array = []

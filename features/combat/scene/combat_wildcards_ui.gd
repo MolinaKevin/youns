@@ -55,10 +55,14 @@ func setup(hand, ui_root: Node, pile_popup: Control, pile_title: Label, pile_gri
 		column.add_child(button); _buttons[wild] = button
 	column.add_child(HSeparator.new())
 	_lines = Label.new(); _lines.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; column.add_child(_lines)
-	_skip = Button.new(); _skip.custom_minimum_size = Vector2(0, 40); _skip.pressed.connect(skip_requested.emit); column.add_child(_skip)
+	_skip = Button.new(); _skip.custom_minimum_size = Vector2(0, 40); _skip.pressed.connect(_on_skip_pressed); column.add_child(_skip)
 	_end = Button.new(); _end.custom_minimum_size = Vector2(0, 44); _end.pressed.connect(end_turn_requested.emit); column.add_child(_end)
 	panel.visible = false
 	_build_item_picker(ui_root)
+
+func _on_skip_pressed() -> void:
+	print("[CombatMoveTrace] ui.skip_action_pressed | disabled=%s visible=%s" % [_skip.disabled, _skip.visible])
+	skip_requested.emit()
 
 func apply_localization(wild_attack: CardAction, wild_move: CardAction) -> void:
 	_title.text = LocalizationState.t("combat.wildcards")

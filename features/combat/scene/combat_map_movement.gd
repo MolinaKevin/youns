@@ -10,7 +10,9 @@ var map: CombatMapArea
 func try_move_player_to(pos: Vector2) -> bool:
 	var goal := CombatGrid.to_cell(pos)
 	var path: Array[Vector2i] = map.terrain.navigation.path_for_move(pos)
+	print("[CombatMoveTrace] map.try_move_player_to | requested=%s goal=%s path_points=%d player_before=%s" % [pos, goal, path.size(), map.player_pos])
 	if path.size() < 2:
+		print("[CombatMoveTrace] map.try_move_player_to rejected | reason=path_too_short")
 		return false
 	var from_elevation: int = map.player_elevation
 	map.player_pos = CombatGrid.to_world(goal)
@@ -25,10 +27,17 @@ func try_move_player_to(pos: Vector2) -> bool:
 	map.actors.state.targets.sync_targets()
 	if map.actors.movement.has_player_waypoints():
 		map.actors.movement.set_player_final_waypoint(map.actors.state.targets.player_target())
+	print("[CombatMoveTrace] map.try_move_player_to accepted | player_after=%s has_waypoints=%s" % [map.player_pos, map.actors.movement.has_player_waypoints()])
 	return true
 
 func plan_player_move(pos: Vector2) -> String:
-	return map.terrain.navigation.plan_move(pos, map.player_elevation, map.actors.state.geometry.player_radius(), map.enemy_pos, map.actors.state.geometry.enemy_radius())
+	var result := map.terrain.navigation.plan_move(pos, map.player_elevation, map.actors.state.geometry.player_radius(), map.enemy_pos, map.actors.state.geometry.enemy_radius())
+	print("[CombatMoveTrace] map.plan_player_move | requested=%s result='%s' destination=%s cost=%.3f" % [pos, result, planned_destination(), path_cost()])
+	return result
+
+func planned_destination() -> Vector2:
+	var path := map.terrain.navigation.planned_path()
+	return path[-1] if not path.is_empty() else map.player_pos
 
 func path_cost() -> float:
 	return map.terrain.navigation.planned_path_cost()

@@ -32,11 +32,11 @@ func begin_move(from_pos: Vector2, max_range: float, elevation: int, radius: flo
 
 func plan_move(pos: Vector2, elevation: int, radius: float, other_pos: Vector2, other_radius: float) -> String:
 	var goal := CombatGrid.to_cell(pos)
-	if not move_reach.has(goal) or not _in_move_circle(goal, move_origin, move_range):
+	if not _in_move_circle(goal, move_origin, move_range):
+		goal = _closest_reachable_cell(pos)
+	if not move_reach.has(goal):
 		last_path = []
 		last_path_cost = INF
-		if not _in_move_circle(goal, move_origin, move_range):
-			return "range"
 		if not _grid_passable(goal, elevation, radius, other_pos, other_radius):
 			return "blocked"
 		return "no_path"
@@ -51,6 +51,21 @@ func plan_move(pos: Vector2, elevation: int, radius: float, other_pos: Vector2, 
 		scale = (CombatGrid.to_world(goal).distance_to(CombatGrid.to_world(start)) / CombatGrid.CELL) / direct
 	last_path_cost = float(move_reach[goal]["cost"]) * scale * CombatGrid.CELL
 	return ""
+
+func _closest_reachable_cell(target: Vector2) -> Vector2i:
+	var best := CombatGrid.to_cell(move_origin)
+	var best_distance := CombatGrid.to_world(best).distance_to(target)
+	var best_cost := 0.0
+	for cell: Vector2i in move_reach:
+		if not _in_move_circle(cell, move_origin, move_range):
+			continue
+		var distance := CombatGrid.to_world(cell).distance_to(target)
+		var cost: float = move_reach[cell]["cost"]
+		if distance < best_distance - 0.0001 or (absf(distance - best_distance) <= 0.0001 and cost < best_cost):
+			best = cell
+			best_distance = distance
+			best_cost = cost
+	return best
 
 func path_for_move(pos: Vector2) -> Array[Vector2i]:
 	var goal := CombatGrid.to_cell(pos)

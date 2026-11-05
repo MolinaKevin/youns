@@ -13,9 +13,17 @@ func execute(cell: Vector2) -> void:
 	var action: CombatPendingAction = _host.current_action()
 	if action == null:
 		return
+	if action is CombatMoveAction:
+		print("[CombatMoveTrace] executor.before_execute | cell=%s active=%s current_is_move=%s" % [cell, action.is_active(), _host.current_action() == action])
 	action.execute(cell)
+	if action is CombatMoveAction:
+		print("[CombatMoveTrace] executor.after_execute | active=%s current_is_move=%s" % [action.is_active(), _host.current_action() == action])
 	if not action.is_active():
+		if action is CombatMoveAction:
+			print("[CombatMoveTrace] executor.clear_current_action")
 		_host.clear_current_action()
+		if action is CombatMoveAction:
+			print("[CombatMoveTrace] executor.current_action_cleared | current=%s" % _host.current_action())
 
 func execute_async(cell: Vector2) -> void:
 	# Las implementaciones de `execute()` pueden ser corrutinas o inmediatas.
